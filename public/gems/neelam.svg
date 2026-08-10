@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
+  <rect width="200" height="200" fill="#1a1a14"/>
+  <defs>
+    <radialGradient id="g" cx="50%" cy="45%" r="40%">
+      <stop offset="0%" stop-color="#a3c8ff"/>
+      <stop offset="40%" stop-color="#1a4fcf"/>
+      <stop offset="100%" stop-color="#0a1a5e"/>
+    </radialGradient>
+  </defs>
+  <polygon points="100,30 140,60 150,110 130,150 70,150 50,110 60,60" fill="url(#g)" opacity="0.95"/>
+  <polygon points="100,30 140,60 100,75 60,60" fill="#c8dfff" opacity="0.25"/>
+  <line x1="100" y1="30" x2="100" y2="150" stroke="#fff" stroke-width="0.5" opacity="0.12"/>
+  <polygon points="100,75 140,60 150,110 100,100" fill="#fff" opacity="0.05"/>
+</svg>

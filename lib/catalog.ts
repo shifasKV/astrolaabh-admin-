@@ -58,6 +58,7 @@ export type Design = {
   runSize: number;
   remaining: number; // 0 = archive
   image: string;
+  price: number;
 };
 
 /* Per-family lore — planet line, brings and wearing ritual, carried over
@@ -72,7 +73,7 @@ export const GEMS = [
     english: "Yellow Sapphire",
     planet: "Jupiter",
     planetLine: "Jupiter · Guru",
-    image: "/gems/pukhraj.png",
+    image: "/gems/pukhraj.svg",
     brings: "Wisdom, wealth and dharma — the blessing of Guru.",
     brings4: [
       { word: "Wisdom", note: "Sharper judgment, calmer decisions." },
@@ -100,7 +101,7 @@ export const GEMS = [
     english: "Ruby",
     planet: "Sun",
     planetLine: "Sun · Surya",
-    image: "/gems/manik.png",
+    image: "/gems/manik.svg",
     brings: "Authority, vitality and the courage of the Sun.",
     brings4: [
       { word: "Leadership", note: "The room turns when you speak." },
@@ -128,7 +129,7 @@ export const GEMS = [
     english: "Blue Sapphire",
     planet: "Saturn",
     planetLine: "Saturn · Shani",
-    image: "/gems/neelam.png",
+    image: "/gems/neelam.svg",
     brings: "Discipline, focus and Saturn's swift rewards.",
     brings4: [
       { word: "Discipline", note: "Order where there was drift." },
@@ -156,7 +157,7 @@ export const GEMS = [
     english: "Emerald",
     planet: "Mercury",
     planetLine: "Mercury · Budha",
-    image: "/gems/panna.png",
+    image: "/gems/panna.svg",
     brings: "Intellect, speech and Mercury's quick clarity.",
     brings4: [
       { word: "Intelligence", note: "Quickness with depth." },
@@ -253,7 +254,7 @@ const CURATED_STONES: Stone[] = [
     pricePerRatti: 42000,
     price: 250320,
     oneOfOne: true,
-    image: "/pukhraj/loose.jpg",
+    image: "/gems/pukhraj.svg",
     brings:
       "A strong Jupiter stone for the 9th house of dharma — prescribed for wealth that compounds and judgment that steadies.",
     custody: custodyCeylon("AL-PKJ-0417", "12 Mar 2026", "26 Mar 2026", "14 Apr 2026"),
@@ -281,7 +282,7 @@ const CURATED_STONES: Stone[] = [
     pricePerRatti: 36000,
     price: 126000,
     oneOfOne: false,
-    image: "/pukhraj/loose.jpg",
+    image: "/gems/pukhraj.svg",
     brings:
       "An entry Jupiter stone with exceptional transparency — the quality tradition asks for before size.",
     custody: custodyCeylon("AL-PKJ-0389", "2 Feb 2026", "18 Feb 2026", "9 Mar 2026"),
@@ -309,7 +310,7 @@ const CURATED_STONES: Stone[] = [
     pricePerRatti: 58000,
     price: 258680,
     oneOfOne: true,
-    image: "/gems/manik.png",
+    image: "/gems/manik.svg",
     brings:
       "A Sun stone of rare Mogok saturation — prescribed for authority, recognition and the father's line.",
     custody: [
@@ -346,7 +347,7 @@ const CURATED_STONES: Stone[] = [
     pricePerRatti: 48000,
     price: 257760,
     oneOfOne: true,
-    image: "/gems/neelam.png",
+    image: "/gems/neelam.svg",
     brings:
       "Saturn's stone — the fastest-acting in the tradition. Always trialled before permanent wearing; our astro-gemologist guides the trial.",
     custody: custodyCeylon("AL-NLM-0208", "28 Feb 2026", "12 Mar 2026", "30 Mar 2026"),
@@ -374,7 +375,7 @@ const CURATED_STONES: Stone[] = [
     pricePerRatti: 39000,
     price: 155220,
     oneOfOne: false,
-    image: "/gems/panna.png",
+    image: "/gems/panna.svg",
     brings:
       "Mercury's stone for speech, trade and quick judgment — favoured by founders and advocates.",
     custody: [
@@ -411,7 +412,7 @@ const CURATED_STONES: Stone[] = [
     pricePerRatti: 52000,
     price: 412360,
     oneOfOne: true,
-    image: "/pukhraj/hero.jpg",
+    image: "/gems/pukhraj.svg",
     brings:
       "A collector-grade Jupiter stone above seven ratti — the weight tradition reserves for a life's turning point.",
     custody: custodyCeylon("AL-PKJ-0402", "3 Mar 2026", "20 Mar 2026", "11 Apr 2026"),
@@ -478,10 +479,10 @@ const FAMILIES: FamilySpec[] = [
     ppr: [24000, 38000, 54000],
     // real stone photography (placeholder set — replace with house shots before launch)
     images: [
-      "/pukhraj/stones/ys-01.png", "/pukhraj/stones/ys-02.png", "/pukhraj/stones/ys-03.png",
-      "/pukhraj/stones/ys-04.png", "/pukhraj/stones/ys-05.png", "/pukhraj/stones/ys-06.png",
-      "/pukhraj/stones/ys-07.png", "/pukhraj/stones/ys-08.png", "/pukhraj/stones/ys-09.png",
-      "/pukhraj/stones/ys-10.png", "/pukhraj/stones/ys-11.png", "/pukhraj/stones/ys-12.png",
+      "/gems/pukhraj.svg", "/gems/pukhraj.svg", "/gems/pukhraj.svg",
+      "/gems/pukhraj.svg", "/gems/pukhraj.svg", "/gems/pukhraj.svg",
+      "/gems/pukhraj.svg", "/gems/pukhraj.svg", "/gems/pukhraj.svg",
+      "/gems/pukhraj.svg", "/gems/pukhraj.svg", "/gems/pukhraj.svg",
     ],
     brings: "A Jupiter stone for the 9th house of dharma — wealth that compounds, judgment that steadies.",
   },
@@ -501,7 +502,7 @@ const FAMILIES: FamilySpec[] = [
     clarities: ["Minor silk, VS", "Eye-clean, VS", "Silk visible, SI"],
     shapes: ["Oval", "Cushion", "Round", "Pear"],
     ppr: [30000, 48000, 72000],
-    images: ["/gems/manik.png"],
+    images: ["/gems/manik.svg"],
     brings: "A Sun stone — authority, recognition and the father's line.",
   },
   {
@@ -520,7 +521,7 @@ const FAMILIES: FamilySpec[] = [
     clarities: ["Eye-clean, VVS", "Eye-clean, VS", "Fine silk, SI"],
     shapes: ["Oval", "Cushion", "Emerald cut", "Round"],
     ppr: [26000, 42000, 64000],
-    images: ["/gems/neelam.png"],
+    images: ["/gems/neelam.svg"],
     brings: "Saturn's stone — the fastest-acting in the tradition; always trialled before permanent wearing.",
   },
   {
@@ -539,7 +540,7 @@ const FAMILIES: FamilySpec[] = [
     clarities: ["Jardin visible, typical of origin", "Lightly included, VS", "Eye-clean — rare for origin"],
     shapes: ["Emerald cut", "Oval", "Cushion", "Pear"],
     ppr: [20000, 34000, 52000],
-    images: ["/gems/panna.png"],
+    images: ["/gems/panna.svg"],
     brings: "Mercury's stone for speech, trade and quick judgment — favoured by founders and advocates.",
   },
 ];
@@ -642,7 +643,8 @@ const CURATED_DESIGNS: Design[] = [
     metal: "22k gold",
     runSize: 12,
     remaining: 4,
-    image: "/pukhraj/ring-onhand.jpg",
+    price: 35000,
+    image: "/gems/jewellery.svg",
   },
   {
     slug: "guru-kripa-pendant",
@@ -657,7 +659,8 @@ const CURATED_DESIGNS: Design[] = [
     metal: "22k gold",
     runSize: 18,
     remaining: 11,
-    image: "/pukhraj/pendant.jpg",
+    price: 28000,
+    image: "/gems/jewellery.svg",
   },
   {
     slug: "akshaya-band",
@@ -672,7 +675,8 @@ const CURATED_DESIGNS: Design[] = [
     metal: "22k gold",
     runSize: 9,
     remaining: 2,
-    image: "/pukhraj/bracelet.jpg",
+    price: 42000,
+    image: "/gems/jewellery.svg",
   },
   {
     slug: "trishula-signet",
@@ -687,7 +691,8 @@ const CURATED_DESIGNS: Design[] = [
     metal: "22k gold",
     runSize: 12,
     remaining: 0,
-    image: "/pukhraj/ring.jpg",
+    price: 38000,
+    image: "/gems/jewellery.svg",
   },
   {
     slug: "ravi-tejas-ring",
@@ -702,7 +707,8 @@ const CURATED_DESIGNS: Design[] = [
     metal: "22k gold",
     runSize: 15,
     remaining: 6,
-    image: "/pukhraj/ring.jpg",
+    price: 32000,
+    image: "/gems/jewellery.svg",
   },
   {
     slug: "kesari-ring",
@@ -717,7 +723,8 @@ const CURATED_DESIGNS: Design[] = [
     metal: "22k gold",
     runSize: 10,
     remaining: 3,
-    image: "/pukhraj/ring-onhand.jpg",
+    price: 45000,
+    image: "/gems/jewellery.svg",
   },
   {
     slug: "brihaspati-pendant",
@@ -732,7 +739,8 @@ const CURATED_DESIGNS: Design[] = [
     metal: "22k gold",
     runSize: 16,
     remaining: 8,
-    image: "/pukhraj/pendant.jpg",
+    price: 26000,
+    image: "/gems/jewellery.svg",
   },
   {
     slug: "dhanya-pendant",
@@ -747,7 +755,8 @@ const CURATED_DESIGNS: Design[] = [
     metal: "22k gold",
     runSize: 12,
     remaining: 5,
-    image: "/pukhraj/pendant.jpg",
+    price: 30000,
+    image: "/gems/jewellery.svg",
   },
   {
     slug: "rakshak-band",
@@ -762,7 +771,8 @@ const CURATED_DESIGNS: Design[] = [
     metal: "22k gold",
     runSize: 8,
     remaining: 4,
-    image: "/pukhraj/bracelet.jpg",
+    price: 48000,
+    image: "/gems/jewellery.svg",
   },
 ];
 
@@ -781,47 +791,47 @@ const CURATED_STYLE: Record<string, Design["style"]> = {
 };
 
 const DESIGN_POOL: { form: Design["form"]; style: NonNullable<Design["style"]>; name: string; sanskrit: string; gloss: string; image: string }[] = [
-  { form: "Ring", style: "Temple", name: "Padma Mudra", sanskrit: "पद्ममुद्रा", gloss: "The lotus seal", image: "/pukhraj/ring.jpg" },
-  { form: "Ring", style: "Temple", name: "Meru Shikhar", sanskrit: "मेरुशिखर", gloss: "The peak of Meru", image: "/pukhraj/ring-onhand.jpg" },
-  { form: "Ring", style: "Heritage", name: "Rajmudra", sanskrit: "राजमुद्रा", gloss: "The royal seal", image: "/pukhraj/ring.jpg" },
-  { form: "Ring", style: "Minimal", name: "Bindu", sanskrit: "बिन्दु", gloss: "The single point", image: "/pukhraj/ring-onhand.jpg" },
-  { form: "Ring", style: "Minimal", name: "Rekha", sanskrit: "रेखा", gloss: "The clean line", image: "/pukhraj/ring.jpg" },
-  { form: "Ring", style: "Statement", name: "Vajra Kanti", sanskrit: "वज्रकान्ति", gloss: "The thunderbolt's lustre", image: "/pukhraj/ring-onhand.jpg" },
-  { form: "Ring", style: "Statement", name: "Simhasan", sanskrit: "सिंहासन", gloss: "The lion throne", image: "/pukhraj/ring.jpg" },
-  { form: "Ring", style: "Heritage", name: "Navagraha Kosh", sanskrit: "नवग्रहकोश", gloss: "The planetary treasury", image: "/pukhraj/ring-onhand.jpg" },
-  { form: "Ring", style: "Temple", name: "Garbha Griha", sanskrit: "गर्भगृह", gloss: "The inner sanctum", image: "/pukhraj/ring.jpg" },
-  { form: "Ring", style: "Temple", name: "Deepa Stambh", sanskrit: "दीपस्तम्भ", gloss: "The lamp pillar", image: "/pukhraj/ring-onhand.jpg" },
-  { form: "Ring", style: "Temple", name: "Kalash", sanskrit: "कलश", gloss: "The sacred vessel", image: "/pukhraj/ring.jpg" },
-  { form: "Ring", style: "Heritage", name: "Nizami Jadau", sanskrit: "जड़ाऊ", gloss: "The court inlay", image: "/pukhraj/ring-onhand.jpg" },
-  { form: "Ring", style: "Heritage", name: "Paatli Vinta", sanskrit: "पाटली", gloss: "The old-city band", image: "/pukhraj/ring.jpg" },
-  { form: "Ring", style: "Heritage", name: "Mysore Mandap", sanskrit: "मण्डप", gloss: "The pavilion setting", image: "/pukhraj/ring-onhand.jpg" },
-  { form: "Ring", style: "Minimal", name: "Sthir", sanskrit: "स्थिर", gloss: "The still one", image: "/pukhraj/ring.jpg" },
-  { form: "Ring", style: "Minimal", name: "Ekaant", sanskrit: "एकान्त", gloss: "The solitary", image: "/pukhraj/ring-onhand.jpg" },
-  { form: "Ring", style: "Minimal", name: "Shunya Vrit", sanskrit: "शून्यवृत्त", gloss: "The empty circle", image: "/pukhraj/ring.jpg" },
-  { form: "Ring", style: "Statement", name: "Airavat", sanskrit: "ऐरावत", gloss: "The royal elephant", image: "/pukhraj/ring-onhand.jpg" },
-  { form: "Ring", style: "Statement", name: "Suryavansh", sanskrit: "सूर्यवंश", gloss: "The solar line", image: "/pukhraj/ring.jpg" },
-  { form: "Ring", style: "Statement", name: "Chakravarti", sanskrit: "चक्रवर्ती", gloss: "The sovereign's turn", image: "/pukhraj/ring-onhand.jpg" },
-  { form: "Ring", style: "Heritage", name: "Ashta Dhaatu", sanskrit: "अष्टधातु", gloss: "The eight-metal bezel", image: "/pukhraj/ring.jpg" },
-  { form: "Pendant", style: "Temple", name: "Deva Deepa", sanskrit: "देवदीप", gloss: "The temple lamp", image: "/pukhraj/pendant.jpg" },
-  { form: "Pendant", style: "Heritage", name: "Chandra Haar", sanskrit: "चन्द्रहार", gloss: "The moon's garland", image: "/pukhraj/pendant.jpg" },
-  { form: "Pendant", style: "Minimal", name: "Sutra", sanskrit: "सूत्र", gloss: "The single thread", image: "/pukhraj/pendant.jpg" },
-  { form: "Pendant", style: "Minimal", name: "Nirmal", sanskrit: "निर्मल", gloss: "The unadorned", image: "/pukhraj/pendant.jpg" },
-  { form: "Pendant", style: "Statement", name: "Kaustubh", sanskrit: "कौस्तुभ", gloss: "The jewel of Vishnu", image: "/pukhraj/pendant.jpg" },
-  { form: "Pendant", style: "Temple", name: "Mandala", sanskrit: "मण्डल", gloss: "The sacred circle", image: "/pukhraj/pendant.jpg" },
-  { form: "Pendant", style: "Temple", name: "Gopuram", sanskrit: "गोपुरम्", gloss: "The temple gate", image: "/pukhraj/pendant.jpg" },
-  { form: "Pendant", style: "Heritage", name: "Taveez", sanskrit: "तावीज़", gloss: "The kept word", image: "/pukhraj/pendant.jpg" },
-  { form: "Pendant", style: "Heritage", name: "Guttapusalu", sanskrit: "गुट्टापुसलु", gloss: "The southern cascade", image: "/pukhraj/pendant.jpg" },
-  { form: "Pendant", style: "Minimal", name: "Antar", sanskrit: "अन्तर्", gloss: "The inward", image: "/pukhraj/pendant.jpg" },
-  { form: "Pendant", style: "Statement", name: "Surya Kavach", sanskrit: "सूर्यकवच", gloss: "The sun's armour", image: "/pukhraj/pendant.jpg" },
-  { form: "Pendant", style: "Statement", name: "Meghdoot", sanskrit: "मेघदूत", gloss: "The cloud messenger", image: "/pukhraj/pendant.jpg" },
-  { form: "Bracelet", style: "Minimal", name: "Dhara", sanskrit: "धारा", gloss: "The steady stream", image: "/pukhraj/bracelet.jpg" },
-  { form: "Bracelet", style: "Heritage", name: "Kada Veer", sanskrit: "वीर कड़ा", gloss: "The warrior's band", image: "/pukhraj/bracelet.jpg" },
-  { form: "Bracelet", style: "Statement", name: "Garuda Pankh", sanskrit: "गरुडपंख", gloss: "The eagle's wing", image: "/pukhraj/bracelet.jpg" },
-  { form: "Bracelet", style: "Temple", name: "Ghanta Mala", sanskrit: "घण्टामाला", gloss: "The temple-bell chain", image: "/pukhraj/bracelet.jpg" },
-  { form: "Bracelet", style: "Heritage", name: "Pahunchi", sanskrit: "पहुँची", gloss: "The wrist court", image: "/pukhraj/bracelet.jpg" },
-  { form: "Bracelet", style: "Minimal", name: "Sarala", sanskrit: "सरल", gloss: "The straight path", image: "/pukhraj/bracelet.jpg" },
-  { form: "Bracelet", style: "Statement", name: "Nag Valay", sanskrit: "नागवलय", gloss: "The serpent coil", image: "/pukhraj/bracelet.jpg" },
-  { form: "Bracelet", style: "Temple", name: "Rudra Kada", sanskrit: "रुद्र कड़ा", gloss: "The ascetic's band", image: "/pukhraj/bracelet.jpg" },
+  { form: "Ring", style: "Temple", name: "Padma Mudra", sanskrit: "पद्ममुद्रा", gloss: "The lotus seal", image: "/gems/jewellery.svg" },
+  { form: "Ring", style: "Temple", name: "Meru Shikhar", sanskrit: "मेरुशिखर", gloss: "The peak of Meru", image: "/gems/jewellery.svg" },
+  { form: "Ring", style: "Heritage", name: "Rajmudra", sanskrit: "राजमुद्रा", gloss: "The royal seal", image: "/gems/jewellery.svg" },
+  { form: "Ring", style: "Minimal", name: "Bindu", sanskrit: "बिन्दु", gloss: "The single point", image: "/gems/jewellery.svg" },
+  { form: "Ring", style: "Minimal", name: "Rekha", sanskrit: "रेखा", gloss: "The clean line", image: "/gems/jewellery.svg" },
+  { form: "Ring", style: "Statement", name: "Vajra Kanti", sanskrit: "वज्रकान्ति", gloss: "The thunderbolt's lustre", image: "/gems/jewellery.svg" },
+  { form: "Ring", style: "Statement", name: "Simhasan", sanskrit: "सिंहासन", gloss: "The lion throne", image: "/gems/jewellery.svg" },
+  { form: "Ring", style: "Heritage", name: "Navagraha Kosh", sanskrit: "नवग्रहकोश", gloss: "The planetary treasury", image: "/gems/jewellery.svg" },
+  { form: "Ring", style: "Temple", name: "Garbha Griha", sanskrit: "गर्भगृह", gloss: "The inner sanctum", image: "/gems/jewellery.svg" },
+  { form: "Ring", style: "Temple", name: "Deepa Stambh", sanskrit: "दीपस्तम्भ", gloss: "The lamp pillar", image: "/gems/jewellery.svg" },
+  { form: "Ring", style: "Temple", name: "Kalash", sanskrit: "कलश", gloss: "The sacred vessel", image: "/gems/jewellery.svg" },
+  { form: "Ring", style: "Heritage", name: "Nizami Jadau", sanskrit: "जड़ाऊ", gloss: "The court inlay", image: "/gems/jewellery.svg" },
+  { form: "Ring", style: "Heritage", name: "Paatli Vinta", sanskrit: "पाटली", gloss: "The old-city band", image: "/gems/jewellery.svg" },
+  { form: "Ring", style: "Heritage", name: "Mysore Mandap", sanskrit: "मण्डप", gloss: "The pavilion setting", image: "/gems/jewellery.svg" },
+  { form: "Ring", style: "Minimal", name: "Sthir", sanskrit: "स्थिर", gloss: "The still one", image: "/gems/jewellery.svg" },
+  { form: "Ring", style: "Minimal", name: "Ekaant", sanskrit: "एकान्त", gloss: "The solitary", image: "/gems/jewellery.svg" },
+  { form: "Ring", style: "Minimal", name: "Shunya Vrit", sanskrit: "शून्यवृत्त", gloss: "The empty circle", image: "/gems/jewellery.svg" },
+  { form: "Ring", style: "Statement", name: "Airavat", sanskrit: "ऐरावत", gloss: "The royal elephant", image: "/gems/jewellery.svg" },
+  { form: "Ring", style: "Statement", name: "Suryavansh", sanskrit: "सूर्यवंश", gloss: "The solar line", image: "/gems/jewellery.svg" },
+  { form: "Ring", style: "Statement", name: "Chakravarti", sanskrit: "चक्रवर्ती", gloss: "The sovereign's turn", image: "/gems/jewellery.svg" },
+  { form: "Ring", style: "Heritage", name: "Ashta Dhaatu", sanskrit: "अष्टधातु", gloss: "The eight-metal bezel", image: "/gems/jewellery.svg" },
+  { form: "Pendant", style: "Temple", name: "Deva Deepa", sanskrit: "देवदीप", gloss: "The temple lamp", image: "/gems/jewellery.svg" },
+  { form: "Pendant", style: "Heritage", name: "Chandra Haar", sanskrit: "चन्द्रहार", gloss: "The moon's garland", image: "/gems/jewellery.svg" },
+  { form: "Pendant", style: "Minimal", name: "Sutra", sanskrit: "सूत्र", gloss: "The single thread", image: "/gems/jewellery.svg" },
+  { form: "Pendant", style: "Minimal", name: "Nirmal", sanskrit: "निर्मल", gloss: "The unadorned", image: "/gems/jewellery.svg" },
+  { form: "Pendant", style: "Statement", name: "Kaustubh", sanskrit: "कौस्तुभ", gloss: "The jewel of Vishnu", image: "/gems/jewellery.svg" },
+  { form: "Pendant", style: "Temple", name: "Mandala", sanskrit: "मण्डल", gloss: "The sacred circle", image: "/gems/jewellery.svg" },
+  { form: "Pendant", style: "Temple", name: "Gopuram", sanskrit: "गोपुरम्", gloss: "The temple gate", image: "/gems/jewellery.svg" },
+  { form: "Pendant", style: "Heritage", name: "Taveez", sanskrit: "तावीज़", gloss: "The kept word", image: "/gems/jewellery.svg" },
+  { form: "Pendant", style: "Heritage", name: "Guttapusalu", sanskrit: "गुट्टापुसलु", gloss: "The southern cascade", image: "/gems/jewellery.svg" },
+  { form: "Pendant", style: "Minimal", name: "Antar", sanskrit: "अन्तर्", gloss: "The inward", image: "/gems/jewellery.svg" },
+  { form: "Pendant", style: "Statement", name: "Surya Kavach", sanskrit: "सूर्यकवच", gloss: "The sun's armour", image: "/gems/jewellery.svg" },
+  { form: "Pendant", style: "Statement", name: "Meghdoot", sanskrit: "मेघदूत", gloss: "The cloud messenger", image: "/gems/jewellery.svg" },
+  { form: "Bracelet", style: "Minimal", name: "Dhara", sanskrit: "धारा", gloss: "The steady stream", image: "/gems/jewellery.svg" },
+  { form: "Bracelet", style: "Heritage", name: "Kada Veer", sanskrit: "वीर कड़ा", gloss: "The warrior's band", image: "/gems/jewellery.svg" },
+  { form: "Bracelet", style: "Statement", name: "Garuda Pankh", sanskrit: "गरुडपंख", gloss: "The eagle's wing", image: "/gems/jewellery.svg" },
+  { form: "Bracelet", style: "Temple", name: "Ghanta Mala", sanskrit: "घण्टामाला", gloss: "The temple-bell chain", image: "/gems/jewellery.svg" },
+  { form: "Bracelet", style: "Heritage", name: "Pahunchi", sanskrit: "पहुँची", gloss: "The wrist court", image: "/gems/jewellery.svg" },
+  { form: "Bracelet", style: "Minimal", name: "Sarala", sanskrit: "सरल", gloss: "The straight path", image: "/gems/jewellery.svg" },
+  { form: "Bracelet", style: "Statement", name: "Nag Valay", sanskrit: "नागवलय", gloss: "The serpent coil", image: "/gems/jewellery.svg" },
+  { form: "Bracelet", style: "Temple", name: "Rudra Kada", sanskrit: "रुद्र कड़ा", gloss: "The ascetic's band", image: "/gems/jewellery.svg" },
 ];
 
 /* real jewellery photography — one distinct image per design (placeholder set,
@@ -865,6 +875,7 @@ function generateDesigns(): Design[] {
       metal: metals[Math.floor(rng() * metals.length)],
       runSize,
       remaining,
+      price: 20000 + Math.floor(rng() * 35000),
       image,
     };
   });

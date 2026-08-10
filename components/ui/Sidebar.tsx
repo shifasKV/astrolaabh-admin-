@@ -47,7 +47,7 @@ export function Sidebar({ groups, orgName, orgSub, userLabel, userSub, onUserCli
 
   return (
     <aside
-      className="hidden md:flex w-[232px] shrink-0 flex-col fixed inset-y-0 left-0 px-3 py-4 z-30"
+      className="hidden md:flex w-[280px] shrink-0 flex-col fixed inset-y-0 left-0 px-4 py-4 z-30"
       style={{ background: T.panel, borderRight: `1px solid ${T.borderSoft}` }}
     >
       {/* Org card */}

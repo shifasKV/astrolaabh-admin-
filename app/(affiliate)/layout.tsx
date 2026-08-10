@@ -37,8 +37,8 @@ export default function AffiliateLayout({ children }: { children: React.ReactNod
         userLabel={user.name}
         onUserClick={() => { logout(); router.push("/"); }}
       />
-      <div className="md:ml-[232px] min-w-0">
-        <div className="px-5 md:px-8 py-7 max-w-[1080px]">
+      <div className="md:ml-[280px] min-w-0">
+        <div className="px-5 md:px-10 py-7 max-w-[1400px] mx-auto">
           {children}
         </div>
       </div>

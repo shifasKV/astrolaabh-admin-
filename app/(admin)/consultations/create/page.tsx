@@ -73,13 +73,11 @@ export default function CreateConsultationPage() {
     if (!availableDates.includes(iso)) return;
     setSelectedDate(iso);
     setSelectedSlot("");
-    setStep(4);
   };
 
   const selectSlot = (slot: TimeSlot) => {
     if (!slot.available) return;
     setSelectedSlot(slot.time);
-    setStep(5);
   };
 
   const STEPS = [
@@ -136,31 +134,38 @@ export default function CreateConsultationPage() {
 
       {/* Step 2: Expert Selection */}
       {step === 2 && (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {EXPERT_PROFILES.map((ep) => (
-            <button
-              key={ep.id}
-              type="button"
-              onClick={() => { setSelectedExpert(ep); setSelectedDate(""); setSelectedSlot(""); setStep(3); }}
-              className="text-left rounded-[12px] p-5 transition-all hover:scale-[1.02]"
-              style={{
-                background: T.card,
-                border: `1px solid ${selectedExpert?.id === ep.id ? T.accent : T.border}`,
-                boxShadow: selectedExpert?.id === ep.id ? "0 0 0 1px rgba(195,160,88,0.3)" : "none",
-              }}
-            >
-              <div className="text-[14px] font-semibold mb-1" style={{ color: T.text }}>{ep.name}</div>
-              <div className="text-[12px] mb-2" style={{ color: T.muted }}>{ep.specialization}</div>
-              <div className="flex items-center gap-3 text-[11px]" style={{ color: T.faint }}>
-                <span>{ep.experience}</span>
-                <span>•</span>
-                <span>{ep.languages.join(", ")}</span>
-              </div>
-              <div className="mt-3 text-[13px] font-semibold" style={{ color: T.accent }}>
-                ₹{ep.fee.toLocaleString("en-IN")}
-              </div>
-            </button>
-          ))}
+        <div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {EXPERT_PROFILES.map((ep) => (
+              <button
+                key={ep.id}
+                type="button"
+                onClick={() => { setSelectedExpert(ep); setSelectedDate(""); setSelectedSlot(""); }}
+                className="text-left rounded-[12px] p-5 transition-all hover:scale-[1.02] cursor-pointer"
+                style={{
+                  background: T.card,
+                  border: `1px solid ${selectedExpert?.id === ep.id ? T.accent : T.border}`,
+                  boxShadow: selectedExpert?.id === ep.id ? "0 0 0 1px rgba(195,160,88,0.3)" : "none",
+                }}
+              >
+                <div className="text-[14px] font-semibold mb-1" style={{ color: T.text }}>{ep.name}</div>
+                <div className="text-[12px] mb-2" style={{ color: T.muted }}>{ep.specialization}</div>
+                <div className="flex items-center gap-3 text-[11px]" style={{ color: T.faint }}>
+                  <span>{ep.experience}</span>
+                  <span>•</span>
+                  <span>{ep.languages.join(", ")}</span>
+                </div>
+                <div className="mt-3 text-[13px] font-semibold" style={{ color: T.accent }}>
+                  ₹{ep.fee.toLocaleString("en-IN")}
+                </div>
+              </button>
+            ))}
+          </div>
+          {selectedExpert && (
+            <div className="mt-4 pt-3 flex justify-end" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+              <GoldBtn onClick={() => setStep(3)}>Next →</GoldBtn>
+            </div>
+          )}
         </div>
       )}
 
@@ -214,6 +219,11 @@ export default function CreateConsultationPage() {
                 <span className="w-3 h-3 rounded-full opacity-40" style={{ background: T.border }} /> Unavailable
               </span>
             </div>
+            {selectedDate && (
+              <div className="mt-4 pt-3 flex justify-end" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+                <GoldBtn onClick={() => setStep(4)}>Next →</GoldBtn>
+              </div>
+            )}
           </div>
         </Card>
       )}
@@ -248,6 +258,11 @@ export default function CreateConsultationPage() {
           </div>
           {slotsForDate.filter((s) => s.available).length === 0 && (
             <p className="text-[12.5px] mt-4" style={{ color: T.danger }}>No slots available on this date. Please go back and pick another date.</p>
+          )}
+          {selectedSlot && (
+            <div className="mt-4 pt-3 flex justify-end" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+              <GoldBtn onClick={() => setStep(5)}>Next →</GoldBtn>
+            </div>
           )}
         </Card>
       )}
