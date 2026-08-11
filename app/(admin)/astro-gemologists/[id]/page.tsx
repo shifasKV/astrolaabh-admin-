@@ -150,17 +150,14 @@ export default function AstroGemologistDetailPage() {
         {/* Available Slots */}
         <Card>
           <div className="flex items-center justify-between mb-4">
-            <span className="text-[11px] tracking-[0.08em] uppercase font-medium" style={{ color: T.faint }}>Availability</span>
-            <div className="flex items-center gap-3">
-              <span className="text-[11px]" style={{ color: T.faint }}>Next 7 days</span>
-              <Link
-                href={`/astro-gemologists/${id}/availability`}
-                className="text-[11px] font-medium hover:opacity-80 transition-opacity"
-                style={{ color: T.accent }}
-              >
-                Edit →
-              </Link>
-            </div>
+            <span className="text-[11px] tracking-[0.08em] uppercase font-medium" style={{ color: T.faint }}>Availability <span style={{ textTransform: "none", letterSpacing: "normal" }}>(Next 7 days)</span></span>
+            <Link
+              href={`/astro-gemologists/${id}/availability`}
+              className="text-[11px] px-2.5 py-1 rounded-[9px] transition-all duration-200 hover:brightness-125"
+              style={{ color: T.accent, border: `1px solid rgba(195,160,88,0.3)` }}
+            >
+              Edit →
+            </Link>
           </div>
           {next7Days.length === 0 ? (
             <p className="text-[13px] py-6 text-center" style={{ color: T.muted }}>No availability data.</p>
