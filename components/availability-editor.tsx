@@ -367,17 +367,17 @@ export function AvailabilityEditor({ expertId }: AvailabilityEditorProps) {
             </button>
           </div>
 
-          <div className="grid grid-cols-7 mb-2">
+          <div className="grid grid-cols-7 mb-1 max-w-[320px] mx-auto">
             {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
-              <div key={d} className="text-center text-[10.5px] tracking-[0.04em] py-1" style={{ color: T.faint }}>
+              <div key={d} className="text-center text-[10px] tracking-[0.04em] py-1" style={{ color: T.faint }}>
                 {d}
               </div>
             ))}
           </div>
 
-          <div className="grid grid-cols-7 gap-0.5">
+          <div className="grid grid-cols-7 gap-0.5 max-w-[320px] mx-auto">
             {calDays.map((dateISO, idx) => {
-              if (!dateISO) return <div key={`empty-${idx}`} />;
+              if (!dateISO) return <div key={`empty-${idx}`} className="h-10" />;
               const dayNum = parseInt(dateISO.split("-")[2], 10);
               const avail = hasAvailability(dateISO);
               const isSelected = selectedCalDate === dateISO;
@@ -387,7 +387,7 @@ export function AvailabilityEditor({ expertId }: AvailabilityEditorProps) {
                 <button
                   key={dateISO}
                   onClick={() => setSelectedCalDate(dateISO)}
-                  className="relative w-full aspect-square rounded-full flex flex-col items-center justify-center text-[13px] transition-all cursor-pointer"
+                  className="relative h-10 w-10 mx-auto rounded-full flex flex-col items-center justify-center text-[12.5px] transition-all cursor-pointer"
                   style={{
                     background: isSelected ? T.accent : "transparent",
                     color: isSelected ? T.accentInk : avail ? T.text : T.faint,
@@ -397,7 +397,7 @@ export function AvailabilityEditor({ expertId }: AvailabilityEditorProps) {
                   {dayNum}
                   {avail && !isSelected && (
                     <span
-                      className="absolute bottom-1 w-1.5 h-1.5 rounded-full"
+                      className="absolute bottom-[5px] w-1 h-1 rounded-full"
                       style={{ background: T.accent }}
                     />
                   )}
