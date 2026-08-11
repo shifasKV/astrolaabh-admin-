@@ -1,7 +1,7 @@
 "use client";
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { PageHeader, Card, StatCard, SearchFilter } from "@/components/ui";
+import { PageHeader, Card, StatCard, SearchFilter, GoldBtn } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_CUSTOMERS, MOCK_ORDERS, MOCK_CONSULTATIONS } from "@/lib/mock";
 
@@ -28,6 +28,9 @@ export default function CustomersPage() {
       <PageHeader
         title="Customer records"
         sub="Unified customer context — birth details, chart, consultations, orders, and timeline"
+        action={
+          <Link href="/customers/create"><GoldBtn>+ Add customer</GoldBtn></Link>
+        }
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">

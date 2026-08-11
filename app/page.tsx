@@ -11,7 +11,7 @@ const ROLES: { key: Role; label: string; note: string }[] = [
 
 const ROLE_ROUTES: Record<Role, string> = {
   admin: "/dashboard",
-  expert: "/appointments",
+  expert: "/expert-dashboard",
   affiliate: "/aff-dashboard",
 };
 

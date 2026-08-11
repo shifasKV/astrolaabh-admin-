@@ -151,7 +151,16 @@ export default function AstroGemologistDetailPage() {
         <Card>
           <div className="flex items-center justify-between mb-4">
             <span className="text-[11px] tracking-[0.08em] uppercase font-medium" style={{ color: T.faint }}>Availability</span>
-            <span className="text-[11px]" style={{ color: T.faint }}>Next 7 days</span>
+            <div className="flex items-center gap-3">
+              <span className="text-[11px]" style={{ color: T.faint }}>Next 7 days</span>
+              <Link
+                href={`/astro-gemologists/${id}/availability`}
+                className="text-[11px] font-medium hover:opacity-80 transition-opacity"
+                style={{ color: T.accent }}
+              >
+                Edit →
+              </Link>
+            </div>
           </div>
           {next7Days.length === 0 ? (
             <p className="text-[13px] py-6 text-center" style={{ color: T.muted }}>No availability data.</p>

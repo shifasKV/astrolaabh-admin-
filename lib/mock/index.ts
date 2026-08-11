@@ -8,5 +8,5 @@ export { MOCK_CERTIFICATES } from "./certificates";
 export { MOCK_AFFILIATES, MOCK_AFFILIATE_LINKS, MOCK_REFERRAL_EVENTS, MOCK_PAYOUTS } from "./affiliates";
 export { MOCK_NOTIFICATIONS, MOCK_AUDIT } from "./notifications";
 export type { MockNotification, AuditEvent } from "./notifications";
-export { EXPERT_PROFILES, EXPERT_AVAILABILITY, getExpertDates, getExpertSlots } from "./expert-availability";
-export type { ExpertProfile, TimeSlot, DayAvailability, ExpertAvailability } from "./expert-availability";
+export { EXPERT_PROFILES, EXPERT_AVAILABILITY, getExpertDates, getExpertSlots, MOCK_EXPERT_SCHEDULES, getExpertSchedule, DAY_LABELS, generateTimeOptions, formatTime24to12, DEFAULT_BOOKING_DURATION_MIN } from "./expert-availability";
+export type { ExpertProfile, TimeSlot, DayAvailability, ExpertAvailability, TimeRange, WeeklyScheduleDay, DateOverride, ExpertSchedule } from "./expert-availability";
