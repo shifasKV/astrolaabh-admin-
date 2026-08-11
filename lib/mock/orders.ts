@@ -6,14 +6,14 @@ export const MOCK_ORDERS: Order[] = [
     items: [{ sku: "AL-PKJ-0417", name: "Pukhraj · Ceylon Yellow Sapphire", qty: 1, price: 285000, gemstone: "Yellow Sapphire", caratWeight: "5.2r", itemType: "stone", itemStatus: "ready_to_ship" }],
     total: 285000, stage: 7, shopifyStatus: "fulfilled", operationalStatus: "completed", paymentStatus: "paid",
     energisationStatus: "completed", energisationTier: "pran_pratishtha", certificateStatus: "verified", affiliateCode: "SANDEEP108", tracking: "AWB-BLU-5518234",
-    placedAt: "2026-02-10", updatedAt: "2026-03-05", consultationId: "cons_001", recommendationId: "rec_001",
+    placedAt: "2026-02-10", updatedAt: "2026-03-05", placedBy: "ops@astrolaabh.house", consultationId: "cons_001", recommendationId: "rec_001",
   },
   {
     id: "AL-ORD-002", customerId: "cust_002", customerName: "Amit Khanna",
     items: [{ sku: "AL-MNK-0208", name: "Manik · Burmese Ruby", qty: 1, price: 412000, gemstone: "Ruby", caratWeight: "3.8r", itemType: "stone", itemStatus: "ready_to_ship" }],
     total: 412000, stage: 6, shopifyStatus: "partially_fulfilled", operationalStatus: "in_progress", paymentStatus: "paid",
     energisationStatus: "completed", energisationTier: "maha_abhishek", certificateStatus: "uploaded", tracking: "AWB-DHL-7742901",
-    placedAt: "2026-04-18", updatedAt: "2026-07-25", consultationId: "cons_002", recommendationId: "rec_002",
+    placedAt: "2026-04-18", updatedAt: "2026-07-25", placedBy: "ops@astrolaabh.house", consultationId: "cons_002", recommendationId: "rec_002",
   },
   {
     id: "AL-ORD-003", customerId: "cust_003", customerName: "Zara Sheikh",
@@ -30,7 +30,7 @@ export const MOCK_ORDERS: Order[] = [
     ],
     total: 558000, stage: 1, shopifyStatus: "unfulfilled", operationalStatus: "in_progress", paymentStatus: "paid",
     energisationStatus: "scheduled", energisationTier: "vishesh_anushthan", certificateStatus: "missing", affiliateCode: "SANDEEP108",
-    placedAt: "2026-07-10", updatedAt: "2026-08-02", consultationId: "cons_004", recommendationId: "rec_004",
+    placedAt: "2026-07-10", updatedAt: "2026-08-02", placedBy: "ops@astrolaabh.house", consultationId: "cons_004", recommendationId: "rec_004",
   },
   {
     id: "AL-ORD-005", customerId: "cust_005", customerName: "Kavya Menon",
@@ -98,7 +98,7 @@ export const MOCK_ORDERS: Order[] = [
     ],
     total: 257760, stage: 0, shopifyStatus: "unfulfilled", operationalStatus: "pending", paymentStatus: "pending",
     energisationStatus: "pending", energisationTier: "maha_abhishek", certificateStatus: "not_required", affiliateCode: "RAJENDRA7",
-    placedAt: "2026-08-06", updatedAt: "2026-08-06", consultationId: "cons_008",
+    placedAt: "2026-08-06", updatedAt: "2026-08-06", placedBy: "admin@astrolaabh.house", consultationId: "cons_008",
   },
   {
     id: "AL-ORD-013", customerId: "cust_006", customerName: "Vikram Singh Randhawa",

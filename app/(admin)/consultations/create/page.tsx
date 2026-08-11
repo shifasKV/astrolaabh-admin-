@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { PageHeader, Card, GoldBtn, GhostBtn, Select, Textarea, StepIndicator } from "@/components/ui";
+import { PageHeader, Card, GoldBtn, GhostBtn, SearchFilter, Input, Select, Textarea, StepIndicator } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_CUSTOMERS, EXPERT_PROFILES, getExpertDates, getExpertSlots } from "@/lib/mock";
 import type { ExpertProfile, TimeSlot } from "@/lib/mock";
@@ -16,28 +16,60 @@ const TYPES = [
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const DAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
 
-type Step = 1 | 2 | 3 | 4 | 5;
+type Step = "customer" | "schedule" | "review";
+
+const STEPS: { key: Step; label: string }[] = [
+  { key: "customer", label: "Customer" },
+  { key: "schedule", label: "Schedule" },
+  { key: "review", label: "Review" },
+];
 
 export default function CreateConsultationPage() {
   const router = useRouter();
-  const [step, setStep] = useState<Step>(1);
+  const [step, setStep] = useState<Step>("customer");
+  const [search, setSearch] = useState("");
+  const [animating, setAnimating] = useState(false);
+  const [toast, setToast] = useState("");
 
+  // Customer
   const [customerId, setCustomerId] = useState("");
+  const [showNewCustomer, setShowNewCustomer] = useState(false);
+  const [newCustomer, setNewCustomer] = useState({ name: "", email: "", phone: "" });
+  const [createdCustomer, setCreatedCustomer] = useState<{ id: string; name: string; email: string; phone: string } | null>(null);
+
+  // Details
   const [type, setType] = useState("initial");
   const [problem, setProblem] = useState("");
 
+  // Schedule
   const [selectedExpert, setSelectedExpert] = useState<ExpertProfile | null>(null);
-
   const [selectedDate, setSelectedDate] = useState("");
   const [viewYear, setViewYear] = useState(new Date().getFullYear());
   const [viewMonth, setViewMonth] = useState(new Date().getMonth());
-
   const [selectedSlot, setSelectedSlot] = useState("");
-  const [toast, setToast] = useState("");
 
-  const customerName = MOCK_CUSTOMERS.find((c) => c.id === customerId)?.name ?? "";
+  // Review editable fields
+  const [editFee, setEditFee] = useState("");
+  const [discount, setDiscount] = useState("");
+
+  const selectedCustomer = createdCustomer ?? MOCK_CUSTOMERS.find((c) => c.id === customerId);
+  const customerName = selectedCustomer?.name ?? "";
   const availableDates = selectedExpert ? getExpertDates(selectedExpert.id) : [];
   const slotsForDate = selectedExpert && selectedDate ? getExpertSlots(selectedExpert.id, selectedDate) : [];
+
+  const stepIndex = STEPS.findIndex((s) => s.key === step);
+
+  const canNavigateTo = (targetIndex: number) => {
+    if (targetIndex === 0) return true;
+    if (targetIndex === 1) return !!customerId || !!createdCustomer;
+    if (targetIndex === 2) return (!!customerId || !!createdCustomer) && !!selectedExpert && !!selectedDate && !!selectedSlot;
+    return false;
+  };
+
+  const goTo = (target: Step) => {
+    setAnimating(true);
+    setTimeout(() => { setStep(target); setAnimating(false); }, 180);
+  };
 
   const handleCreate = () => {
     setToast("Consultation created successfully");
@@ -45,6 +77,23 @@ export default function CreateConsultationPage() {
     router.push("/consultations");
   };
 
+  const selectCustomer = (id: string) => {
+    setCustomerId(id);
+    setCreatedCustomer(null);
+    setSearch("");
+  };
+
+  const handleCreateCustomer = () => {
+    if (!newCustomer.name || !newCustomer.phone) return;
+    const id = `cust_new_${Date.now()}`;
+    setCreatedCustomer({ id, ...newCustomer });
+    setCustomerId(id);
+    setShowNewCustomer(false);
+    setSearch("");
+    goTo("schedule");
+  };
+
+  // Calendar helpers
   const firstDay = new Date(viewYear, viewMonth, 1).getDay();
   const offset = firstDay === 0 ? 6 : firstDay - 1;
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
@@ -80,14 +129,6 @@ export default function CreateConsultationPage() {
     setSelectedSlot(slot.time);
   };
 
-  const STEPS = [
-    { key: "details", label: "Details" },
-    { key: "expert", label: "Expert" },
-    { key: "date", label: "Date" },
-    { key: "slot", label: "Slot" },
-    { key: "review", label: "Review" },
-  ];
-
   return (
     <>
       <PageHeader
@@ -98,207 +139,320 @@ export default function CreateConsultationPage() {
 
       <StepIndicator
         steps={STEPS}
-        currentIndex={step - 1}
-        onNavigate={(i) => { if (i < step - 1) setStep((i + 1) as Step); }}
-        canNavigateTo={(i) => i < step - 1}
+        currentIndex={stepIndex}
+        onNavigate={(i) => goTo(STEPS[i].key)}
+        canNavigateTo={canNavigateTo}
       />
 
-      {/* Step 1: Customer + Type + Problem */}
-      {step === 1 && (
-        <Card>
-          <div className="max-w-lg space-y-4">
-            <Select
-              value={customerId}
-              onChange={setCustomerId}
-              label="Customer"
-              searchable
-              placeholder="Select customer…"
-              options={[
-                { value: "", label: "Select customer…" },
-                ...MOCK_CUSTOMERS.map((c) => ({ value: c.id, label: `${c.name} (${c.email})` })),
-              ]}
-            />
-            <Select value={type} onChange={setType} label="Consultation type" options={TYPES} />
-            <Textarea
-              value={problem}
-              onChange={setProblem}
-              label="Problem statement / reason"
-              placeholder="Brief description of what the customer needs…"
-            />
-            <div className="pt-3">
-              <GoldBtn onClick={() => setStep(2)} disabled={!customerId}>Continue</GoldBtn>
-            </div>
-          </div>
-        </Card>
-      )}
-
-      {/* Step 2: Expert Selection */}
-      {step === 2 && (
-        <div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {EXPERT_PROFILES.map((ep) => (
+      <div
+        className="transition-all duration-200"
+        style={{
+          opacity: animating ? 0 : 1,
+          transform: animating ? "translateY(8px)" : "translateY(0)",
+        }}
+      >
+        {/* STEP: Customer */}
+        {step === "customer" && (
+          <Card>
+            <div className="flex items-center justify-between mb-3">
+              <div className="text-[11px] tracking-[0.08em] uppercase" style={{ color: T.faint }}>Select customer</div>
               <button
-                key={ep.id}
-                type="button"
-                onClick={() => { setSelectedExpert(ep); setSelectedDate(""); setSelectedSlot(""); }}
-                className="text-left rounded-[12px] p-5 transition-all hover:scale-[1.02] cursor-pointer"
-                style={{
-                  background: T.card,
-                  border: `1px solid ${selectedExpert?.id === ep.id ? T.accent : T.border}`,
-                  boxShadow: selectedExpert?.id === ep.id ? "0 0 0 1px rgba(195,160,88,0.3)" : "none",
-                }}
+                onClick={() => setShowNewCustomer(true)}
+                className="text-[12px] font-medium cursor-pointer transition-opacity hover:opacity-80"
+                style={{ color: T.accent }}
               >
-                <div className="text-[14px] font-semibold mb-1" style={{ color: T.text }}>{ep.name}</div>
-                <div className="text-[12px] mb-2" style={{ color: T.muted }}>{ep.specialization}</div>
-                <div className="flex items-center gap-3 text-[11px]" style={{ color: T.faint }}>
-                  <span>{ep.experience}</span>
-                  <span>•</span>
-                  <span>{ep.languages.join(", ")}</span>
-                </div>
-                <div className="mt-3 text-[13px] font-semibold" style={{ color: T.accent }}>
-                  ₹{ep.fee.toLocaleString("en-IN")}
-                </div>
+                + New customer
               </button>
-            ))}
-          </div>
-          {selectedExpert && (
-            <div className="mt-4 pt-3 flex justify-end" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
-              <GoldBtn onClick={() => setStep(3)}>Next →</GoldBtn>
             </div>
-          )}
-        </div>
-      )}
 
-      {/* Step 3: Date Selection (Calendar) */}
-      {step === 3 && selectedExpert && (
-        <Card>
-          <div className="text-[12px] mb-4" style={{ color: T.muted }}>
-            Select a date for <span style={{ color: T.text }}>{selectedExpert.name}</span>
-          </div>
-          <div className="max-w-[320px]">
-            <div className="flex items-center justify-between mb-4">
-              <button type="button" onClick={prevMonth} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-[rgba(195,160,88,0.1)]" style={{ color: T.muted }}>‹</button>
-              <span className="text-[13px] font-medium" style={{ color: T.text }}>{MONTHS[viewMonth]} {viewYear}</span>
-              <button type="button" onClick={nextMonth} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-[rgba(195,160,88,0.1)]" style={{ color: T.muted }}>›</button>
-            </div>
-            <div className="grid grid-cols-7 gap-1 mb-2">
-              {DAYS.map((d) => (
-                <div key={d} className="text-center text-[10px] py-1" style={{ color: T.faint }}>{d}</div>
-              ))}
-            </div>
-            <div className="grid grid-cols-7 gap-1">
-              {Array.from({ length: offset }).map((_, i) => <div key={`e${i}`} />)}
-              {Array.from({ length: daysInMonth }).map((_, i) => {
-                const day = i + 1;
-                const available = isDateAvailable(day);
-                const selected = isDateSelected(day);
-                return (
+            {showNewCustomer ? (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[12px] font-medium" style={{ color: T.accent }}>Add new customer</span>
+                  <button onClick={() => setShowNewCustomer(false)} className="text-[11px] cursor-pointer" style={{ color: T.muted }}>← Back to list</button>
+                </div>
+                <Input
+                  value={newCustomer.name}
+                  onChange={(v) => setNewCustomer((p) => ({ ...p, name: v }))}
+                  label="Full name"
+                  placeholder="e.g. Priya Sharma"
+                />
+                <Input
+                  value={newCustomer.email}
+                  onChange={(v) => setNewCustomer((p) => ({ ...p, email: v }))}
+                  label="Email"
+                  placeholder="e.g. priya@example.com"
+                />
+                <Input
+                  value={newCustomer.phone}
+                  onChange={(v) => setNewCustomer((p) => ({ ...p, phone: v }))}
+                  label="Mobile number"
+                  placeholder="e.g. +91 98765 43210"
+                />
+                <div className="max-w-lg space-y-3 mt-3">
+                  <Select value={type} onChange={setType} label="Consultation type" options={TYPES} />
+                  <Textarea
+                    value={problem}
+                    onChange={setProblem}
+                    label="Problem statement / reason"
+                    placeholder="Brief description of what the customer needs…"
+                  />
+                </div>
+                <div className="flex gap-2.5 pt-2">
+                  <GoldBtn onClick={handleCreateCustomer}>Create & continue</GoldBtn>
+                  <GhostBtn onClick={() => setShowNewCustomer(false)}>Cancel</GhostBtn>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="mb-3">
+                  <SearchFilter search={search} onSearchChange={setSearch} placeholder="Search name, email…" />
+                </div>
+                <div className="max-h-[300px] overflow-y-auto">
+                  {MOCK_CUSTOMERS.filter((c) => !search || c.name.toLowerCase().includes(search.toLowerCase()) || c.email.toLowerCase().includes(search.toLowerCase())).map((c) => (
+                    <button
+                      key={c.id}
+                      onClick={() => selectCustomer(c.id)}
+                      className="w-full flex items-center justify-between py-3 px-3 text-left rounded-[9px] transition-all duration-150 cursor-pointer hover:pl-4"
+                      style={{
+                        background: customerId === c.id ? "rgba(195,160,88,0.08)" : "transparent",
+                        borderBottom: `1px solid ${T.borderSoft}`,
+                      }}
+                    >
+                      <div>
+                        <div className="text-[13px] font-medium" style={{ color: T.text }}>{c.name}</div>
+                        <div className="text-[11.5px]" style={{ color: T.muted }}>{c.email} · {c.phone}</div>
+                      </div>
+                      {customerId === c.id && <span style={{ color: T.accent }}>✓</span>}
+                    </button>
+                  ))}
+                </div>
+                {customerId && (
+                  <div className="max-w-lg space-y-3 mt-4 pt-3" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+                    <Select value={type} onChange={setType} label="Consultation type" options={TYPES} />
+                    <Textarea
+                      value={problem}
+                      onChange={setProblem}
+                      label="Problem statement / reason"
+                      placeholder="Brief description of what the customer needs…"
+                    />
+                  </div>
+                )}
+              </>
+            )}
+            {customerId && !showNewCustomer && (
+              <div className="mt-4 pt-3 flex justify-end" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+                <GoldBtn onClick={() => goTo("schedule")}>Next →</GoldBtn>
+              </div>
+            )}
+          </Card>
+        )}
+
+        {/* STEP: Schedule (Expert + Date + Slot combined) */}
+        {step === "schedule" && (
+          <div className="space-y-5">
+            {/* Expert selection */}
+            <Card>
+              <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.faint }}>Choose expert</div>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {EXPERT_PROFILES.map((ep) => (
                   <button
-                    key={day}
+                    key={ep.id}
                     type="button"
-                    onClick={() => selectDay(day)}
-                    disabled={!available}
-                    className="w-9 h-9 rounded-full flex items-center justify-center text-[12px] transition-colors disabled:cursor-not-allowed"
+                    onClick={() => { setSelectedExpert(ep); setSelectedDate(""); setSelectedSlot(""); }}
+                    className="text-left rounded-[12px] p-4 transition-all hover:scale-[1.02] cursor-pointer"
                     style={{
-                      background: selected ? T.accent : available ? "rgba(195,160,88,0.08)" : "transparent",
-                      color: selected ? T.accentInk : available ? T.text : T.faint,
-                      fontWeight: selected ? 700 : available ? 500 : 400,
-                      opacity: available ? 1 : 0.4,
+                      background: T.card,
+                      border: `1px solid ${selectedExpert?.id === ep.id ? T.accent : T.border}`,
+                      boxShadow: selectedExpert?.id === ep.id ? "0 0 0 1px rgba(195,160,88,0.3)" : "none",
                     }}
                   >
-                    {day}
+                    <div className="text-[14px] font-semibold mb-1" style={{ color: T.text }}>{ep.name}</div>
+                    <div className="text-[12px] mb-2" style={{ color: T.muted }}>{ep.specialization}</div>
+                    <div className="flex items-center gap-3 text-[11px]" style={{ color: T.faint }}>
+                      <span>{ep.experience}</span>
+                      <span>•</span>
+                      <span>{ep.languages.join(", ")}</span>
+                    </div>
+                    <div className="mt-3 text-[13px] font-semibold" style={{ color: T.accent }}>
+                      ₹{ep.fee.toLocaleString("en-IN")}
+                    </div>
                   </button>
-                );
-              })}
-            </div>
-            <div className="flex items-center gap-3 mt-4 text-[10.5px]" style={{ color: T.faint }}>
-              <span className="flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded-full" style={{ background: "rgba(195,160,88,0.2)" }} /> Available
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded-full opacity-40" style={{ background: T.border }} /> Unavailable
-              </span>
-            </div>
-            {selectedDate && (
-              <div className="mt-4 pt-3 flex justify-end" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
-                <GoldBtn onClick={() => setStep(4)}>Next →</GoldBtn>
+                ))}
               </div>
+            </Card>
+
+            {/* Date + Slot selection — visible once an expert is selected */}
+            {selectedExpert && (
+              <Card>
+                <div className="flex flex-col lg:flex-row gap-6">
+                  {/* Calendar */}
+                  <div className="flex-1">
+                    <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.faint }}>
+                      Select date for <span style={{ color: T.text }}>{selectedExpert.name}</span>
+                    </div>
+                    <div className="max-w-[320px]">
+                      <div className="flex items-center justify-between mb-4">
+                        <button type="button" onClick={prevMonth} className="w-8 h-8 rounded-full flex items-center justify-center cursor-pointer hover:bg-[rgba(195,160,88,0.1)]" style={{ color: T.muted }}>‹</button>
+                        <span className="text-[13px] font-medium" style={{ color: T.text }}>{MONTHS[viewMonth]} {viewYear}</span>
+                        <button type="button" onClick={nextMonth} className="w-8 h-8 rounded-full flex items-center justify-center cursor-pointer hover:bg-[rgba(195,160,88,0.1)]" style={{ color: T.muted }}>›</button>
+                      </div>
+                      <div className="grid grid-cols-7 gap-1 mb-2">
+                        {DAYS.map((d) => (
+                          <div key={d} className="text-center text-[10px] py-1" style={{ color: T.faint }}>{d}</div>
+                        ))}
+                      </div>
+                      <div className="grid grid-cols-7 gap-1">
+                        {Array.from({ length: offset }).map((_, i) => <div key={`e${i}`} />)}
+                        {Array.from({ length: daysInMonth }).map((_, i) => {
+                          const day = i + 1;
+                          const available = isDateAvailable(day);
+                          const selected = isDateSelected(day);
+                          return (
+                            <button
+                              key={day}
+                              type="button"
+                              onClick={() => selectDay(day)}
+                              disabled={!available}
+                              className="w-9 h-9 rounded-full flex items-center justify-center text-[12px] transition-colors disabled:cursor-not-allowed cursor-pointer"
+                              style={{
+                                background: selected ? T.accent : available ? "rgba(195,160,88,0.08)" : "transparent",
+                                color: selected ? T.accentInk : available ? T.text : T.faint,
+                                fontWeight: selected ? 700 : available ? 500 : 400,
+                                opacity: available ? 1 : 0.4,
+                              }}
+                            >
+                              {day}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <div className="flex items-center gap-3 mt-4 text-[10.5px]" style={{ color: T.faint }}>
+                        <span className="flex items-center gap-1.5">
+                          <span className="w-3 h-3 rounded-full" style={{ background: "rgba(195,160,88,0.2)" }} /> Available
+                        </span>
+                        <span className="flex items-center gap-1.5">
+                          <span className="w-3 h-3 rounded-full opacity-40" style={{ background: T.border }} /> Unavailable
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Slots — visible once a date is selected */}
+                  {selectedDate && (
+                    <div className="flex-1 lg:border-l lg:pl-6" style={{ borderColor: T.borderSoft }}>
+                      <div className="text-[11px] tracking-[0.08em] uppercase mb-2" style={{ color: T.faint }}>
+                        Available slots
+                      </div>
+                      <div className="text-[12px] mb-4" style={{ color: T.muted }}>
+                        {new Date(selectedDate).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                        {slotsForDate.map((slot) => (
+                          <button
+                            key={slot.time}
+                            type="button"
+                            onClick={() => selectSlot(slot)}
+                            disabled={!slot.available}
+                            className="py-2.5 px-3 rounded-[9px] text-[13px] font-medium transition-all disabled:cursor-not-allowed cursor-pointer tabular-nums"
+                            style={{
+                              background: selectedSlot === slot.time ? T.accent : slot.available ? T.panel : "transparent",
+                              border: `1px solid ${selectedSlot === slot.time ? T.accent : slot.available ? T.border : T.borderSoft}`,
+                              color: selectedSlot === slot.time ? T.accentInk : slot.available ? T.text : T.faint,
+                              opacity: slot.available ? 1 : 0.45,
+                            }}
+                          >
+                            {slot.time}
+                          </button>
+                        ))}
+                      </div>
+                      {slotsForDate.filter((s) => s.available).length === 0 && (
+                        <p className="text-[12.5px] mt-4" style={{ color: T.danger }}>No slots available on this date. Pick another date.</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {selectedSlot && (
+                  <div className="mt-5 pt-3 flex justify-end" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+                    <GoldBtn onClick={() => goTo("review")}>Next →</GoldBtn>
+                  </div>
+                )}
+              </Card>
             )}
           </div>
-        </Card>
-      )}
+        )}
 
-      {/* Step 4: Slot Selection */}
-      {step === 4 && selectedExpert && selectedDate && (
-        <Card>
-          <div className="text-[12px] mb-1" style={{ color: T.muted }}>
-            Available slots for <span style={{ color: T.text }}>{selectedExpert.name}</span>
-          </div>
-          <div className="text-[11px] mb-5" style={{ color: T.faint }}>
-            {new Date(selectedDate).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
-          </div>
-          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
-            {slotsForDate.map((slot) => (
-              <button
-                key={slot.time}
-                type="button"
-                onClick={() => selectSlot(slot)}
-                disabled={!slot.available}
-                className="py-3 px-3 rounded-[9px] text-[13px] font-medium transition-all disabled:cursor-not-allowed tabular-nums"
-                style={{
-                  background: selectedSlot === slot.time ? T.accent : slot.available ? T.panel : "transparent",
-                  border: `1px solid ${selectedSlot === slot.time ? T.accent : slot.available ? T.border : T.borderSoft}`,
-                  color: selectedSlot === slot.time ? T.accentInk : slot.available ? T.text : T.faint,
-                  opacity: slot.available ? 1 : 0.45,
-                }}
-              >
-                {slot.time}
-              </button>
-            ))}
-          </div>
-          {slotsForDate.filter((s) => s.available).length === 0 && (
-            <p className="text-[12.5px] mt-4" style={{ color: T.danger }}>No slots available on this date. Please go back and pick another date.</p>
-          )}
-          {selectedSlot && (
-            <div className="mt-4 pt-3 flex justify-end" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
-              <GoldBtn onClick={() => setStep(5)}>Next →</GoldBtn>
+        {/* STEP: Review */}
+        {step === "review" && selectedExpert && (
+          <Card>
+            <div className="text-[11px] tracking-[0.08em] uppercase mb-4" style={{ color: T.faint }}>Review booking</div>
+            <div className="space-y-3 text-[13px]">
+              {[
+                ["Customer", customerName],
+                ["Type", TYPES.find((t) => t.value === type)?.label ?? type],
+                ["Expert", selectedExpert.name],
+                ["Date", selectedDate ? new Date(selectedDate).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" }) : ""],
+                ["Time", selectedSlot],
+              ].map(([k, v]) => (
+                <div key={k} className="flex justify-between gap-3 py-1.5" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
+                  <span style={{ color: T.muted }}>{k}</span>
+                  <span className="text-right font-medium" style={{ color: T.text }}>{v}</span>
+                </div>
+              ))}
+              <div className="flex justify-between items-center py-1.5" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
+                <span style={{ color: T.muted }}>Fee</span>
+                <div className="flex items-center gap-1 rounded-md px-2 py-1" style={{ background: "rgba(235,230,215,0.04)", border: `1px solid rgba(235,230,215,0.1)` }}>
+                  <span className="text-[12px]" style={{ color: T.faint }}>₹</span>
+                  <input
+                    type="text"
+                    value={editFee || String(selectedExpert.fee)}
+                    onChange={(e) => setEditFee(e.target.value)}
+                    className="text-right font-semibold tabular-nums bg-transparent border-none outline-none w-[100px] text-[13px]"
+                    style={{ color: T.text }}
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-between items-center py-1.5" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
+                <span style={{ color: T.muted }}>Discount</span>
+                <div className="flex items-center gap-1 rounded-md px-2 py-1" style={{ background: "rgba(235,230,215,0.04)", border: `1px solid rgba(235,230,215,0.1)` }}>
+                  <input
+                    type="text"
+                    value={discount}
+                    onChange={(e) => setDiscount(e.target.value)}
+                    className="text-right tabular-nums bg-transparent border-none outline-none w-[100px] text-[13px]"
+                    style={{ color: T.danger || "#e55" }}
+                    placeholder="0"
+                  />
+                  <span className="text-[12px]" style={{ color: T.faint }}>%</span>
+                </div>
+              </div>
+              <div className="flex justify-between py-2">
+                <span className="font-medium" style={{ color: T.text }}>Total</span>
+                <span className="text-[15px] font-semibold tabular-nums" style={{ color: T.text }}>
+                  {(() => {
+                    const fee = Number(editFee) || selectedExpert.fee;
+                    const discPct = Math.min(100, Math.max(0, Number(discount) || 0));
+                    return `₹${Math.max(0, Math.round(fee - (fee * discPct / 100))).toLocaleString("en-IN")}`;
+                  })()}
+                </span>
+              </div>
+              {problem && (
+                <div className="pt-2">
+                  <div className="text-[10px] tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>Problem</div>
+                  <p className="text-[12.5px]" style={{ color: T.text }}>{problem}</p>
+                </div>
+              )}
             </div>
-          )}
-        </Card>
-      )}
-
-      {/* Step 5: Review */}
-      {step === 5 && selectedExpert && (
-        <Card>
-          <div className="text-[11px] tracking-[0.08em] uppercase mb-4" style={{ color: T.faint }}>Review booking</div>
-          <div className="space-y-3 text-[13px] max-w-md">
-            {[
-              ["Customer", customerName],
-              ["Type", TYPES.find((t) => t.value === type)?.label ?? type],
-              ["Expert", selectedExpert.name],
-              ["Date", selectedDate ? new Date(selectedDate).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" }) : ""],
-              ["Time", selectedSlot],
-              ["Fee", `₹${selectedExpert.fee.toLocaleString("en-IN")}`],
-            ].map(([k, v]) => (
-              <div key={k} className="flex justify-between gap-3 py-1.5" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
-                <span style={{ color: T.muted }}>{k}</span>
-                <span className="text-right font-medium" style={{ color: T.text }}>{v}</span>
-              </div>
-            ))}
-            {problem && (
-              <div className="pt-2">
-                <div className="text-[10px] tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>Problem</div>
-                <p className="text-[12.5px]" style={{ color: T.text }}>{problem}</p>
-              </div>
-            )}
-          </div>
-          <div className="flex gap-2.5 mt-6">
-            <GoldBtn onClick={handleCreate}>Book consultation</GoldBtn>
-            <GhostBtn onClick={() => router.push("/consultations")}>Cancel</GhostBtn>
-          </div>
-          <p className="text-[11px] mt-3" style={{ color: T.faint }}>Payment link will be sent to the customer. Consultation is confirmed once paid.</p>
-        </Card>
-      )}
+            <div className="flex gap-2.5 mt-6">
+              <GoldBtn onClick={handleCreate}>Book consultation</GoldBtn>
+              <GhostBtn onClick={() => router.push("/consultations")}>Cancel</GhostBtn>
+            </div>
+            <p className="text-[11px] mt-3" style={{ color: T.faint }}>Payment link will be sent to the customer. Consultation is confirmed once paid.</p>
+          </Card>
+        )}
+      </div>
 
       {toast && (
         <div

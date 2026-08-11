@@ -29,11 +29,11 @@ export const T = {
 export type ThemeColor = keyof typeof T;
 
 export const STATUS_COLORS = {
-  gold: { border: "rgba(195,160,88,0.4)", color: T.accent, bg: "rgba(0,0,0,0.2)" },
-  good: { border: "rgba(142,160,109,0.4)", color: T.good, bg: "rgba(0,0,0,0.2)" },
-  muted: { border: T.border, color: T.muted, bg: "rgba(0,0,0,0.2)" },
-  danger: { border: "rgba(176,84,84,0.4)", color: T.danger, bg: "rgba(0,0,0,0.2)" },
-  info: { border: "rgba(109,142,160,0.4)", color: T.info, bg: "rgba(0,0,0,0.2)" },
+  gold:   { color: T.accent, bg: "rgba(195,160,88,0.14)" },
+  good:   { color: T.good,   bg: "rgba(142,160,109,0.14)" },
+  muted:  { color: T.muted,  bg: "rgba(235,230,215,0.06)" },
+  danger: { color: T.danger, bg: "rgba(176,84,84,0.14)" },
+  info:   { color: T.info,   bg: "rgba(109,142,160,0.14)" },
 } as const;
 
 export type StatusTone = keyof typeof STATUS_COLORS;

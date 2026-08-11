@@ -57,6 +57,7 @@ export const ADMIN_NAV: NavGroup[] = [
   {
     label: "System",
     items: [
+      { key: "payments", label: "Payments", href: "/payments", icon: ICONS.payments },
       { key: "notifications", label: "Notifications", href: "/notifications", icon: ICONS.notifications },
     ],
   },

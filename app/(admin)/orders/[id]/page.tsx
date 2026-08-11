@@ -118,7 +118,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               </span>
             )}
             <a href="https://admin.shopify.com/orders" target="_blank" rel="noopener" className="inline-flex items-center gap-1.5 text-[12px] px-3 py-1.5 rounded-[8px]" style={{ border: `1px solid ${T.border}`, color: T.good }}>
-              Open in Shopify ↗
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: T.good }} /> Open in Shopify ↗
             </a>
           </div>
         }

@@ -25,7 +25,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const navWithBadge = useMemo(() => ADMIN_NAV.map((g) => ({
     ...g,
-    items: g.items.map((it) => it.key === "notifications" ? { ...it, badge: unreadCount } : it),
+    items: g.items.map((it) => {
+      if (it.key === "notifications") return { ...it, badge: unreadCount };
+      return it;
+    }),
   })), [unreadCount]);
 
   const allItems = navWithBadge.flatMap((g) => g.items);

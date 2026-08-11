@@ -28,6 +28,7 @@ export default function EnergisationDetailPage({ params }: { params: Promise<{ i
   const [formNotes, setFormNotes] = useState("");
   const [formLiveLink, setFormLiveLink] = useState("");
   const [editingLinks, setEditingLinks] = useState(false);
+  const [toast, setToast] = useState("");
   const [editLiveLink, setEditLiveLink] = useState("");
   const [editProofUrl, setEditProofUrl] = useState("");
   const [editNotes, setEditNotes] = useState("");
@@ -243,22 +244,35 @@ export default function EnergisationDetailPage({ params }: { params: Promise<{ i
             ) : null}
           </div>
           {localLiveLink ? (
-            <a
-              href={localLiveLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-3 rounded-[9px] p-3 transition-all duration-200 hover:brightness-110"
-              style={{ background: "rgba(142,160,109,0.06)", border: `1px solid rgba(142,160,109,0.15)` }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: "rgba(142,160,109,0.15)" }}>
-                <span className="text-[14px]">▶</span>
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="text-[12px] font-medium truncate" style={{ color: T.good }}>{localLiveLink}</div>
-                <div className="text-[10.5px] mt-0.5" style={{ color: T.muted }}>Live consultation link</div>
-              </div>
-            </a>
+            <div className="flex items-center gap-2">
+              <a
+                href={localLiveLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 rounded-[9px] p-3 transition-all duration-200 hover:brightness-110 flex-1 min-w-0"
+                style={{ background: "rgba(142,160,109,0.06)", border: `1px solid rgba(142,160,109,0.15)` }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: "rgba(142,160,109,0.15)" }}>
+                  <span className="text-[14px]">▶</span>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[12px] font-medium truncate" style={{ color: T.good }}>{localLiveLink}</div>
+                  <div className="text-[10.5px] mt-0.5" style={{ color: T.muted }}>Live consultation link</div>
+                </div>
+              </a>
+              <button
+                onClick={() => { navigator.clipboard.writeText(localLiveLink); setToast("Link copied to clipboard"); setTimeout(() => setToast(""), 3000); }}
+                className="shrink-0 w-9 h-9 rounded-[9px] flex items-center justify-center transition-all duration-150 cursor-pointer hover:brightness-125"
+                style={{ background: "rgba(142,160,109,0.06)", border: `1px solid rgba(142,160,109,0.15)` }}
+                title="Copy link"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: T.good }}>
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                </svg>
+              </button>
+            </div>
           ) : (
             <div className="text-[12.5px] py-2" style={{ color: T.faint }}>No session link uploaded yet</div>
           )}
@@ -304,6 +318,16 @@ export default function EnergisationDetailPage({ params }: { params: Promise<{ i
           <GhostBtn onClick={() => setAction(null)}>Cancel</GhostBtn>
         </div>
       </Modal>
+
+      {toast && (
+        <div
+          className="fixed top-6 right-6 z-[100] flex items-center gap-2 px-4 py-3 rounded-[10px] shadow-lg text-[13px] font-medium animate-in"
+          style={{ background: T.card, border: `1px solid ${T.border}`, color: T.good }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6L9 17l-5-5"/></svg>
+          {toast}
+        </div>
+      )}
 
     </>
   );

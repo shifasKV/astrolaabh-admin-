@@ -178,21 +178,34 @@ export default function ConsultationDetailPage({ params }: { params: Promise<{ i
             ) : null}
           </div>
           {localMeetingLink ? (
-            <a
-              href={localMeetingLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-3 rounded-[9px] p-3 transition-all duration-200 hover:brightness-110"
-              style={{ background: "rgba(142,160,109,0.06)", border: `1px solid rgba(142,160,109,0.15)` }}
-            >
-              <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: "rgba(142,160,109,0.15)" }}>
-                <span className="text-[14px]">▶</span>
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="text-[12px] font-medium truncate" style={{ color: T.good }}>{localMeetingLink}</div>
-                <div className="text-[10.5px] mt-0.5" style={{ color: T.muted }}>Google Meet link</div>
-              </div>
-            </a>
+            <div className="flex items-center gap-2">
+              <a
+                href={localMeetingLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 rounded-[9px] p-3 transition-all duration-200 hover:brightness-110 flex-1 min-w-0"
+                style={{ background: "rgba(142,160,109,0.06)", border: `1px solid rgba(142,160,109,0.15)` }}
+              >
+                <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: "rgba(142,160,109,0.15)" }}>
+                  <span className="text-[14px]">▶</span>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[12px] font-medium truncate" style={{ color: T.good }}>{localMeetingLink}</div>
+                  <div className="text-[10.5px] mt-0.5" style={{ color: T.muted }}>Google Meet link</div>
+                </div>
+              </a>
+              <button
+                onClick={() => { navigator.clipboard.writeText(localMeetingLink); setToast("Link copied to clipboard"); setTimeout(() => setToast(""), 3000); }}
+                className="shrink-0 w-9 h-9 rounded-[9px] flex items-center justify-center transition-all duration-150 cursor-pointer hover:brightness-125"
+                style={{ background: "rgba(142,160,109,0.06)", border: `1px solid rgba(142,160,109,0.15)` }}
+                title="Copy link"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: T.good }}>
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                </svg>
+              </button>
+            </div>
           ) : null}
         </Card>
       )}

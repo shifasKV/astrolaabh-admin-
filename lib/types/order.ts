@@ -43,6 +43,7 @@ export const OrderSchema = z.object({
   recommendationId: z.string().optional(),
   placedAt: z.string(),
   updatedAt: z.string(),
+  placedBy: z.string().optional(),
   notes: z.string().optional(),
   returnStatus: z.enum(["requested", "approved", "in_transit", "received", "settled"]).optional(),
 });
