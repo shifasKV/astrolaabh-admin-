@@ -134,7 +134,7 @@ export default function CreateCustomerPage() {
             </div>
 
             {createdCustomer && (
-              <div className="text-[12px] mb-4 px-3 py-2 rounded-[8px]" style={{ background: "rgba(195,160,88,0.04)", color: T.muted }}>
+              <div className="text-[12px] mb-4 px-3 py-2 rounded-[8px]" style={{ background: "rgba(160,125,56,0.10)", color: T.muted }}>
                 Adding address for <span style={{ color: T.text }}>{createdCustomer.name}</span>
               </div>
             )}
@@ -184,7 +184,7 @@ export default function CreateCustomerPage() {
               </div>
             ) : (
               <div className="text-center py-8">
-                <p className="text-[13px] mb-2" style={{ color: T.muted }}>No saved addresses</p>
+                <p className="text-[13.5px] mb-2" style={{ color: T.muted }}>No saved addresses</p>
                 <button onClick={() => setShowNewAddress(true)} className="text-[12px] font-medium cursor-pointer" style={{ color: T.accent }}>+ Add new address</button>
               </div>
             )}
@@ -192,7 +192,7 @@ export default function CreateCustomerPage() {
             {selectedAddress && (
               <div className="mt-4 pt-3 flex items-center justify-between" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
                 <div className="text-[12px] truncate pr-4" style={{ color: T.muted }}>
-                  <span className="text-[10px] uppercase tracking-[0.06em] mr-2" style={{ color: T.faint }}>Address:</span>
+                  <span className="text-[11px] uppercase tracking-[0.06em] mr-2" style={{ color: T.faint }}>Address:</span>
                   {selectedAddress}
                 </div>
                 <GoldBtn onClick={handleSave}>Save customer</GoldBtn>
@@ -203,7 +203,7 @@ export default function CreateCustomerPage() {
       </div>
 
       {toast && (
-        <div className="fixed bottom-6 right-6 z-50 px-4 py-2.5 rounded-[9px] text-[13px] shadow-lg" style={{ background: T.good, color: "#fff" }}>
+        <div className="fixed bottom-6 right-6 z-50 px-4 py-2.5 rounded-[9px] text-[13.5px] shadow-lg" style={{ background: T.good, color: "#fff" }}>
           {toast}
         </div>
       )}

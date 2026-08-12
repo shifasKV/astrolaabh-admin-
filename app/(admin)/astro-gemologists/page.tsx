@@ -66,13 +66,13 @@ export default function AstroGemologistsPage() {
                     </span>
                     <div>
                       <div className="text-[14px] font-semibold" style={{ color: T.text }}>{expert.name}</div>
-                      <div className="text-[12.5px] mt-0.5" style={{ color: T.muted }}>{expert.specialization}</div>
+                      <div className="text-[13px] mt-0.5" style={{ color: T.muted }}>{expert.specialization}</div>
                       <div className="flex items-center gap-2 mt-1.5">
-                        <span className="text-[11.5px]" style={{ color: T.faint }}>{expert.experience}</span>
-                        <span className="text-[11.5px]" style={{ color: T.faint }}>·</span>
-                        <span className="text-[11.5px]" style={{ color: T.faint }}>{expert.languages.join(", ")}</span>
-                        <span className="text-[11.5px]" style={{ color: T.faint }}>·</span>
-                        <span className="text-[11.5px]" style={{ color: T.faint }}>{inr(expert.fee)}/session</span>
+                        <span className="text-[12px]" style={{ color: T.faint }}>{expert.experience}</span>
+                        <span className="text-[12px]" style={{ color: T.faint }}>·</span>
+                        <span className="text-[12px]" style={{ color: T.faint }}>{expert.languages.join(", ")}</span>
+                        <span className="text-[12px]" style={{ color: T.faint }}>·</span>
+                        <span className="text-[12px]" style={{ color: T.faint }}>{inr(expert.fee)}/session</span>
                       </div>
                     </div>
                   </div>

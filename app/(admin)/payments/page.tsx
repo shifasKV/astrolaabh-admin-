@@ -134,7 +134,7 @@ export default function PaymentsPage() {
             className="rounded-[12px] p-4"
             style={{ background: T.card, border: `1px solid ${T.border}` }}
           >
-            <div className="text-[10px] tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>{s.label}</div>
+            <div className="text-[11px] tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>{s.label}</div>
             <div className="text-[18px] font-semibold tabular-nums" style={{ color: s.color }}>{s.value}</div>
           </div>
         ))}
@@ -194,8 +194,8 @@ export default function PaymentsPage() {
         <div className="relative">
           <button
             onClick={() => setShowDatePicker(!showDatePicker)}
-            className="h-9 px-3.5 rounded-[9px] text-[13px] flex items-center gap-2 cursor-pointer transition-all"
-            style={{ background: T.panel, border: `1px solid ${(filterDateFrom || filterDateTo) ? T.accentBorder : T.border}`, color: T.text }}
+            className="h-9 px-3.5 rounded-[9px] text-[13.5px] flex items-center gap-2 cursor-pointer transition-all"
+            style={{ background: T.popover, border: `1px solid ${(filterDateFrom || filterDateTo) ? T.accentBorder : T.border}`, color: T.text }}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
               <rect x="3" y="4" width="18" height="17" rx="2" /><path d="M8 2v4M16 2v4M3 9h18" />
@@ -211,7 +211,7 @@ export default function PaymentsPage() {
               <div className="fixed inset-0 z-40" onClick={() => setShowDatePicker(false)} />
               <div
                 className="absolute top-full left-0 mt-1 z-50 flex rounded-[9px] shadow-lg overflow-hidden"
-                style={{ background: T.panel, border: `1px solid ${T.border}` }}
+                style={{ background: T.popover, border: `1px solid ${T.border}` }}
               >
                 {/* Quick selects */}
                 <div className="w-[130px] py-2 px-1.5 shrink-0" style={{ borderRight: `1px solid ${T.borderSoft}` }}>
@@ -225,7 +225,7 @@ export default function PaymentsPage() {
                     <button
                       key={preset.label}
                       onClick={() => { setFilterDateFrom(preset.from); setFilterDateTo(preset.to); setShowDatePicker(false); }}
-                      className="w-full text-left px-2.5 py-2 rounded-[7px] text-[12px] transition-colors cursor-pointer hover:bg-[rgba(195,160,88,0.06)]"
+                      className="w-full text-left px-2.5 py-2 rounded-[7px] text-[12px] transition-colors cursor-pointer hover:bg-[rgba(160,125,56,0.10)]"
                       style={{ color: T.text }}
                     >
                       {preset.label}
@@ -272,7 +272,7 @@ export default function PaymentsPage() {
                     <button
                       type="button"
                       onClick={() => { if (dpMonth === 0) { setDpMonth(11); setDpYear((y) => y - 1); } else setDpMonth((m) => m - 1); }}
-                      className="w-6 h-6 rounded-full flex items-center justify-center cursor-pointer hover:bg-[rgba(195,160,88,0.1)]"
+                      className="w-6 h-6 rounded-full flex items-center justify-center cursor-pointer hover:bg-[rgba(160,125,56,0.15)]"
                       style={{ color: T.muted }}
                     >‹</button>
                     <span className="text-[11px] font-medium" style={{ color: T.text }}>
@@ -281,7 +281,7 @@ export default function PaymentsPage() {
                     <button
                       type="button"
                       onClick={() => { if (dpMonth === 11) { setDpMonth(0); setDpYear((y) => y + 1); } else setDpMonth((m) => m + 1); }}
-                      className="w-6 h-6 rounded-full flex items-center justify-center cursor-pointer hover:bg-[rgba(195,160,88,0.1)]"
+                      className="w-6 h-6 rounded-full flex items-center justify-center cursor-pointer hover:bg-[rgba(160,125,56,0.15)]"
                       style={{ color: T.muted }}
                     >›</button>
                   </div>
@@ -317,7 +317,7 @@ export default function PaymentsPage() {
                           }}
                           className="w-[34px] h-[34px] rounded-full flex items-center justify-center text-[11px] transition-colors cursor-pointer"
                           style={{
-                            background: (isFrom || isTo) ? T.accent : inRange ? "rgba(195,160,88,0.12)" : "transparent",
+                            background: (isFrom || isTo) ? T.accent : inRange ? "rgba(160,125,56,0.16)" : "transparent",
                             color: (isFrom || isTo) ? T.accentInk : inRange ? T.text : T.text,
                             fontWeight: (isFrom || isTo) ? 700 : 400,
                           }}
@@ -362,7 +362,7 @@ export default function PaymentsPage() {
 
       <Card>
         {/* Table header */}
-        <div className="hidden sm:grid grid-cols-[1fr_110px_140px_130px_90px_120px] gap-3 px-3 py-2 text-[10px] tracking-[0.06em] uppercase" style={{ color: T.faint, borderBottom: `1px solid ${T.borderSoft}` }}>
+        <div className="hidden sm:grid grid-cols-[1fr_110px_140px_130px_90px_120px] gap-3 px-3 py-2 text-[11px] tracking-[0.06em] uppercase" style={{ color: T.faint, borderBottom: `1px solid ${T.borderSoft}` }}>
           <span>Details</span>
           <span>Type</span>
           <span>Date & Time</span>
@@ -372,7 +372,7 @@ export default function PaymentsPage() {
         </div>
 
         {filtered.length === 0 ? (
-          <p className="text-[13px] text-center py-6" style={{ color: T.muted }}>No transactions match.</p>
+          <p className="text-[13.5px] text-center py-6" style={{ color: T.muted }}>No transactions match.</p>
         ) : (
           paginated.map((p) => {
             const type = p.linkedOrderId ? "Order" : "Consultation";
@@ -387,13 +387,13 @@ export default function PaymentsPage() {
               <Link
                 key={p.id}
                 href={href || "#"}
-                className="group grid grid-cols-1 sm:grid-cols-[1fr_110px_140px_130px_90px_120px] gap-2 sm:gap-3 items-center px-3 py-3.5 transition-all duration-150 rounded-[8px] hover:bg-[rgba(195,160,88,0.03)]"
+                className="group grid grid-cols-1 sm:grid-cols-[1fr_110px_140px_130px_90px_120px] gap-2 sm:gap-3 items-center px-3 py-3.5 transition-all duration-150 rounded-[8px] hover:bg-[rgba(160,125,56,0.07)]"
                 style={{ borderBottom: `1px solid ${T.borderSoft}` }}
               >
                 {/* Details: ID first, then item name + customer */}
                 <div className="min-w-0">
-                  <div className="text-[13px] font-medium truncate" style={{ color: T.text }}>{itemName}</div>
-                  <div className="text-[11.5px] truncate mt-0.5" style={{ color: T.muted }}>
+                  <div className="text-[13.5px] font-medium truncate" style={{ color: T.text }}>{itemName}</div>
+                  <div className="text-[12px] truncate mt-0.5" style={{ color: T.muted }}>
                     <span className="group-hover:underline" style={{ color: T.accent }}>{refId}</span> · {p.customerName}
                   </div>
                 </div>
@@ -406,7 +406,7 @@ export default function PaymentsPage() {
                 {/* Date & Time */}
                 <div className="min-w-0">
                   <div className="text-[12px]" style={{ color: T.text }}>{formatDate(dateStr)}</div>
-                  {p.paidAt && <div className="text-[10.5px]" style={{ color: T.faint }}>{formatTime(p.paidAt)}</div>}
+                  {p.paidAt && <div className="text-[11px]" style={{ color: T.faint }}>{formatTime(p.paidAt)}</div>}
                 </div>
 
                 {/* Transaction ID */}
@@ -456,7 +456,7 @@ export default function PaymentsPage() {
               onClick={() => setPage(1)}
               disabled={currentPage === 1}
               className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[12px] transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-              style={{ background: T.panel, border: `1px solid ${T.borderSoft}`, color: T.muted }}
+              style={{ background: T.popover, border: `1px solid ${T.borderSoft}`, color: T.muted }}
             >
               «
             </button>
@@ -464,7 +464,7 @@ export default function PaymentsPage() {
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={currentPage === 1}
               className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[12px] transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-              style={{ background: T.panel, border: `1px solid ${T.borderSoft}`, color: T.muted }}
+              style={{ background: T.popover, border: `1px solid ${T.borderSoft}`, color: T.muted }}
             >
               ‹
             </button>
@@ -493,7 +493,7 @@ export default function PaymentsPage() {
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
               className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[12px] transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-              style={{ background: T.panel, border: `1px solid ${T.borderSoft}`, color: T.muted }}
+              style={{ background: T.popover, border: `1px solid ${T.borderSoft}`, color: T.muted }}
             >
               ›
             </button>
@@ -501,7 +501,7 @@ export default function PaymentsPage() {
               onClick={() => setPage(totalPages)}
               disabled={currentPage === totalPages}
               className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[12px] transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-              style={{ background: T.panel, border: `1px solid ${T.borderSoft}`, color: T.muted }}
+              style={{ background: T.popover, border: `1px solid ${T.borderSoft}`, color: T.muted }}
             >
               »
             </button>
@@ -511,7 +511,7 @@ export default function PaymentsPage() {
 
       {toast && (
         <div
-          className="fixed top-6 right-6 z-[100] flex items-center gap-2 px-4 py-3 rounded-[10px] shadow-lg text-[13px] font-medium animate-in"
+          className="fixed top-6 right-6 z-[100] flex items-center gap-2 px-4 py-3 rounded-[10px] shadow-lg text-[13.5px] font-medium animate-in"
           style={{ background: T.card, border: `1px solid ${T.border}`, color: T.good }}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6L9 17l-5-5"/></svg>

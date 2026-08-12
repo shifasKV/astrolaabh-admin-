@@ -174,15 +174,15 @@ export default function RecommendationsPage() {
           className="hidden sm:grid items-center gap-4 pb-3 mb-1"
           style={{ gridTemplateColumns: "1.4fr 1fr 0.8fr 0.8fr 1fr", borderBottom: `1px solid ${T.border}` }}
         >
-          <div className="text-[10.5px] tracking-[0.08em] uppercase" style={{ color: T.faint }}>Stone details</div>
-          <div className="text-[10.5px] tracking-[0.08em] uppercase" style={{ color: T.faint }}>Customer</div>
-          <div className="text-[10.5px] tracking-[0.08em] uppercase" style={{ color: T.faint }}>Appointment date</div>
-          <div className="text-[10.5px] tracking-[0.08em] uppercase" style={{ color: T.faint }}>Status</div>
-          <div className="text-[10.5px] tracking-[0.08em] uppercase text-right" style={{ color: T.faint }}>Order info</div>
+          <div className="text-[11px] tracking-[0.08em] uppercase" style={{ color: T.faint }}>Stone details</div>
+          <div className="text-[11px] tracking-[0.08em] uppercase" style={{ color: T.faint }}>Customer</div>
+          <div className="text-[11px] tracking-[0.08em] uppercase" style={{ color: T.faint }}>Appointment date</div>
+          <div className="text-[11px] tracking-[0.08em] uppercase" style={{ color: T.faint }}>Status</div>
+          <div className="text-[11px] tracking-[0.08em] uppercase text-right" style={{ color: T.faint }}>Order info</div>
         </div>
 
         {paginated.length === 0 ? (
-          <p className="text-[13px] text-center py-6" style={{ color: T.muted }}>No recommendations match your filters.</p>
+          <p className="text-[13.5px] text-center py-6" style={{ color: T.muted }}>No recommendations match your filters.</p>
         ) : (
           paginated.map((r) => {
             const appointmentDate = consultationMap.get(r.consultationId);
@@ -197,18 +197,18 @@ export default function RecommendationsPage() {
               >
                 {/* Stone details */}
                 <div className="min-w-0">
-                  <div className="text-[13.5px] font-medium" style={{ color: T.text }}>{r.gemstone}</div>
+                  <div className="text-[14px] font-medium" style={{ color: T.text }}>{r.gemstone}</div>
                 </div>
 
                 {/* Customer */}
                 <div className="min-w-0">
-                  <div className="text-[13px] font-medium" style={{ color: T.text }}>{r.customerName}</div>
+                  <div className="text-[13.5px] font-medium" style={{ color: T.text }}>{r.customerName}</div>
                 </div>
 
                 {/* Appointment date */}
                 <div className="shrink-0">
                   {appointmentDate ? (
-                    <div className="text-[13px] tabular-nums" style={{ color: T.text }}>{fmtDate(appointmentDate)}</div>
+                    <div className="text-[13.5px] tabular-nums" style={{ color: T.text }}>{fmtDate(appointmentDate)}</div>
                   ) : (
                     <span className="text-[12px]" style={{ color: T.faint }}>—</span>
                   )}
@@ -223,8 +223,8 @@ export default function RecommendationsPage() {
                 <div className="text-right min-w-0">
                   {order ? (
                     <>
-                      <div className="text-[13px] font-medium" style={{ color: T.accent }}>{order.id}</div>
-                      <div className="text-[11.5px] mt-0.5 tabular-nums" style={{ color: T.muted }}>
+                      <div className="text-[13.5px] font-medium" style={{ color: T.accent }}>{order.id}</div>
+                      <div className="text-[12px] mt-0.5 tabular-nums" style={{ color: T.muted }}>
                         Ordered {fmtDate(order.placedAt)}
                       </div>
                     </>
@@ -246,8 +246,8 @@ export default function RecommendationsPage() {
             Showing {(currentPage - 1) * PER_PAGE + 1}–{Math.min(currentPage * PER_PAGE, filtered.length)} of {filtered.length}
           </div>
           <div className="flex items-center gap-1">
-            <button onClick={() => setPage(1)} disabled={currentPage === 1} className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[12px] transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed" style={{ background: T.panel, border: `1px solid ${T.borderSoft}`, color: T.muted }}>«</button>
-            <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1} className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[12px] transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed" style={{ background: T.panel, border: `1px solid ${T.borderSoft}`, color: T.muted }}>‹</button>
+            <button onClick={() => setPage(1)} disabled={currentPage === 1} className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[12px] transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed" style={{ background: T.popover, border: `1px solid ${T.borderSoft}`, color: T.muted }}>«</button>
+            <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1} className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[12px] transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed" style={{ background: T.popover, border: `1px solid ${T.borderSoft}`, color: T.muted }}>‹</button>
             {Array.from({ length: totalPages }).map((_, i) => {
               const p = i + 1;
               if (totalPages > 7 && Math.abs(p - currentPage) > 2 && p !== 1 && p !== totalPages) {
@@ -258,8 +258,8 @@ export default function RecommendationsPage() {
                 <button key={p} onClick={() => setPage(p)} className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[12px] font-medium transition-all cursor-pointer" style={{ background: p === currentPage ? T.accent : T.panel, border: `1px solid ${p === currentPage ? T.accent : T.borderSoft}`, color: p === currentPage ? T.accentInk : T.text }}>{p}</button>
               );
             })}
-            <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[12px] transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed" style={{ background: T.panel, border: `1px solid ${T.borderSoft}`, color: T.muted }}>›</button>
-            <button onClick={() => setPage(totalPages)} disabled={currentPage === totalPages} className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[12px] transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed" style={{ background: T.panel, border: `1px solid ${T.borderSoft}`, color: T.muted }}>»</button>
+            <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[12px] transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed" style={{ background: T.popover, border: `1px solid ${T.borderSoft}`, color: T.muted }}>›</button>
+            <button onClick={() => setPage(totalPages)} disabled={currentPage === totalPages} className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[12px] transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed" style={{ background: T.popover, border: `1px solid ${T.borderSoft}`, color: T.muted }}>»</button>
           </div>
         </div>
       )}

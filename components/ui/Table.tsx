@@ -26,7 +26,7 @@ export function Table<R extends Record<string, unknown>>({
 }: TableProps<R>) {
   if (data.length === 0) {
     return (
-      <div className="py-10 text-center text-[13px]" style={{ color: T.muted }}>
+      <div className="py-10 text-center text-[13.5px]" style={{ color: T.muted }}>
         {emptyMessage}
       </div>
     );
@@ -34,14 +34,14 @@ export function Table<R extends Record<string, unknown>>({
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-[13px]">
+      <table className="w-full text-[13.5px]">
         <thead>
-          <tr style={{ borderBottom: `1px solid ${T.border}` }}>
+          <tr style={{ borderBottom: `1px solid ${T.border}`, background: "rgba(89,82,54,0.035)" }}>
             {columns.map((col) => (
               <th
                 key={col.key}
-                className="text-[10px] tracking-[0.08em] uppercase font-medium py-3 px-3 text-left"
-                style={{ color: T.faint, width: col.width, textAlign: col.align || "left" }}
+                className="text-[11px] tracking-[0.07em] uppercase font-semibold py-2.5 px-3 text-left first:rounded-l-[8px] last:rounded-r-[8px]"
+                style={{ color: T.muted, width: col.width, textAlign: col.align || "left" }}
               >
                 {col.label}
               </th>
@@ -53,13 +53,13 @@ export function Table<R extends Record<string, unknown>>({
             <tr
               key={String(row[keyField])}
               onClick={() => onRowClick?.(row)}
-              className={`${onRowClick ? "cursor-pointer hover:brightness-110" : ""} transition-colors`}
+              className={`${onRowClick ? "cursor-pointer hover:bg-[rgba(160,125,56,0.06)]" : ""} transition-colors`}
               style={{ borderBottom: `1px solid ${T.borderSoft}` }}
             >
               {columns.map((col) => (
                 <td
                   key={col.key}
-                  className="py-3 px-3"
+                  className="py-3.5 px-3 leading-snug"
                   style={{ color: T.text, textAlign: col.align || "left" }}
                 >
                   {col.render ? col.render(row) : String(row[col.key] ?? "")}

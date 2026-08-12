@@ -1,7 +1,7 @@
 "use client";
 import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import { PageHeader, Card, SearchFilter, Select, Chip, Modal, Input, GoldBtn, GhostBtn } from "@/components/ui";
+import { PageHeader, Card, SearchFilter, Select, Chip, Modal, Input, GoldBtn, GhostBtn, ShopifyIcon, ShopifyButton, SHOPIFY_GREEN_DARK, SHOPIFY_TINT, SHOPIFY_BORDER } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { STONES, DESIGNS, ENERGISATION, INTENTS, ZODIAC, inr as catalogInr } from "@/lib/catalog";
 import type { Stone, Design } from "@/lib/catalog";
@@ -55,6 +55,17 @@ const FORM_OPTIONS = [
   { value: "Bracelet", label: "Bracelet" },
 ];
 
+/* Design thumbnails — curated designs carry a real photo; generated ones
+   borrow deterministically from the house photo set for their form. */
+const DESIGN_IMG_COUNT: Record<string, number> = { Ring: 12, Pendant: 8, Bracelet: 6 };
+function designThumb(d: Design): string {
+  if (d.image && !d.image.endsWith("jewellery.svg")) return d.image;
+  const n = DESIGN_IMG_COUNT[d.form] ?? 6;
+  let h = 0;
+  for (const ch of d.slug) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return `/designs/${d.form.toLowerCase()}-${String((h % n) + 1).padStart(2, "0")}.png`;
+}
+
 const METAL_OPTIONS = [
   { value: "", label: "All metals" },
   { value: "22k gold", label: "22k Gold" },
@@ -68,15 +79,15 @@ function ToggleSwitch({ enabled, onToggle }: { enabled: boolean; onToggle: () =>
       onClick={(e) => { e.stopPropagation(); e.preventDefault(); onToggle(); }}
       className="relative inline-flex h-[22px] w-[40px] items-center rounded-full transition-colors duration-200"
       style={{
-        background: enabled ? `${T.accent}30` : "rgba(255,255,255,0.06)",
-        border: `1px solid ${enabled ? `${T.accent}60` : "rgba(255,255,255,0.12)"}`,
+        background: enabled ? `${T.accent}30` : "rgba(89,82,54,0.08)",
+        border: `1px solid ${enabled ? `${T.accent}60` : "rgba(89,82,54,0.18)"}`,
       }}
       title={enabled ? "Enabled — click to disable" : "Disabled — click to enable"}
     >
       <span
         className="inline-block h-[16px] w-[16px] rounded-full transition-transform duration-200"
         style={{
-          background: enabled ? T.accent : "rgba(255,255,255,0.25)",
+          background: enabled ? T.accent : "rgba(89,82,54,0.35)",
           transform: enabled ? "translateX(20px)" : "translateX(3px)",
         }}
       />
@@ -84,17 +95,20 @@ function ToggleSwitch({ enabled, onToggle }: { enabled: boolean; onToggle: () =>
   );
 }
 
-function ExternalLink({ href, label }: { href: string; label: string }) {
+function ExternalLink({ href, label, shopify }: { href: string; label: string; shopify?: boolean }) {
   return (
     <a
       href={href}
       target="_blank"
       rel="noopener"
       onClick={(e) => e.stopPropagation()}
-      className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-[6px] transition-colors hover:brightness-125"
-      style={{ border: `1px solid ${T.borderSoft}`, color: T.muted }}
+      className={`inline-flex items-center gap-1.5 text-[11px] px-2 py-1 rounded-[6px] transition-colors ${shopify ? "font-medium hover:bg-[rgba(149,191,71,0.12)]" : "hover:bg-[rgba(89,82,54,0.05)]"}`}
+      style={shopify
+        ? { border: `1px solid ${SHOPIFY_BORDER}`, color: SHOPIFY_GREEN_DARK }
+        : { border: `1px solid ${T.borderSoft}`, color: T.muted }}
     >
-      {label} <span className="text-[10px]">↗</span>
+      {shopify && <ShopifyIcon size={12} />}
+      {label} <span className="text-[11px]">↗</span>
     </a>
   );
 }
@@ -119,6 +133,9 @@ export default function InventoryPage() {
 
   const [form, setForm] = useState("");
   const [metal, setMetal] = useState("");
+
+  const [stoneSort, setStoneSort] = useState("");
+  const [designSort, setDesignSort] = useState("");
 
   const toggleStone = (sku: string) => {
     const wasDisabled = disabledStones.has(sku);
@@ -192,8 +209,14 @@ export default function InventoryPage() {
         if (match && s.planet !== match.planet) return false;
       }
       return true;
+    }).sort((a, b) => {
+      if (stoneSort === "price_asc") return a.price - b.price;
+      if (stoneSort === "price_desc") return b.price - a.price;
+      if (stoneSort === "ratti_asc") return a.ratti - b.ratti;
+      if (stoneSort === "ratti_desc") return b.ratti - a.ratti;
+      return 0;
     });
-  }, [search, stoneType, color, intentGem, zodiac]);
+  }, [search, stoneType, color, intentGem, zodiac, stoneSort]);
 
   const filteredDesigns = useMemo(() => {
     return DESIGNS.filter((d: Design) => {
@@ -204,8 +227,13 @@ export default function InventoryPage() {
       if (form && d.form !== form) return false;
       if (metal && d.metal !== metal) return false;
       return true;
+    }).sort((a, b) => {
+      if (designSort === "name_asc") return a.name.localeCompare(b.name);
+      if (designSort === "stock_asc") return a.remaining - b.remaining;
+      if (designSort === "stock_desc") return b.remaining - a.remaining;
+      return 0;
     });
-  }, [search, form, metal]);
+  }, [search, form, metal, designSort]);
 
   const pageTitle = tab === "stones" ? "Stones" : tab === "designs" ? "Jewellery Designs" : "Energisation Packages";
   const pageSub = tab === "stones"
@@ -220,10 +248,7 @@ export default function InventoryPage() {
         title={pageTitle}
         sub={pageSub}
         action={
-          <a href="https://admin.shopify.com/products" target="_blank" rel="noopener" className="inline-flex items-center gap-1.5 text-[12px] px-3 py-1.5 rounded-[8px]" style={{ border: `1px solid ${T.border}`, color: T.good }}>
-            <span className="w-1.5 h-1.5 rounded-full" style={{ background: T.good }} />
-            Open Shopify Products ↗
-          </a>
+          <ShopifyButton href="https://admin.shopify.com/products">Open Shopify Products</ShopifyButton>
         }
       />
 
@@ -248,6 +273,21 @@ export default function InventoryPage() {
           <div className="w-[150px]">
             <Select value={zodiac} onChange={setZodiac} options={ZODIAC_OPTIONS} compact searchable />
           </div>
+          <div className="w-[180px] ml-auto">
+            <Select
+              value={stoneSort}
+              onChange={setStoneSort}
+              compact
+              prefix="Sort: "
+              options={[
+                { value: "", label: "Featured" },
+                { value: "price_asc", label: "Price low to high" },
+                { value: "price_desc", label: "Price high to low" },
+                { value: "ratti_asc", label: "Weight low to high" },
+                { value: "ratti_desc", label: "Weight high to low" },
+              ]}
+            />
+          </div>
         </div>
       )}
 
@@ -259,6 +299,20 @@ export default function InventoryPage() {
           <div className="w-[150px]">
             <Select value={metal} onChange={setMetal} options={METAL_OPTIONS} compact />
           </div>
+          <div className="w-[190px] ml-auto">
+            <Select
+              value={designSort}
+              onChange={setDesignSort}
+              compact
+              prefix="Sort: "
+              options={[
+                { value: "", label: "Featured" },
+                { value: "name_asc", label: "Name A to Z" },
+                { value: "stock_asc", label: "Stock low to high" },
+                { value: "stock_desc", label: "Stock high to low" },
+              ]}
+            />
+          </div>
         </div>
       )}
 
@@ -268,15 +322,43 @@ export default function InventoryPage() {
             <div className="text-[11px] tracking-[0.08em] uppercase" style={{ color: T.faint }}>
               {filteredStones.length} stones
             </div>
-            <Chip tone="good">Synced · Shopify</Chip>
+            <span className="inline-flex items-center gap-1.5 text-[11px] tracking-[0.06em] font-medium px-2 py-[3px] rounded-[6px] whitespace-nowrap" style={{ color: SHOPIFY_GREEN_DARK, background: SHOPIFY_TINT }}><ShopifyIcon size={11} /> Synced · Shopify</span>
           </div>
-          {filteredStones.slice(0, 30).map((s) => (
-            <div key={s.sku} className="flex flex-wrap items-center gap-x-4 gap-y-1.5 py-3 text-[13px]" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
-              <span className="font-medium w-[110px]" style={{ color: T.text }}>{s.sku}</span>
-              <span className="w-[140px]" style={{ color: T.muted }}>{s.gemName} · {s.ratti}r</span>
-              <span className="tabular-nums text-[12.5px]" style={{ color: T.muted }}>{catalogInr(s.pricePerRatti)}/r · {catalogInr(s.price)}</span>
-              <span className="ml-auto flex items-center gap-3">
-                <ExternalLink href={`https://admin.shopify.com/products/${s.sku}`} label="Shopify" />
+          <div
+            className="hidden md:grid grid-cols-[minmax(200px,1.2fr)_100px_140px_130px_240px] gap-x-4 px-3 py-2.5 rounded-[8px] text-[11px] tracking-[0.07em] uppercase font-semibold"
+            style={{ color: T.muted, background: "rgba(89,82,54,0.035)" }}
+          >
+            <span>Stone</span>
+            <span className="text-right">Weight</span>
+            <span className="text-right">Price / ratti</span>
+            <span className="text-right">Total</span>
+            <span />
+          </div>
+          {filteredStones.slice(0, 30).map((s, i, arr) => (
+            <div
+              key={s.sku}
+              className="grid md:grid-cols-[minmax(200px,1.2fr)_100px_140px_130px_240px] grid-cols-1 gap-x-4 gap-y-1.5 items-center px-3 py-3 text-[13.5px]"
+              style={{ borderBottom: i < Math.min(arr.length, 30) - 1 ? `1px solid ${T.borderSoft}` : "none" }}
+            >
+              <span className="flex items-center gap-3 min-w-0">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={`/gems/${s.gem}.png`}
+                  alt={s.gemName}
+                  className="w-9 h-9 rounded-[8px] object-cover shrink-0"
+                  style={{ border: `1px solid ${T.borderSoft}` }}
+                  loading="lazy"
+                />
+                <span className="min-w-0">
+                  <span className="block font-medium truncate" style={{ color: T.text }}>{s.gemName}</span>
+                  <span className="block text-[11px] tracking-[0.05em] uppercase tabular-nums" style={{ color: T.faint }}>{s.sku}</span>
+                </span>
+              </span>
+              <span className="tabular-nums md:text-right" style={{ color: T.muted }}>{s.ratti} r</span>
+              <span className="tabular-nums md:text-right text-[13px]" style={{ color: T.muted }}>{catalogInr(s.pricePerRatti)}</span>
+              <span className="tabular-nums md:text-right font-semibold" style={{ color: T.text }}>{catalogInr(s.price)}</span>
+              <span className="flex items-center gap-3 md:justify-end">
+                <ExternalLink href={`https://admin.shopify.com/products/${s.sku}`} label="Shopify" shopify />
                 <ExternalLink href={`https://astrolaabh.house/stones/${s.slug}`} label="Website" />
                 <ToggleSwitch enabled={!disabledStones.has(s.sku)} onToggle={() => toggleStone(s.sku)} />
               </span>
@@ -286,7 +368,7 @@ export default function InventoryPage() {
             <p className="text-[12px] mt-3 text-center" style={{ color: T.faint }}>Showing 30 of {filteredStones.length} stones</p>
           )}
           {filteredStones.length === 0 && (
-            <p className="text-[13px] py-6 text-center" style={{ color: T.muted }}>No stones match the current filters.</p>
+            <p className="text-[13.5px] py-6 text-center" style={{ color: T.muted }}>No stones match the current filters.</p>
           )}
         </Card>
       )}
@@ -298,72 +380,120 @@ export default function InventoryPage() {
               {filteredDesigns.length} designs
             </div>
           </div>
-          {filteredDesigns.map((d) => (
-            <div key={d.slug} className="flex flex-wrap items-center gap-x-4 gap-y-1.5 py-3 text-[13px]" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
-              <span className="font-medium w-[120px]" style={{ color: T.text }}>{d.name}</span>
-              <span className="w-[80px]" style={{ color: T.muted }}>{d.form}</span>
-              <span className="w-[80px] text-[12.5px]" style={{ color: T.faint }}>{d.metal}</span>
-              <span className="text-[12.5px]" style={{ color: T.muted }}>run {d.runSize} · {d.remaining} remain</span>
+          {filteredDesigns.map((d, i, arr) => (
+            <div
+              key={d.slug}
+              className="flex flex-wrap items-center gap-x-4 gap-y-1.5 py-3 text-[13.5px]"
+              style={{ borderBottom: i < arr.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
+            >
+              <span className="flex items-center gap-3 w-[220px] min-w-0">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={designThumb(d)}
+                  alt={d.name}
+                  className="w-9 h-9 rounded-[8px] object-cover shrink-0"
+                  style={{ border: `1px solid ${T.borderSoft}`, background: "#fffdf5" }}
+                  loading="lazy"
+                />
+                <span className="min-w-0">
+                  <span className="block font-medium truncate" style={{ color: T.text }}>{d.name}</span>
+                  <span className="block text-[11.5px]" style={{ color: T.faint }}>{d.form} · {d.metal}</span>
+                </span>
+              </span>
+              <span className="text-[13px]" style={{ color: T.muted }}>run {d.runSize} · {d.remaining} remain</span>
               <span className="ml-auto flex items-center gap-3">
-                <ExternalLink href={`https://admin.shopify.com/products/${d.slug}`} label="Shopify" />
+                <ExternalLink href={`https://admin.shopify.com/products/${d.slug}`} label="Shopify" shopify />
                 <ToggleSwitch enabled={!disabledDesigns.has(d.slug)} onToggle={() => toggleDesign(d.slug)} />
               </span>
             </div>
           ))}
           {filteredDesigns.length === 0 && (
-            <p className="text-[13px] py-6 text-center" style={{ color: T.muted }}>No designs match the current filters.</p>
+            <p className="text-[13.5px] py-6 text-center" style={{ color: T.muted }}>No designs match the current filters.</p>
           )}
         </Card>
       )}
 
       {tab === "energisation" && (
         <>
-          <Card className="mb-5">
-            <div className="flex items-center justify-between mb-3">
-              <div className="text-[11px] tracking-[0.08em] uppercase" style={{ color: T.faint }}>
-                {ENERGISATION.length} packages
-              </div>
-              <Chip tone="good">Synced · Shopify</Chip>
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-[11px] tracking-[0.08em] uppercase font-medium" style={{ color: T.faint }}>
+              {ENERGISATION.length} packages
             </div>
-            {ENERGISATION.map((tier) => (
-              <div key={tier.key} className="flex flex-wrap items-center gap-x-4 gap-y-1.5 py-3.5 text-[13px]" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
-                <span className="font-semibold w-[160px]" style={{ color: T.accent }}>{tier.name}</span>
-                <span className="text-[11px] w-[80px]" style={{ color: T.faint }}>{tier.sanskrit}</span>
-                <Chip tone={tier.fee === 0 ? "good" : "gold"}>{tier.fee === 0 ? "Free" : "Paid"}</Chip>
-                <span className="text-[12.5px] tabular-nums" style={{ color: T.muted }}>{tier.fee === 0 ? "Included" : catalogInr(tier.fee)}</span>
-                <span className="text-[11.5px]" style={{ color: T.faint }}>{tier.duration}</span>
-                <span className="ml-auto flex items-center gap-3">
-                  <ExternalLink href={`https://admin.shopify.com/products/energisation-${tier.key}`} label="Shopify" />
-                  <ToggleSwitch enabled={!disabledEnergisation.has(tier.key)} onToggle={() => toggleEnergisation(tier.key)} />
-                </span>
-              </div>
-            ))}
-          </Card>
+            <span className="inline-flex items-center gap-1.5 text-[11px] tracking-[0.06em] font-medium px-2 py-[3px] rounded-[6px] whitespace-nowrap" style={{ color: SHOPIFY_GREEN_DARK, background: SHOPIFY_TINT }}><ShopifyIcon size={11} /> Synced · Shopify</span>
+          </div>
+          <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+            {ENERGISATION.map((tier) => {
+              const enabled = !disabledEnergisation.has(tier.key);
+              return (
+                <div
+                  key={tier.key}
+                  className="rounded-[12px] p-5 flex flex-col transition-opacity duration-200"
+                  style={{ background: T.card, border: `1px solid ${T.border}`, boxShadow: T.shadow, opacity: enabled ? 1 : 0.55 }}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="text-[14px] font-semibold" style={{ color: T.text }}>{tier.name}</div>
+                      <div className="font-devanagari text-[12px] mt-0.5" style={{ color: T.faint }}>{tier.sanskrit}</div>
+                    </div>
+                    {tier.fee === 0 && <Chip tone="good">Free</Chip>}
+                  </div>
+                  <div className="font-title text-[22px] font-semibold tracking-[-0.01em] tabular-nums mt-4" style={{ color: T.text }}>
+                    {tier.fee === 0 ? "Included" : catalogInr(tier.fee)}
+                  </div>
+                  <div className="text-[12.5px] mt-1 mb-5" style={{ color: T.muted }}>{tier.duration}</div>
+                  <div className="mt-auto flex items-center justify-between pt-3" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+                    <ExternalLink href={`https://admin.shopify.com/products/energisation-${tier.key}`} label="Shopify" shopify />
+                    <ToggleSwitch enabled={enabled} onToggle={() => toggleEnergisation(tier.key)} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
 
           <Card>
             <div className="flex items-center justify-between mb-3">
-              <div className="text-[11px] tracking-[0.08em] uppercase" style={{ color: T.faint }}>
+              <div className="text-[11px] tracking-[0.08em] uppercase font-medium" style={{ color: T.faint }}>
                 Gurujis / Pandits
               </div>
               <button
                 onClick={() => setShowAddGuruji(true)}
-                className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[9px] text-[11.5px] font-medium cursor-pointer hover:opacity-90 transition-opacity"
-                style={{ background: T.accent, color: T.accentInk }}
+                className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[9px] text-[12px] font-medium cursor-pointer hover:opacity-90 transition-opacity"
+                style={{ background: T.primary, color: T.primaryInk }}
               >
                 + Add Guruji
               </button>
             </div>
-            {GURUJIS.map((g) => (
-              <div key={g.id} className="flex flex-wrap items-center gap-x-4 gap-y-1.5 py-3.5 text-[13px]" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
-                <span className="font-medium w-[180px]" style={{ color: T.text }}>{g.name}</span>
-                <span className="text-[12px] w-[140px]" style={{ color: T.muted }}>{g.speciality}</span>
-                <span className="text-[11.5px] w-[120px]" style={{ color: T.faint }}>{g.location}</span>
-                <span className="text-[11.5px]" style={{ color: T.muted }}>{g.phone}</span>
-                <span className="ml-auto">
-                  <ToggleSwitch enabled={!disabledGurujis.has(g.id)} onToggle={() => toggleGuruji(g.id)} />
-                </span>
-              </div>
-            ))}
+            {GURUJIS.map((g, i) => {
+              const enabled = !disabledGurujis.has(g.id);
+              return (
+                <div
+                  key={g.id}
+                  className="grid md:grid-cols-[minmax(220px,1.4fr)_1fr_150px_auto] items-center gap-x-4 gap-y-1 py-3.5 transition-opacity"
+                  style={{ borderBottom: i < GURUJIS.length - 1 ? `1px solid ${T.borderSoft}` : "none", opacity: enabled ? 1 : 0.55 }}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span
+                      className="w-9 h-9 rounded-full flex items-center justify-center text-[13px] font-semibold shrink-0"
+                      style={{ background: `${T.accent}15`, border: `1px solid ${T.accent}35`, color: T.accent }}
+                    >
+                      {g.name.split(" ").slice(-1)[0][0]}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="text-[13.5px] font-medium truncate" style={{ color: T.text }}>{g.name}</div>
+                      <div className="text-[12px] truncate" style={{ color: T.muted }}>{g.speciality}</div>
+                    </div>
+                  </div>
+                  <div className="text-[12.5px] md:pl-0 pl-12" style={{ color: T.muted }}>{g.location}</div>
+                  <div className="text-[12.5px] tabular-nums md:pl-0 pl-12" style={{ color: T.muted }}>{g.phone}</div>
+                  <div className="flex items-center gap-2.5 justify-end md:pl-0 pl-12">
+                    <span className="text-[11px] font-medium uppercase tracking-[0.06em]" style={{ color: enabled ? T.good : T.faint }}>
+                      {enabled ? "Active" : "Inactive"}
+                    </span>
+                    <ToggleSwitch enabled={enabled} onToggle={() => toggleGuruji(g.id)} />
+                  </div>
+                </div>
+              );
+            })}
           </Card>
 
           <Modal open={showAddGuruji} onClose={() => setShowAddGuruji(false)} title="Add Guruji">
@@ -382,7 +512,7 @@ export default function InventoryPage() {
 
       {toast && (
         <div
-          className="fixed top-6 right-6 z-[100] flex items-center gap-2 px-4 py-3 rounded-[10px] shadow-lg text-[13px] font-medium animate-in"
+          className="fixed top-6 right-6 z-[100] flex items-center gap-2 px-4 py-3 rounded-[10px] shadow-lg text-[13.5px] font-medium animate-in"
           style={{ background: T.card, border: `1px solid ${T.border}`, color: T.good }}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6L9 17l-5-5"/></svg>

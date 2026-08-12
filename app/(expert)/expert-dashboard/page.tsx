@@ -114,7 +114,7 @@ export default function ExpertDashboard() {
         </div>
       </div>
       {slots.length === 0 ? (
-        <div className="text-[12.5px] py-4" style={{ color: T.muted }}>No availability configured for this day.</div>
+        <div className="text-[13px] py-4" style={{ color: T.muted }}>No availability configured for this day.</div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
           {slots.map((time) => {
@@ -123,8 +123,8 @@ export default function ExpertDashboard() {
             const isBooked = !!customer;
             const isDisabled = disabledSlots.has(key);
 
-            let bg = "rgba(142,160,109,0.12)";
-            let borderColor = "rgba(142,160,109,0.25)";
+            let bg = "rgba(95,112,64,0.12)";
+            let borderColor = "rgba(95,112,64,0.28)";
             let textColor: string = T.good;
             let statusLabel = "Available";
 
@@ -148,7 +148,7 @@ export default function ExpertDashboard() {
                 className="rounded-[10px] p-3 text-left transition-all duration-150 cursor-pointer disabled:cursor-default"
                 style={{ background: bg, border: `1px solid ${borderColor}` }}
               >
-                <div className="text-[13px] font-medium tabular-nums" style={{ color: textColor }}>
+                <div className="text-[13.5px] font-medium tabular-nums" style={{ color: textColor }}>
                   {formatTime24to12(time)}
                 </div>
                 <div className="text-[11px] mt-0.5 truncate" style={{ color: isBooked ? T.accent : isDisabled ? T.faint : T.muted }}>
@@ -184,7 +184,7 @@ export default function ExpertDashboard() {
                 <div className="rounded-[12px] p-4" style={{ background: T.card, border: `1px solid rgba(176,84,84,0.3)` }}>
                   <div className="text-[11px] tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>Summaries due</div>
                   <div className="text-[20px] font-bold tabular-nums" style={{ color: T.danger }}>{summariesDue}</div>
-                  <div className="text-[10.5px] mt-1" style={{ color: T.muted }}>Pending post-consultation</div>
+                  <div className="text-[11px] mt-1" style={{ color: T.muted }}>Pending post-consultation</div>
                 </div>
               </Link>
             )}
@@ -193,7 +193,7 @@ export default function ExpertDashboard() {
                 <div className="rounded-[12px] p-4" style={{ background: T.card, border: `1px solid rgba(176,84,84,0.3)` }}>
                   <div className="text-[11px] tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>Reschedule requests</div>
                   <div className="text-[20px] font-bold tabular-nums" style={{ color: T.danger }}>{rescheduleReqs}</div>
-                  <div className="text-[10.5px] mt-1" style={{ color: T.muted }}>Customer-initiated</div>
+                  <div className="text-[11px] mt-1" style={{ color: T.muted }}>Customer-initiated</div>
                 </div>
               </Link>
             )}
@@ -202,7 +202,7 @@ export default function ExpertDashboard() {
                 <div className="rounded-[12px] p-4" style={{ background: T.card, border: `1px solid rgba(176,84,84,0.3)` }}>
                   <div className="text-[11px] tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>Draft recommendations</div>
                   <div className="text-[20px] font-bold tabular-nums" style={{ color: T.danger }}>{draftRecs}</div>
-                  <div className="text-[10.5px] mt-1" style={{ color: T.muted }}>Submit to proceed</div>
+                  <div className="text-[11px] mt-1" style={{ color: T.muted }}>Submit to proceed</div>
                 </div>
               </Link>
             )}
@@ -216,7 +216,7 @@ export default function ExpertDashboard() {
         <Link href="/availability" className="text-[12px]" style={{ color: T.accent }}>View all →</Link>
       </div>
       <Card className="mb-6">
-        <div className="text-[11.5px] mb-4" style={{ color: T.muted }}>
+        <div className="text-[12px] mb-4" style={{ color: T.muted }}>
           Tap an available slot to mark it unavailable, or tap an unavailable slot to restore it. Booked slots cannot be changed.
         </div>
         {renderSlotGrid(todayISO, todaySlots, "Today")}
@@ -232,11 +232,11 @@ export default function ExpertDashboard() {
               <Link
                 key={c.id}
                 href={`/appointments/${c.id}`}
-                className="flex flex-wrap items-center justify-between gap-3 py-3.5 hover:brightness-110 transition-colors"
+                className="flex flex-wrap items-center justify-between gap-3 py-3.5 hover:bg-[rgba(160,125,56,0.06)] transition-colors"
                 style={{ borderBottom: `1px solid ${T.borderSoft}` }}
               >
                 <div className="min-w-0 flex-1">
-                  <div className="text-[13.5px] font-medium" style={{ color: T.text }}>{c.customerName}</div>
+                  <div className="text-[14px] font-medium" style={{ color: T.text }}>{c.customerName}</div>
                   <div className="text-[12px] mt-0.5" style={{ color: T.muted }}>
                     {c.type.replace(/_/g, " ")} · {new Date(c.scheduledAt).toLocaleString("en-IN", { timeStyle: "short" })} · {c.duration}min
                   </div>
@@ -250,7 +250,7 @@ export default function ExpertDashboard() {
 
       {toast && (
         <div
-          className="fixed top-6 right-6 z-[100] flex items-center gap-2 px-4 py-3 rounded-[10px] shadow-lg text-[13px] font-medium"
+          className="fixed top-6 right-6 z-[100] flex items-center gap-2 px-4 py-3 rounded-[10px] shadow-lg text-[13.5px] font-medium"
           style={{ background: T.card, border: `1px solid ${T.border}`, color: T.good }}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6L9 17l-5-5"/></svg>

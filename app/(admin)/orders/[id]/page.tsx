@@ -1,7 +1,7 @@
 "use client";
 import { use, useState } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, Timeline, GoldBtn, GhostBtn, Modal, Input, Select, FileInput, Textarea, DateInput, TimeInput } from "@/components/ui";
+import { PageHeader, Card, Chip, Timeline, GoldBtn, GhostBtn, Modal, Input, Select, FileInput, Textarea, DateInput, TimeInput, ShopifyButton } from "@/components/ui";
 import type { TimelineEvent } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_ORDERS, MOCK_CUSTOMERS, MOCK_CERTIFICATES, MOCK_ENERGISATION } from "@/lib/mock";
@@ -56,7 +56,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
     return (
       <div className="py-20 text-center">
         <p className="text-[14px]" style={{ color: T.muted }}>Order not found.</p>
-        <Link href="/orders" className="text-[12.5px] mt-2 inline-block" style={{ color: T.accent }}>← Back to orders</Link>
+        <Link href="/orders" className="text-[13px] mt-2 inline-block" style={{ color: T.accent }}>← Back to orders</Link>
       </div>
     );
   }
@@ -112,14 +112,12 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               <span
                 onClick={() => { setToast("Payment link sent to customer"); setTimeout(() => setToast(""), 3000); }}
                 className="inline-flex items-center gap-1.5 text-[12px] px-3 py-1.5 rounded-[8px] cursor-pointer hover:opacity-90 transition-opacity"
-                style={{ background: T.accent, color: T.bg, fontWeight: 600 }}
+                style={{ background: T.primary, color: T.primaryInk, fontWeight: 600 }}
               >
                 Resend payment link
               </span>
             )}
-            <a href="https://admin.shopify.com/orders" target="_blank" rel="noopener" className="inline-flex items-center gap-1.5 text-[12px] px-3 py-1.5 rounded-[8px]" style={{ border: `1px solid ${T.border}`, color: T.good }}>
-              <span className="w-1.5 h-1.5 rounded-full" style={{ background: T.good }} /> Open in Shopify ↗
-            </a>
+            <ShopifyButton href="https://admin.shopify.com/orders">Open in Shopify</ShopifyButton>
           </div>
         }
       />
@@ -134,12 +132,12 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
             style={{ borderBottom: i < order.items.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
           >
             <Link href="/inventory" className="flex items-center gap-4 min-w-0 flex-1 row-interactive rounded-[9px] py-1 px-1 -ml-1">
-              <div className="w-8 h-8 rounded-[6px] flex items-center justify-center text-[11px] font-semibold shrink-0" style={{ background: "rgba(195,160,88,0.1)", color: T.accent }}>
+              <div className="w-8 h-8 rounded-[6px] flex items-center justify-center text-[11px] font-semibold shrink-0" style={{ background: "rgba(160,125,56,0.15)", color: T.accent }}>
                 {i + 1}
               </div>
               <div className="min-w-0">
-                <div className="text-[13.5px] font-medium truncate" style={{ color: T.text }}>{item.name}</div>
-                <div className="text-[11.5px] mt-0.5" style={{ color: T.muted }}>
+                <div className="text-[14px] font-medium truncate" style={{ color: T.text }}>{item.name}</div>
+                <div className="text-[12px] mt-0.5" style={{ color: T.muted }}>
                   {item.sku} {item.caratWeight && `· ${item.caratWeight}`} {item.gemstone && `· ${item.gemstone}`}
                 </div>
               </div>
@@ -157,7 +155,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
           </div>
         ))}
         <div className="flex items-center justify-between pt-3 mt-1" style={{ borderTop: `1px solid ${T.border}` }}>
-          <span className="text-[12.5px] font-medium" style={{ color: T.muted }}>Order total</span>
+          <span className="text-[13px] font-medium" style={{ color: T.muted }}>Order total</span>
           <span className="text-[16px] font-semibold tabular-nums" style={{ color: T.text }}>{inr(order.total)}</span>
         </div>
       </Card>
@@ -171,7 +169,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               style={{ background: T.card, border: `1px solid ${T.border}` }}
             >
               <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.faint }}>Customer</div>
-              <div className="space-y-2.5 text-[12.5px]">
+              <div className="space-y-2.5 text-[13px]">
                 <div className="flex items-center justify-between">
                   <span style={{ color: T.muted }}>Name</span>
                   <span style={{ color: T.text }}>{customer.name}</span>
@@ -194,7 +192,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
         ) : (
           <Card>
             <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.faint }}>Customer</div>
-            <div className="space-y-2.5 text-[12.5px]">
+            <div className="space-y-2.5 text-[13px]">
               <div className="flex items-center justify-between">
                 <span style={{ color: T.muted }}>Name</span>
                 <span style={{ color: T.text }}>{order.customerName}</span>
@@ -205,7 +203,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
         <Card>
           <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.faint }}>Order details</div>
-          <div className="space-y-2.5 text-[12.5px]">
+          <div className="space-y-2.5 text-[13px]">
             <div className="flex items-center justify-between">
               <span style={{ color: T.muted }}>Payment status</span>
               <Chip tone={order.paymentStatus === "paid" ? "good" : order.paymentStatus === "pending" ? "gold" : "danger"}>
@@ -239,7 +237,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                   <span
                     onClick={() => { setLocalTracking(trackingInput); setEditingTracking(false); }}
                     className="text-[11px] font-medium cursor-pointer px-2 py-1 rounded-[6px] hover:opacity-90 transition-opacity"
-                    style={{ background: T.accent, color: T.bg }}
+                    style={{ background: T.primary, color: T.primaryInk }}
                   >
                     Save
                   </span>
@@ -257,7 +255,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                   {order.paymentStatus === "paid" && (
                     <span
                       onClick={() => { setTrackingInput(localTracking); setEditingTracking(true); }}
-                      className="text-[10.5px] cursor-pointer hover:opacity-90 transition-opacity"
+                      className="text-[11px] cursor-pointer hover:opacity-90 transition-opacity"
                       style={{ color: T.accent }}
                     >
                       {localTracking ? "Edit" : "Add"}
@@ -299,27 +297,27 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                 <div className="rounded-[9px] p-4 mb-4" style={{ background: T.bg, border: `1px solid ${T.borderSoft}` }}>
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-2">
-                      <span className="text-[13px] font-semibold" style={{ color: T.accent }}>{tier.name}</span>
-                      <span className="text-[10.5px]" style={{ color: T.faint }}>{tier.sanskrit}</span>
+                      <span className="text-[13.5px] font-semibold" style={{ color: T.accent }}>{tier.name}</span>
+                      <span className="text-[11px]" style={{ color: T.faint }}>{tier.sanskrit}</span>
                     </div>
                     <span className="text-[12px] font-medium tabular-nums" style={{ color: tier.fee === 0 ? T.good : T.text }}>
                       {tier.fee === 0 ? "Included" : inr(tier.fee)}
                     </span>
                   </div>
-                  <div className="text-[11.5px]" style={{ color: T.muted }}>{tier.duration}</div>
+                  <div className="text-[12px]" style={{ color: T.muted }}>{tier.duration}</div>
                 </div>
               );
             })()}
 
             {/* Schedule details */}
             <div className="flex items-center gap-4">
-              <div className="grid sm:grid-cols-3 gap-4 text-[12.5px] flex-1">
+              <div className="grid sm:grid-cols-3 gap-4 text-[13px] flex-1">
                 <div>
-                  <div className="text-[10px] tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>Guruji</div>
+                  <div className="text-[11px] tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>Guruji</div>
                   <div style={{ color: energisation.assignedTo ? T.text : T.faint }}>{energisation.assignedTo ?? "Unassigned"}</div>
                 </div>
                 <div>
-                  <div className="text-[10px] tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>
+                  <div className="text-[11px] tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>
                     {energisation.completedAt ? "Completed" : energisation.scheduledAt ? "Scheduled" : "Schedule"}
                   </div>
                   <div style={{ color: energisation.scheduledAt || energisation.completedAt ? T.text : T.danger }}>
@@ -331,7 +329,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                   </div>
                 </div>
                 <div>
-                  <div className="text-[10px] tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>Session link</div>
+                  <div className="text-[11px] tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>Session link</div>
                   <div style={{ color: energisation.liveLink ? T.good : T.faint }}>
                     {energisation.liveLink ? "Uploaded" : "Not uploaded"}
                   </div>
@@ -340,7 +338,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               {(energisation.status === "scheduled" || energisation.status === "pending") && (
                 <span
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowSchedule(true); }}
-                  className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[9px] text-[11.5px] font-medium cursor-pointer hover:opacity-90 transition-opacity shrink-0"
+                  className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[9px] text-[12px] font-medium cursor-pointer hover:opacity-90 transition-opacity shrink-0"
                   style={{ border: `1px solid ${T.border}`, color: T.text }}
                 >
                   Edit
@@ -363,19 +361,19 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               <div className="rounded-[9px] p-4 mb-4" style={{ background: T.bg, border: `1px solid ${T.borderSoft}` }}>
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-[13px] font-semibold" style={{ color: T.accent }}>{tier.name}</span>
-                    <span className="text-[10.5px]" style={{ color: T.faint }}>{tier.sanskrit}</span>
+                    <span className="text-[13.5px] font-semibold" style={{ color: T.accent }}>{tier.name}</span>
+                    <span className="text-[11px]" style={{ color: T.faint }}>{tier.sanskrit}</span>
                   </div>
                   <span className="text-[12px] font-medium tabular-nums" style={{ color: tier.fee === 0 ? T.good : T.text }}>
                     {tier.fee === 0 ? "Included" : inr(tier.fee)}
                   </span>
                 </div>
-                <div className="text-[11.5px]" style={{ color: T.muted }}>{tier.duration}</div>
+                <div className="text-[12px]" style={{ color: T.muted }}>{tier.duration}</div>
               </div>
             );
           })()}
 
-          <p className="text-[12.5px] mb-3" style={{ color: T.muted }}>
+          <p className="text-[13px] mb-3" style={{ color: T.muted }}>
             {order.paymentStatus === "pending"
               ? "Energisation can be scheduled after payment is received."
               : "Schedule the energisation — assign a Guruji, date, time, and meeting link."}
@@ -400,13 +398,13 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               Independent gemological lab report confirming identity, weight, origin, treatment, and quality grade.
             </p>
             {labCert && labCert.status !== "missing" ? (
-              <div className="text-[11.5px] space-y-1" style={{ color: T.muted }}>
+              <div className="text-[12px] space-y-1" style={{ color: T.muted }}>
                 {labCert.certificateNumber && <div><span style={{ color: T.faint }}>Cert #:</span> {labCert.certificateNumber}</div>}
                 {labCert.issuingAuthority && <div><span style={{ color: T.faint }}>Lab:</span> {labCert.issuingAuthority}</div>}
                 {labCert.issueDate && <div><span style={{ color: T.faint }}>Issued:</span> {labCert.issueDate}</div>}
                 {labCert.fileName && <div><span style={{ color: T.faint }}>File:</span> {labCert.fileName}</div>}
                 <div className="pt-2">
-                  <a href={labCert.fileUrl ?? "#"} target="_blank" rel="noopener" className="inline-flex items-center gap-1 text-[11.5px]" style={{ color: T.accent }}>
+                  <a href={labCert.fileUrl ?? "#"} target="_blank" rel="noopener" className="inline-flex items-center gap-1 text-[12px]" style={{ color: T.accent }}>
                     View certificate ↗
                   </a>
                 </div>
@@ -428,13 +426,13 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               In-house energisation certificate confirming ritual completion, mantra details, and astrological suitability.
             </p>
             {energCert && energCert.status !== "missing" ? (
-              <div className="text-[11.5px] space-y-1" style={{ color: T.muted }}>
+              <div className="text-[12px] space-y-1" style={{ color: T.muted }}>
                 {energCert.certificateNumber && <div><span style={{ color: T.faint }}>Cert #:</span> {energCert.certificateNumber}</div>}
                 {energCert.issuingAuthority && <div><span style={{ color: T.faint }}>Issued by:</span> {energCert.issuingAuthority}</div>}
                 {energCert.issueDate && <div><span style={{ color: T.faint }}>Date:</span> {energCert.issueDate}</div>}
                 {energCert.fileName && <div><span style={{ color: T.faint }}>File:</span> {energCert.fileName}</div>}
                 <div className="pt-2">
-                  <a href={energCert.fileUrl ?? "#"} target="_blank" rel="noopener" className="inline-flex items-center gap-1 text-[11.5px]" style={{ color: T.accent }}>
+                  <a href={energCert.fileUrl ?? "#"} target="_blank" rel="noopener" className="inline-flex items-center gap-1 text-[12px]" style={{ color: T.accent }}>
                     View certificate ↗
                   </a>
                 </div>
@@ -574,7 +572,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       {/* Toast */}
       {toast && (
         <div
-          className="fixed top-6 right-6 z-[100] flex items-center gap-2 px-4 py-3 rounded-[10px] shadow-lg text-[13px] font-medium animate-in"
+          className="fixed top-6 right-6 z-[100] flex items-center gap-2 px-4 py-3 rounded-[10px] shadow-lg text-[13.5px] font-medium animate-in"
           style={{ background: T.card, border: `1px solid ${T.border}`, color: T.good }}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6L9 17l-5-5"/></svg>

@@ -1,179 +1,229 @@
 "use client";
 import { use, useState } from "react";
 import Link from "next/link";
-import { Card, Chip, SectionLink, GhostBtn } from "@/components/ui";
+import { Card, Chip, GhostBtn, BackLink, Tabs } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_CUSTOMERS, MOCK_ORDERS, MOCK_CONSULTATIONS, MOCK_PAYMENTS } from "@/lib/mock";
 import { inr } from "@/lib/types";
 
+function fmtDate(d: string) {
+  return new Date(d).toLocaleDateString("en-IN", { dateStyle: "medium" });
+}
+
+function SectionTitle({ children, count }: { children: React.ReactNode; count?: number }) {
+  return (
+    <div className="flex items-center gap-2 mb-1">
+      <span className="text-[11px] tracking-[0.08em] uppercase font-medium" style={{ color: T.faint }}>{children}</span>
+      {count !== undefined && (
+        <span className="text-[11px] font-medium tabular-nums px-1.5 py-0.5 rounded-full" style={{ color: T.muted, background: "rgba(89,82,54,0.07)" }}>
+          {count}
+        </span>
+      )}
+    </div>
+  );
+}
+
 export default function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const [toast, setToast] = useState("");
+  const [activeTab, setActiveTab] = useState("consultations");
   const customer = MOCK_CUSTOMERS.find((c) => c.id === id);
 
   if (!customer) {
     return (
       <div className="py-20 text-center">
         <p className="text-[14px]" style={{ color: T.muted }}>Customer not found.</p>
-        <Link href="/customers" className="text-[12.5px] mt-2 inline-block" style={{ color: T.accent }}>← Back</Link>
+        <div className="mt-3 flex justify-center"><BackLink label="Back to customers" href="/customers" /></div>
       </div>
     );
   }
 
-  const orders = MOCK_ORDERS.filter((o) => o.customerId === customer.id);
-  const consultations = MOCK_CONSULTATIONS.filter((c) => c.customerId === customer.id);
+  const orders = MOCK_ORDERS.filter((o) => o.customerId === customer.id)
+    .sort((a, b) => new Date(b.placedAt).getTime() - new Date(a.placedAt).getTime());
+  const consultations = MOCK_CONSULTATIONS.filter((c) => c.customerId === customer.id)
+    .sort((a, b) => new Date(b.scheduledAt).getTime() - new Date(a.scheduledAt).getTime());
   const payments = MOCK_PAYMENTS.filter((p) => p.customerId === customer.id);
+  const totalSpent = orders.reduce((s, o) => s + o.total, 0);
 
   return (
     <>
       {/* Back link */}
       <div className="mb-5">
-        <Link href="/customers" className="inline-flex items-center gap-1.5 text-[13px] font-medium hover:opacity-80 transition-opacity duration-200" style={{ color: T.accent }}>
-          ← Customers
-        </Link>
+        <BackLink label="Customers" href="/customers" />
       </div>
 
       {/* Profile Card */}
-      <div className="rounded-[14px] p-6 mb-6" style={{ background: `linear-gradient(135deg, ${T.card} 0%, ${T.panel} 100%)`, border: `1px solid ${T.border}` }}>
-        <div className="flex flex-wrap items-start gap-5">
+      <div className="rounded-[14px] mb-6 overflow-hidden" style={{ background: T.card, border: `1px solid ${T.border}`, boxShadow: T.shadow }}>
+        <div className="flex flex-wrap items-center gap-5 p-6 pb-5">
           <div
-            className="w-14 h-14 rounded-full flex items-center justify-center text-[20px] font-bold shrink-0"
-            style={{ background: `${T.accent}15`, border: `2px solid ${T.accent}40`, color: T.accent }}
+            className="w-14 h-14 rounded-full flex items-center justify-center font-title text-[20px] font-semibold shrink-0"
+            style={{ background: `${T.accent}15`, border: `1px solid ${T.accent}35`, color: T.accent }}
           >
             {customer.name[0]}
           </div>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-3">
-              <span className="text-[17px] font-semibold" style={{ color: T.text }}>{customer.name}</span>
+            <div className="font-title text-[20px] font-semibold tracking-[-0.015em]" style={{ color: T.text }}>{customer.name}</div>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1 text-[13px]" style={{ color: T.muted }}>
+              <span className="inline-flex items-center gap-1.5">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-3.5 h-3.5" style={{ color: T.faint }}><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+                {customer.email}
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-3.5 h-3.5" style={{ color: T.faint }}><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                <span className="tabular-nums">{customer.phone}</span>
+              </span>
             </div>
-            <div className="text-[13px] mt-1" style={{ color: T.muted }}>{customer.email} · {customer.phone}</div>
           </div>
-          <div className="flex items-center gap-3 shrink-0">
-            <div className="flex items-center gap-4 text-[12px] mr-3" style={{ color: T.faint }}>
-              <div className="text-center">
-                <div className="text-[15px] font-semibold" style={{ color: T.text }}>{orders.length}</div>
-                <div className="text-[10px] uppercase tracking-wider">Orders</div>
-              </div>
-              <div className="text-center">
-                <div className="text-[15px] font-semibold" style={{ color: T.text }}>{consultations.length}</div>
-                <div className="text-[10px] uppercase tracking-wider">Consults</div>
-              </div>
+          <GhostBtn className="!text-[12px] !h-8 !px-3 shrink-0" onClick={() => { setToast("Customer deactivated"); setTimeout(() => setToast(""), 3000); }}>
+            Deactivate
+          </GhostBtn>
+        </div>
+        <div
+          className="px-6 py-3"
+          style={{ borderTop: `1px solid ${T.borderSoft}`, background: "rgba(89,82,54,0.025)" }}
+        >
+          <div className="grid grid-cols-3 sm:max-w-[440px]">
+          {[
+            [String(consultations.length), "Consultations"],
+            [String(orders.length), "Orders"],
+            [inr(totalSpent), "Total spent"],
+          ].map(([v, k], i) => (
+            <div key={k} className={i > 0 ? "pl-5" : ""} style={i > 0 ? { borderLeft: `1px solid ${T.borderSoft}` } : undefined}>
+              <div className="text-[15px] font-semibold tabular-nums" style={{ color: T.text }}>{v}</div>
+              <div className="text-[11px] uppercase tracking-[0.07em] mt-0.5" style={{ color: T.faint }}>{k}</div>
             </div>
-            <GhostBtn className="!text-[11.5px] !h-8 !px-3" onClick={() => { setToast("Customer deactivated"); setTimeout(() => setToast(""), 3000); }}>
-              Deactivate
-            </GhostBtn>
+          ))}
           </div>
         </div>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-4 mb-5">
-        {/* Birth details */}
-        <Card>
-          <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.faint }}>Birth details</div>
-          <div className="space-y-2 text-[12.5px]">
-            {[
-              ["Date", customer.birthDate],
-              ["Time", customer.birthTime],
-              ["Place", customer.birthPlace],
-              ["Rashi", customer.rashi || "—"],
-              ["Nakshatra", customer.nakshatra || "—"],
-              ["Chart ref", customer.chartRef || "Not generated"],
-            ].map(([k, v]) => (
-              <div key={k} className="flex justify-between gap-2">
-                <span style={{ color: T.muted }}>{k}</span>
-                <span style={{ color: T.text }}>{v}</span>
-              </div>
-            ))}
-          </div>
-        </Card>
+      {/* Left rail: attributes · Main: full history */}
+      <div className="grid lg:grid-cols-[300px_1fr] gap-4 items-start">
+        <div className="space-y-4">
+          <Card>
+            <SectionTitle>Birth details</SectionTitle>
+            <div className="space-y-2 text-[13px] mt-3">
+              {[
+                ["Date", customer.birthDate],
+                ["Time", customer.birthTime],
+                ["Place", customer.birthPlace],
+                ["Rashi", customer.rashi || "—"],
+                ["Nakshatra", customer.nakshatra || "—"],
+                ["Chart ref", customer.chartRef || "Not generated"],
+              ].map(([k, v]) => (
+                <div key={k} className="flex justify-between gap-2">
+                  <span style={{ color: T.muted }}>{k}</span>
+                  <span className="text-right" style={{ color: T.text }}>{v}</span>
+                </div>
+              ))}
+            </div>
+          </Card>
 
-        {/* Summary stats */}
-        <Card>
-          <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.faint }}>Activity</div>
-          <div className="space-y-2 text-[12.5px]">
-            {[
-              ["Consultations", String(consultations.length)],
-              ["Orders", String(orders.length)],
-              ["Total spent", inr(orders.reduce((s, o) => s + o.total, 0))],
-              ["Payment requests", String(payments.length)],
-              ["Affiliate", customer.affiliateCode || "Direct"],
-              ["Joined", customer.createdAt],
-            ].map(([k, v]) => (
-              <div key={k} className="flex justify-between gap-2">
-                <span style={{ color: T.muted }}>{k}</span>
-                <span style={{ color: T.text }}>{v}</span>
-              </div>
+          <Card>
+            <SectionTitle>Account</SectionTitle>
+            <div className="space-y-2 text-[13px] mt-3">
+              {[
+                ["Payment requests", String(payments.length)],
+                ["Affiliate", customer.affiliateCode || "Direct"],
+                ["Joined", customer.createdAt],
+              ].map(([k, v]) => (
+                <div key={k} className="flex justify-between gap-2">
+                  <span style={{ color: T.muted }}>{k}</span>
+                  <span className="text-right" style={{ color: T.text }}>{v}</span>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
+
+        <div className="min-w-0">
+          <Card>
+            <div className="mb-3">
+              <Tabs
+                tabs={[
+                  { key: "consultations", label: "Consultations", count: consultations.length },
+                  { key: "orders", label: "Orders", count: orders.length },
+                ]}
+                active={activeTab}
+                onChange={setActiveTab}
+              />
+            </div>
+            {activeTab === "consultations" && (consultations.length === 0 ? (
+              <p className="text-[13px] py-5 text-center" style={{ color: T.faint }}>No consultations yet.</p>
+            ) : (
+              consultations.map((c, i) => (
+                <Link
+                  key={c.id}
+                  href={`/consultations/${c.id}`}
+                  className="flex items-center justify-between gap-4 py-3 row-interactive rounded-[9px] px-2 -mx-2"
+                  style={{ borderBottom: i < consultations.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="text-[13.5px] font-medium capitalize" style={{ color: T.text }}>{c.type.replace(/_/g, " ")}</span>
+                      <span className="text-[11px]" style={{ color: T.faint }}>·</span>
+                      <span className="text-[13px]" style={{ color: T.muted }}>{c.expertName}</span>
+                    </div>
+                    <div className="text-[12px]" style={{ color: T.muted }}>
+                      {fmtDate(c.scheduledAt)}
+                      <span className="mx-1.5" style={{ color: T.faint }}>·</span>
+                      <span className="uppercase tracking-[0.05em] text-[11px]" style={{ color: T.faint }}>{c.id}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0">
+                    {c.paymentStatus === "pending" ? (
+                      <Chip tone="gold">Payment pending</Chip>
+                    ) : c.status === "reschedule_requested" ? (
+                      <Chip tone="danger">Reschedule request</Chip>
+                    ) : (c.status === "closed" || c.status === "completed") ? (
+                      <Chip tone="good">Completed</Chip>
+                    ) : (
+                      <Chip tone="gold">Scheduled</Chip>
+                    )}
+                    <span style={{ color: T.faint }}>→</span>
+                  </div>
+                </Link>
+              ))
             ))}
-          </div>
-        </Card>
+            {activeTab === "orders" && (orders.length === 0 ? (
+              <p className="text-[13px] py-5 text-center" style={{ color: T.faint }}>No orders yet.</p>
+            ) : (
+              orders.map((o, i) => (
+                <Link
+                  key={o.id}
+                  href={`/orders/${o.id}`}
+                  className="flex items-center justify-between gap-4 py-3 row-interactive rounded-[9px] px-2 -mx-2"
+                  style={{ borderBottom: i < orders.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-baseline gap-2 mb-0.5 min-w-0">
+                      <span className="text-[13.5px] font-medium truncate" style={{ color: T.text }}>
+                        {o.items[0]?.name}
+                      </span>
+                      {o.items.length > 1 && <span className="text-[12px] shrink-0" style={{ color: T.faint }}>+{o.items.length - 1} more</span>}
+                    </div>
+                    <div className="flex items-baseline gap-3 text-[12px]" style={{ color: T.muted }}>
+                      <span>Placed {fmtDate(o.placedAt)}</span>
+                      <span className="uppercase tracking-[0.05em] text-[11px]" style={{ color: T.faint }}>{o.id}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <Chip tone={o.shopifyStatus === "fulfilled" ? "good" : o.paymentStatus === "pending" ? "gold" : "muted"}>
+                      {o.shopifyStatus === "fulfilled" ? "Delivered" : o.paymentStatus === "pending" ? "Payment pending" : o.tracking ? "In transit" : "In progress"}
+                    </Chip>
+                    <span className="text-[13.5px] font-semibold tabular-nums w-[90px] text-right" style={{ color: T.text }}>{inr(o.total)}</span>
+                    <span style={{ color: T.faint }}>→</span>
+                  </div>
+                </Link>
+              ))
+            ))}
+          </Card>
+        </div>
       </div>
-
-      {/* Consultations */}
-      {consultations.length > 0 && (
-        <Card className="mb-5">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-[11px] tracking-[0.08em] uppercase" style={{ color: T.faint }}>Consultations</span>
-            <SectionLink href={`/consultations?customer=${encodeURIComponent(customer.name)}`} />
-          </div>
-          {consultations.slice(0, 3).map((c) => (
-            <Link key={c.id} href={`/consultations/${c.id}`} className="flex items-center justify-between gap-4 py-3 row-interactive rounded-[9px] px-2 -mx-2" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2 mb-0.5">
-                  <span className="text-[11px] tracking-[0.06em] uppercase" style={{ color: T.accent }}>{c.id}</span>
-                  <span className="text-[11px]" style={{ color: T.faint }}>·</span>
-                  <span className="text-[13px] font-medium" style={{ color: T.text }}>{c.expertName}</span>
-                </div>
-                <div className="text-[12px]" style={{ color: T.muted }}>
-                  {new Date(c.scheduledAt).toLocaleDateString("en-IN", { dateStyle: "medium" })}
-                </div>
-              </div>
-              <div className="flex flex-col items-end gap-1">
-                {c.paymentStatus === "pending" ? (
-                  <Chip tone="gold">Payment pending</Chip>
-                ) : (c.status === "closed" || c.status === "completed") ? (
-                  <Chip tone="good">Completed</Chip>
-                ) : (
-                  <Chip tone="gold">Scheduled</Chip>
-                )}
-              </div>
-            </Link>
-          ))}
-        </Card>
-      )}
-
-      {/* Orders */}
-      {orders.length > 0 && (
-        <Card className="mb-5">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-[11px] tracking-[0.08em] uppercase" style={{ color: T.faint }}>Orders</span>
-            <SectionLink href={`/orders?customer=${encodeURIComponent(customer.name)}`} />
-          </div>
-          {orders.slice(0, 3).map((o) => (
-            <Link key={o.id} href={`/orders/${o.id}`} className="flex items-center justify-between gap-4 py-3 row-interactive rounded-[9px] px-2 -mx-2" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2 mb-0.5">
-                  <span className="text-[11px] tracking-[0.06em] uppercase" style={{ color: T.accent }}>{o.id}</span>
-                  <span className="text-[11px]" style={{ color: T.faint }}>·</span>
-                  <span className="text-[13px] font-medium" style={{ color: T.text }}>{o.items[0]?.name}</span>
-                </div>
-                <div className="text-[12px]" style={{ color: T.muted }}>
-                  Placed {new Date(o.placedAt).toLocaleDateString("en-IN", { dateStyle: "medium" })}
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <Chip tone={o.shopifyStatus === "fulfilled" ? "good" : o.paymentStatus === "pending" ? "gold" : "muted"}>
-                  {o.shopifyStatus === "fulfilled" ? "Delivered" : o.paymentStatus === "pending" ? "Payment pending" : "In progress"}
-                </Chip>
-                <span className="text-[13px] font-semibold tabular-nums" style={{ color: T.text }}>{inr(o.total)}</span>
-              </div>
-            </Link>
-          ))}
-        </Card>
-      )}
 
       {toast && (
         <div
-          className="fixed top-6 right-6 z-[100] flex items-center gap-2 px-4 py-3 rounded-[10px] shadow-lg text-[13px] font-medium animate-in"
+          className="fixed top-6 right-6 z-[100] flex items-center gap-2 px-4 py-3 rounded-[10px] shadow-lg text-[13.5px] font-medium animate-in"
           style={{ background: T.card, border: `1px solid ${T.border}`, color: T.good }}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6L9 17l-5-5"/></svg>

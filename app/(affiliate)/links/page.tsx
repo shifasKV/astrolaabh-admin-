@@ -27,13 +27,13 @@ export default function LinksPage() {
                   <span className="text-[11px] px-1.5 py-0.5 rounded capitalize" style={{ background: T.bg, color: T.muted }}>{link.destinationType}</span>
                   {link.campaign && <span className="text-[11px]" style={{ color: T.faint }}>{link.campaign}</span>}
                 </div>
-                <div className="text-[13px] font-medium mt-1 break-all" style={{ color: T.accent }}>{link.shortUrl}</div>
+                <div className="text-[13.5px] font-medium mt-1 break-all" style={{ color: T.accent }}>{link.shortUrl}</div>
                 <div className="text-[12px] mt-0.5" style={{ color: T.muted }}>{link.destination}</div>
               </div>
               <div className="flex items-center gap-3 shrink-0">
                 <div className="text-right">
-                  <div className="text-[13px] font-semibold tabular-nums" style={{ color: T.text }}>{link.clicks.toLocaleString()} clicks</div>
-                  <div className="text-[11.5px]" style={{ color: T.muted }}>{link.conversions} conversions</div>
+                  <div className="text-[13.5px] font-semibold tabular-nums" style={{ color: T.text }}>{link.clicks.toLocaleString()} clicks</div>
+                  <div className="text-[12px]" style={{ color: T.muted }}>{link.conversions} conversions</div>
                 </div>
                 <Chip tone={link.active ? "good" : "muted"}>{link.active ? "Active" : "Inactive"}</Chip>
               </div>

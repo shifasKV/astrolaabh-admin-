@@ -1,7 +1,7 @@
 "use client";
 import { use, useState } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, GoldBtn, GhostBtn, Input, Textarea, Modal, Timeline, DateInput, TimeInput, Select } from "@/components/ui";
+import { PageHeader, Card, Chip, GoldBtn, GhostBtn, Input, Textarea, Modal, Timeline, DateInput, TimeInput, Select, BackLink } from "@/components/ui";
 import type { TimelineEvent } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_ENERGISATION, MOCK_ORDERS, MOCK_CUSTOMERS } from "@/lib/mock";
@@ -37,7 +37,7 @@ export default function EnergisationDetailPage({ params }: { params: Promise<{ i
     return (
       <div className="py-20 text-center">
         <p className="text-[14px]" style={{ color: T.muted }}>Energisation task not found.</p>
-        <Link href="/energisation" className="text-[12.5px] mt-2 inline-block" style={{ color: T.accent }}>← Back</Link>
+        <div className="mt-3 flex justify-center"><BackLink label="Back to energisation" href="/energisation" /></div>
       </div>
     );
   }
@@ -96,29 +96,31 @@ export default function EnergisationDetailPage({ params }: { params: Promise<{ i
     <>
       <PageHeader
         back={{ label: "Energisation", href: "/energisation" }}
+        title={task.customerName}
+        sub={`${task.stoneDescription} · ${task.orderNumber}`}
       />
 
       {/* Energisation details card */}
       <Card className="mb-5">
         <div className="rounded-[9px] p-4 mb-4" style={{ background: T.bg, border: `1px solid ${T.borderSoft}` }}>
           <div className="flex items-center justify-between mb-2">
-            <div className="text-[13px] font-semibold" style={{ color: T.accent }}>{localMethod || "Method not assigned"}</div>
+            <div className="text-[13.5px] font-semibold" style={{ color: T.accent }}>{localMethod || "Method not assigned"}</div>
             <div className="flex items-center gap-2">
               <Chip tone={statusTone(localStatus)}>{localStatus.replace(/_/g, " ")}</Chip>
               {!localLiveLink && localStatus === "scheduled" && <Chip tone="danger">Link missing</Chip>}
             </div>
           </div>
-          <div className="text-[11.5px]" style={{ color: T.muted }}>{task.stoneDescription}</div>
+          <div className="text-[12px]" style={{ color: T.muted }}>{task.stoneDescription}</div>
         </div>
 
         <div className="flex items-center gap-4">
-          <div className="grid grid-cols-3 gap-4 text-[12.5px] flex-1">
+          <div className="grid grid-cols-3 gap-4 text-[13px] flex-1">
             <div>
-              <div className="text-[10px] tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>Guruji</div>
+              <div className="text-[11px] tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>Guruji</div>
               <div style={{ color: localAssignedTo ? T.text : T.faint }}>{localAssignedTo || "Unassigned"}</div>
             </div>
             <div>
-              <div className="text-[10px] tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>
+              <div className="text-[11px] tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>
                 {task.completedAt ? "Completed" : "Date"}
               </div>
               <div style={{ color: localScheduledAt || task.completedAt ? T.text : T.danger }}>
@@ -130,7 +132,7 @@ export default function EnergisationDetailPage({ params }: { params: Promise<{ i
               </div>
             </div>
             <div>
-              <div className="text-[10px] tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>Time</div>
+              <div className="text-[11px] tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>Time</div>
               <div style={{ color: localScheduledAt ? T.text : T.faint }}>
                 {localScheduledAt
                   ? new Date(localScheduledAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })
@@ -141,7 +143,7 @@ export default function EnergisationDetailPage({ params }: { params: Promise<{ i
           {(localStatus === "pending" || localStatus === "scheduled") && (
             <span
               onClick={() => setAction("schedule")}
-              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[9px] text-[11.5px] font-medium cursor-pointer hover:opacity-90 transition-opacity shrink-0"
+              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[9px] text-[12px] font-medium cursor-pointer hover:opacity-90 transition-opacity shrink-0"
               style={{ border: `1px solid ${T.border}`, color: T.text }}
             >
               {localStatus === "scheduled" ? "Update" : "Schedule"}
@@ -159,7 +161,7 @@ export default function EnergisationDetailPage({ params }: { params: Promise<{ i
               style={{ background: T.card, border: `1px solid ${T.border}` }}
             >
               <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.faint }}>Order</div>
-              <div className="space-y-2.5 text-[12.5px]">
+              <div className="space-y-2.5 text-[13px]">
                 <div className="flex justify-between gap-2">
                   <span style={{ color: T.muted }}>Order ID</span>
                   <span className="font-medium" style={{ color: T.accent }}>{order.id}</span>
@@ -188,7 +190,7 @@ export default function EnergisationDetailPage({ params }: { params: Promise<{ i
               style={{ background: T.card, border: `1px solid ${T.border}` }}
             >
               <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.faint }}>Customer</div>
-              <div className="space-y-2.5 text-[12.5px]">
+              <div className="space-y-2.5 text-[13px]">
                 <div className="flex justify-between gap-2">
                   <span style={{ color: T.muted }}>Name</span>
                   <span className="font-medium" style={{ color: T.text }}>{customer.name}</span>
@@ -216,7 +218,7 @@ export default function EnergisationDetailPage({ params }: { params: Promise<{ i
         <Card className="mb-5">
           <div className="flex items-center justify-between mb-3">
             <div className="text-[11px] tracking-[0.08em] uppercase" style={{ color: T.faint }}>Session</div>
-            <span className="text-[10.5px] px-2 py-0.5 rounded" style={{ background: "rgba(195,160,88,0.1)", color: T.accent }}>Editing</span>
+            <span className="text-[11px] px-2 py-0.5 rounded" style={{ background: "rgba(160,125,56,0.15)", color: T.accent }}>Editing</span>
           </div>
           <div className="space-y-3">
             <Input value={editLiveLink} onChange={setEditLiveLink} label="Session link" type="url" placeholder="https://live.astrolaabh.house/…" />
@@ -249,22 +251,22 @@ export default function EnergisationDetailPage({ params }: { params: Promise<{ i
                 href={localLiveLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-3 rounded-[9px] p-3 transition-all duration-200 hover:brightness-110 flex-1 min-w-0"
-                style={{ background: "rgba(142,160,109,0.06)", border: `1px solid rgba(142,160,109,0.15)` }}
+                className="flex items-center gap-3 rounded-[9px] p-3 transition-all duration-200 hover:brightness-[0.97] flex-1 min-w-0"
+                style={{ background: "rgba(95,112,64,0.08)", border: `1px solid rgba(95,112,64,0.18)` }}
                 onClick={(e) => e.stopPropagation()}
               >
-                <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: "rgba(142,160,109,0.15)" }}>
+                <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: "rgba(95,112,64,0.18)" }}>
                   <span className="text-[14px]">▶</span>
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="text-[12px] font-medium truncate" style={{ color: T.good }}>{localLiveLink}</div>
-                  <div className="text-[10.5px] mt-0.5" style={{ color: T.muted }}>Live consultation link</div>
+                  <div className="text-[11px] mt-0.5" style={{ color: T.muted }}>Live consultation link</div>
                 </div>
               </a>
               <button
                 onClick={() => { navigator.clipboard.writeText(localLiveLink); setToast("Link copied to clipboard"); setTimeout(() => setToast(""), 3000); }}
-                className="shrink-0 w-9 h-9 rounded-[9px] flex items-center justify-center transition-all duration-150 cursor-pointer hover:brightness-125"
-                style={{ background: "rgba(142,160,109,0.06)", border: `1px solid rgba(142,160,109,0.15)` }}
+                className="shrink-0 w-9 h-9 rounded-[9px] flex items-center justify-center transition-all duration-150 cursor-pointer hover:brightness-[0.97]"
+                style={{ background: "rgba(95,112,64,0.08)", border: `1px solid rgba(95,112,64,0.18)` }}
                 title="Copy link"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: T.good }}>
@@ -274,12 +276,12 @@ export default function EnergisationDetailPage({ params }: { params: Promise<{ i
               </button>
             </div>
           ) : (
-            <div className="text-[12.5px] py-2" style={{ color: T.faint }}>No session link uploaded yet</div>
+            <div className="text-[13px] py-2" style={{ color: T.faint }}>No session link uploaded yet</div>
           )}
           {localNotes && (
             <div className="mt-4 pt-3" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
-              <div className="text-[10px] tracking-[0.08em] uppercase mb-1.5" style={{ color: T.faint }}>Notes</div>
-              <p className="text-[12.5px]" style={{ color: T.text }}>{localNotes}</p>
+              <div className="text-[11px] tracking-[0.08em] uppercase mb-1.5" style={{ color: T.faint }}>Notes</div>
+              <p className="text-[13px]" style={{ color: T.text }}>{localNotes}</p>
             </div>
           )}
         </Card>
@@ -321,7 +323,7 @@ export default function EnergisationDetailPage({ params }: { params: Promise<{ i
 
       {toast && (
         <div
-          className="fixed top-6 right-6 z-[100] flex items-center gap-2 px-4 py-3 rounded-[10px] shadow-lg text-[13px] font-medium animate-in"
+          className="fixed top-6 right-6 z-[100] flex items-center gap-2 px-4 py-3 rounded-[10px] shadow-lg text-[13.5px] font-medium animate-in"
           style={{ background: T.card, border: `1px solid ${T.border}`, color: T.good }}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6L9 17l-5-5"/></svg>

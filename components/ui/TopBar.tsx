@@ -21,12 +21,8 @@ export function TopBar({ items, userLabel, onUserClick }: TopBarProps) {
       className="md:hidden sticky top-0 z-20 flex items-center gap-3 px-4 h-14"
       style={{ background: T.panel, borderBottom: `1px solid ${T.border}` }}
     >
-      <span
-        className="w-8 h-8 rounded-[9px] flex items-center justify-center text-[12px] font-bold shrink-0"
-        style={{ background: T.accent, color: T.accentInk }}
-      >
-        A
-      </span>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/logo/mark-gold.webp" alt="AstroLaabh" className="w-8 h-8 object-contain shrink-0" />
       <Select
         value={currentItem?.href ?? items[0]?.href ?? ""}
         onChange={(val) => router.push(val)}
@@ -36,7 +32,7 @@ export function TopBar({ items, userLabel, onUserClick }: TopBarProps) {
       />
       <button
         onClick={onUserClick}
-        className="text-[11px] px-2 py-1.5 rounded-[9px] transition-all duration-200 hover:bg-[rgba(195,160,88,0.04)] cursor-pointer"
+        className="text-[11px] px-2 py-1.5 rounded-[9px] transition-all duration-200 hover:bg-[rgba(160,125,56,0.10)] cursor-pointer"
         style={{ color: T.muted }}
       >
         {userLabel} ↺

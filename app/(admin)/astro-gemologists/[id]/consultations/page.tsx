@@ -142,7 +142,7 @@ export default function ExpertConsultationsPage() {
       <Card>
         <div className="overflow-x-auto">
         {/* Table header */}
-        <div className="grid grid-cols-[1fr_130px_130px_100px] gap-3 py-2.5 px-2 text-[10.5px] uppercase tracking-wider min-w-[500px]" style={{ color: T.faint, borderBottom: `1px solid ${T.border}` }}>
+        <div className="grid grid-cols-[1fr_130px_130px_100px] gap-3 py-2.5 px-2 text-[11px] uppercase tracking-wider min-w-[500px]" style={{ color: T.faint, borderBottom: `1px solid ${T.border}` }}>
           <span>Customer</span>
           <span>Date</span>
           <span>Summary</span>
@@ -150,7 +150,7 @@ export default function ExpertConsultationsPage() {
         </div>
 
         {paginated.length === 0 ? (
-          <p className="text-[13px] py-8 text-center" style={{ color: T.muted }}>No consultations found.</p>
+          <p className="text-[13.5px] py-8 text-center" style={{ color: T.muted }}>No consultations found.</p>
         ) : (
           paginated.map((c) => (
             <Link
@@ -160,10 +160,10 @@ export default function ExpertConsultationsPage() {
               style={{ borderBottom: `1px solid ${T.borderSoft}` }}
             >
               <div className="flex items-center gap-2.5 min-w-0">
-                <span className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-semibold shrink-0" style={{ background: `${T.accent}10`, color: T.accent }}>
+                <span className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-semibold shrink-0" style={{ background: `${T.accent}10`, color: T.accent }}>
                   {c.customerName[0]}
                 </span>
-                <span className="text-[13px] font-medium truncate" style={{ color: T.text }}>{c.customerName}</span>
+                <span className="text-[13.5px] font-medium truncate" style={{ color: T.text }}>{c.customerName}</span>
               </div>
               <span className="text-[12px] tabular-nums" style={{ color: T.muted }}>
                 {new Date(c.scheduledAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}

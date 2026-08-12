@@ -43,17 +43,17 @@ export default function ReferralsPage() {
 
       <Card>
         {filtered.length === 0 ? (
-          <p className="text-[13px] text-center py-6" style={{ color: T.muted }}>No referrals in this view.</p>
+          <p className="text-[13.5px] text-center py-6" style={{ color: T.muted }}>No referrals in this view.</p>
         ) : (
           filtered.map((r) => (
             <div key={r.id} className="flex flex-wrap items-center justify-between gap-3 py-3" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] px-1.5 py-0.5 rounded capitalize" style={{ background: T.bg, color: T.muted }}>{r.eventType}</span>
-                  <span className="text-[11.5px]" style={{ color: T.faint }}>{r.eventDate}</span>
+                  <span className="text-[12px]" style={{ color: T.faint }}>{r.eventDate}</span>
                   {r.campaign && <span className="text-[11px]" style={{ color: T.muted }}>{r.campaign}</span>}
                 </div>
-                {r.maskedCustomer && <div className="text-[13px] mt-0.5" style={{ color: T.text }}>{r.maskedCustomer}</div>}
+                {r.maskedCustomer && <div className="text-[13.5px] mt-0.5" style={{ color: T.text }}>{r.maskedCustomer}</div>}
               </div>
               <div className="flex items-center gap-2.5 shrink-0">
                 {r.orderValue && <span className="text-[12px] tabular-nums" style={{ color: T.muted }}>Order {inr(r.orderValue)}</span>}
@@ -62,7 +62,7 @@ export default function ReferralsPage() {
                     {r.commissionStatus}
                   </Chip>
                 )}
-                {r.commissionAmount && <span className="text-[12.5px] font-semibold tabular-nums" style={{ color: T.accent }}>{inr(r.commissionAmount)}</span>}
+                {r.commissionAmount && <span className="text-[13px] font-semibold tabular-nums" style={{ color: T.accent }}>{inr(r.commissionAmount)}</span>}
               </div>
             </div>
           ))

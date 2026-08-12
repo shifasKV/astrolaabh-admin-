@@ -15,7 +15,7 @@ export function StatusBadge({ stages, current, className = "" }: StatusBadgeProp
           <span
             key={i}
             className="h-[4px] flex-1 rounded-full"
-            style={{ background: i <= current ? T.accent : "rgba(235,230,215,0.1)" }}
+            style={{ background: i <= current ? T.accent : "rgba(89,82,54,0.14)" }}
           />
         ))}
       </div>
@@ -38,12 +38,12 @@ export function StatusPipeline({ stages, current }: StatusPipelineProps) {
     <div className="flex items-center gap-2 overflow-x-auto py-1">
       {stages.map((s, i) => (
         <div key={s} className="flex items-center gap-2 shrink-0">
-          {i > 0 && <span className="text-[10px]" style={{ color: T.faint }}>→</span>}
+          {i > 0 && <span className="text-[11px]" style={{ color: T.faint }}>→</span>}
           <span
             className="text-[11px] px-2.5 py-1 rounded-full whitespace-nowrap"
             style={{
-              background: i === current ? "rgba(195,160,88,0.15)" : "transparent",
-              border: `1px solid ${i <= current ? "rgba(195,160,88,0.4)" : T.borderSoft}`,
+              background: i === current ? "rgba(160,125,56,0.15)" : "transparent",
+              border: `1px solid ${i <= current ? "rgba(160,125,56,0.45)" : T.borderSoft}`,
               color: i <= current ? T.accent : T.faint,
               fontWeight: i === current ? 600 : 400,
             }}

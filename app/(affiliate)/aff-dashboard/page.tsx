@@ -36,7 +36,7 @@ export default function AffiliateDashboard() {
       {/* Attribution policy */}
       <Card className="mb-4">
         <div className="text-[11px] tracking-[0.08em] uppercase mb-2" style={{ color: T.faint }}>Your attribution policy</div>
-        <p className="text-[12.5px]" style={{ color: T.muted }}>
+        <p className="text-[13px]" style={{ color: T.muted }}>
           First-touch attribution · 30-day cookie window · {affiliate.commissionRate}% net order value · Commissions held for 14 days after delivery · Returns and refunds claw back.
         </p>
       </Card>
@@ -50,8 +50,8 @@ export default function AffiliateDashboard() {
         {myReferrals.filter((r) => r.eventType === "order").slice(0, 4).map((r) => (
           <div key={r.id} className="flex items-center justify-between py-2.5" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
             <div>
-              <span className="text-[12.5px]" style={{ color: T.text }}>{r.maskedCustomer}</span>
-              <span className="text-[11.5px] ml-2" style={{ color: T.muted }}>{r.eventDate} · {r.campaign || "direct"}</span>
+              <span className="text-[13px]" style={{ color: T.text }}>{r.maskedCustomer}</span>
+              <span className="text-[12px] ml-2" style={{ color: T.muted }}>{r.eventDate} · {r.campaign || "direct"}</span>
             </div>
             <div className="flex items-center gap-2">
               {r.commissionStatus && (
@@ -59,7 +59,7 @@ export default function AffiliateDashboard() {
                   {r.commissionStatus}
                 </Chip>
               )}
-              {r.commissionAmount && <span className="text-[12.5px] font-semibold tabular-nums" style={{ color: T.accent }}>{inr(r.commissionAmount)}</span>}
+              {r.commissionAmount && <span className="text-[13px] font-semibold tabular-nums" style={{ color: T.accent }}>{inr(r.commissionAmount)}</span>}
             </div>
           </div>
         ))}
@@ -74,12 +74,12 @@ export default function AffiliateDashboard() {
         {myPayouts.slice(0, 3).map((p) => (
           <div key={p.id} className="flex items-center justify-between py-2.5" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
             <div>
-              <span className="text-[12.5px]" style={{ color: T.text }}>{p.period}</span>
+              <span className="text-[13px]" style={{ color: T.text }}>{p.period}</span>
               {p.reference && <span className="text-[11px] ml-2" style={{ color: T.faint }}>{p.reference}</span>}
             </div>
             <div className="flex items-center gap-2">
               <Chip tone={p.status === "paid" ? "good" : "gold"}>{p.status}</Chip>
-              <span className="text-[13px] font-semibold tabular-nums" style={{ color: T.text }}>{inr(p.amount)}</span>
+              <span className="text-[13.5px] font-semibold tabular-nums" style={{ color: T.text }}>{inr(p.amount)}</span>
             </div>
           </div>
         ))}

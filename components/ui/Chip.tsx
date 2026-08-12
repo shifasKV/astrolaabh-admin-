@@ -10,7 +10,7 @@ export function Chip({ children, tone = "muted" }: ChipProps) {
   const colors = STATUS_COLORS[tone];
   return (
     <span
-      className="inline-flex items-center text-[10.5px] tracking-[0.06em] font-medium px-2 py-[3px] rounded-[6px] whitespace-nowrap"
+      className="inline-flex items-center text-[11px] tracking-[0.06em] font-medium px-2 py-[3px] rounded-[6px] whitespace-nowrap"
       style={{ color: colors.color, background: colors.bg }}
     >
       {children}

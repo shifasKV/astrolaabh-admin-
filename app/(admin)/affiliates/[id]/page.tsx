@@ -28,7 +28,7 @@ export default function AffiliateDetailPage({ params }: { params: Promise<{ id: 
     return (
       <div className="py-20 text-center">
         <p className="text-[14px]" style={{ color: T.muted }}>Affiliate not found.</p>
-        <Link href="/affiliates" className="text-[12.5px] mt-2 inline-block" style={{ color: T.accent }}>← Back</Link>
+        <Link href="/affiliates" className="text-[13px] mt-2 inline-block" style={{ color: T.accent }}>← Back</Link>
       </div>
     );
   }
@@ -41,7 +41,7 @@ export default function AffiliateDetailPage({ params }: { params: Promise<{ id: 
     <>
       {/* Back link */}
       <div className="mb-5">
-        <Link href="/affiliates" className="inline-flex items-center gap-1.5 text-[13px] font-medium hover:opacity-80 transition-opacity duration-200" style={{ color: T.accent }}>
+        <Link href="/affiliates" className="inline-flex items-center gap-1.5 text-[13.5px] font-medium hover:opacity-80 transition-opacity duration-200" style={{ color: T.accent }}>
           ← Affiliates
         </Link>
       </div>
@@ -60,7 +60,7 @@ export default function AffiliateDetailPage({ params }: { params: Promise<{ id: 
               <span className="text-[17px] font-semibold" style={{ color: T.text }}>{affiliate.name}</span>
               <Chip tone={isActive ? "good" : "danger"}>{isActive ? "active" : "inactive"}</Chip>
             </div>
-            <div className="text-[13px] mt-1" style={{ color: T.muted }}>{affiliate.code} · {affiliate.email} · {affiliate.commissionRate}% commission</div>
+            <div className="text-[13.5px] mt-1" style={{ color: T.muted }}>{affiliate.code} · {affiliate.email} · {affiliate.commissionRate}% commission</div>
             <div className="flex flex-wrap items-center gap-4 mt-3 text-[12px]" style={{ color: T.faint }}>
               <span>Joined {affiliate.joinedAt}</span>
               <span>·</span>
@@ -68,10 +68,10 @@ export default function AffiliateDetailPage({ params }: { params: Promise<{ id: 
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <GhostBtn className="!text-[11.5px] !h-8 !px-3" onClick={() => setShowEditModal(true)}>
+            <GhostBtn className="!text-[12px] !h-8 !px-3" onClick={() => setShowEditModal(true)}>
               Edit
             </GhostBtn>
-            <GhostBtn className="!text-[11.5px] !h-8 !px-3" onClick={() => setIsActive((v) => !v)}>
+            <GhostBtn className="!text-[12px] !h-8 !px-3" onClick={() => setIsActive((v) => !v)}>
               {isActive ? "Deactivate" : "Activate"}
             </GhostBtn>
           </div>
@@ -94,20 +94,20 @@ export default function AffiliateDetailPage({ params }: { params: Promise<{ id: 
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
-            <div className="text-[10.5px] uppercase tracking-wider" style={{ color: T.faint }}>Bank</div>
-            <div className="text-[13px] mt-0.5" style={{ color: T.text }}>{editForm.bankName}</div>
+            <div className="text-[11px] uppercase tracking-wider" style={{ color: T.faint }}>Bank</div>
+            <div className="text-[13.5px] mt-0.5" style={{ color: T.text }}>{editForm.bankName}</div>
           </div>
           <div>
-            <div className="text-[10.5px] uppercase tracking-wider" style={{ color: T.faint }}>Account</div>
-            <div className="text-[13px] mt-0.5" style={{ color: T.text }}>{editForm.accountNumber}</div>
+            <div className="text-[11px] uppercase tracking-wider" style={{ color: T.faint }}>Account</div>
+            <div className="text-[13.5px] mt-0.5" style={{ color: T.text }}>{editForm.accountNumber}</div>
           </div>
           <div>
-            <div className="text-[10.5px] uppercase tracking-wider" style={{ color: T.faint }}>IFSC</div>
-            <div className="text-[13px] mt-0.5" style={{ color: T.text }}>{editForm.ifsc}</div>
+            <div className="text-[11px] uppercase tracking-wider" style={{ color: T.faint }}>IFSC</div>
+            <div className="text-[13.5px] mt-0.5" style={{ color: T.text }}>{editForm.ifsc}</div>
           </div>
           <div>
-            <div className="text-[10.5px] uppercase tracking-wider" style={{ color: T.faint }}>UPI</div>
-            <div className="text-[13px] mt-0.5" style={{ color: T.accent }}>{editForm.upi}</div>
+            <div className="text-[11px] uppercase tracking-wider" style={{ color: T.faint }}>UPI</div>
+            <div className="text-[13.5px] mt-0.5" style={{ color: T.accent }}>{editForm.upi}</div>
           </div>
         </div>
 
@@ -120,10 +120,10 @@ export default function AffiliateDetailPage({ params }: { params: Promise<{ id: 
           <SectionLink href={`/affiliates/${id}/payouts`} />
         </div>
         {payouts.length === 0 ? (
-          <p className="text-[12.5px]" style={{ color: T.muted }}>No payouts yet.</p>
+          <p className="text-[13px]" style={{ color: T.muted }}>No payouts yet.</p>
         ) : (
           payouts.map((p) => (
-            <div key={p.id} className="flex items-center justify-between py-3 text-[12.5px]" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
+            <div key={p.id} className="flex items-center justify-between py-3 text-[13px]" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
               <div>
                 <div className="font-medium" style={{ color: T.text }}>{p.period}</div>
                 <div className="mt-0.5" style={{ color: T.muted }}>{p.reference} · {p.paidAt ?? "pending"}</div>
@@ -144,10 +144,10 @@ export default function AffiliateDetailPage({ params }: { params: Promise<{ id: 
           <SectionLink href={`/affiliates/${id}/referrals`} />
         </div>
         {referrals.length === 0 ? (
-          <p className="text-[12.5px]" style={{ color: T.muted }}>No referral events.</p>
+          <p className="text-[13px]" style={{ color: T.muted }}>No referral events.</p>
         ) : (
           referrals.slice(0, 5).map((r) => (
-            <div key={r.id} className="flex flex-wrap items-center justify-between py-2.5 text-[12.5px]" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
+            <div key={r.id} className="flex flex-wrap items-center justify-between py-2.5 text-[13px]" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
               <div>
                 <span style={{ color: T.text }}>{r.eventDate}</span>
                 <span className="mx-2" style={{ color: T.faint }}>·</span>
@@ -171,11 +171,11 @@ export default function AffiliateDetailPage({ params }: { params: Promise<{ id: 
           <div className="p-4 rounded-[10px]" style={{ background: T.panel, border: `1px solid ${T.borderSoft}` }}>
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-[13px] font-medium" style={{ color: T.text }}>{affiliate.name}</div>
-                <div className="text-[11.5px] mt-0.5" style={{ color: T.muted }}>{editForm.upi}</div>
+                <div className="text-[13.5px] font-medium" style={{ color: T.text }}>{affiliate.name}</div>
+                <div className="text-[12px] mt-0.5" style={{ color: T.muted }}>{editForm.upi}</div>
               </div>
               <div className="text-right">
-                <div className="text-[10.5px] uppercase tracking-wider" style={{ color: T.faint }}>Pending</div>
+                <div className="text-[11px] uppercase tracking-wider" style={{ color: T.faint }}>Pending</div>
                 <div className="text-[16px] font-semibold" style={{ color: T.accent }}>{inr(affiliate.totalAccrued)}</div>
               </div>
             </div>

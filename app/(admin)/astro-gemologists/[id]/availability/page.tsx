@@ -1,7 +1,7 @@
 "use client";
 import { useParams } from "next/navigation";
-import Link from "next/link";
 import { T } from "@/lib/theme";
+import { BackLink } from "@/components/ui";
 import { EXPERT_PROFILES } from "@/lib/mock";
 import { AvailabilityEditor } from "@/components/availability-editor";
 
@@ -20,13 +20,7 @@ export default function AdminAvailabilityPage() {
   return (
     <>
       <div className="mb-5">
-        <Link
-          href={`/astro-gemologists/${id}`}
-          className="inline-flex items-center gap-1.5 text-[13px] font-medium hover:opacity-80 transition-opacity duration-200"
-          style={{ color: T.accent }}
-        >
-          ← Back to {expert.name}
-        </Link>
+        <BackLink label={`Back to ${expert.name}`} href={`/astro-gemologists/${id}`} />
       </div>
 
       <div className="mb-6">
@@ -41,7 +35,7 @@ export default function AdminAvailabilityPage() {
             <h1 className="text-[18px] font-semibold" style={{ color: T.text }}>
               Availability — {expert.name}
             </h1>
-            <p className="text-[12.5px] mt-0.5" style={{ color: T.muted }}>
+            <p className="text-[13px] mt-0.5" style={{ color: T.muted }}>
               Manage consultation schedule for {expert.name}
             </p>
           </div>

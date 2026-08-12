@@ -121,7 +121,7 @@ export default function UsersPage() {
 
       <Card>
         {filtered.length === 0 ? (
-          <p className="text-[13px] text-center py-6" style={{ color: T.muted }}>No users found.</p>
+          <p className="text-[13.5px] text-center py-6" style={{ color: T.muted }}>No users found.</p>
         ) : (
           filtered.map((u) => {
             const inner = (
@@ -135,7 +135,7 @@ export default function UsersPage() {
                       {u.name[0]}
                     </span>
                     <div>
-                      <div className="text-[13.5px] font-medium" style={{ color: T.text }}>{u.name}</div>
+                      <div className="text-[14px] font-medium" style={{ color: T.text }}>{u.name}</div>
                       <div className="text-[12px]" style={{ color: T.muted }}>{u.email}</div>
                     </div>
                   </div>

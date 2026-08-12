@@ -135,7 +135,7 @@ export default function ExpertRecommendationsPage() {
 
       <Card>
         {paginated.length === 0 ? (
-          <p className="text-[13px] py-8 text-center" style={{ color: T.muted }}>No recommendations found.</p>
+          <p className="text-[13.5px] py-8 text-center" style={{ color: T.muted }}>No recommendations found.</p>
         ) : (
           paginated.map((r) => {
             const href = r.orderId ? `/orders/${r.orderId}` : `/consultations/${r.consultationId}`;
@@ -149,11 +149,11 @@ export default function ExpertRecommendationsPage() {
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 mb-0.5">
-                    <span className="text-[13.5px] font-medium" style={{ color: T.accent }}>{r.gemstone}</span>
+                    <span className="text-[14px] font-medium" style={{ color: T.accent }}>{r.gemstone}</span>
                     <span className="text-[11px]" style={{ color: T.faint }}>·</span>
-                    <span className="text-[12.5px]" style={{ color: T.text }}>{r.customerName}</span>
+                    <span className="text-[13px]" style={{ color: T.text }}>{r.customerName}</span>
                   </div>
-                  <div className="flex items-center gap-3 text-[11.5px]" style={{ color: T.muted }}>
+                  <div className="flex items-center gap-3 text-[12px]" style={{ color: T.muted }}>
                     <span>{r.weightRange}</span>
                     {price != null && (
                       <>

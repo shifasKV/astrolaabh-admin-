@@ -208,22 +208,34 @@ export default function CreateConsultationPage() {
                 <div className="mb-3">
                   <SearchFilter search={search} onSearchChange={setSearch} placeholder="Search name, email…" />
                 </div>
-                <div className="max-h-[300px] overflow-y-auto">
+                <div className="max-h-[300px] overflow-y-auto space-y-0.5 pr-1">
                   {MOCK_CUSTOMERS.filter((c) => !search || c.name.toLowerCase().includes(search.toLowerCase()) || c.email.toLowerCase().includes(search.toLowerCase())).map((c) => (
                     <button
                       key={c.id}
                       onClick={() => selectCustomer(c.id)}
-                      className="w-full flex items-center justify-between py-3 px-3 text-left rounded-[9px] transition-all duration-150 cursor-pointer hover:pl-4"
+                      className={`w-full flex items-center gap-3 py-2.5 px-3 text-left rounded-[10px] transition-colors duration-150 cursor-pointer ${customerId === c.id ? "" : "hover:bg-[rgba(89,82,54,0.05)]"}`}
                       style={{
-                        background: customerId === c.id ? "rgba(195,160,88,0.08)" : "transparent",
-                        borderBottom: `1px solid ${T.borderSoft}`,
+                        background: customerId === c.id ? "rgba(160,125,56,0.13)" : undefined,
+                        border: `1px solid ${customerId === c.id ? T.accentBorder : "transparent"}`,
                       }}
                     >
-                      <div>
-                        <div className="text-[13px] font-medium" style={{ color: T.text }}>{c.name}</div>
-                        <div className="text-[11.5px]" style={{ color: T.muted }}>{c.email} · {c.phone}</div>
+                      <span
+                        className="w-9 h-9 rounded-full flex items-center justify-center text-[13px] font-semibold shrink-0"
+                        style={{ background: `${T.accent}15`, border: `1px solid ${T.accent}30`, color: T.accent }}
+                      >
+                        {c.name[0]}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[13.5px] font-medium truncate" style={{ color: T.text }}>{c.name}</div>
+                        <div className="text-[12px] truncate" style={{ color: T.muted }}>{c.email}</div>
                       </div>
-                      {customerId === c.id && <span style={{ color: T.accent }}>✓</span>}
+                      <span className="hidden sm:block text-[12.5px] tabular-nums shrink-0" style={{ color: T.muted }}>{c.phone}</span>
+                      <span
+                        className="w-[18px] h-[18px] rounded-full shrink-0 flex items-center justify-center"
+                        style={{ border: `1.5px solid ${customerId === c.id ? T.accent : "rgba(89,82,54,0.25)"}` }}
+                      >
+                        {customerId === c.id && <span className="w-[9px] h-[9px] rounded-full" style={{ background: T.accent }} />}
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -264,7 +276,7 @@ export default function CreateConsultationPage() {
                     style={{
                       background: T.card,
                       border: `1px solid ${selectedExpert?.id === ep.id ? T.accent : T.border}`,
-                      boxShadow: selectedExpert?.id === ep.id ? "0 0 0 1px rgba(195,160,88,0.3)" : "none",
+                      boxShadow: selectedExpert?.id === ep.id ? "0 0 0 1px rgba(160,125,56,0.38)" : "none",
                     }}
                   >
                     <div className="text-[14px] font-semibold mb-1" style={{ color: T.text }}>{ep.name}</div>
@@ -274,7 +286,7 @@ export default function CreateConsultationPage() {
                       <span>•</span>
                       <span>{ep.languages.join(", ")}</span>
                     </div>
-                    <div className="mt-3 text-[13px] font-semibold" style={{ color: T.accent }}>
+                    <div className="mt-3 text-[13.5px] font-semibold" style={{ color: T.accent }}>
                       ₹{ep.fee.toLocaleString("en-IN")}
                     </div>
                   </button>
@@ -293,13 +305,13 @@ export default function CreateConsultationPage() {
                     </div>
                     <div className="max-w-[320px]">
                       <div className="flex items-center justify-between mb-4">
-                        <button type="button" onClick={prevMonth} className="w-8 h-8 rounded-full flex items-center justify-center cursor-pointer hover:bg-[rgba(195,160,88,0.1)]" style={{ color: T.muted }}>‹</button>
-                        <span className="text-[13px] font-medium" style={{ color: T.text }}>{MONTHS[viewMonth]} {viewYear}</span>
-                        <button type="button" onClick={nextMonth} className="w-8 h-8 rounded-full flex items-center justify-center cursor-pointer hover:bg-[rgba(195,160,88,0.1)]" style={{ color: T.muted }}>›</button>
+                        <button type="button" onClick={prevMonth} className="w-8 h-8 rounded-full flex items-center justify-center cursor-pointer hover:bg-[rgba(160,125,56,0.15)]" style={{ color: T.muted }}>‹</button>
+                        <span className="text-[13.5px] font-medium" style={{ color: T.text }}>{MONTHS[viewMonth]} {viewYear}</span>
+                        <button type="button" onClick={nextMonth} className="w-8 h-8 rounded-full flex items-center justify-center cursor-pointer hover:bg-[rgba(160,125,56,0.15)]" style={{ color: T.muted }}>›</button>
                       </div>
                       <div className="grid grid-cols-7 gap-1 mb-2">
                         {DAYS.map((d) => (
-                          <div key={d} className="text-center text-[10px] py-1" style={{ color: T.faint }}>{d}</div>
+                          <div key={d} className="text-center text-[11px] py-1" style={{ color: T.faint }}>{d}</div>
                         ))}
                       </div>
                       <div className="grid grid-cols-7 gap-1">
@@ -316,7 +328,7 @@ export default function CreateConsultationPage() {
                               disabled={!available}
                               className="w-9 h-9 rounded-full flex items-center justify-center text-[12px] transition-colors disabled:cursor-not-allowed cursor-pointer"
                               style={{
-                                background: selected ? T.accent : available ? "rgba(195,160,88,0.08)" : "transparent",
+                                background: selected ? T.accent : available ? "rgba(160,125,56,0.13)" : "transparent",
                                 color: selected ? T.accentInk : available ? T.text : T.faint,
                                 fontWeight: selected ? 700 : available ? 500 : 400,
                                 opacity: available ? 1 : 0.4,
@@ -327,9 +339,9 @@ export default function CreateConsultationPage() {
                           );
                         })}
                       </div>
-                      <div className="flex items-center gap-3 mt-4 text-[10.5px]" style={{ color: T.faint }}>
+                      <div className="flex items-center gap-3 mt-4 text-[11px]" style={{ color: T.faint }}>
                         <span className="flex items-center gap-1.5">
-                          <span className="w-3 h-3 rounded-full" style={{ background: "rgba(195,160,88,0.2)" }} /> Available
+                          <span className="w-3 h-3 rounded-full" style={{ background: "rgba(160,125,56,0.25)" }} /> Available
                         </span>
                         <span className="flex items-center gap-1.5">
                           <span className="w-3 h-3 rounded-full opacity-40" style={{ background: T.border }} /> Unavailable
@@ -354,7 +366,7 @@ export default function CreateConsultationPage() {
                             type="button"
                             onClick={() => selectSlot(slot)}
                             disabled={!slot.available}
-                            className="py-2.5 px-3 rounded-[9px] text-[13px] font-medium transition-all disabled:cursor-not-allowed cursor-pointer tabular-nums"
+                            className="py-2.5 px-3 rounded-[9px] text-[13.5px] font-medium transition-all disabled:cursor-not-allowed cursor-pointer tabular-nums"
                             style={{
                               background: selectedSlot === slot.time ? T.accent : slot.available ? T.panel : "transparent",
                               border: `1px solid ${selectedSlot === slot.time ? T.accent : slot.available ? T.border : T.borderSoft}`,
@@ -367,7 +379,7 @@ export default function CreateConsultationPage() {
                         ))}
                       </div>
                       {slotsForDate.filter((s) => s.available).length === 0 && (
-                        <p className="text-[12.5px] mt-4" style={{ color: T.danger }}>No slots available on this date. Pick another date.</p>
+                        <p className="text-[13px] mt-4" style={{ color: T.danger }}>No slots available on this date. Pick another date.</p>
                       )}
                     </div>
                   )}
@@ -387,7 +399,7 @@ export default function CreateConsultationPage() {
         {step === "review" && selectedExpert && (
           <Card>
             <div className="text-[11px] tracking-[0.08em] uppercase mb-4" style={{ color: T.faint }}>Review booking</div>
-            <div className="space-y-3 text-[13px]">
+            <div className="space-y-3 text-[13.5px]">
               {[
                 ["Customer", customerName],
                 ["Type", TYPES.find((t) => t.value === type)?.label ?? type],
@@ -402,13 +414,13 @@ export default function CreateConsultationPage() {
               ))}
               <div className="flex justify-between items-center py-1.5" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
                 <span style={{ color: T.muted }}>Fee</span>
-                <div className="flex items-center gap-1 rounded-md px-2 py-1" style={{ background: "rgba(235,230,215,0.04)", border: `1px solid rgba(235,230,215,0.1)` }}>
+                <div className="flex items-center gap-1 rounded-md px-2 py-1" style={{ background: "rgba(89,82,54,0.05)", border: `1px solid rgba(89,82,54,0.14)` }}>
                   <span className="text-[12px]" style={{ color: T.faint }}>₹</span>
                   <input
                     type="text"
                     value={editFee || String(selectedExpert.fee)}
                     onChange={(e) => setEditFee(e.target.value)}
-                    className="text-right font-semibold tabular-nums bg-transparent border-none outline-none w-[100px] text-[13px]"
+                    className="text-right font-semibold tabular-nums bg-transparent border-none outline-none w-[100px] text-[13.5px]"
                     style={{ color: T.text }}
                     placeholder="0"
                   />
@@ -416,12 +428,12 @@ export default function CreateConsultationPage() {
               </div>
               <div className="flex justify-between items-center py-1.5" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
                 <span style={{ color: T.muted }}>Discount</span>
-                <div className="flex items-center gap-1 rounded-md px-2 py-1" style={{ background: "rgba(235,230,215,0.04)", border: `1px solid rgba(235,230,215,0.1)` }}>
+                <div className="flex items-center gap-1 rounded-md px-2 py-1" style={{ background: "rgba(89,82,54,0.05)", border: `1px solid rgba(89,82,54,0.14)` }}>
                   <input
                     type="text"
                     value={discount}
                     onChange={(e) => setDiscount(e.target.value)}
-                    className="text-right tabular-nums bg-transparent border-none outline-none w-[100px] text-[13px]"
+                    className="text-right tabular-nums bg-transparent border-none outline-none w-[100px] text-[13.5px]"
                     style={{ color: T.danger || "#e55" }}
                     placeholder="0"
                   />
@@ -440,8 +452,8 @@ export default function CreateConsultationPage() {
               </div>
               {problem && (
                 <div className="pt-2">
-                  <div className="text-[10px] tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>Problem</div>
-                  <p className="text-[12.5px]" style={{ color: T.text }}>{problem}</p>
+                  <div className="text-[11px] tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>Problem</div>
+                  <p className="text-[13px]" style={{ color: T.text }}>{problem}</p>
                 </div>
               )}
             </div>
@@ -456,7 +468,7 @@ export default function CreateConsultationPage() {
 
       {toast && (
         <div
-          className="fixed top-6 right-6 z-[100] flex items-center gap-2 px-4 py-3 rounded-[10px] shadow-lg text-[13px] font-medium animate-in"
+          className="fixed top-6 right-6 z-[100] flex items-center gap-2 px-4 py-3 rounded-[10px] shadow-lg text-[13.5px] font-medium animate-in"
           style={{ background: T.card, border: `1px solid ${T.border}`, color: T.good }}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6L9 17l-5-5"/></svg>

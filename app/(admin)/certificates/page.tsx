@@ -60,7 +60,7 @@ export default function CertificatesPage() {
 
       <Card>
         {filtered.length === 0 ? (
-          <p className="text-[13px] text-center py-6" style={{ color: T.muted }}>No certificates match.</p>
+          <p className="text-[13.5px] text-center py-6" style={{ color: T.muted }}>No certificates match.</p>
         ) : (
           filtered.map((c) => (
             <div key={c.id} className="flex flex-wrap items-center justify-between gap-3 py-3.5" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
@@ -71,10 +71,10 @@ export default function CertificatesPage() {
                     {c.type === "lab_authenticity" ? "Lab" : "Energisation"}
                   </span>
                 </div>
-                <div className="text-[13px] mt-0.5" style={{ color: T.text }}>
+                <div className="text-[13.5px] mt-0.5" style={{ color: T.text }}>
                   {c.certificateNumber ?? "No certificate number"} {c.issuingAuthority && `· ${c.issuingAuthority}`}
                 </div>
-                {c.fileName && <div className="text-[11.5px] mt-0.5" style={{ color: T.muted }}>{c.fileName}</div>}
+                {c.fileName && <div className="text-[12px] mt-0.5" style={{ color: T.muted }}>{c.fileName}</div>}
               </div>
               <div className="flex items-center gap-2.5">
                 <Chip tone={statusTone(c.status)}>{c.status === "verified" ? "uploaded" : c.status}</Chip>

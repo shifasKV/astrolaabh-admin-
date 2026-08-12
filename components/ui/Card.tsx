@@ -12,7 +12,7 @@ export function Card({ children, className = "", id }: CardProps) {
     <div
       id={id}
       className={`rounded-[12px] p-5 ${className}`}
-      style={{ background: T.card, border: `1px solid ${T.border}` }}
+      style={{ background: T.card, border: `1px solid ${T.border}`, boxShadow: T.shadow }}
     >
       {children}
     </div>
@@ -32,22 +32,28 @@ export function StatCard({ label, value, sub, trend, onClick }: StatCardProps) {
   return (
     <Wrapper
       onClick={onClick}
-      className={`rounded-[12px] p-5 text-left transition-all duration-200 ${onClick ? "cursor-pointer hover:border-[rgba(195,160,88,0.2)]" : ""}`}
-      style={{ background: T.card, border: `1px solid ${T.border}` }}
+      className={`rounded-[12px] p-5 text-left transition-all duration-300 ${onClick ? "cursor-pointer hover:-translate-y-[2px] hover:border-[rgba(160,125,56,0.35)] hover:shadow-[0_2px_6px_rgba(43,42,34,0.05),0_16px_32px_-16px_rgba(43,42,34,0.18)]" : ""}`}
+      style={{ background: T.card, border: `1px solid ${T.border}`, boxShadow: T.shadow }}
     >
-      <div className="text-[11px] tracking-[0.08em] uppercase" style={{ color: T.faint }}>
+      <div className="text-[11px] font-medium tracking-[0.09em] uppercase" style={{ color: T.faint }}>
         {label}
       </div>
-      <div className="text-[22px] font-semibold mt-1.5 tabular-nums flex items-center gap-2" style={{ color: T.text }}>
+      <div className="font-title text-[28px] font-semibold mt-2 tracking-[-0.02em] tabular-nums flex items-baseline gap-2" style={{ color: T.text }}>
         {value}
         {trend && trend !== "neutral" && (
-          <span className="text-[11px]" style={{ color: trend === "up" ? T.good : T.danger }}>
+          <span
+            className="text-[11px] font-semibold px-1.5 py-0.5 rounded-[5px]"
+            style={{
+              color: trend === "up" ? T.good : T.danger,
+              background: trend === "up" ? "rgba(95,112,64,0.12)" : "rgba(163,73,63,0.10)",
+            }}
+          >
             {trend === "up" ? "↑" : "↓"}
           </span>
         )}
       </div>
       {sub && (
-        <div className="text-[11.5px] mt-1" style={{ color: T.muted }}>
+        <div className="text-[12.5px] mt-1.5" style={{ color: T.muted }}>
           {sub}
         </div>
       )}
@@ -59,7 +65,7 @@ export function DetailCard({ children, className = "" }: CardProps) {
   return (
     <div
       className={`rounded-[14px] p-6 ${className}`}
-      style={{ background: T.panel, border: `1px solid ${T.border}` }}
+      style={{ background: T.card, border: `1px solid ${T.border}`, boxShadow: T.shadow }}
     >
       {children}
     </div>

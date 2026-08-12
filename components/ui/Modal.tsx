@@ -31,13 +31,13 @@ export function Modal({ open, onClose, title, children, wide }: ModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby={title ? "modal-title" : undefined}>
       <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        style={{ animation: "modal-backdrop-in 200ms ease-out" }}
+        className="absolute inset-0 backdrop-blur-sm"
+        style={{ background: "rgba(43,42,34,0.38)", animation: "modal-backdrop-in 200ms ease-out" }}
         onClick={onClose}
       />
       <div
-        className={`relative rounded-[14px] p-6 w-full shadow-2xl max-h-[90vh] overflow-y-auto ${wide ? "max-w-[640px]" : "max-w-[480px]"}`}
-        style={{ background: T.panel, border: `1px solid ${T.border}`, animation: "modal-in 250ms cubic-bezier(0.22, 1, 0.36, 1)" }}
+        className={`relative rounded-[14px] p-6 w-full max-h-[90vh] overflow-y-auto ${wide ? "max-w-[640px]" : "max-w-[480px]"}`}
+        style={{ background: T.card, border: `1px solid ${T.border}`, boxShadow: "0 4px 12px rgba(43,42,34,0.07), 0 40px 80px -36px rgba(43,42,34,0.4)", animation: "modal-in 250ms cubic-bezier(0.22, 1, 0.36, 1)" }}
       >
         {title && (
           <div className="flex items-center justify-between mb-5">
@@ -45,7 +45,7 @@ export function Modal({ open, onClose, title, children, wide }: ModalProps) {
             <button
               onClick={onClose}
               aria-label="Close"
-              className="w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 hover:bg-[rgba(235,230,215,0.06)]"
+              className="w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 hover:bg-[rgba(89,82,54,0.07)]"
               style={{ color: T.muted }}
             >
               ✕

@@ -19,7 +19,7 @@ export function Input({ value, onChange, placeholder, type = "text", label, clas
   return (
     <div className={className}>
       {label && (
-        <label className="block text-[10px] tracking-[0.12em] uppercase mb-1.5" style={{ color: T.faint }}>
+        <label className="block text-[11px] tracking-[0.12em] uppercase mb-1.5" style={{ color: T.faint }}>
           {label}
         </label>
       )}
@@ -124,7 +124,7 @@ export function Select({ value, onChange, options, label, className = "", disabl
   return (
     <div className={`relative ${className}`} ref={containerRef}>
       {label && (
-        <label className="block text-[10px] tracking-[0.12em] uppercase mb-1.5" style={{ color: T.faint }}>
+        <label className="block text-[11px] tracking-[0.12em] uppercase mb-1.5" style={{ color: T.faint }}>
           {label}
         </label>
       )}
@@ -133,7 +133,7 @@ export function Select({ value, onChange, options, label, className = "", disabl
         onClick={() => !disabled && setOpen(!open)}
         onKeyDown={handleKeyDown}
         disabled={disabled}
-        className={`${height} px-3.5 rounded-[9px] text-[13px] w-full text-left flex items-center justify-between gap-2 outline-none disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors`}
+        className={`${height} px-3.5 rounded-[9px] text-[13.5px] w-full text-left flex items-center justify-between gap-2 outline-none disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors`}
         style={{ ...INPUT_STYLE, color: selected ? T.text : T.faint }}
       >
         <span className="truncate">{triggerLabel}</span>
@@ -145,7 +145,7 @@ export function Select({ value, onChange, options, label, className = "", disabl
       {open && (
         <div
           className="absolute z-50 mt-1 w-full rounded-[9px] overflow-hidden shadow-lg"
-          style={{ background: T.panel, border: `1px solid ${T.border}`, animation: "fadeIn 120ms ease-out" }}
+          style={{ background: T.popover, border: `1px solid ${T.border}`, animation: "fadeIn 120ms ease-out" }}
         >
           {showSearch && (
             <div className="p-2" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
@@ -157,7 +157,7 @@ export function Select({ value, onChange, options, label, className = "", disabl
                 onKeyDown={handleKeyDown}
                 onMouseDown={(e) => e.stopPropagation()}
                 placeholder="Search…"
-                className="w-full h-8 px-3 rounded-[9px] text-[12.5px] outline-none"
+                className="w-full h-8 px-3 rounded-[9px] text-[13px] outline-none"
                 style={{ background: T.bg, border: `1px solid ${T.borderSoft}`, color: T.text }}
               />
             </div>
@@ -171,9 +171,9 @@ export function Select({ value, onChange, options, label, className = "", disabl
                   key={opt.value}
                   type="button"
                   onClick={() => { onChange(opt.value); setOpen(false); }}
-                  className="w-full text-left px-3.5 py-2 text-[12.5px] transition-colors flex items-center justify-between"
+                  className="w-full text-left px-3.5 py-2 text-[13px] transition-colors flex items-center justify-between"
                   style={{
-                    background: idx === highlightIdx ? "rgba(195,160,88,0.08)" : opt.value === value ? "rgba(195,160,88,0.05)" : "transparent",
+                    background: idx === highlightIdx ? "rgba(160,125,56,0.13)" : opt.value === value ? "rgba(160,125,56,0.09)" : "transparent",
                     color: opt.value === value ? T.accent : T.text,
                   }}
                   onMouseEnter={() => setHighlightIdx(idx)}
@@ -266,14 +266,14 @@ export function DateInput({ value, onChange, label, className = "", placeholder 
   return (
     <div className={`relative ${className}`} ref={containerRef}>
       {label && (
-        <label className="block text-[10px] tracking-[0.12em] uppercase mb-1.5" style={{ color: T.faint }}>
+        <label className="block text-[11px] tracking-[0.12em] uppercase mb-1.5" style={{ color: T.faint }}>
           {label}
         </label>
       )}
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="h-10 px-3.5 rounded-[9px] text-[13px] w-full text-left flex items-center justify-between gap-2 outline-none cursor-pointer"
+        className="h-10 px-3.5 rounded-[9px] text-[13.5px] w-full text-left flex items-center justify-between gap-2 outline-none cursor-pointer"
         style={{ ...INPUT_STYLE, color: parsed ? T.text : T.faint }}
       >
         <span>{parsed ? formatDate(parsed) : (placeholder ?? "Select date…")}</span>
@@ -285,21 +285,21 @@ export function DateInput({ value, onChange, label, className = "", placeholder 
       {open && (
         <div
           className="absolute z-50 mt-1 rounded-[9px] p-3 shadow-lg w-[280px]"
-          style={{ background: T.panel, border: `1px solid ${T.border}`, animation: "fadeIn 120ms ease-out" }}
+          style={{ background: T.popover, border: `1px solid ${T.border}`, animation: "fadeIn 120ms ease-out" }}
         >
           <div className="flex items-center justify-between mb-3">
-            <button type="button" onClick={prevMonth} className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-[rgba(195,160,88,0.1)]" style={{ color: T.muted }}>
+            <button type="button" onClick={prevMonth} className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-[rgba(160,125,56,0.15)]" style={{ color: T.muted }}>
               ‹
             </button>
-            <span className="text-[12.5px] font-medium" style={{ color: T.text }}>{MONTHS[viewMonth]} {viewYear}</span>
-            <button type="button" onClick={nextMonth} className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-[rgba(195,160,88,0.1)]" style={{ color: T.muted }}>
+            <span className="text-[13px] font-medium" style={{ color: T.text }}>{MONTHS[viewMonth]} {viewYear}</span>
+            <button type="button" onClick={nextMonth} className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-[rgba(160,125,56,0.15)]" style={{ color: T.muted }}>
               ›
             </button>
           </div>
 
           <div className="grid grid-cols-7 gap-0.5 mb-1">
             {DAYS.map((d) => (
-              <div key={d} className="text-center text-[10px] py-1" style={{ color: T.faint }}>{d}</div>
+              <div key={d} className="text-center text-[11px] py-1" style={{ color: T.faint }}>{d}</div>
             ))}
           </div>
 
@@ -382,14 +382,14 @@ export function TimeInput({ value, onChange, label, className = "", placeholder 
   return (
     <div className={`relative ${className}`} ref={containerRef}>
       {label && (
-        <label className="block text-[10px] tracking-[0.12em] uppercase mb-1.5" style={{ color: T.faint }}>
+        <label className="block text-[11px] tracking-[0.12em] uppercase mb-1.5" style={{ color: T.faint }}>
           {label}
         </label>
       )}
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="h-10 px-3.5 rounded-[9px] text-[13px] w-full text-left flex items-center justify-between gap-2 outline-none cursor-pointer"
+        className="h-10 px-3.5 rounded-[9px] text-[13.5px] w-full text-left flex items-center justify-between gap-2 outline-none cursor-pointer"
         style={{ ...INPUT_STYLE, color: value ? T.text : T.faint }}
       >
         <span>{value || (placeholder ?? "Select time…")}</span>
@@ -401,7 +401,7 @@ export function TimeInput({ value, onChange, label, className = "", placeholder 
       {open && (
         <div
           className="absolute z-50 mt-1 w-full rounded-[9px] overflow-hidden shadow-lg"
-          style={{ background: T.panel, border: `1px solid ${T.border}`, animation: "fadeIn 120ms ease-out" }}
+          style={{ background: T.popover, border: `1px solid ${T.border}`, animation: "fadeIn 120ms ease-out" }}
         >
           <div ref={listRef} className="max-h-[200px] overflow-y-auto py-1">
             {TIME_SLOTS.map((slot) => (
@@ -409,9 +409,9 @@ export function TimeInput({ value, onChange, label, className = "", placeholder 
                 key={slot}
                 type="button"
                 onClick={() => { onChange(slot); setOpen(false); }}
-                className="w-full text-left px-3.5 py-2 text-[12.5px] transition-colors tabular-nums"
+                className="w-full text-left px-3.5 py-2 text-[13px] transition-colors tabular-nums"
                 style={{
-                  background: slot === value ? "rgba(195,160,88,0.08)" : "transparent",
+                  background: slot === value ? "rgba(160,125,56,0.13)" : "transparent",
                   color: slot === value ? T.accent : T.text,
                 }}
               >
@@ -441,7 +441,7 @@ export function Textarea({ value, onChange, placeholder, label, rows = 4, classN
   return (
     <div className={className}>
       {label && (
-        <label className="block text-[10px] tracking-[0.12em] uppercase mb-1.5" style={{ color: T.faint }}>
+        <label className="block text-[11px] tracking-[0.12em] uppercase mb-1.5" style={{ color: T.faint }}>
           {label}
         </label>
       )}
@@ -450,7 +450,7 @@ export function Textarea({ value, onChange, placeholder, label, rows = 4, classN
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         rows={rows}
-        className="w-full px-3.5 py-2.5 rounded-[9px] text-[13px] outline-none resize-y"
+        className="w-full px-3.5 py-2.5 rounded-[9px] text-[13.5px] outline-none resize-y"
         style={INPUT_STYLE}
       />
     </div>
@@ -470,7 +470,7 @@ export function FileInput({ onSelect, label, accept, className = "" }: FileInput
   return (
     <div className={className}>
       {label && (
-        <label className="block text-[10px] tracking-[0.12em] uppercase mb-1.5" style={{ color: T.faint }}>
+        <label className="block text-[11px] tracking-[0.12em] uppercase mb-1.5" style={{ color: T.faint }}>
           {label}
         </label>
       )}
@@ -478,7 +478,7 @@ export function FileInput({ onSelect, label, accept, className = "" }: FileInput
         type="file"
         accept={accept}
         onChange={(e) => e.target.files?.[0] && onSelect(e.target.files[0])}
-        className="block w-full text-[12.5px] file:mr-3 file:py-2 file:px-4 file:rounded-[9px] file:border-0 file:text-[12px] file:font-medium file:cursor-pointer"
+        className="block w-full text-[13px] file:mr-3 file:py-2 file:px-4 file:rounded-[9px] file:border-0 file:text-[12px] file:font-medium file:cursor-pointer"
         style={{ color: T.muted }}
       />
     </div>

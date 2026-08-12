@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, SearchFilter, Tabs, GoldBtn, Select } from "@/components/ui";
+import { PageHeader, Card, Chip, SearchFilter, Tabs, GoldBtn, Select, ShopifyButton } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_ORDERS } from "@/lib/mock";
 import { inr } from "@/lib/types";
@@ -83,9 +83,7 @@ export default function OrdersPage() {
         action={
           <div className="flex items-center gap-2.5">
             <Link href="/orders/create"><GoldBtn>+ Create order</GoldBtn></Link>
-            <a href="https://admin.shopify.com/orders" target="_blank" rel="noopener" className="inline-flex items-center gap-1.5 text-[12px] px-3 py-1.5 rounded-[8px]" style={{ border: `1px solid ${T.border}`, color: T.good }}>
-              <span className="w-1.5 h-1.5 rounded-full" style={{ background: T.good }} /> Open Shopify ↗
-            </a>
+            <ShopifyButton href="https://admin.shopify.com/orders">Open Shopify</ShopifyButton>
           </div>
         }
       />
@@ -165,8 +163,8 @@ export default function OrdersPage() {
         <div className="relative">
           <button
             onClick={() => setShowDatePicker(!showDatePicker)}
-            className="h-9 px-3.5 rounded-[9px] text-[13px] flex items-center gap-2 cursor-pointer transition-all"
-            style={{ background: T.panel, border: `1px solid ${(filterDateFrom || filterDateTo) ? T.accentBorder : T.border}`, color: (filterDateFrom || filterDateTo) ? T.text : T.text }}
+            className="h-9 px-3.5 rounded-[9px] text-[13.5px] flex items-center gap-2 cursor-pointer transition-all"
+            style={{ background: T.popover, border: `1px solid ${(filterDateFrom || filterDateTo) ? T.accentBorder : T.border}`, color: (filterDateFrom || filterDateTo) ? T.text : T.text }}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
               <rect x="3" y="4" width="18" height="17" rx="2" /><path d="M8 2v4M16 2v4M3 9h18" />
@@ -182,7 +180,7 @@ export default function OrdersPage() {
               <div className="fixed inset-0 z-40" onClick={() => setShowDatePicker(false)} />
               <div
                 className="absolute top-full left-0 mt-1 z-50 flex rounded-[9px] shadow-lg overflow-hidden"
-                style={{ background: T.panel, border: `1px solid ${T.border}` }}
+                style={{ background: T.popover, border: `1px solid ${T.border}` }}
               >
                 <div className="w-[130px] py-2 px-1.5 shrink-0" style={{ borderRight: `1px solid ${T.borderSoft}` }}>
                   <div className="text-[9px] tracking-[0.06em] uppercase px-2 mb-1.5" style={{ color: T.faint }}>Quick select</div>
@@ -195,7 +193,7 @@ export default function OrdersPage() {
                     <button
                       key={preset.label}
                       onClick={() => { setFilterDateFrom(preset.from); setFilterDateTo(preset.to); setShowDatePicker(false); setPage(1); }}
-                      className="w-full text-left px-2.5 py-2 rounded-[7px] text-[12px] transition-colors cursor-pointer hover:bg-[rgba(195,160,88,0.06)]"
+                      className="w-full text-left px-2.5 py-2 rounded-[7px] text-[12px] transition-colors cursor-pointer hover:bg-[rgba(160,125,56,0.10)]"
                       style={{ color: T.text }}
                     >
                       {preset.label}
@@ -224,9 +222,9 @@ export default function OrdersPage() {
                     </div>
                   </div>
                   <div className="flex items-center justify-between mb-2">
-                    <button type="button" onClick={() => { if (dpMonth === 0) { setDpMonth(11); setDpYear((y) => y - 1); } else setDpMonth((m) => m - 1); }} className="w-6 h-6 rounded-full flex items-center justify-center cursor-pointer hover:bg-[rgba(195,160,88,0.1)]" style={{ color: T.muted }}>‹</button>
+                    <button type="button" onClick={() => { if (dpMonth === 0) { setDpMonth(11); setDpYear((y) => y - 1); } else setDpMonth((m) => m - 1); }} className="w-6 h-6 rounded-full flex items-center justify-center cursor-pointer hover:bg-[rgba(160,125,56,0.15)]" style={{ color: T.muted }}>‹</button>
                     <span className="text-[11px] font-medium" style={{ color: T.text }}>{["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][dpMonth]} {dpYear}</span>
-                    <button type="button" onClick={() => { if (dpMonth === 11) { setDpMonth(0); setDpYear((y) => y + 1); } else setDpMonth((m) => m + 1); }} className="w-6 h-6 rounded-full flex items-center justify-center cursor-pointer hover:bg-[rgba(195,160,88,0.1)]" style={{ color: T.muted }}>›</button>
+                    <button type="button" onClick={() => { if (dpMonth === 11) { setDpMonth(0); setDpYear((y) => y + 1); } else setDpMonth((m) => m + 1); }} className="w-6 h-6 rounded-full flex items-center justify-center cursor-pointer hover:bg-[rgba(160,125,56,0.15)]" style={{ color: T.muted }}>›</button>
                   </div>
                   <div className="grid grid-cols-7 gap-0.5 mb-1">
                     {["Mo","Tu","We","Th","Fr","Sa","Su"].map((d) => <div key={d} className="text-center text-[9px] py-0.5" style={{ color: T.faint }}>{d}</div>)}
@@ -242,7 +240,7 @@ export default function OrdersPage() {
                       return (
                         <button key={day} type="button" onClick={() => { if (!filterDateFrom || (filterDateFrom && filterDateTo)) { setFilterDateFrom(iso); setFilterDateTo(""); } else { if (iso < filterDateFrom) { setFilterDateTo(filterDateFrom); setFilterDateFrom(iso); } else { setFilterDateTo(iso); } } setPage(1); }}
                           className="w-[34px] h-[34px] rounded-full flex items-center justify-center text-[11px] transition-colors cursor-pointer"
-                          style={{ background: (isFrom || isTo) ? T.accent : inRange ? "rgba(195,160,88,0.12)" : "transparent", color: (isFrom || isTo) ? T.accentInk : T.text, fontWeight: (isFrom || isTo) ? 700 : 400 }}
+                          style={{ background: (isFrom || isTo) ? T.accent : inRange ? "rgba(160,125,56,0.16)" : "transparent", color: (isFrom || isTo) ? T.accentInk : T.text, fontWeight: (isFrom || isTo) ? 700 : 400 }}
                         >{day}</button>
                       );
                     })}
@@ -282,7 +280,7 @@ export default function OrdersPage() {
 
       <Card>
         {/* Table header */}
-        <div className="hidden sm:grid grid-cols-[1fr_100px_140px_100px_110px] gap-3 px-3 py-2 text-[10px] tracking-[0.06em] uppercase" style={{ color: T.faint, borderBottom: `1px solid ${T.borderSoft}` }}>
+        <div className="hidden sm:grid grid-cols-[1fr_100px_140px_100px_110px] gap-3 px-3 py-2 text-[11px] tracking-[0.06em] uppercase" style={{ color: T.faint, borderBottom: `1px solid ${T.borderSoft}` }}>
           <span>Order details</span>
           <span>Created date</span>
           <span>Created by</span>
@@ -291,26 +289,29 @@ export default function OrdersPage() {
         </div>
 
         {paginated.length === 0 ? (
-          <p className="text-[13px] py-6 text-center" style={{ color: T.muted }}>No orders match your filters.</p>
+          <p className="text-[13.5px] py-6 text-center" style={{ color: T.muted }}>No orders match your filters.</p>
         ) : (
           paginated.map((o) => (
             <Link
               key={o.id}
               href={`/orders/${o.id}`}
-              className="group grid grid-cols-1 sm:grid-cols-[1fr_100px_140px_100px_110px] gap-2 sm:gap-3 items-center px-3 py-3.5 transition-all duration-150 rounded-[8px] hover:bg-[rgba(195,160,88,0.03)]"
+              className="group grid grid-cols-1 sm:grid-cols-[1fr_100px_140px_100px_110px] gap-2 sm:gap-3 items-center px-3 py-3.5 transition-all duration-150 rounded-[8px] hover:bg-[rgba(160,125,56,0.07)]"
               style={{ borderBottom: `1px solid ${T.borderSoft}` }}
             >
-              {/* Order details */}
+              {/* Order details — who, then what, then the reference */}
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-[11px] tracking-[0.06em] uppercase font-medium group-hover:underline" style={{ color: T.accent }}>{o.id}</span>
-                  <span className="text-[12px]" style={{ color: T.text }}>{o.customerName}</span>
+                  <span className="text-[14px] font-medium group-hover:underline" style={{ color: T.text }}>{o.customerName}</span>
                   {o.paymentStatus === "pending" && <Chip tone="gold">Payment pending</Chip>}
                   {o.certificateStatus === "missing" && o.paymentStatus === "paid" && <Chip tone="danger">Cert missing</Chip>}
                   {o.energisationStatus === "pending" && o.paymentStatus === "paid" && <Chip tone="danger">Energ pending</Chip>}
                 </div>
-                <div className="text-[14px] mt-0.5 truncate" style={{ color: T.text }}>
-                  {o.items.map((i) => i.name).join(", ")}
+                <div className="flex items-baseline gap-3 mt-0.5 min-w-0">
+                  <span className="text-[13px] truncate" style={{ color: T.muted }}>
+                    {o.items[0]?.name}
+                    {o.items.length > 1 && <span style={{ color: T.faint }}> +{o.items.length - 1} more</span>}
+                  </span>
+                  <span className="text-[11px] tracking-[0.05em] uppercase tabular-nums shrink-0" style={{ color: T.faint }}>{o.id}</span>
                 </div>
               </div>
 
@@ -321,7 +322,7 @@ export default function OrdersPage() {
 
               {/* Created by */}
               <div className="min-w-0">
-                <span className="text-[11.5px] truncate block" style={{ color: T.muted }}>
+                <span className="text-[12px] truncate block" style={{ color: T.muted }}>
                   {o.placedBy || "Customer"}
                 </span>
               </div>
@@ -349,8 +350,8 @@ export default function OrdersPage() {
             Showing {(currentPage - 1) * PER_PAGE + 1}–{Math.min(currentPage * PER_PAGE, filtered.length)} of {filtered.length}
           </div>
           <div className="flex items-center gap-1">
-            <button onClick={() => setPage(1)} disabled={currentPage === 1} className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[12px] transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed" style={{ background: T.panel, border: `1px solid ${T.borderSoft}`, color: T.muted }}>«</button>
-            <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1} className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[12px] transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed" style={{ background: T.panel, border: `1px solid ${T.borderSoft}`, color: T.muted }}>‹</button>
+            <button onClick={() => setPage(1)} disabled={currentPage === 1} className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[12px] transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed" style={{ background: T.popover, border: `1px solid ${T.borderSoft}`, color: T.muted }}>«</button>
+            <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1} className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[12px] transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed" style={{ background: T.popover, border: `1px solid ${T.borderSoft}`, color: T.muted }}>‹</button>
             {Array.from({ length: totalPages }).map((_, i) => {
               const p = i + 1;
               if (totalPages > 7 && Math.abs(p - currentPage) > 2 && p !== 1 && p !== totalPages) {
@@ -361,8 +362,8 @@ export default function OrdersPage() {
                 <button key={p} onClick={() => setPage(p)} className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[12px] font-medium transition-all cursor-pointer" style={{ background: p === currentPage ? T.accent : T.panel, border: `1px solid ${p === currentPage ? T.accent : T.borderSoft}`, color: p === currentPage ? T.accentInk : T.text }}>{p}</button>
               );
             })}
-            <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[12px] transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed" style={{ background: T.panel, border: `1px solid ${T.borderSoft}`, color: T.muted }}>›</button>
-            <button onClick={() => setPage(totalPages)} disabled={currentPage === totalPages} className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[12px] transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed" style={{ background: T.panel, border: `1px solid ${T.borderSoft}`, color: T.muted }}>»</button>
+            <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[12px] transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed" style={{ background: T.popover, border: `1px solid ${T.borderSoft}`, color: T.muted }}>›</button>
+            <button onClick={() => setPage(totalPages)} disabled={currentPage === totalPages} className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[12px] transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed" style={{ background: T.popover, border: `1px solid ${T.borderSoft}`, color: T.muted }}>»</button>
           </div>
         </div>
       )}

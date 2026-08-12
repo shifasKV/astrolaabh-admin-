@@ -15,33 +15,33 @@ interface TabsProps {
 
 export function Tabs({ tabs, active, onChange }: TabsProps) {
   return (
-    <div className="flex items-center gap-1 overflow-x-auto pb-1 no-scrollbar" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
+    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar" style={{ borderBottom: `1px solid ${T.border}` }}>
       {tabs.map((tab) => {
         const isActive = active === tab.key;
         return (
           <button
             key={tab.key}
             onClick={() => onChange(tab.key)}
-            className={`relative px-3.5 py-2.5 text-[13px] rounded-t-[9px] transition-all duration-200 whitespace-nowrap cursor-pointer ${
-              isActive ? "" : "hover:bg-[rgba(195,160,88,0.04)]"
-            }`}
+            className="relative -mb-px px-3 py-2.5 text-[13.5px] transition-colors duration-200 whitespace-nowrap cursor-pointer"
             style={{
               color: isActive ? T.text : T.muted,
-              background: isActive ? T.card : "transparent",
               fontWeight: isActive ? 600 : 400,
+              borderBottom: `2px solid ${isActive ? T.accent : "transparent"}`,
             }}
+            onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.color = T.text; }}
+            onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.color = T.muted; }}
           >
             {tab.label}
             {tab.count !== undefined && (
-              <span className="ml-1.5 text-[10.5px] tabular-nums" style={{ color: isActive ? T.muted : T.faint }}>
+              <span
+                className="ml-1.5 text-[11px] font-medium tabular-nums px-1.5 py-0.5 rounded-full align-middle"
+                style={{
+                  color: isActive ? T.accent : T.faint,
+                  background: isActive ? T.accentMuted : "rgba(89,82,54,0.07)",
+                }}
+              >
                 {tab.count}
               </span>
-            )}
-            {isActive && (
-              <span
-                className="absolute bottom-0 left-3 right-3 h-[2px] rounded-full"
-                style={{ background: T.accent }}
-              />
             )}
           </button>
         );

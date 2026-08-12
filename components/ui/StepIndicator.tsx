@@ -27,8 +27,8 @@ export function StepIndicator({ steps, currentIndex, onNavigate, canNavigateTo }
               onClick={() => navigable && onNavigate?.(i)}
               className="flex items-center gap-2 text-[12px] px-3 py-1.5 rounded-full whitespace-nowrap transition-all duration-200"
               style={{
-                background: isActive ? T.accentMuted : isCompleted ? "rgba(142,160,109,0.08)" : "transparent",
-                border: `1px solid ${isActive ? T.accentBorder : navigable ? "rgba(195,160,88,0.2)" : T.borderSoft}`,
+                background: isActive ? T.accentMuted : isCompleted ? "rgba(95,112,64,0.10)" : "transparent",
+                border: `1px solid ${isActive ? T.accentBorder : navigable ? "rgba(160,125,56,0.25)" : T.borderSoft}`,
                 color: isActive ? T.accent : isCompleted ? T.good : T.faint,
                 fontWeight: isActive ? 600 : 400,
                 cursor: navigable ? "pointer" : "default",
@@ -36,7 +36,7 @@ export function StepIndicator({ steps, currentIndex, onNavigate, canNavigateTo }
               }}
             >
               <span
-                className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0"
+                className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0"
                 style={{
                   background: isActive ? T.accent : isCompleted ? T.good : T.border,
                   color: isActive || isCompleted ? T.accentInk : T.faint,

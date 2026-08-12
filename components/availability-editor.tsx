@@ -13,13 +13,13 @@ import type { WeeklyScheduleDay, DateOverride, TimeRange } from "@/lib/mock";
 const TIME_OPTIONS = generateTimeOptions();
 
 const DAY_COLORS = [
-  "#5d5e56",
-  "#6d8ea0",
-  "#8ea06d",
-  "#c3a058",
-  "#b05454",
-  "#a06d8e",
-  "#5d5e56",
+  "#6d6753",
+  "#587082",
+  "#5f7040",
+  "#a07d38",
+  "#a3493f",
+  "#8a5f7e",
+  "#6d6753",
 ];
 
 function toISODate(d: Date): string {
@@ -58,8 +58,8 @@ function TimeSelect({ value, onChange }: { value: string; onChange: (v: string) 
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="h-9 px-3 rounded-[8px] text-[12.5px] min-w-[100px] text-left cursor-pointer flex items-center justify-between gap-1.5"
-        style={{ background: T.panel, border: `1px solid ${open ? T.accent : T.border}`, color: T.text }}
+        className="h-9 px-3 rounded-[8px] text-[13px] min-w-[100px] text-left cursor-pointer flex items-center justify-between gap-1.5"
+        style={{ background: T.popover, border: `1px solid ${open ? T.accent : T.border}`, color: T.text }}
       >
         {formatTime24to12(value)}
         <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
@@ -71,7 +71,7 @@ function TimeSelect({ value, onChange }: { value: string; onChange: (v: string) 
         <div
           ref={listRef}
           className="absolute z-50 mt-1 w-[130px] max-h-[220px] overflow-y-auto rounded-[10px] py-1 shadow-lg"
-          style={{ background: T.panel, border: `1px solid ${T.border}` }}
+          style={{ background: T.popover, border: `1px solid ${T.border}` }}
         >
           {TIME_OPTIONS.map((t) => {
             const isActive = t === value;
@@ -80,13 +80,13 @@ function TimeSelect({ value, onChange }: { value: string; onChange: (v: string) 
                 key={t}
                 type="button"
                 onClick={() => { onChange(t); setOpen(false); }}
-                className="w-full text-left px-3 py-2 text-[12.5px] cursor-pointer transition-colors"
+                className="w-full text-left px-3 py-2 text-[13px] cursor-pointer transition-colors"
                 style={{
                   background: isActive ? T.accent : "transparent",
                   color: isActive ? T.accentInk : T.text,
                   fontWeight: isActive ? 600 : 400,
                 }}
-                onMouseEnter={(e) => { if (!isActive) { e.currentTarget.style.background = "rgba(195,160,88,0.08)"; } }}
+                onMouseEnter={(e) => { if (!isActive) { e.currentTarget.style.background = "rgba(160,125,56,0.13)"; } }}
                 onMouseLeave={(e) => { if (!isActive) { e.currentTarget.style.background = "transparent"; } }}
               >
                 {formatTime24to12(t)}
@@ -121,7 +121,7 @@ function TimeRangeRow({
       <TimeSelect value={range.end} onChange={onEndChange} />
       <button
         onClick={onRemove}
-        className="w-7 h-7 rounded-full flex items-center justify-center text-[13px] transition-colors hover:bg-[rgba(176,84,84,0.15)] cursor-pointer"
+        className="w-7 h-7 rounded-full flex items-center justify-center text-[13.5px] transition-colors hover:bg-[rgba(176,84,84,0.15)] cursor-pointer"
         style={{ color: T.muted }}
         title="Remove"
       >
@@ -130,7 +130,7 @@ function TimeRangeRow({
       {showAdd && (
         <button
           onClick={onAdd}
-          className="w-7 h-7 rounded-full flex items-center justify-center text-[15px] transition-colors hover:bg-[rgba(195,160,88,0.1)] cursor-pointer"
+          className="w-7 h-7 rounded-full flex items-center justify-center text-[15px] transition-colors hover:bg-[rgba(160,125,56,0.15)] cursor-pointer"
           style={{ color: T.accent }}
           title="Add time range"
         >
@@ -286,9 +286,9 @@ export function AvailabilityEditor({ expertId }: AvailabilityEditorProps) {
       {/* Weekly hours */}
       <Card>
         <div className="mb-4">
-          <span className="text-[13.5px] font-semibold" style={{ color: T.text }}>Weekly hours</span>
+          <span className="text-[14px] font-semibold" style={{ color: T.text }}>Weekly hours</span>
         </div>
-        <div className="text-[11.5px] mb-5" style={{ color: T.muted }}>
+        <div className="text-[12px] mb-5" style={{ color: T.muted }}>
           Set when you are typically available for meetings
         </div>
 
@@ -299,7 +299,7 @@ export function AvailabilityEditor({ expertId }: AvailabilityEditorProps) {
             style={{ borderBottom: `1px solid ${T.borderSoft}` }}
           >
             <div
-              className="w-9 h-8 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5"
+              className="w-9 h-8 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 mt-0.5"
               style={{ background: `${DAY_COLORS[day.dayOfWeek]}22`, color: DAY_COLORS[day.dayOfWeek] }}
             >
               {DAY_LABELS[day.dayOfWeek].slice(0, 3)}
@@ -308,10 +308,10 @@ export function AvailabilityEditor({ expertId }: AvailabilityEditorProps) {
             <div className="flex-1 min-w-0">
               {!day.available ? (
                 <div className="flex items-center justify-between">
-                  <span className="text-[12.5px]" style={{ color: T.muted }}>Unavailable</span>
+                  <span className="text-[13px]" style={{ color: T.muted }}>Unavailable</span>
                   <button
                     onClick={() => toggleDayAvailable(day.dayOfWeek)}
-                    className="w-7 h-7 rounded-full flex items-center justify-center text-[15px] transition-colors hover:bg-[rgba(195,160,88,0.1)] cursor-pointer"
+                    className="w-7 h-7 rounded-full flex items-center justify-center text-[15px] transition-colors hover:bg-[rgba(160,125,56,0.15)] cursor-pointer"
                     style={{ color: T.accent }}
                     title="Make available"
                   >
@@ -347,10 +347,11 @@ export function AvailabilityEditor({ expertId }: AvailabilityEditorProps) {
                   return { year: d.getFullYear(), month: d.getMonth() };
                 })
               }
-              className="w-8 h-8 rounded-full flex items-center justify-center text-[14px] transition-colors hover:bg-[rgba(195,160,88,0.1)] cursor-pointer"
-              style={{ color: T.muted }}
+              className="w-8 h-8 rounded-[8px] flex items-center justify-center transition-colors hover:bg-[rgba(89,82,54,0.07)] cursor-pointer"
+              style={{ color: T.muted, border: `1px solid ${T.borderSoft}` }}
+              aria-label="Previous month"
             >
-              ‹
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M10 3.5 5.5 8 10 12.5" /></svg>
             </button>
             <span className="text-[14px] font-semibold" style={{ color: T.text }}>{calMonthLabel}</span>
             <button
@@ -360,24 +361,25 @@ export function AvailabilityEditor({ expertId }: AvailabilityEditorProps) {
                   return { year: d.getFullYear(), month: d.getMonth() };
                 })
               }
-              className="w-8 h-8 rounded-full flex items-center justify-center text-[14px] transition-colors hover:bg-[rgba(195,160,88,0.1)] cursor-pointer"
-              style={{ color: T.muted }}
+              className="w-8 h-8 rounded-[8px] flex items-center justify-center transition-colors hover:bg-[rgba(89,82,54,0.07)] cursor-pointer"
+              style={{ color: T.muted, border: `1px solid ${T.borderSoft}` }}
+              aria-label="Next month"
             >
-              ›
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="m6 3.5 4.5 4.5L6 12.5" /></svg>
             </button>
           </div>
 
           <div className="grid grid-cols-7 mb-1 max-w-[320px] mx-auto">
             {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
-              <div key={d} className="text-center text-[10px] tracking-[0.04em] py-1" style={{ color: T.faint }}>
+              <div key={d} className="text-center text-[11px] tracking-[0.04em] py-1" style={{ color: T.faint }}>
                 {d}
               </div>
             ))}
           </div>
 
-          <div className="grid grid-cols-7 gap-0.5 max-w-[320px] mx-auto">
+          <div className="grid grid-cols-7 gap-y-1 max-w-[320px] mx-auto">
             {calDays.map((dateISO, idx) => {
-              if (!dateISO) return <div key={`empty-${idx}`} className="h-10" />;
+              if (!dateISO) return <div key={`empty-${idx}`} className="h-9" />;
               const dayNum = parseInt(dateISO.split("-")[2], 10);
               const avail = hasAvailability(dateISO);
               const isSelected = selectedCalDate === dateISO;
@@ -387,18 +389,19 @@ export function AvailabilityEditor({ expertId }: AvailabilityEditorProps) {
                 <button
                   key={dateISO}
                   onClick={() => setSelectedCalDate(dateISO)}
-                  className="relative h-10 w-10 mx-auto rounded-full flex flex-col items-center justify-center text-[12.5px] transition-all cursor-pointer"
+                  className={`relative h-9 w-9 mx-auto rounded-full flex flex-col items-center justify-center text-[13px] tabular-nums transition-colors duration-150 cursor-pointer ${isSelected ? "" : "hover:bg-[rgba(89,82,54,0.07)]"}`}
                   style={{
-                    background: isSelected ? T.accent : "transparent",
-                    color: isSelected ? T.accentInk : avail ? T.text : T.faint,
-                    fontWeight: isSelected || isToday ? 700 : 400,
+                    background: isSelected ? T.primary : undefined,
+                    color: isSelected ? T.primaryInk : avail ? T.text : T.faint,
+                    fontWeight: isSelected ? 600 : isToday ? 700 : 400,
+                    boxShadow: isToday && !isSelected ? `inset 0 0 0 1.5px ${T.accentBorder}` : undefined,
                   }}
                 >
                   {dayNum}
                   {avail && !isSelected && (
                     <span
-                      className="absolute bottom-[5px] w-1 h-1 rounded-full"
-                      style={{ background: T.accent }}
+                      className="absolute bottom-[3px] w-[3px] h-[3px] rounded-full"
+                      style={{ background: T.good, opacity: 0.8 }}
                     />
                   )}
                 </button>
@@ -411,7 +414,7 @@ export function AvailabilityEditor({ expertId }: AvailabilityEditorProps) {
           {selectedCalDate ? (
             <>
               <div className="flex items-center justify-between mb-4">
-                <div className="text-[13.5px] font-semibold" style={{ color: T.text }}>
+                <div className="text-[14px] font-semibold" style={{ color: T.text }}>
                   {selectedDateLabel}
                 </div>
                 <button
@@ -424,7 +427,7 @@ export function AvailabilityEditor({ expertId }: AvailabilityEditorProps) {
               </div>
 
               {getDateRanges(selectedCalDate).length === 0 ? (
-                <div className="text-[12.5px] py-4 text-center" style={{ color: T.muted }}>
+                <div className="text-[13px] py-4 text-center" style={{ color: T.muted }}>
                   No availability. Click &quot;+ Add hours&quot; to add a slot.
                 </div>
               ) : (
@@ -436,7 +439,7 @@ export function AvailabilityEditor({ expertId }: AvailabilityEditorProps) {
                       <TimeSelect value={range.end} onChange={(v) => setCalSlotField(selectedCalDate, ri, "end", v)} />
                       <button
                         onClick={() => removeCalSlot(selectedCalDate, ri)}
-                        className="w-7 h-7 rounded-full flex items-center justify-center text-[13px] transition-colors hover:bg-[rgba(176,84,84,0.15)] cursor-pointer"
+                        className="w-7 h-7 rounded-full flex items-center justify-center text-[13.5px] transition-colors hover:bg-[rgba(176,84,84,0.15)] cursor-pointer"
                         style={{ color: T.muted }}
                         title="Remove"
                       >
@@ -448,7 +451,7 @@ export function AvailabilityEditor({ expertId }: AvailabilityEditorProps) {
               )}
             </>
           ) : (
-            <div className="text-[12.5px] py-4 text-center" style={{ color: T.muted }}>
+            <div className="text-[13px] py-4 text-center" style={{ color: T.muted }}>
               Select a date to view and edit hours.
             </div>
           )}
@@ -457,7 +460,7 @@ export function AvailabilityEditor({ expertId }: AvailabilityEditorProps) {
 
       {toast && (
         <div
-          className="fixed top-6 right-6 z-[100] flex items-center gap-2 px-4 py-3 rounded-[10px] shadow-lg text-[13px] font-medium"
+          className="fixed top-6 right-6 z-[100] flex items-center gap-2 px-4 py-3 rounded-[10px] shadow-lg text-[13.5px] font-medium"
           style={{ background: T.card, border: `1px solid ${T.border}`, color: T.good }}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6L9 17l-5-5"/></svg>

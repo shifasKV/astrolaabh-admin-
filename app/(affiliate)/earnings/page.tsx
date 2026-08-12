@@ -32,7 +32,7 @@ export default function EarningsPage() {
         {myPayouts.map((p) => (
           <div key={p.id} className="flex flex-wrap items-center justify-between gap-3 py-3.5" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
             <div>
-              <div className="text-[13.5px] font-medium" style={{ color: T.text }}>{p.period}</div>
+              <div className="text-[14px] font-medium" style={{ color: T.text }}>{p.period}</div>
               <div className="text-[12px] mt-0.5" style={{ color: T.muted }}>
                 {p.reference || "—"} {p.paidAt && `· Paid ${p.paidAt}`}
               </div>
@@ -47,7 +47,7 @@ export default function EarningsPage() {
 
       <Card>
         <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.faint }}>Payout policy</div>
-        <div className="space-y-2 text-[12.5px]">
+        <div className="space-y-2 text-[13px]">
           {[
             ["Payout cycle", "Monthly, by the 5th"],
             ["Minimum threshold", "₹5,000"],

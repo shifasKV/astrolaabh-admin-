@@ -20,7 +20,7 @@ export function EmptyState({ title, description, action }: EmptyStateProps) {
         </svg>
       </div>
       <h3 className="text-[14px] font-medium mb-1" style={{ color: T.text }}>{title}</h3>
-      {description && <p className="text-[12.5px] mb-4" style={{ color: T.muted }}>{description}</p>}
+      {description && <p className="text-[13px] mb-4" style={{ color: T.muted }}>{description}</p>}
       {action}
     </div>
   );

@@ -52,7 +52,7 @@ export default function AstroGemologistDetailPage() {
     <>
       {/* Back link */}
       <div className="mb-5">
-        <Link href="/astro-gemologists" className="inline-flex items-center gap-1.5 text-[13px] font-medium hover:opacity-80 transition-opacity duration-200" style={{ color: T.accent }}>
+        <Link href="/astro-gemologists" className="inline-flex items-center gap-1.5 text-[13.5px] font-medium hover:opacity-80 transition-opacity duration-200" style={{ color: T.accent }}>
           ← Astro-Gemologists
         </Link>
       </div>
@@ -71,7 +71,7 @@ export default function AstroGemologistDetailPage() {
               <span className="text-[17px] font-semibold" style={{ color: T.text }}>{expert.name}</span>
               <Chip tone={isActive ? "good" : "danger"}>{isActive ? "active" : "inactive"}</Chip>
             </div>
-            <div className="text-[13px] mt-1" style={{ color: T.muted }}>{expert.specialization}</div>
+            <div className="text-[13.5px] mt-1" style={{ color: T.muted }}>{expert.specialization}</div>
             <div className="flex flex-wrap items-center gap-4 mt-3 text-[12px]" style={{ color: T.faint }}>
               <span>{expert.experience}</span>
               <span>·</span>
@@ -119,7 +119,7 @@ export default function AstroGemologistDetailPage() {
             </div>
           </div>
           {upcoming.length === 0 ? (
-            <p className="text-[13px] py-6 text-center" style={{ color: T.muted }}>No upcoming sessions.</p>
+            <p className="text-[13.5px] py-6 text-center" style={{ color: T.muted }}>No upcoming sessions.</p>
           ) : (
             upcoming.map((c) => (
               <Link
@@ -132,7 +132,7 @@ export default function AstroGemologistDetailPage() {
                   <div className="flex items-center gap-2 mb-0.5">
                     <span className="text-[11px] tracking-[0.06em] uppercase" style={{ color: T.accent }}>{c.id}</span>
                     <span className="text-[11px]" style={{ color: T.faint }}>·</span>
-                    <span className="text-[13px] font-medium" style={{ color: T.text }}>{c.customerName}</span>
+                    <span className="text-[13.5px] font-medium" style={{ color: T.text }}>{c.customerName}</span>
                   </div>
                   <div className="text-[12px]" style={{ color: T.muted }}>{c.expertName}</div>
                 </div>
@@ -153,44 +153,49 @@ export default function AstroGemologistDetailPage() {
             <span className="text-[11px] tracking-[0.08em] uppercase font-medium" style={{ color: T.faint }}>Availability <span style={{ textTransform: "none", letterSpacing: "normal" }}>(Next 7 days)</span></span>
             <Link
               href={`/astro-gemologists/${id}/availability`}
-              className="text-[11px] px-2.5 py-1 rounded-[9px] transition-all duration-200 hover:brightness-125"
-              style={{ color: T.accent, border: `1px solid rgba(195,160,88,0.3)` }}
+              className="text-[11px] px-2.5 py-1 rounded-[9px] transition-all duration-200 hover:bg-[rgba(160,125,56,0.10)]"
+              style={{ color: T.accent, border: `1px solid rgba(160,125,56,0.38)` }}
             >
               Edit →
             </Link>
           </div>
           {next7Days.length === 0 ? (
-            <p className="text-[13px] py-6 text-center" style={{ color: T.muted }}>No availability data.</p>
+            <p className="text-[13.5px] py-6 text-center" style={{ color: T.muted }}>No availability data.</p>
           ) : (
-            <div className="space-y-2.5">
-              {next7Days.map((day) => {
+            <div>
+              {next7Days.map((day, i) => {
                 const freeSlots = day.slots.filter((s) => s.available).length;
                 const totalSlots = day.slots.length;
                 return (
-                  <div key={day.date} className="flex items-center justify-between py-2 px-3 rounded-[10px]" style={{ background: T.panel }}>
-                    <div>
-                      <div className="text-[12px] font-medium" style={{ color: T.text }}>
-                        {new Date(day.date + "T00:00:00").toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })}
+                  <div
+                    key={day.date}
+                    className="flex items-start justify-between gap-4 py-3"
+                    style={{ borderBottom: i < next7Days.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
+                  >
+                    <div className="min-w-0">
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-[13px] font-medium" style={{ color: T.text }}>
+                          {new Date(day.date + "T00:00:00").toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })}
+                        </span>
+                        <span className="text-[11.5px] tabular-nums" style={{ color: freeSlots > 0 ? T.good : T.faint }}>
+                          {freeSlots > 0 ? `${freeSlots} of ${totalSlots} free` : "Fully booked"}
+                        </span>
                       </div>
-                      <div className="flex flex-wrap gap-1.5 mt-1.5">
+                      <div className="flex flex-wrap gap-1.5 mt-2">
                         {day.slots.map((slot) => (
                           <span
                             key={slot.time}
-                            className="text-[10px] px-1.5 py-0.5 rounded"
-                            style={{
-                              background: slot.available ? `${T.accent}15` : `${T.faint}10`,
-                              color: slot.available ? T.accent : T.faint,
-                              border: `1px solid ${slot.available ? `${T.accent}30` : `${T.faint}15`}`,
-                            }}
+                            className="text-[11px] tabular-nums px-2 py-1 rounded-[6px]"
+                            style={
+                              slot.available
+                                ? { background: "rgba(95,112,64,0.10)", color: T.good, border: "1px solid rgba(95,112,64,0.22)" }
+                                : { background: "transparent", color: T.faint, border: `1px dashed rgba(89,82,54,0.18)`, textDecoration: "line-through", textDecorationColor: "rgba(89,82,54,0.3)" }
+                            }
                           >
                             {slot.time}
                           </span>
                         ))}
                       </div>
-                    </div>
-                    <div className="text-right shrink-0 ml-3">
-                      <div className="text-[13px] font-semibold" style={{ color: freeSlots > 0 ? T.accent : T.faint }}>{freeSlots}</div>
-                      <div className="text-[10px]" style={{ color: T.faint }}>of {totalSlots}</div>
                     </div>
                   </div>
                 );
@@ -207,7 +212,7 @@ export default function AstroGemologistDetailPage() {
           <SectionLink href={`/consultations`} />
         </div>
         {completed.length === 0 ? (
-          <p className="text-[13px] py-6 text-center" style={{ color: T.muted }}>No completed sessions yet.</p>
+          <p className="text-[13.5px] py-6 text-center" style={{ color: T.muted }}>No completed sessions yet.</p>
         ) : (
           completed.slice(0, 5).map((c) => (
             <Link
@@ -220,7 +225,7 @@ export default function AstroGemologistDetailPage() {
                 <div className="flex items-center gap-2 mb-0.5 flex-wrap">
                   <span className="text-[11px] tracking-[0.06em] uppercase" style={{ color: T.accent }}>{c.id}</span>
                   <span className="text-[11px]" style={{ color: T.faint }}>·</span>
-                  <span className="text-[13px] font-medium" style={{ color: T.text }}>{c.customerName}</span>
+                  <span className="text-[13.5px] font-medium" style={{ color: T.text }}>{c.customerName}</span>
                   {!c.summarySubmittedAt && <Chip tone="danger">Summary due</Chip>}
                 </div>
                 <div className="text-[12px]" style={{ color: T.muted }}>{c.expertName}</div>
@@ -243,7 +248,7 @@ export default function AstroGemologistDetailPage() {
           <SectionLink href={`/astro-gemologists/${id}/recommendations`} />
         </div>
         {recommendations.length === 0 ? (
-          <p className="text-[13px] py-6 text-center" style={{ color: T.muted }}>No recommendations yet.</p>
+          <p className="text-[13.5px] py-6 text-center" style={{ color: T.muted }}>No recommendations yet.</p>
         ) : (
           recommendations.slice(0, 5).map((r) => {
             const href = r.orderId ? `/orders/${r.orderId}` : `/consultations/${r.consultationId}`;
@@ -255,7 +260,7 @@ export default function AstroGemologistDetailPage() {
                 style={{ borderBottom: `1px solid ${T.borderSoft}` }}
               >
                 <div className="flex items-center gap-2 min-w-0 flex-1 flex-wrap">
-                  <span className="text-[13px] font-semibold truncate" style={{ color: T.accent }}>{r.gemstone}</span>
+                  <span className="text-[13.5px] font-semibold truncate" style={{ color: T.accent }}>{r.gemstone}</span>
                   <span className="text-[11px] shrink-0" style={{ color: T.faint }}>·</span>
                   <span className="text-[12px] truncate" style={{ color: T.muted }}>{r.customerName}</span>
                   <span className="text-[11px] shrink-0" style={{ color: T.faint }}>·</span>
@@ -288,7 +293,7 @@ export default function AstroGemologistDetailPage() {
 
       {toast && (
         <div
-          className="fixed top-6 right-6 z-[100] flex items-center gap-2 px-4 py-3 rounded-[10px] shadow-lg text-[13px] font-medium animate-in"
+          className="fixed top-6 right-6 z-[100] flex items-center gap-2 px-4 py-3 rounded-[10px] shadow-lg text-[13.5px] font-medium animate-in"
           style={{ background: T.card, border: `1px solid ${T.border}`, color: T.good }}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6L9 17l-5-5"/></svg>

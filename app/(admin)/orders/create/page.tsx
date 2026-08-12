@@ -209,22 +209,34 @@ export default function CreateOrderPage() {
                 <div className="mb-3">
                   <SearchFilter search={search} onSearchChange={setSearch} placeholder="Search name, email…" />
                 </div>
-                <div className="max-h-[400px] overflow-y-auto">
+                <div className="max-h-[400px] overflow-y-auto space-y-0.5 pr-1">
                   {MOCK_CUSTOMERS.filter((c) => !search || c.name.toLowerCase().includes(search.toLowerCase()) || c.email.toLowerCase().includes(search.toLowerCase())).map((c) => (
                     <button
                       key={c.id}
                       onClick={() => selectCustomer(c.id)}
-                      className="w-full flex items-center justify-between py-3 px-3 text-left rounded-[9px] transition-all duration-150 cursor-pointer hover:pl-4"
+                      className={`w-full flex items-center gap-3 py-2.5 px-3 text-left rounded-[10px] transition-colors duration-150 cursor-pointer ${customerId === c.id ? "" : "hover:bg-[rgba(89,82,54,0.05)]"}`}
                       style={{
-                        background: customerId === c.id ? "rgba(195,160,88,0.08)" : "transparent",
-                        borderBottom: `1px solid ${T.borderSoft}`,
+                        background: customerId === c.id ? "rgba(160,125,56,0.13)" : undefined,
+                        border: `1px solid ${customerId === c.id ? T.accentBorder : "transparent"}`,
                       }}
                     >
-                      <div>
-                        <div className="text-[13px] font-medium" style={{ color: T.text }}>{c.name}</div>
-                        <div className="text-[11.5px]" style={{ color: T.muted }}>{c.email} · {c.phone}</div>
+                      <span
+                        className="w-9 h-9 rounded-full flex items-center justify-center text-[13px] font-semibold shrink-0"
+                        style={{ background: `${T.accent}15`, border: `1px solid ${T.accent}30`, color: T.accent }}
+                      >
+                        {c.name[0]}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[13.5px] font-medium truncate" style={{ color: T.text }}>{c.name}</div>
+                        <div className="text-[12px] truncate" style={{ color: T.muted }}>{c.email}</div>
                       </div>
-                      {customerId === c.id && <span style={{ color: T.accent }}>✓</span>}
+                      <span className="hidden sm:block text-[12.5px] tabular-nums shrink-0" style={{ color: T.muted }}>{c.phone}</span>
+                      <span
+                        className="w-[18px] h-[18px] rounded-full shrink-0 flex items-center justify-center"
+                        style={{ border: `1.5px solid ${customerId === c.id ? T.accent : "rgba(89,82,54,0.25)"}` }}
+                      >
+                        {customerId === c.id && <span className="w-[9px] h-[9px] rounded-full" style={{ background: T.accent }} />}
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -255,7 +267,7 @@ export default function CreateOrderPage() {
             </div>
 
             {selectedCustomer && (
-              <div className="text-[12px] mb-4 px-3 py-2 rounded-[8px]" style={{ background: "rgba(195,160,88,0.04)", color: T.muted }}>
+              <div className="text-[12px] mb-4 px-3 py-2 rounded-[8px]" style={{ background: "rgba(160,125,56,0.10)", color: T.muted }}>
                 Shipping for <span style={{ color: T.text }}>{selectedCustomer.name}</span>
               </div>
             )}
@@ -310,8 +322,8 @@ export default function CreateOrderPage() {
                     onClick={() => selectAddress(existingAddress)}
                     className="w-full flex items-start justify-between py-3.5 px-4 text-left rounded-[10px] transition-all duration-150 cursor-pointer"
                     style={{
-                      background: selectedAddress === existingAddress ? "rgba(195,160,88,0.08)" : T.bg,
-                      border: `1px solid ${selectedAddress === existingAddress ? "rgba(195,160,88,0.4)" : T.borderSoft}`,
+                      background: selectedAddress === existingAddress ? "rgba(160,125,56,0.13)" : T.bg,
+                      border: `1px solid ${selectedAddress === existingAddress ? "rgba(160,125,56,0.45)" : T.borderSoft}`,
                     }}
                   >
                     <div>
@@ -319,7 +331,7 @@ export default function CreateOrderPage() {
                         <span className="text-[11px] font-medium uppercase tracking-[0.05em]" style={{ color: T.faint }}>Saved address</span>
                         <Chip tone="gold">Default</Chip>
                       </div>
-                      <div className="text-[13px]" style={{ color: T.text }}>{existingAddress}</div>
+                      <div className="text-[13.5px]" style={{ color: T.text }}>{existingAddress}</div>
                     </div>
                     {selectedAddress === existingAddress && <span className="mt-1" style={{ color: T.accent }}>✓</span>}
                   </button>
@@ -327,14 +339,14 @@ export default function CreateOrderPage() {
 
                 {!existingAddress && !createdCustomer && (
                   <div className="text-center py-8">
-                    <p className="text-[13px] mb-3" style={{ color: T.muted }}>No saved address for this customer</p>
+                    <p className="text-[13.5px] mb-3" style={{ color: T.muted }}>No saved address for this customer</p>
                     <GoldBtn onClick={() => setShowNewAddress(true)}>Add shipping address</GoldBtn>
                   </div>
                 )}
 
                 {createdCustomer && (
                   <div className="text-center py-8">
-                    <p className="text-[13px] mb-3" style={{ color: T.muted }}>New customer — add a shipping address</p>
+                    <p className="text-[13.5px] mb-3" style={{ color: T.muted }}>New customer — add a shipping address</p>
                     <GoldBtn onClick={() => setShowNewAddress(true)}>Add shipping address</GoldBtn>
                   </div>
                 )}
@@ -362,15 +374,15 @@ export default function CreateOrderPage() {
                   onClick={() => selectStone(s.sku)}
                   className="w-full flex items-center justify-between py-3 px-3 text-left rounded-[9px] transition-all duration-150 cursor-pointer hover:pl-4"
                   style={{
-                    background: stoneSku === s.sku ? "rgba(195,160,88,0.08)" : "transparent",
+                    background: stoneSku === s.sku ? "rgba(160,125,56,0.13)" : "transparent",
                     borderBottom: `1px solid ${T.borderSoft}`,
                   }}
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-[13px] font-medium" style={{ color: T.text }}>{s.sku}</span>
+                      <span className="text-[13.5px] font-medium" style={{ color: T.text }}>{s.sku}</span>
                     </div>
-                    <div className="text-[11.5px] mt-0.5" style={{ color: T.muted }}>
+                    <div className="text-[12px] mt-0.5" style={{ color: T.muted }}>
                       {s.gemName} · {s.origin} · {s.ratti}r · {inr(s.price)}
                     </div>
                   </div>
@@ -380,7 +392,7 @@ export default function CreateOrderPage() {
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={(e) => e.stopPropagation()}
-                      className="inline-flex items-center gap-1 text-[10.5px] transition-opacity hover:opacity-70"
+                      className="inline-flex items-center gap-1 text-[11px] transition-opacity hover:opacity-70"
                       style={{ color: T.accent }}
                     >
                       View in website
@@ -481,8 +493,8 @@ export default function CreateOrderPage() {
                           }}
                           className="flex flex-col items-center justify-center w-[90px] h-[80px] rounded-[10px] transition-all duration-150 cursor-pointer"
                           style={{
-                            background: isActive ? "rgba(195,160,88,0.1)" : T.bg,
-                            border: `1.5px solid ${isActive ? "rgba(195,160,88,0.6)" : T.borderSoft}`,
+                            background: isActive ? "rgba(160,125,56,0.15)" : T.bg,
+                            border: `1.5px solid ${isActive ? "rgba(160,125,56,0.65)" : T.borderSoft}`,
                           }}
                         >
                           <span className="text-[20px] mb-1">
@@ -521,8 +533,8 @@ export default function CreateOrderPage() {
                             onClick={() => setDesignMetal(isActive ? "" : metal)}
                             className="px-4 py-2 rounded-[8px] text-[12px] font-medium transition-all duration-150 cursor-pointer"
                             style={{
-                              background: isActive ? "rgba(195,160,88,0.1)" : T.bg,
-                              border: `1.5px solid ${isActive ? "rgba(195,160,88,0.6)" : T.borderSoft}`,
+                              background: isActive ? "rgba(160,125,56,0.15)" : T.bg,
+                              border: `1.5px solid ${isActive ? "rgba(160,125,56,0.65)" : T.borderSoft}`,
                               color: isActive ? T.accent : T.text,
                             }}
                           >
@@ -552,8 +564,8 @@ export default function CreateOrderPage() {
                             onClick={() => setDesignSize(isActive ? "" : size)}
                             className="px-3 py-1.5 rounded-[8px] text-[12px] font-medium transition-all duration-150 cursor-pointer"
                             style={{
-                              background: isActive ? "rgba(195,160,88,0.1)" : T.bg,
-                              border: `1.5px solid ${isActive ? "rgba(195,160,88,0.6)" : T.borderSoft}`,
+                              background: isActive ? "rgba(160,125,56,0.15)" : T.bg,
+                              border: `1.5px solid ${isActive ? "rgba(160,125,56,0.65)" : T.borderSoft}`,
                               color: isActive ? T.accent : T.text,
                             }}
                           >
@@ -578,13 +590,13 @@ export default function CreateOrderPage() {
                             onClick={() => selectDesign(d.slug)}
                             className="flex flex-col items-center p-3 rounded-[10px] transition-all duration-150 cursor-pointer"
                             style={{
-                              background: isActive ? "rgba(195,160,88,0.1)" : T.bg,
-                              border: `1.5px solid ${isActive ? "rgba(195,160,88,0.6)" : T.borderSoft}`,
+                              background: isActive ? "rgba(160,125,56,0.15)" : T.bg,
+                              border: `1.5px solid ${isActive ? "rgba(160,125,56,0.65)" : T.borderSoft}`,
                             }}
                           >
                             <div
                               className="w-[72px] h-[72px] rounded-[8px] overflow-hidden mb-2"
-                              style={{ background: "rgba(195,160,88,0.04)", border: `1px solid ${T.borderSoft}` }}
+                              style={{ background: "rgba(160,125,56,0.10)", border: `1px solid ${T.borderSoft}` }}
                             >
                               <img
                                 src={d.image}
@@ -594,7 +606,7 @@ export default function CreateOrderPage() {
                               />
                             </div>
                             <span className="text-[12px] font-medium text-center truncate w-full" style={{ color: isActive ? T.accent : T.text }}>{d.name}</span>
-                            <span className="text-[10px] text-center mt-0.5" style={{ color: T.faint }}>{d.remaining} left · run {d.runSize}</span>
+                            <span className="text-[11px] text-center mt-0.5" style={{ color: T.faint }}>{d.remaining} left · run {d.runSize}</span>
                             <span className="text-[11px] font-medium text-center mt-0.5" style={{ color: isActive ? T.accent : T.text }}>₹{d.price.toLocaleString("en-IN")}</span>
                           </button>
                         );
@@ -626,15 +638,15 @@ export default function CreateOrderPage() {
                 onClick={() => setEnergisationKey("none")}
                 className="w-full text-left rounded-[10px] p-4 transition-all duration-150 cursor-pointer"
                 style={{
-                  background: energisationKey === "none" ? "rgba(195,160,88,0.08)" : T.bg,
-                  border: `1px solid ${energisationKey === "none" ? "rgba(195,160,88,0.4)" : T.borderSoft}`,
+                  background: energisationKey === "none" ? "rgba(160,125,56,0.13)" : T.bg,
+                  border: `1px solid ${energisationKey === "none" ? "rgba(160,125,56,0.45)" : T.borderSoft}`,
                 }}
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-[13px] font-medium" style={{ color: energisationKey === "none" ? T.accent : T.text }}>No energisation</span>
+                  <span className="text-[13.5px] font-medium" style={{ color: energisationKey === "none" ? T.accent : T.text }}>No energisation</span>
                   <span className="text-[12px]" style={{ color: T.faint }}>—</span>
                 </div>
-                <p className="text-[11.5px] mt-1" style={{ color: T.muted }}>Ship stone/jewellery as-is without any ritual.</p>
+                <p className="text-[12px] mt-1" style={{ color: T.muted }}>Ship stone/jewellery as-is without any ritual.</p>
               </button>
 
               {ENERGISATION.map((tier, idx) => (
@@ -643,22 +655,22 @@ export default function CreateOrderPage() {
                   onClick={() => setEnergisationKey(tier.key)}
                   className="w-full text-left rounded-[10px] p-4 transition-all duration-150 cursor-pointer"
                   style={{
-                    background: energisationKey === tier.key ? "rgba(195,160,88,0.08)" : T.bg,
-                    border: `1px solid ${energisationKey === tier.key ? "rgba(195,160,88,0.4)" : T.borderSoft}`,
+                    background: energisationKey === tier.key ? "rgba(160,125,56,0.13)" : T.bg,
+                    border: `1px solid ${energisationKey === tier.key ? "rgba(160,125,56,0.45)" : T.borderSoft}`,
                   }}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
-                      <span className="text-[13px] font-semibold" style={{ color: energisationKey === tier.key ? T.accent : T.text }}>
+                      <span className="text-[13.5px] font-semibold" style={{ color: energisationKey === tier.key ? T.accent : T.text }}>
                         {tier.name}
                       </span>
-                      <span className="text-[10.5px]" style={{ color: T.faint }}>{tier.sanskrit}</span>
+                      <span className="text-[11px]" style={{ color: T.faint }}>{tier.sanskrit}</span>
                       {idx === 0 && <Chip tone="good">Standard</Chip>}
                       {idx === 1 && <Chip tone="gold">Premium</Chip>}
                       {idx === 2 && <Chip tone="gold">Premium+</Chip>}
                       {idx === 3 && <Chip tone="gold">Elite</Chip>}
                     </div>
-                    <span className="text-[12.5px] font-semibold tabular-nums shrink-0" style={{ color: tier.fee === 0 ? T.good : T.text }}>
+                    <span className="text-[13px] font-semibold tabular-nums shrink-0" style={{ color: tier.fee === 0 ? T.good : T.text }}>
                       {tier.fee === 0 ? "Included free" : inr(tier.fee)}
                     </span>
                   </div>
@@ -677,7 +689,7 @@ export default function CreateOrderPage() {
         {step === "review" && (
           <Card>
             <div className="text-[11px] tracking-[0.08em] uppercase mb-4" style={{ color: T.faint }}>Review order</div>
-            <div className="space-y-3 text-[13px]">
+            <div className="space-y-3 text-[13.5px]">
               <div className="flex justify-between py-2" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
                 <span style={{ color: T.muted }}>Customer</span>
                 <span style={{ color: T.text }}>{selectedCustomer?.name ?? "—"}</span>
@@ -708,13 +720,13 @@ export default function CreateOrderPage() {
               </div>
               <div className="flex justify-between items-center py-2" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
                 <span style={{ color: T.muted }}>Stone price</span>
-                <div className="flex items-center gap-1 rounded-md px-2 py-1" style={{ background: "rgba(235,230,215,0.04)", border: `1px solid rgba(235,230,215,0.1)` }}>
+                <div className="flex items-center gap-1 rounded-md px-2 py-1" style={{ background: "rgba(89,82,54,0.05)", border: `1px solid rgba(89,82,54,0.14)` }}>
                   <span className="text-[12px]" style={{ color: T.faint }}>₹</span>
                   <input
                     type="text"
                     value={editStonePrice || (selectedStone ? String(selectedStone.price) : "")}
                     onChange={(e) => setEditStonePrice(e.target.value)}
-                    className="text-right font-semibold tabular-nums bg-transparent border-none outline-none w-[100px] text-[13px]"
+                    className="text-right font-semibold tabular-nums bg-transparent border-none outline-none w-[100px] text-[13.5px]"
                     style={{ color: T.text }}
                     placeholder="0"
                   />
@@ -723,13 +735,13 @@ export default function CreateOrderPage() {
               {(hasCustomDesign || selectedDesign) && (
                 <div className="flex justify-between items-center py-2" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
                   <span style={{ color: T.muted }}>{hasCustomDesign ? "Custom design price" : "Jewellery price"}</span>
-                  <div className="flex items-center gap-1 rounded-md px-2 py-1" style={{ background: "rgba(235,230,215,0.04)", border: `1px solid rgba(235,230,215,0.1)` }}>
+                  <div className="flex items-center gap-1 rounded-md px-2 py-1" style={{ background: "rgba(89,82,54,0.05)", border: `1px solid rgba(89,82,54,0.14)` }}>
                     <span className="text-[12px]" style={{ color: T.faint }}>₹</span>
                     <input
                       type="text"
                       value={editDesignPrice || (hasCustomDesign ? customDesign.price : selectedDesign ? String(selectedDesign.price) : "")}
                       onChange={(e) => setEditDesignPrice(e.target.value)}
-                      className="text-right tabular-nums bg-transparent border-none outline-none w-[100px] text-[13px]"
+                      className="text-right tabular-nums bg-transparent border-none outline-none w-[100px] text-[13.5px]"
                       style={{ color: T.text }}
                       placeholder="0"
                     />
@@ -744,12 +756,12 @@ export default function CreateOrderPage() {
               )}
               <div className="flex justify-between items-center py-2" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
                 <span style={{ color: T.muted }}>Discount</span>
-                <div className="flex items-center gap-1 rounded-md px-2 py-1" style={{ background: "rgba(235,230,215,0.04)", border: `1px solid rgba(235,230,215,0.1)` }}>
+                <div className="flex items-center gap-1 rounded-md px-2 py-1" style={{ background: "rgba(89,82,54,0.05)", border: `1px solid rgba(89,82,54,0.14)` }}>
                   <input
                     type="text"
                     value={discount}
                     onChange={(e) => setDiscount(e.target.value)}
-                    className="text-right tabular-nums bg-transparent border-none outline-none w-[100px] text-[13px]"
+                    className="text-right tabular-nums bg-transparent border-none outline-none w-[100px] text-[13.5px]"
                     style={{ color: T.danger || "#e55" }}
                     placeholder="0"
                   />
@@ -770,7 +782,7 @@ export default function CreateOrderPage() {
                 </span>
               </div>
             </div>
-            <p className="text-[11.5px] mt-4" style={{ color: T.faint }}>
+            <p className="text-[12px] mt-4" style={{ color: T.faint }}>
               Order will be created with pending payment status. Generate a payment request from the order detail page to collect payment.
             </p>
             <div className="mt-4">
@@ -782,7 +794,7 @@ export default function CreateOrderPage() {
 
       {toast && (
         <div
-          className="fixed top-6 right-6 z-[100] flex items-center gap-2 px-4 py-3 rounded-[10px] shadow-lg text-[13px] font-medium animate-in"
+          className="fixed top-6 right-6 z-[100] flex items-center gap-2 px-4 py-3 rounded-[10px] shadow-lg text-[13.5px] font-medium animate-in"
           style={{ background: T.card, border: `1px solid ${T.border}`, color: T.good }}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6L9 17l-5-5"/></svg>

@@ -23,7 +23,7 @@ export default function ProfilePage() {
           <div className="text-[11px] tracking-[0.08em] uppercase" style={{ color: T.faint }}>Account status</div>
           <Chip tone="good">Active</Chip>
         </div>
-        <div className="space-y-2 text-[12.5px]">
+        <div className="space-y-2 text-[13px]">
           {[
             ["Affiliate code", affiliate.code],
             ["Commission rate", `${affiliate.commissionRate}%`],
@@ -77,7 +77,7 @@ export default function ProfilePage() {
             ["Agreement", "Signed", "good"],
           ].map(([doc, status, tone]) => (
             <div key={doc} className="flex items-center justify-between py-2" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
-              <span className="text-[13px]" style={{ color: T.text }}>{doc}</span>
+              <span className="text-[13.5px]" style={{ color: T.text }}>{doc}</span>
               <Chip tone={tone as "good"}>{status}</Chip>
             </div>
           ))}

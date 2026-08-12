@@ -1,7 +1,7 @@
 "use client";
 import { use, useState } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, Timeline, GoldBtn, GhostBtn, Modal, Input, Textarea } from "@/components/ui";
+import { PageHeader, Card, Chip, Timeline, GoldBtn, GhostBtn, Modal, Input, Textarea, BackLink } from "@/components/ui";
 import type { TimelineEvent } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_CONSULTATIONS, MOCK_CUSTOMERS, MOCK_STONE_RECOMMENDATIONS, MOCK_REMEDY_RECOMMENDATIONS, EXPERT_PROFILES, getExpertDates, getExpertSlots } from "@/lib/mock";
@@ -34,7 +34,7 @@ export default function ConsultationDetailPage({ params }: { params: Promise<{ i
     return (
       <div className="py-20 text-center">
         <p className="text-[14px]" style={{ color: T.muted }}>Consultation not found.</p>
-        <Link href="/consultations" className="text-[12.5px] mt-2 inline-block" style={{ color: T.accent }}>← Back</Link>
+        <div className="mt-3 flex justify-center"><BackLink label="Back to consultations" href="/consultations" /></div>
       </div>
     );
   }
@@ -92,6 +92,8 @@ export default function ConsultationDetailPage({ params }: { params: Promise<{ i
     <>
       <PageHeader
         back={{ label: "Consultations", href: "/consultations" }}
+        title={consultation.customerName}
+        sub={`${consultation.id} · with ${consultation.expertName}`}
       />
 
       {/* Consultation details card */}
@@ -106,8 +108,8 @@ export default function ConsultationDetailPage({ params }: { params: Promise<{ i
         <div className="rounded-[9px] p-4 mb-4" style={{ background: T.bg, border: `1px solid ${T.borderSoft}` }}>
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-[13px] font-semibold mb-1" style={{ color: T.accent }}>{consultation.type.replace(/_/g, " ")}</div>
-              <div className="text-[11.5px]" style={{ color: T.muted }}>{consultation.customerName} · {consultation.expertName}</div>
+              <div className="text-[13.5px] font-semibold mb-1" style={{ color: T.accent }}>{consultation.type.replace(/_/g, " ")}</div>
+              <div className="text-[12px]" style={{ color: T.muted }}>{consultation.customerName} · {consultation.expertName}</div>
             </div>
             {consultation.paymentStatus === "pending" ? (
               <Chip tone="gold">Payment pending</Chip>
@@ -120,24 +122,24 @@ export default function ConsultationDetailPage({ params }: { params: Promise<{ i
         </div>
 
         <div className="flex items-center gap-4">
-          <div className="grid grid-cols-3 gap-4 text-[12.5px] flex-1">
+          <div className="grid grid-cols-3 gap-4 text-[13px] flex-1">
             <div>
-              <div className="text-[10px] tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>Expert</div>
+              <div className="text-[11px] tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>Expert</div>
               <div style={{ color: T.text }}>{consultation.expertName}</div>
             </div>
             <div>
-              <div className="text-[10px] tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>Date</div>
+              <div className="text-[11px] tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>Date</div>
               <div style={{ color: T.text }}>{new Date(consultation.scheduledAt).toLocaleDateString("en-IN", { dateStyle: "medium" })}</div>
             </div>
             <div>
-              <div className="text-[10px] tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>Time</div>
+              <div className="text-[11px] tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>Time</div>
               <div style={{ color: T.text }}>{new Date(consultation.scheduledAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })}</div>
             </div>
           </div>
           {(consultation.status === "scheduled" || consultation.status === "reschedule_requested") && (
             <span
               onClick={openRescheduleModal}
-              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[9px] text-[11.5px] font-medium cursor-pointer hover:opacity-90 transition-opacity shrink-0"
+              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[9px] text-[12px] font-medium cursor-pointer hover:opacity-90 transition-opacity shrink-0"
               style={{ border: `1px solid ${T.border}`, color: T.text }}
             >
               Update
@@ -151,7 +153,7 @@ export default function ConsultationDetailPage({ params }: { params: Promise<{ i
         <Card className="mb-5">
           <div className="flex items-center justify-between mb-3">
             <div className="text-[11px] tracking-[0.08em] uppercase" style={{ color: T.faint }}>Meeting</div>
-            <span className="text-[10.5px] px-2 py-0.5 rounded" style={{ background: "rgba(195,160,88,0.1)", color: T.accent }}>Editing</span>
+            <span className="text-[11px] px-2 py-0.5 rounded" style={{ background: "rgba(160,125,56,0.15)", color: T.accent }}>Editing</span>
           </div>
           <div className="space-y-3">
             <Input value={meetingLinkInput} onChange={setMeetingLinkInput} label="Meeting link" type="url" placeholder="https://meet.google.com/..." />
@@ -183,21 +185,21 @@ export default function ConsultationDetailPage({ params }: { params: Promise<{ i
                 href={localMeetingLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-3 rounded-[9px] p-3 transition-all duration-200 hover:brightness-110 flex-1 min-w-0"
-                style={{ background: "rgba(142,160,109,0.06)", border: `1px solid rgba(142,160,109,0.15)` }}
+                className="flex items-center gap-3 rounded-[9px] p-3 transition-all duration-200 hover:brightness-[0.97] flex-1 min-w-0"
+                style={{ background: "rgba(95,112,64,0.08)", border: `1px solid rgba(95,112,64,0.18)` }}
               >
-                <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: "rgba(142,160,109,0.15)" }}>
+                <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: "rgba(95,112,64,0.18)" }}>
                   <span className="text-[14px]">▶</span>
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="text-[12px] font-medium truncate" style={{ color: T.good }}>{localMeetingLink}</div>
-                  <div className="text-[10.5px] mt-0.5" style={{ color: T.muted }}>Google Meet link</div>
+                  <div className="text-[11px] mt-0.5" style={{ color: T.muted }}>Google Meet link</div>
                 </div>
               </a>
               <button
                 onClick={() => { navigator.clipboard.writeText(localMeetingLink); setToast("Link copied to clipboard"); setTimeout(() => setToast(""), 3000); }}
-                className="shrink-0 w-9 h-9 rounded-[9px] flex items-center justify-center transition-all duration-150 cursor-pointer hover:brightness-125"
-                style={{ background: "rgba(142,160,109,0.06)", border: `1px solid rgba(142,160,109,0.15)` }}
+                className="shrink-0 w-9 h-9 rounded-[9px] flex items-center justify-center transition-all duration-150 cursor-pointer hover:brightness-[0.97]"
+                style={{ background: "rgba(95,112,64,0.08)", border: `1px solid rgba(95,112,64,0.18)` }}
                 title="Copy link"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: T.good }}>
@@ -219,7 +221,7 @@ export default function ConsultationDetailPage({ params }: { params: Promise<{ i
           <div className="flex items-start justify-between gap-4">
             <div>
               <div className="text-[11px] tracking-[0.08em] uppercase mb-2 font-medium" style={{ color: T.danger }}>Reschedule requested</div>
-              <p className="text-[13px]" style={{ color: T.text }}>{consultation.rescheduleReason}</p>
+              <p className="text-[13.5px]" style={{ color: T.text }}>{consultation.rescheduleReason}</p>
             </div>
             <GoldBtn onClick={openRescheduleModal}>Accept & reschedule</GoldBtn>
           </div>
@@ -236,9 +238,9 @@ export default function ConsultationDetailPage({ params }: { params: Promise<{ i
             >
               <div className="flex items-center justify-between mb-3">
                 <div className="text-[11px] tracking-[0.08em] uppercase" style={{ color: T.faint }}>Customer context</div>
-                <span className="text-[10px]" style={{ color: T.muted }}>View profile →</span>
+                <span className="text-[11px]" style={{ color: T.muted }}>View profile →</span>
               </div>
-              <div className="space-y-2 text-[12.5px]">
+              <div className="space-y-2 text-[13px]">
                 {[
                   ["Name", customer.name],
                   ["Birth", `${customer.birthDate} · ${customer.birthTime} · ${customer.birthPlace}`],
@@ -257,14 +259,14 @@ export default function ConsultationDetailPage({ params }: { params: Promise<{ i
         ) : (
           <Card>
             <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.faint }}>Customer context</div>
-            <p className="text-[12.5px]" style={{ color: T.muted }}>Customer record not found.</p>
+            <p className="text-[13px]" style={{ color: T.muted }}>Customer record not found.</p>
           </Card>
         )}
 
         {/* Consultation details */}
         <Card>
           <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.faint }}>Consultation details</div>
-          <div className="space-y-2 text-[12.5px]">
+          <div className="space-y-2 text-[13px]">
             {[
               ["Type", consultation.type.replace(/_/g, " ")],
               ["Expert", consultation.expertName],
@@ -289,22 +291,22 @@ export default function ConsultationDetailPage({ params }: { params: Promise<{ i
           <div className="grid md:grid-cols-2 gap-4">
             {/* Consultation Summary */}
             <div className="rounded-[9px] p-4" style={{ background: T.bg, border: `1px solid ${T.borderSoft}` }}>
-              <div className="text-[10px] tracking-[0.08em] uppercase mb-2" style={{ color: T.faint }}>Consultation summary</div>
+              <div className="text-[11px] tracking-[0.08em] uppercase mb-2" style={{ color: T.faint }}>Consultation summary</div>
               {consultation.summary ? (
                 <>
-                  <p className="text-[13px] leading-relaxed" style={{ color: T.text }}>{consultation.summary}</p>
+                  <p className="text-[13.5px] leading-relaxed" style={{ color: T.text }}>{consultation.summary}</p>
                   {consultation.summarySubmittedAt && (
                     <p className="text-[11px] mt-3" style={{ color: T.faint }}>Submitted {new Date(consultation.summarySubmittedAt).toLocaleDateString("en-IN", { dateStyle: "medium" })}</p>
                   )}
                 </>
               ) : (
-                <p className="text-[12.5px]" style={{ color: T.faint }}>Summary not submitted yet.</p>
+                <p className="text-[13px]" style={{ color: T.faint }}>Summary not submitted yet.</p>
               )}
             </div>
 
             {/* Recommended stone */}
             <div className="rounded-[9px] p-4" style={{ background: T.bg, border: `1px solid ${T.borderSoft}` }}>
-              <div className="text-[10px] tracking-[0.08em] uppercase mb-2" style={{ color: T.faint }}>Recommended stone</div>
+              <div className="text-[11px] tracking-[0.08em] uppercase mb-2" style={{ color: T.faint }}>Recommended stone</div>
               {recommendation ? (
                 <div>
                   <div className="flex items-center gap-2 mb-2">
@@ -331,7 +333,7 @@ export default function ConsultationDetailPage({ params }: { params: Promise<{ i
                   )}
                 </div>
               ) : (
-                <p className="text-[12.5px]" style={{ color: T.faint }}>No stone recommended yet.</p>
+                <p className="text-[13px]" style={{ color: T.faint }}>No stone recommended yet.</p>
               )}
             </div>
           </div>
@@ -339,8 +341,8 @@ export default function ConsultationDetailPage({ params }: { params: Promise<{ i
           {/* Other Remedy */}
           {remedy && (
             <div className="rounded-[9px] p-4 mt-4" style={{ background: T.bg, border: `1px solid ${T.borderSoft}` }}>
-              <div className="text-[10px] tracking-[0.08em] uppercase mb-2" style={{ color: T.faint }}>Other remedy</div>
-              <p className="text-[13px] leading-relaxed" style={{ color: T.text }}>
+              <div className="text-[11px] tracking-[0.08em] uppercase mb-2" style={{ color: T.faint }}>Other remedy</div>
+              <p className="text-[13.5px] leading-relaxed" style={{ color: T.text }}>
                 <span className="font-medium capitalize">{remedy.type}</span> — {remedy.instructions}
                 {remedy.frequency && ` (${remedy.frequency})`}
                 {remedy.duration && `. Duration: ${remedy.duration}`}
@@ -358,13 +360,13 @@ export default function ConsultationDetailPage({ params }: { params: Promise<{ i
 
       {/* Send Payment Link Confirmation */}
       <Modal open={showSendLinkModal} onClose={() => setShowSendLinkModal(false)} title="Send payment link">
-        <p className="text-[13px] mb-2" style={{ color: T.text }}>
+        <p className="text-[13.5px] mb-2" style={{ color: T.text }}>
           A payment link for the recommended stone will be sent to <strong>{consultation.customerName}</strong>.
         </p>
         {recommendation && (
           <div className="rounded-[9px] p-3 mb-4" style={{ background: T.panel, border: `1px solid ${T.borderSoft}` }}>
-            <div className="text-[12.5px] font-medium" style={{ color: T.accent }}>{recommendation.gemstone}</div>
-            <div className="text-[11.5px] mt-0.5" style={{ color: T.muted }}>{recommendation.weightRange} · {recommendation.qualityCriteria}</div>
+            <div className="text-[13px] font-medium" style={{ color: T.accent }}>{recommendation.gemstone}</div>
+            <div className="text-[12px] mt-0.5" style={{ color: T.muted }}>{recommendation.weightRange} · {recommendation.qualityCriteria}</div>
           </div>
         )}
         <div className="flex gap-2.5">
@@ -387,11 +389,11 @@ export default function ConsultationDetailPage({ params }: { params: Promise<{ i
                   onClick={() => { setRsExpert(ep); setRsDate(""); setRsSlot(""); setRescheduleStep(2); }}
                   className="w-full text-left rounded-[9px] p-3.5 transition-all"
                   style={{
-                    background: rsExpert?.id === ep.id ? "rgba(195,160,88,0.08)" : T.panel,
+                    background: rsExpert?.id === ep.id ? "rgba(160,125,56,0.13)" : T.panel,
                     border: `1px solid ${rsExpert?.id === ep.id ? T.accent : T.border}`,
                   }}
                 >
-                  <div className="text-[13px] font-medium" style={{ color: T.text }}>{ep.name}</div>
+                  <div className="text-[13.5px] font-medium" style={{ color: T.text }}>{ep.name}</div>
                   <div className="text-[11px] mt-0.5" style={{ color: T.muted }}>{ep.specialization} · ₹{ep.fee.toLocaleString("en-IN")}</div>
                 </button>
               ))}
@@ -407,7 +409,7 @@ export default function ConsultationDetailPage({ params }: { params: Promise<{ i
             </div>
             <div className="flex items-center justify-between mb-3">
               <button type="button" onClick={() => { if (rsViewMonth === 0) { setRsViewMonth(11); setRsViewYear((y) => y - 1); } else setRsViewMonth((m) => m - 1); }} className="w-7 h-7 rounded-full flex items-center justify-center" style={{ color: T.muted }}>‹</button>
-              <span className="text-[12.5px] font-medium" style={{ color: T.text }}>{MONTHS[rsViewMonth]} {rsViewYear}</span>
+              <span className="text-[13px] font-medium" style={{ color: T.text }}>{MONTHS[rsViewMonth]} {rsViewYear}</span>
               <button type="button" onClick={() => { if (rsViewMonth === 11) { setRsViewMonth(0); setRsViewYear((y) => y + 1); } else setRsViewMonth((m) => m + 1); }} className="w-7 h-7 rounded-full flex items-center justify-center" style={{ color: T.muted }}>›</button>
             </div>
             <div className="grid grid-cols-7 gap-0.5 mb-1">
@@ -426,7 +428,7 @@ export default function ConsultationDetailPage({ params }: { params: Promise<{ i
                     disabled={!avail}
                     className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] disabled:cursor-not-allowed"
                     style={{
-                      background: sel ? T.accent : avail ? "rgba(195,160,88,0.06)" : "transparent",
+                      background: sel ? T.accent : avail ? "rgba(160,125,56,0.10)" : "transparent",
                       color: sel ? T.accentInk : avail ? T.text : T.faint,
                       opacity: avail ? 1 : 0.35,
                       fontWeight: sel ? 700 : 400,
@@ -479,7 +481,7 @@ export default function ConsultationDetailPage({ params }: { params: Promise<{ i
 
       {toast && (
         <div
-          className="fixed top-6 right-6 z-[100] flex items-center gap-2 px-4 py-3 rounded-[10px] shadow-lg text-[13px] font-medium animate-in"
+          className="fixed top-6 right-6 z-[100] flex items-center gap-2 px-4 py-3 rounded-[10px] shadow-lg text-[13.5px] font-medium animate-in"
           style={{ background: T.card, border: `1px solid ${T.border}`, color: T.good }}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6L9 17l-5-5"/></svg>

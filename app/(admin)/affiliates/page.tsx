@@ -54,8 +54,8 @@ export default function AffiliatesPage() {
                   </span>
                   <div>
                     <div className="text-[14px] font-semibold" style={{ color: T.text }}>{a.name}</div>
-                    <div className="text-[12.5px] mt-0.5" style={{ color: T.accent }}>{a.code}</div>
-                    <div className="text-[11.5px] mt-1" style={{ color: T.faint }}>{a.email}</div>
+                    <div className="text-[13px] mt-0.5" style={{ color: T.accent }}>{a.code}</div>
+                    <div className="text-[12px] mt-1" style={{ color: T.faint }}>{a.email}</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
@@ -87,7 +87,7 @@ export default function AffiliatesPage() {
           </Link>
         ))}
         {filtered.length === 0 && (
-          <p className="text-[13px] text-center py-8" style={{ color: T.muted }}>No affiliates found.</p>
+          <p className="text-[13.5px] text-center py-8" style={{ color: T.muted }}>No affiliates found.</p>
         )}
       </div>
 

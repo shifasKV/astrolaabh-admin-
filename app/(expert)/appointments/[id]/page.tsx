@@ -1,7 +1,7 @@
 "use client";
 import { use, useState } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, GoldBtn, GhostBtn, Textarea, Input, Modal, SearchFilter, StepIndicator } from "@/components/ui";
+import { PageHeader, Card, Chip, GoldBtn, GhostBtn, Textarea, Input, Modal, SearchFilter, StepIndicator, BackLink } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_CONSULTATIONS, MOCK_CUSTOMERS, MOCK_STONE_RECOMMENDATIONS, MOCK_REMEDY_RECOMMENDATIONS } from "@/lib/mock";
 import { STONES, DESIGNS, inr } from "@/lib/catalog";
@@ -92,7 +92,7 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
     return (
       <div className="py-20 text-center">
         <p className="text-[14px]" style={{ color: T.muted }}>Consultation not found.</p>
-        <Link href="/appointments" className="text-[12.5px] mt-2 inline-block" style={{ color: T.accent }}>← Back</Link>
+        <div className="mt-3 flex justify-center"><BackLink label="Back to appointments" href="/appointments" /></div>
       </div>
     );
   }
@@ -183,13 +183,7 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
   return (
     <>
       <div className="mb-6">
-        <button
-          onClick={() => window.history.back()}
-          className="inline-flex items-center gap-1.5 text-[13px] font-medium mb-4 hover:opacity-80 cursor-pointer transition-opacity duration-200"
-          style={{ color: T.accent }}
-        >
-          ← Appointments
-        </button>
+        <BackLink label="Appointments" href="/appointments" className="mb-4" />
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <h1 className="text-[17px] font-semibold" style={{ color: T.text }}>
@@ -209,7 +203,7 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
             )}
           </div>
         </div>
-        <p className="text-[12.5px] mt-1" style={{ color: T.muted }}>
+        <p className="text-[13px] mt-1" style={{ color: T.muted }}>
           {new Date(consultation.scheduledAt).toLocaleString("en-IN")} · {consultation.duration}min
         </p>
       </div>
@@ -219,7 +213,7 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
         <Card>
           <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.faint }}>Customer context</div>
           {customer ? (
-            <div className="space-y-2 text-[12.5px]">
+            <div className="space-y-2 text-[13px]">
               {[
                 ["Name", customer.name],
                 ["Birth", `${customer.birthDate} · ${customer.birthTime}`],
@@ -231,32 +225,32 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
               ))}
             </div>
           ) : (
-            <p className="text-[12.5px]" style={{ color: T.muted }}>Customer not found.</p>
+            <p className="text-[13px]" style={{ color: T.muted }}>Customer not found.</p>
           )}
           {customer?.chartRef && (
             <button
               onClick={() => showToast("Opening chart viewer…")}
-              className="mt-3 p-3 rounded-[8px] w-full flex items-center justify-between cursor-pointer transition-all hover:brightness-110"
+              className="mt-3 p-3 rounded-[8px] w-full flex items-center justify-between cursor-pointer transition-all hover:brightness-[0.97]"
               style={{ background: T.bg, border: `1px solid ${T.borderSoft}` }}
             >
               <div className="text-left">
                 <div className="text-[12px] font-medium" style={{ color: T.text }}>{customer.chartRef} — Kundali / D1 chart</div>
-                <div className="text-[10.5px] mt-0.5" style={{ color: T.faint }}>Open chart viewer</div>
+                <div className="text-[11px] mt-0.5" style={{ color: T.faint }}>Open chart viewer</div>
               </div>
-              <span className="text-[13px]" style={{ color: T.accent }}>↗</span>
+              <span className="text-[13.5px]" style={{ color: T.accent }}>↗</span>
             </button>
           )}
         </Card>
 
         <Card>
           <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.faint }}>Problem & intake</div>
-          <p className="text-[13px] leading-relaxed" style={{ color: T.text }}>
+          <p className="text-[13.5px] leading-relaxed" style={{ color: T.text }}>
             {consultation.problemStatement || "No problem statement recorded."}
           </p>
           {consultation.notes && (
             <div className="mt-3 pt-3" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
-              <div className="text-[10px] uppercase mb-1" style={{ color: T.faint }}>Notes</div>
-              <p className="text-[12.5px]" style={{ color: T.muted }}>{consultation.notes}</p>
+              <div className="text-[11px] uppercase mb-1" style={{ color: T.faint }}>Notes</div>
+              <p className="text-[13px]" style={{ color: T.muted }}>{consultation.notes}</p>
             </div>
           )}
         </Card>
@@ -290,7 +284,7 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
           </div>
         </div>
         {summaryStatus === "submitted" && !editingSummary ? (
-          <p className="text-[13px] leading-relaxed" style={{ color: T.text }}>{summaryText}</p>
+          <p className="text-[13.5px] leading-relaxed" style={{ color: T.text }}>{summaryText}</p>
         ) : (
           <>
             <Textarea value={summaryText} onChange={setSummaryText} placeholder="Key observations, interpretation, conclusion, agreed next steps…" rows={4} />
@@ -326,11 +320,11 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
         </div>
 
         {recData.status === "not_recommended" && (
-          <p className="text-[12.5px]" style={{ color: T.muted }}>No recommendation yet. Click above to create one.</p>
+          <p className="text-[13px]" style={{ color: T.muted }}>No recommendation yet. Click above to create one.</p>
         )}
 
         {recData.status === "draft" && (
-          <div className="space-y-1.5 text-[12.5px]">
+          <div className="space-y-1.5 text-[13px]">
             <div><span style={{ color: T.muted }}>Gemstone: </span><span style={{ color: T.text }}>{recData.gemstone}</span></div>
             <div><span style={{ color: T.muted }}>Weight: </span><span style={{ color: T.text }}>{recData.weightRange}</span></div>
             <div><span style={{ color: T.muted }}>Setting: </span><span style={{ color: T.text }}>{recData.metalSetting}</span></div>
@@ -339,7 +333,7 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
         )}
 
         {(recData.status === "recommended" || recData.status === "purchased") && (
-          <div className="space-y-1.5 text-[12.5px]">
+          <div className="space-y-1.5 text-[13px]">
             <div><span style={{ color: T.muted }}>Gemstone: </span><span style={{ color: T.text }}>{recData.gemstone}</span></div>
             <div><span style={{ color: T.muted }}>Weight: </span><span style={{ color: T.text }}>{recData.weightRange}</span></div>
             <div><span style={{ color: T.muted }}>Setting: </span><span style={{ color: T.text }}>{recData.metalSetting}</span></div>
@@ -360,7 +354,7 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
       {!isUpcoming && remedyRec && (
         <Card className="mb-4">
           <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.faint }}>Other remedy</div>
-          <div className="space-y-1.5 text-[12.5px]">
+          <div className="space-y-1.5 text-[13px]">
             <div><span style={{ color: T.muted }}>Type: </span><span style={{ color: T.text }}>{remedyRec.type}</span></div>
             <div><span style={{ color: T.muted }}>Instructions: </span><span style={{ color: T.text }}>{remedyRec.instructions}</span></div>
             {remedyRec.frequency && <div><span style={{ color: T.muted }}>Frequency: </span><span style={{ color: T.text }}>{remedyRec.frequency}</span></div>}
@@ -398,13 +392,13 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
                     onClick={() => { setRecStoneSku(s.sku); setRecSearch(""); }}
                     className="w-full flex items-center justify-between py-3 px-3 text-left rounded-[9px] transition-all duration-150 cursor-pointer hover:pl-4"
                     style={{
-                      background: recStoneSku === s.sku ? "rgba(195,160,88,0.08)" : "transparent",
+                      background: recStoneSku === s.sku ? "rgba(160,125,56,0.13)" : "transparent",
                       borderBottom: `1px solid ${T.borderSoft}`,
                     }}
                   >
                     <div className="flex-1 min-w-0">
-                      <div className="text-[13px] font-medium" style={{ color: T.text }}>{s.sku}</div>
-                      <div className="text-[11.5px] mt-0.5" style={{ color: T.muted }}>
+                      <div className="text-[13.5px] font-medium" style={{ color: T.text }}>{s.sku}</div>
+                      <div className="text-[12px] mt-0.5" style={{ color: T.muted }}>
                         {s.gemName} · {s.origin} · {s.ratti}r · {inr(s.price)}
                       </div>
                     </div>
@@ -436,14 +430,14 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
                           onClick={() => { setRecDesignForm(form); setRecDesignSize(""); if (form === "Loose") setRecDesignSlug(""); }}
                           className="flex flex-col items-center justify-center w-[80px] h-[70px] rounded-[10px] transition-all duration-150 cursor-pointer"
                           style={{
-                            background: isActive ? "rgba(195,160,88,0.1)" : T.bg,
-                            border: `1.5px solid ${isActive ? "rgba(195,160,88,0.6)" : T.borderSoft}`,
+                            background: isActive ? "rgba(160,125,56,0.15)" : T.bg,
+                            border: `1.5px solid ${isActive ? "rgba(160,125,56,0.65)" : T.borderSoft}`,
                           }}
                         >
                           <span className="text-[18px] mb-1">
                             {form === "Ring" && "💍"}{form === "Pendant" && "📿"}{form === "Bracelet" && "⌚"}{form === "Loose" && "💎"}
                           </span>
-                          <span className="text-[10px] font-medium" style={{ color: isActive ? T.accent : T.text }}>
+                          <span className="text-[11px] font-medium" style={{ color: isActive ? T.accent : T.text }}>
                             {form === "Loose" ? "Loose stone" : form}
                           </span>
                         </button>
@@ -462,8 +456,8 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
                           onClick={() => setRecDesignMetal(recDesignMetal === metal ? "" : metal)}
                           className="px-3 py-1.5 rounded-[8px] text-[11px] font-medium transition-all duration-150 cursor-pointer"
                           style={{
-                            background: recDesignMetal === metal ? "rgba(195,160,88,0.1)" : T.bg,
-                            border: `1.5px solid ${recDesignMetal === metal ? "rgba(195,160,88,0.6)" : T.borderSoft}`,
+                            background: recDesignMetal === metal ? "rgba(160,125,56,0.15)" : T.bg,
+                            border: `1.5px solid ${recDesignMetal === metal ? "rgba(160,125,56,0.65)" : T.borderSoft}`,
                             color: recDesignMetal === metal ? T.accent : T.text,
                           }}
                         >{metal}</button>
@@ -484,15 +478,15 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
                             onClick={() => setRecDesignSlug(d.slug)}
                             className="flex flex-col items-center p-2.5 rounded-[10px] transition-all duration-150 cursor-pointer"
                             style={{
-                              background: isActive ? "rgba(195,160,88,0.1)" : T.bg,
-                              border: `1.5px solid ${isActive ? "rgba(195,160,88,0.6)" : T.borderSoft}`,
+                              background: isActive ? "rgba(160,125,56,0.15)" : T.bg,
+                              border: `1.5px solid ${isActive ? "rgba(160,125,56,0.65)" : T.borderSoft}`,
                             }}
                           >
-                            <div className="w-[56px] h-[56px] rounded-[8px] overflow-hidden mb-1.5" style={{ background: "rgba(195,160,88,0.04)", border: `1px solid ${T.borderSoft}` }}>
+                            <div className="w-[56px] h-[56px] rounded-[8px] overflow-hidden mb-1.5" style={{ background: "rgba(160,125,56,0.10)", border: `1px solid ${T.borderSoft}` }}>
                               <img src={d.image} alt={d.name} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
                             </div>
                             <span className="text-[11px] font-medium text-center truncate w-full" style={{ color: isActive ? T.accent : T.text }}>{d.name}</span>
-                            <span className="text-[10px]" style={{ color: T.faint }}>₹{d.price.toLocaleString("en-IN")}</span>
+                            <span className="text-[11px]" style={{ color: T.faint }}>₹{d.price.toLocaleString("en-IN")}</span>
                           </button>
                         );
                       })}
@@ -513,7 +507,7 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
             <>
               <div className="text-[11px] tracking-[0.08em] uppercase mb-4" style={{ color: T.faint }}>Review recommendation</div>
 
-              <div className="space-y-3 text-[13px] mb-5">
+              <div className="space-y-3 text-[13.5px] mb-5">
                 <div className="flex justify-between py-2" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
                   <span style={{ color: T.muted }}>Stone</span>
                   <span style={{ color: T.text }}>{selectedStone ? `${selectedStone.gemName} · ${selectedStone.sku} · ${selectedStone.ratti}r` : "—"}</span>
@@ -551,7 +545,7 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
       <Modal open={showReschedule} onClose={() => { setShowReschedule(false); setRescheduleReason(""); }} title="Request reschedule">
         <div className="space-y-4">
           <div>
-            <label className="text-[11.5px] block mb-1.5" style={{ color: T.muted }}>Reason for reschedule</label>
+            <label className="text-[12px] block mb-1.5" style={{ color: T.muted }}>Reason for reschedule</label>
             <Textarea
               value={rescheduleReason}
               onChange={setRescheduleReason}
@@ -578,7 +572,7 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
       {/* Toast */}
       {toast && (
         <div
-          className="fixed top-6 right-6 z-[100] flex items-center gap-2 px-4 py-3 rounded-[10px] shadow-lg text-[13px] font-medium"
+          className="fixed top-6 right-6 z-[100] flex items-center gap-2 px-4 py-3 rounded-[10px] shadow-lg text-[13.5px] font-medium"
           style={{ background: T.card, border: `1px solid ${T.border}`, color: T.good, animation: "fadeIn 200ms ease-out" }}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6L9 17l-5-5"/></svg>

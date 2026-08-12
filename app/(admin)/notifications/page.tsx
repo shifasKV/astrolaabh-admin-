@@ -29,7 +29,7 @@ export default function NotificationsPage() {
 
       <Card className="!p-0 overflow-hidden">
         {filtered.length === 0 ? (
-          <p className="text-[13px] text-center py-8" style={{ color: T.muted }}>No notifications.</p>
+          <p className="text-[13.5px] text-center py-8" style={{ color: T.muted }}>No notifications.</p>
         ) : (
           filtered.map((n) => (
             <NotificationItem
