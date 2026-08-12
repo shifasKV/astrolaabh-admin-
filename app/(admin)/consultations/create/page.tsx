@@ -34,7 +34,7 @@ export default function CreateConsultationPage() {
   // Customer
   const [customerId, setCustomerId] = useState("");
   const [showNewCustomer, setShowNewCustomer] = useState(false);
-  const [newCustomer, setNewCustomer] = useState({ name: "", email: "", phone: "" });
+  const [newCustomer, setNewCustomer] = useState({ name: "", email: "", phone: "", birthDate: "", birthTime: "", birthPlace: "" });
   const [createdCustomer, setCreatedCustomer] = useState<{ id: string; name: string; email: string; phone: string } | null>(null);
 
   // Details
@@ -155,40 +155,79 @@ export default function CreateConsultationPage() {
         {step === "customer" && (
           <Card>
             <div className="flex items-center justify-between mb-3">
-              <div className="text-[11px] tracking-[0.08em] uppercase" style={{ color: T.faint }}>Select customer</div>
+              <div className="text-[11px] tracking-[0.08em] uppercase" style={{ color: T.faint }}>
+                {showNewCustomer ? "Add customer" : "Select customer"}
+              </div>
               <button
-                onClick={() => setShowNewCustomer(true)}
-                className="text-[12px] font-medium cursor-pointer transition-opacity hover:opacity-80"
-                style={{ color: T.accent }}
+                onClick={() => setShowNewCustomer((v) => !v)}
+                className="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-[8px] text-[12px] font-medium cursor-pointer transition-all hover:brightness-110 active:scale-[0.97]"
+                style={{
+                  background: showNewCustomer ? "rgba(160,125,56,0.12)" : `${T.accent}`,
+                  border: `1px solid ${showNewCustomer ? T.accentBorder : T.accent}`,
+                  color: showNewCustomer ? T.accent : T.accentInk,
+                }}
               >
-                + New customer
+                {showNewCustomer ? (
+                  <>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                    Select from existing
+                  </>
+                ) : "+ New customer"}
               </button>
             </div>
 
             {showNewCustomer ? (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[12px] font-medium" style={{ color: T.accent }}>Add new customer</span>
-                  <button onClick={() => setShowNewCustomer(false)} className="text-[11px] cursor-pointer" style={{ color: T.muted }}>← Back to list</button>
+              <div className="space-y-5">
+                {/* Contact */}
+                <div>
+                  <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.accent }}>Contact</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <Input
+                      value={newCustomer.name}
+                      onChange={(v) => setNewCustomer((p) => ({ ...p, name: v }))}
+                      label="Name"
+                      placeholder="e.g. Priya Sharma"
+                    />
+                    <Input
+                      value={newCustomer.phone}
+                      onChange={(v) => setNewCustomer((p) => ({ ...p, phone: v }))}
+                      label="Phone / WhatsApp"
+                      placeholder="e.g. +91 98765 43210"
+                    />
+                    <Input
+                      value={newCustomer.email}
+                      onChange={(v) => setNewCustomer((p) => ({ ...p, email: v }))}
+                      label="Email"
+                      placeholder="e.g. priya@example.com"
+                    />
+                  </div>
                 </div>
-                <Input
-                  value={newCustomer.name}
-                  onChange={(v) => setNewCustomer((p) => ({ ...p, name: v }))}
-                  label="Full name"
-                  placeholder="e.g. Priya Sharma"
-                />
-                <Input
-                  value={newCustomer.email}
-                  onChange={(v) => setNewCustomer((p) => ({ ...p, email: v }))}
-                  label="Email"
-                  placeholder="e.g. priya@example.com"
-                />
-                <Input
-                  value={newCustomer.phone}
-                  onChange={(v) => setNewCustomer((p) => ({ ...p, phone: v }))}
-                  label="Mobile number"
-                  placeholder="e.g. +91 98765 43210"
-                />
+
+                {/* Birth details */}
+                <div>
+                  <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.accent }}>Birth details — the chart on file</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <Input
+                      value={newCustomer.birthDate}
+                      onChange={(v) => setNewCustomer((p) => ({ ...p, birthDate: v }))}
+                      label="Birth date"
+                      placeholder="e.g. 15 Mar 1992"
+                    />
+                    <Input
+                      value={newCustomer.birthTime}
+                      onChange={(v) => setNewCustomer((p) => ({ ...p, birthTime: v }))}
+                      label="Birth time"
+                      placeholder="e.g. 10:30 AM"
+                    />
+                    <Input
+                      value={newCustomer.birthPlace}
+                      onChange={(v) => setNewCustomer((p) => ({ ...p, birthPlace: v }))}
+                      label="Birth place"
+                      placeholder="e.g. Kochi, Kerala"
+                    />
+                  </div>
+                </div>
+
                 <div className="max-w-lg space-y-3 mt-3">
                   <Select value={type} onChange={setType} label="Consultation type" options={TYPES} />
                   <Textarea
@@ -200,7 +239,6 @@ export default function CreateConsultationPage() {
                 </div>
                 <div className="flex gap-2.5 pt-2">
                   <GoldBtn onClick={handleCreateCustomer}>Create & continue</GoldBtn>
-                  <GhostBtn onClick={() => setShowNewCustomer(false)}>Cancel</GhostBtn>
                 </div>
               </div>
             ) : (

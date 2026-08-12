@@ -38,7 +38,7 @@ export default function CreateOrderPage() {
 
   // New customer form
   const [showNewCustomer, setShowNewCustomer] = useState(false);
-  const [newCustomer, setNewCustomer] = useState({ name: "", email: "", phone: "" });
+  const [newCustomer, setNewCustomer] = useState({ name: "", email: "", phone: "", birthDate: "", birthTime: "", birthPlace: "" });
   const [createdCustomer, setCreatedCustomer] = useState<{ id: string; name: string; email: string; phone: string } | null>(null);
 
   // Address step
@@ -165,43 +165,81 @@ export default function CreateOrderPage() {
         {step === "customer" && (
           <Card>
             <div className="flex items-center justify-between mb-3">
-              <div className="text-[11px] tracking-[0.08em] uppercase" style={{ color: T.faint }}>Select customer</div>
+              <div className="text-[11px] tracking-[0.08em] uppercase" style={{ color: T.faint }}>
+                {showNewCustomer ? "Add customer" : "Select customer"}
+              </div>
               <button
-                onClick={() => setShowNewCustomer(true)}
-                className="text-[12px] font-medium cursor-pointer transition-opacity hover:opacity-80"
-                style={{ color: T.accent }}
+                onClick={() => setShowNewCustomer((v) => !v)}
+                className="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-[8px] text-[12px] font-medium cursor-pointer transition-all hover:brightness-110 active:scale-[0.97]"
+                style={{
+                  background: showNewCustomer ? "rgba(160,125,56,0.12)" : `${T.accent}`,
+                  border: `1px solid ${showNewCustomer ? T.accentBorder : T.accent}`,
+                  color: showNewCustomer ? T.accent : T.accentInk,
+                }}
               >
-                + New customer
+                {showNewCustomer ? (
+                  <>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                    Select from existing
+                  </>
+                ) : "+ New customer"}
               </button>
             </div>
 
             {showNewCustomer ? (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[12px] font-medium" style={{ color: T.accent }}>Add new customer</span>
-                  <button onClick={() => setShowNewCustomer(false)} className="text-[11px] cursor-pointer" style={{ color: T.muted }}>← Back to list</button>
+              <div className="space-y-5">
+                {/* Contact */}
+                <div>
+                  <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.accent }}>Contact</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <Input
+                      value={newCustomer.name}
+                      onChange={(v) => setNewCustomer((p) => ({ ...p, name: v }))}
+                      label="Name"
+                      placeholder="e.g. Priya Sharma"
+                    />
+                    <Input
+                      value={newCustomer.phone}
+                      onChange={(v) => setNewCustomer((p) => ({ ...p, phone: v }))}
+                      label="Phone / WhatsApp"
+                      placeholder="e.g. +91 98765 43210"
+                    />
+                    <Input
+                      value={newCustomer.email}
+                      onChange={(v) => setNewCustomer((p) => ({ ...p, email: v }))}
+                      label="Email"
+                      placeholder="e.g. priya@example.com"
+                    />
+                  </div>
                 </div>
-                <Input
-                  value={newCustomer.name}
-                  onChange={(v) => setNewCustomer((p) => ({ ...p, name: v }))}
-                  label="Full name"
-                  placeholder="e.g. Priya Sharma"
-                />
-                <Input
-                  value={newCustomer.email}
-                  onChange={(v) => setNewCustomer((p) => ({ ...p, email: v }))}
-                  label="Email"
-                  placeholder="e.g. priya@example.com"
-                />
-                <Input
-                  value={newCustomer.phone}
-                  onChange={(v) => setNewCustomer((p) => ({ ...p, phone: v }))}
-                  label="Mobile number"
-                  placeholder="e.g. +91 98765 43210"
-                />
+
+                {/* Birth details */}
+                <div>
+                  <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.accent }}>Birth details — the chart on file</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <Input
+                      value={newCustomer.birthDate}
+                      onChange={(v) => setNewCustomer((p) => ({ ...p, birthDate: v }))}
+                      label="Birth date"
+                      placeholder="e.g. 15 Mar 1992"
+                    />
+                    <Input
+                      value={newCustomer.birthTime}
+                      onChange={(v) => setNewCustomer((p) => ({ ...p, birthTime: v }))}
+                      label="Birth time"
+                      placeholder="e.g. 10:30 AM"
+                    />
+                    <Input
+                      value={newCustomer.birthPlace}
+                      onChange={(v) => setNewCustomer((p) => ({ ...p, birthPlace: v }))}
+                      label="Birth place"
+                      placeholder="e.g. Kochi, Kerala"
+                    />
+                  </div>
+                </div>
+
                 <div className="flex gap-2.5 pt-2">
                   <GoldBtn onClick={handleCreateCustomer}>Create & continue</GoldBtn>
-                  <GhostBtn onClick={() => setShowNewCustomer(false)}>Cancel</GhostBtn>
                 </div>
               </div>
             ) : (
@@ -367,26 +405,46 @@ export default function CreateOrderPage() {
             <div className="mb-3">
               <SearchFilter search={search} onSearchChange={setSearch} placeholder="Search SKU, gemstone…" />
             </div>
+            {/* Header */}
+            <div
+              className="hidden md:grid grid-cols-[minmax(200px,1.2fr)_100px_140px_130px_240px] gap-x-4 px-3 py-2.5 rounded-[8px] text-[11px] tracking-[0.07em] uppercase font-semibold"
+              style={{ color: T.muted, background: "rgba(89,82,54,0.035)" }}
+            >
+              <span>Stone</span>
+              <span className="text-right">Weight</span>
+              <span className="text-right">Price / ratti</span>
+              <span className="text-right">Total</span>
+              <span />
+            </div>
             <div className="max-h-[500px] overflow-y-auto">
-              {STONES.filter((s) => !search || s.sku.toLowerCase().includes(search.toLowerCase()) || s.gemName.toLowerCase().includes(search.toLowerCase())).slice(0, 30).map((s) => (
+              {STONES.filter((s) => !search || s.sku.toLowerCase().includes(search.toLowerCase()) || s.gemName.toLowerCase().includes(search.toLowerCase())).slice(0, 30).map((s, i, arr) => (
                 <button
                   key={s.sku}
                   onClick={() => selectStone(s.sku)}
-                  className="w-full flex items-center justify-between py-3 px-3 text-left rounded-[9px] transition-all duration-150 cursor-pointer hover:pl-4"
+                  className="w-full grid md:grid-cols-[minmax(200px,1.2fr)_100px_140px_130px_240px] grid-cols-1 gap-x-4 gap-y-1.5 items-center px-3 py-3 text-[13.5px] text-left transition-all duration-150 cursor-pointer rounded-[9px]"
                   style={{
                     background: stoneSku === s.sku ? "rgba(160,125,56,0.13)" : "transparent",
-                    borderBottom: `1px solid ${T.borderSoft}`,
+                    borderBottom: i < Math.min(arr.length, 30) - 1 ? `1px solid ${T.borderSoft}` : "none",
                   }}
                 >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[13.5px] font-medium" style={{ color: T.text }}>{s.sku}</span>
-                    </div>
-                    <div className="text-[12px] mt-0.5" style={{ color: T.muted }}>
-                      {s.gemName} · {s.origin} · {s.ratti}r · {inr(s.price)}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 shrink-0">
+                  <span className="flex items-center gap-3 min-w-0">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={`/gems/${s.gem}.png`}
+                      alt={s.gemName}
+                      className="w-9 h-9 rounded-[8px] object-cover shrink-0"
+                      style={{ border: `1px solid ${T.borderSoft}` }}
+                      loading="lazy"
+                    />
+                    <span className="min-w-0">
+                      <span className="block font-medium truncate" style={{ color: T.text }}>{s.gemName}</span>
+                      <span className="block text-[11px] tracking-[0.05em] uppercase tabular-nums" style={{ color: T.faint }}>{s.sku}</span>
+                    </span>
+                  </span>
+                  <span className="tabular-nums md:text-right" style={{ color: T.muted }}>{s.ratti} r</span>
+                  <span className="tabular-nums md:text-right text-[13px]" style={{ color: T.muted }}>{inr(s.pricePerRatti)}</span>
+                  <span className="tabular-nums md:text-right font-semibold" style={{ color: T.text }}>{inr(s.price)}</span>
+                  <span className="flex items-center gap-3 md:justify-end">
                     <a
                       href={`https://astrolaabh.com/stones/${s.slug}`}
                       target="_blank"
@@ -395,11 +453,11 @@ export default function CreateOrderPage() {
                       className="inline-flex items-center gap-1 text-[11px] transition-opacity hover:opacity-70"
                       style={{ color: T.accent }}
                     >
-                      View in website
+                      Website
                       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                     </a>
                     {stoneSku === s.sku && <span style={{ color: T.accent }}>✓</span>}
-                  </div>
+                  </span>
                 </button>
               ))}
             </div>

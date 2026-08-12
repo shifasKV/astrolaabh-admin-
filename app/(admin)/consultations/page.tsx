@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { PageHeader, Card, Chip, Tabs, SearchFilter, GoldBtn, Select } from "@/components/ui";
 import { T } from "@/lib/theme";
@@ -10,9 +10,35 @@ const TABS = [
   { key: "upcoming", label: "Upcoming" },
   { key: "reschedule", label: "Reschedule request" },
   { key: "summary_due", label: "Summary due" },
+  { key: "no_show", label: "No show" },
 ];
 
 type SortKey = "date_desc" | "date_asc";
+type ViewMode = "list" | "calendar";
+
+const CAL_HOURS = Array.from({ length: 16 }, (_, i) => i + 5);
+
+function toISODate(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function getWeekDays(base: Date): Date[] {
+  const dow = base.getDay();
+  const monday = new Date(base);
+  monday.setDate(base.getDate() - ((dow + 6) % 7));
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    return d;
+  });
+}
+
+function formatHour(h: number): string {
+  if (h === 0) return "12 AM";
+  if (h < 12) return `${h} AM`;
+  if (h === 12) return "12 PM";
+  return `${h - 12} PM`;
+}
 
 function filterByTab(c: typeof MOCK_CONSULTATIONS[number], tab: string): boolean {
   if (tab === "upcoming") return c.status === "scheduled" && c.paymentStatus === "paid";
@@ -20,11 +46,13 @@ function filterByTab(c: typeof MOCK_CONSULTATIONS[number], tab: string): boolean
   if (tab === "link_pending") return c.status === "scheduled" && !c.meetingLink;
   if (tab === "reschedule") return c.status === "reschedule_requested";
   if (tab === "summary_due") return c.status === "summary_pending";
+  if (tab === "no_show") return c.status === "no_show";
   if (tab === "completed") return c.status === "closed" || c.status === "completed";
   return true;
 }
 
 export default function ConsultationsPage() {
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [tab, setTab] = useState("all");
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<SortKey>("date_desc");
@@ -37,6 +65,10 @@ export default function ConsultationsPage() {
   const [dpYear, setDpYear] = useState(new Date().getFullYear());
   const [dpMonth, setDpMonth] = useState(new Date().getMonth());
   const [page, setPage] = useState(1);
+  const [calWeekBase, setCalWeekBase] = useState(() => new Date());
+  const [goToDateOpen, setGoToDateOpen] = useState(false);
+  const [gtdYear, setGtdYear] = useState(new Date().getFullYear());
+  const [gtdMonth, setGtdMonth] = useState(new Date().getMonth());
 
   const PER_PAGE = 9;
 
@@ -56,6 +88,7 @@ export default function ConsultationsPage() {
       if (filterStatus === "scheduled" && c.status !== "scheduled") return false;
       if (filterStatus === "completed" && c.status !== "closed" && c.status !== "completed") return false;
       if (filterStatus === "reschedule_requested" && c.status !== "reschedule_requested") return false;
+      if (filterStatus === "no_show" && c.status !== "no_show") return false;
       return true;
     })
     .filter((c) => {
@@ -76,11 +109,30 @@ export default function ConsultationsPage() {
 
   const hasActiveFilters = !!filterCustomer || !!filterExpert || !!filterStatus || !!filterDateFrom || !!filterDateTo;
 
+  const weekDays = useMemo(() => getWeekDays(calWeekBase), [calWeekBase]);
+  const todayISO = toISODate(new Date());
+
+  const calEvents = useMemo(() => {
+    const map = new Map<string, typeof MOCK_CONSULTATIONS>();
+    for (const c of MOCK_CONSULTATIONS) {
+      if (c.status === "cancelled") continue;
+      const dt = new Date(c.scheduledAt);
+      const key = toISODate(dt);
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(c);
+    }
+    return map;
+  }, []);
+
+  const prevWeek = () => { const d = new Date(calWeekBase); d.setDate(d.getDate() - 7); setCalWeekBase(d); };
+  const nextWeek = () => { const d = new Date(calWeekBase); d.setDate(d.getDate() + 7); setCalWeekBase(d); };
+  const goToToday = () => setCalWeekBase(new Date());
+
   const statusTone = (s: string) => {
     if (s === "closed" || s === "completed") return "good" as const;
     if (s === "scheduled") return "gold" as const;
-    if (s === "summary_pending" || s === "reschedule_requested") return "danger" as const;
-    if (s === "no_show" || s === "cancelled") return "muted" as const;
+    if (s === "summary_pending" || s === "reschedule_requested" || s === "no_show") return "danger" as const;
+    if (s === "cancelled") return "muted" as const;
     return "muted" as const;
   };
 
@@ -90,7 +142,7 @@ export default function ConsultationsPage() {
     if (c.status === "summary_pending") return "Summary due";
     if (c.status === "closed" || c.status === "completed") return "Completed";
     if (c.status === "scheduled") return "Scheduled";
-    if (c.status === "no_show") return "No show";
+    if (c.status === "no_show") return c.noShowBy === "expert" ? "Expert no show" : "Customer no show";
     if (c.status === "cancelled") return "Cancelled";
     return c.status;
   };
@@ -107,6 +159,26 @@ export default function ConsultationsPage() {
         }
       />
 
+      {/* View toggle */}
+      <div className="flex justify-end mb-4">
+        <div className="flex gap-0 rounded-[9px] overflow-hidden shrink-0" style={{ border: `1px solid ${T.border}` }}>
+          {(["list", "calendar"] as const).map((mode) => (
+            <button
+              key={mode}
+              onClick={() => setViewMode(mode)}
+              className="px-4 py-1.5 text-[12px] font-medium transition-all cursor-pointer capitalize"
+              style={{
+                background: viewMode === mode ? T.accent : "transparent",
+                color: viewMode === mode ? T.accentInk : T.muted,
+              }}
+            >
+              {mode === "list" ? "List" : "Calendar"}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {viewMode === "list" && <>
       <div className="mb-4">
         <Tabs
           tabs={TABS.map((t) => ({
@@ -163,6 +235,7 @@ export default function ConsultationsPage() {
               { value: "payment_pending", label: "Payment pending" },
               { value: "scheduled", label: "Scheduled" },
               { value: "reschedule_requested", label: "Reschedule" },
+              { value: "no_show", label: "No show" },
               { value: "completed", label: "Completed" },
             ]}
           />
@@ -358,6 +431,134 @@ export default function ConsultationsPage() {
             <button onClick={() => setPage(totalPages)} disabled={currentPage === totalPages} className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[12px] transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed" style={{ background: T.popover, border: `1px solid ${T.borderSoft}`, color: T.muted }}>»</button>
           </div>
         </div>
+      )}
+      </>}
+
+      {/* ============ Calendar view ============ */}
+      {viewMode === "calendar" && (
+        <>
+          {/* Week navigation */}
+          <div className="flex flex-wrap items-center gap-3 pb-3 mb-3" style={{ borderBottom: `1px solid ${T.border}` }}>
+            <button onClick={prevWeek} className="w-9 h-9 rounded-[9px] flex items-center justify-center text-[14px] transition-colors hover:bg-[rgba(160,125,56,0.1)] cursor-pointer" style={{ color: T.muted, background: T.popover, border: `1px solid ${T.border}` }}>‹</button>
+            <button onClick={nextWeek} className="w-9 h-9 rounded-[9px] flex items-center justify-center text-[14px] transition-colors hover:bg-[rgba(160,125,56,0.1)] cursor-pointer" style={{ color: T.muted, background: T.popover, border: `1px solid ${T.border}` }}>›</button>
+            <button onClick={goToToday} className="h-9 px-3.5 rounded-[9px] text-[13.5px] font-medium transition-colors hover:bg-[rgba(160,125,56,0.1)] cursor-pointer" style={{ color: T.accent, border: `1px solid ${T.accentBorder}` }}>Today</button>
+
+            <div className="relative ml-1">
+              <button
+                onClick={() => { setGoToDateOpen((o) => !o); setGtdYear(calWeekBase.getFullYear()); setGtdMonth(calWeekBase.getMonth()); }}
+                className="text-[14px] font-semibold flex items-center gap-2 cursor-pointer hover:opacity-75 transition-opacity"
+                style={{ color: T.text }}
+              >
+                {weekDays[0].toLocaleDateString("en-IN", { day: "numeric", month: "short" })} — {weekDays[6].toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 9l6 6 6-6" /></svg>
+              </button>
+              {goToDateOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setGoToDateOpen(false)} />
+                  <div className="absolute left-0 top-full mt-1 z-50 rounded-[10px] p-4 shadow-lg w-[280px]" style={{ background: T.popover, border: `1px solid ${T.border}` }}>
+                    <div className="flex items-center justify-between mb-2">
+                      <button type="button" onClick={() => { if (gtdMonth === 0) { setGtdMonth(11); setGtdYear((y) => y - 1); } else setGtdMonth((m) => m - 1); }} className="w-6 h-6 rounded-full flex items-center justify-center cursor-pointer hover:bg-[rgba(160,125,56,0.15)]" style={{ color: T.muted }}>‹</button>
+                      <span className="text-[11px] font-medium" style={{ color: T.text }}>{["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][gtdMonth]} {gtdYear}</span>
+                      <button type="button" onClick={() => { if (gtdMonth === 11) { setGtdMonth(0); setGtdYear((y) => y + 1); } else setGtdMonth((m) => m + 1); }} className="w-6 h-6 rounded-full flex items-center justify-center cursor-pointer hover:bg-[rgba(160,125,56,0.15)]" style={{ color: T.muted }}>›</button>
+                    </div>
+                    <div className="grid grid-cols-7 gap-0.5 mb-1">
+                      {["Mo","Tu","We","Th","Fr","Sa","Su"].map((d) => <div key={d} className="text-center text-[9px] py-0.5" style={{ color: T.faint }}>{d}</div>)}
+                    </div>
+                    <div className="grid grid-cols-7 gap-0.5">
+                      {Array.from({ length: (() => { const fd = new Date(gtdYear, gtdMonth, 1).getDay(); return fd === 0 ? 6 : fd - 1; })() }).map((_, i) => <div key={`e${i}`} />)}
+                      {Array.from({ length: new Date(gtdYear, gtdMonth + 1, 0).getDate() }).map((_, i) => {
+                        const day = i + 1;
+                        const iso = `${gtdYear}-${String(gtdMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+                        const isToday2 = iso === todayISO;
+                        return (
+                          <button key={day} type="button" onClick={() => { setCalWeekBase(new Date(iso + "T00:00:00")); setGoToDateOpen(false); }}
+                            className="w-[34px] h-[34px] rounded-full flex items-center justify-center text-[11px] transition-colors cursor-pointer hover:bg-[rgba(160,125,56,0.16)]"
+                            style={{ background: isToday2 ? T.accent : "transparent", color: isToday2 ? T.accentInk : T.text, fontWeight: isToday2 ? 700 : 400 }}
+                          >{day}</button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Info */}
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-1.5 h-1.5 rounded-full" style={{ background: T.accent }} />
+            <span className="text-[12px]" style={{ color: T.muted }}>Showing scheduled consultations only</span>
+          </div>
+
+          {/* Calendar grid */}
+          <Card className="overflow-hidden p-0">
+            <div className="overflow-x-auto">
+              <div style={{ minWidth: 800 }}>
+                {/* Day headers */}
+                <div className="grid sticky top-0 z-10" style={{ gridTemplateColumns: "60px repeat(7, 1fr)", background: T.card, borderBottom: `1px solid ${T.border}` }}>
+                  <div className="p-2" />
+                  {weekDays.map((day) => {
+                    const iso = toISODate(day);
+                    const isToday3 = iso === todayISO;
+                    return (
+                      <div key={iso} className="text-center py-3 px-1" style={{ borderLeft: `1px solid ${T.borderSoft}` }}>
+                        <div className="text-[10px] tracking-[0.06em] uppercase" style={{ color: T.faint }}>{day.toLocaleDateString("en-IN", { weekday: "short" })}</div>
+                        <div
+                          className="text-[18px] font-semibold mt-0.5 mx-auto"
+                          style={{
+                            color: isToday3 ? T.accentInk : T.text,
+                            background: isToday3 ? T.accent : "transparent",
+                            borderRadius: isToday3 ? "50%" : undefined,
+                            width: isToday3 ? 34 : undefined,
+                            height: isToday3 ? 34 : undefined,
+                            lineHeight: isToday3 ? "34px" : undefined,
+                          }}
+                        >{day.getDate()}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Hour rows */}
+                <div className="max-h-[600px] overflow-y-auto">
+                  {CAL_HOURS.map((hour) => (
+                    <div key={hour} className="grid" style={{ gridTemplateColumns: "60px repeat(7, 1fr)", minHeight: 60 }}>
+                      <div className="text-[10px] tabular-nums text-right pr-2 pt-1" style={{ color: T.faint, borderTop: `1px solid ${T.borderSoft}` }}>{formatHour(hour)}</div>
+                      {weekDays.map((day) => {
+                        const iso = toISODate(day);
+                        const events = (calEvents.get(iso) ?? []).filter((c) => new Date(c.scheduledAt).getHours() === hour);
+                        return (
+                          <div key={iso} className="relative px-0.5 pt-0.5" style={{ borderTop: `1px solid ${T.borderSoft}`, borderLeft: `1px solid ${T.borderSoft}` }}>
+                            {events.map((ev) => {
+                              const dt = new Date(ev.scheduledAt);
+                              const timeStr = dt.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true });
+                              const tone =
+                                ev.status === "closed" || ev.status === "completed" ? T.good :
+                                ev.status === "scheduled" ? "#6d8ea0" :
+                                ev.status === "reschedule_requested" ? T.accent :
+                                ev.status === "summary_pending" || ev.status === "no_show" ? T.danger :
+                                T.muted;
+                              return (
+                                <Link key={ev.id} href={`/consultations/${ev.id}`}
+                                  className="block rounded-[6px] px-1.5 py-1 mb-0.5 text-[10px] leading-tight truncate transition-all hover:brightness-110"
+                                  style={{ background: `${tone}18`, borderLeft: `3px solid ${tone}`, color: tone }}
+                                  title={`${ev.customerName} — ${ev.expertName}`}
+                                >
+                                  <div className="font-medium truncate">{ev.customerName}</div>
+                                  <div className="truncate opacity-75">{timeStr} · {ev.expertName.split(" ").pop()}</div>
+                                </Link>
+                              );
+                            })}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </Card>
+        </>
       )}
     </>
   );

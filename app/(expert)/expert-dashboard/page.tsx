@@ -65,7 +65,12 @@ export default function ExpertDashboard() {
   const todaySlots = getSlotsForDate(todayISO);
   const tomorrowSlots = getSlotsForDate(tomorrowISO);
 
-  const [disabledSlots, setDisabledSlots] = useState<Set<string>>(new Set());
+  const [disabledSlots, setDisabledSlots] = useState<Set<string>>(() => new Set([
+    `${todayISO}-07:00`,
+    `${todayISO}-18:00`,
+    `${tomorrowISO}-12:00`,
+    `${tomorrowISO}-17:00`,
+  ]));
   const [toast, setToast] = useState("");
 
   const showToast = (msg: string) => {
@@ -85,14 +90,14 @@ export default function ExpertDashboard() {
   };
 
   const bookedSlotMap = useMemo(() => {
-    const map = new Map<string, string>();
+    const map = new Map<string, { customerName: string; id: string }>();
     for (const c of myConsultations) {
       if (c.status === "cancelled" || c.status === "no_show") continue;
       const dt = new Date(c.scheduledAt);
       const dateKey = toISODate(dt);
       const hh = String(dt.getHours()).padStart(2, "0");
       const mm = String(dt.getMinutes()).padStart(2, "0");
-      map.set(`${dateKey}-${hh}:${mm}`, c.customerName);
+      map.set(`${dateKey}-${hh}:${mm}`, { customerName: c.customerName, id: c.id });
     }
     return map;
   }, [myConsultations]);
@@ -119,8 +124,8 @@ export default function ExpertDashboard() {
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
           {slots.map((time) => {
             const key = `${dateISO}-${time}`;
-            const customer = bookedSlotMap.get(key);
-            const isBooked = !!customer;
+            const booking = bookedSlotMap.get(key);
+            const isBooked = !!booking;
             const isDisabled = disabledSlots.has(key);
 
             let bg = "rgba(95,112,64,0.12)";
@@ -132,7 +137,7 @@ export default function ExpertDashboard() {
               bg = T.accentFaint;
               borderColor = T.accentBorder;
               textColor = T.accent;
-              statusLabel = customer;
+              statusLabel = `Booked by ${booking.customerName}`;
             } else if (isDisabled) {
               bg = "rgba(93,94,86,0.1)";
               borderColor = "rgba(93,94,86,0.2)";
@@ -140,18 +145,35 @@ export default function ExpertDashboard() {
               statusLabel = "Unavailable";
             }
 
+            if (isBooked) {
+              return (
+                <Link
+                  key={key}
+                  href={`/appointments/${booking.id}`}
+                  className="rounded-[10px] p-3 text-left transition-all duration-150 hover:brightness-110"
+                  style={{ background: bg, border: `1px solid ${borderColor}` }}
+                >
+                  <div className="text-[13.5px] font-medium tabular-nums" style={{ color: textColor }}>
+                    {formatTime24to12(time)}
+                  </div>
+                  <div className="text-[11px] mt-0.5 truncate" style={{ color: T.accent }}>
+                    {statusLabel}
+                  </div>
+                </Link>
+              );
+            }
+
             return (
               <button
                 key={key}
-                disabled={isBooked}
-                onClick={() => !isBooked && toggleSlot(key)}
-                className="rounded-[10px] p-3 text-left transition-all duration-150 cursor-pointer disabled:cursor-default"
+                onClick={() => toggleSlot(key)}
+                className="rounded-[10px] p-3 text-left transition-all duration-150 cursor-pointer"
                 style={{ background: bg, border: `1px solid ${borderColor}` }}
               >
                 <div className="text-[13.5px] font-medium tabular-nums" style={{ color: textColor }}>
                   {formatTime24to12(time)}
                 </div>
-                <div className="text-[11px] mt-0.5 truncate" style={{ color: isBooked ? T.accent : isDisabled ? T.faint : T.muted }}>
+                <div className="text-[11px] mt-0.5 truncate" style={{ color: isDisabled ? T.faint : T.muted }}>
                   {statusLabel}
                 </div>
               </button>

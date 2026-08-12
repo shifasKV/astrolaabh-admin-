@@ -29,6 +29,7 @@ export default function AdminDashboard() {
   const notShipped = MOCK_ORDERS.filter((o) => o.paymentStatus === "paid" && o.shopifyStatus !== "fulfilled" && !o.tracking).length;
   const rescheduleRequests = MOCK_CONSULTATIONS.filter((c) => c.status === "reschedule_requested").length;
   const summariesDue = MOCK_CONSULTATIONS.filter((c) => c.status === "summary_pending").length;
+  const noShows = MOCK_CONSULTATIONS.filter((c) => c.status === "no_show").length;
 
   return (
     <>
@@ -64,7 +65,7 @@ export default function AdminDashboard() {
 
       {/* Row 2: Actions needed */}
       <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.faint }}>Actions needed</div>
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 mb-6 items-stretch">
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 mb-6 items-stretch">
         <Link href="/orders" className="block h-full">
           <div className="card-interactive rounded-[12px] p-4 text-left h-full" style={{ background: T.card, border: `1px solid ${certsMissing > 0 ? "rgba(176,84,84,0.3)" : T.border}` }}>
             <div className="text-[11px] tracking-[0.08em] uppercase mb-1.5 truncate" style={{ color: T.faint }}>Cert missing</div>
@@ -93,6 +94,14 @@ export default function AdminDashboard() {
           <div className="card-interactive rounded-[12px] p-4 text-left h-full" style={{ background: T.card, border: `1px solid ${rescheduleRequests > 0 ? "rgba(176,84,84,0.3)" : T.border}` }}>
             <div className="text-[11px] tracking-[0.08em] uppercase mb-1.5 truncate" style={{ color: T.faint }}>Reschedule request</div>
             <div className="text-[20px] font-bold tabular-nums" style={{ color: rescheduleRequests > 0 ? T.danger : T.text }}>{rescheduleRequests}</div>
+            <div className="text-[11px] mt-1" style={{ color: T.muted }}>Consultation</div>
+          </div>
+        </Link>
+
+        <Link href="/consultations" className="block h-full">
+          <div className="card-interactive rounded-[12px] p-4 text-left h-full" style={{ background: T.card, border: `1px solid ${noShows > 0 ? "rgba(176,84,84,0.3)" : T.border}` }}>
+            <div className="text-[11px] tracking-[0.08em] uppercase mb-1.5 truncate" style={{ color: T.faint }}>No show</div>
+            <div className="text-[20px] font-bold tabular-nums" style={{ color: noShows > 0 ? T.danger : T.text }}>{noShows}</div>
             <div className="text-[11px] mt-1" style={{ color: T.muted }}>Consultation</div>
           </div>
         </Link>

@@ -20,7 +20,7 @@ export default function AdminAvailabilityPage() {
   return (
     <>
       <div className="mb-5">
-        <BackLink label={`Back to ${expert.name}`} href={`/astro-gemologists/${id}`} />
+        <BackLink label={expert.name} href={`/astro-gemologists/${id}`} />
       </div>
 
       <div className="mb-6">

@@ -33,6 +33,7 @@ export const ConsultationSchema = z.object({
   recommendationId: z.string().optional(),
   paymentRequestId: z.string().optional(),
   rescheduleReason: z.string().optional(),
+  noShowBy: z.enum(["customer", "expert"]).optional(),
   notes: z.string().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),

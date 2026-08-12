@@ -9,6 +9,9 @@ export { EXPERT_PROFILES } from "./experts";
 export interface TimeSlot {
   time: string;
   available: boolean;
+  /** If booked, the consultation ID for navigation */
+  consultationId?: string;
+  customerName?: string;
 }
 
 export interface DayAvailability {
@@ -104,7 +107,7 @@ export interface ExpertSchedule {
   dateOverrides: DateOverride[];
 }
 
-const DEFAULT_RANGE: TimeRange = { start: "09:00", end: "17:00" };
+const DEFAULT_RANGE: TimeRange = { start: "07:00", end: "19:00" };
 
 export const MOCK_EXPERT_SCHEDULES: ExpertSchedule[] = [
   {
@@ -119,12 +122,7 @@ export const MOCK_EXPERT_SCHEDULES: ExpertSchedule[] = [
       { dayOfWeek: 5, available: true, ranges: [{ ...DEFAULT_RANGE }] },
       { dayOfWeek: 6, available: false, ranges: [] },
     ],
-    dateOverrides: [
-      { date: "2026-08-12", ranges: [{ start: "09:00", end: "17:00" }, { start: "18:00", end: "19:00" }] },
-      { date: "2026-08-19", ranges: [{ start: "09:00", end: "17:00" }, { start: "18:00", end: "19:00" }] },
-      { date: "2026-08-25", ranges: [{ start: "09:00", end: "17:00" }] },
-      { date: "2026-08-26", ranges: [{ start: "09:00", end: "17:00" }] },
-    ],
+    dateOverrides: [],
   },
   {
     expertId: "usr_expert_02",

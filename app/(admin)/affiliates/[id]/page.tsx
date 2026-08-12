@@ -1,7 +1,6 @@
 "use client";
 import { use, useState } from "react";
-import Link from "next/link";
-import { Card, StatCard, Chip, GoldBtn, GhostBtn, Modal, Input, SectionLink } from "@/components/ui";
+import { Card, StatCard, Chip, GoldBtn, GhostBtn, Modal, Input, SectionLink, BackLink } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_AFFILIATES, MOCK_REFERRAL_EVENTS, MOCK_PAYOUTS } from "@/lib/mock";
 import { inr } from "@/lib/types";
@@ -18,63 +17,58 @@ export default function AffiliateDetailPage({ params }: { params: Promise<{ id: 
     email: affiliate?.email ?? "",
     phone: "+91 98765 43210",
     bankName: "HDFC Bank",
-    accountNumber: "****6789",
+    accountNumber: "1234 5678 6789",
     ifsc: "HDFC0001234",
     upi: `${affiliate?.name.split(" ").pop()?.toLowerCase()}@upi`,
   });
   const [payoutForm, setPayoutForm] = useState({ amount: "", notes: "" });
 
+  const [specificRates, setSpecificRates] = useState({ stone: "5", jewellery: "4", consultation: "10" });
+  const [commissionEditing, setCommissionEditing] = useState(false);
+  const [commissionToast, setCommissionToast] = useState("");
+
   if (!affiliate) {
     return (
       <div className="py-20 text-center">
         <p className="text-[14px]" style={{ color: T.muted }}>Affiliate not found.</p>
-        <Link href="/affiliates" className="text-[13px] mt-2 inline-block" style={{ color: T.accent }}>← Back</Link>
+        <div className="mt-3 flex justify-center"><BackLink label="Affiliates" href="/affiliates" /></div>
       </div>
     );
   }
 
   const referrals = MOCK_REFERRAL_EVENTS.filter((r) => r.affiliateId === affiliate.id);
   const payouts = MOCK_PAYOUTS.filter((p) => p.affiliateId === affiliate.id);
-  const conversion = affiliate.totalRegistrations > 0 ? Math.round((affiliate.totalPurchases / affiliate.totalRegistrations) * 100) : 0;
 
   return (
     <>
-      {/* Back link */}
       <div className="mb-5">
-        <Link href="/affiliates" className="inline-flex items-center gap-1.5 text-[13.5px] font-medium hover:opacity-80 transition-opacity duration-200" style={{ color: T.accent }}>
-          ← Affiliates
-        </Link>
+        <BackLink label="Affiliates" href="/affiliates" />
       </div>
 
-      {/* Profile Card */}
-      <div className="rounded-[14px] p-6 mb-6" style={{ background: `linear-gradient(135deg, ${T.card} 0%, ${T.panel} 100%)`, border: `1px solid ${T.border}` }}>
-        <div className="flex flex-wrap items-start gap-5">
+      {/* Profile header */}
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+        <div className="flex items-center gap-3">
           <div
-            className="w-14 h-14 rounded-full flex items-center justify-center text-[20px] font-bold shrink-0"
+            className="w-10 h-10 rounded-full flex items-center justify-center text-[15px] font-bold shrink-0"
             style={{ background: `${T.accent}15`, border: `2px solid ${T.accent}40`, color: T.accent }}
           >
             {affiliate.name[0]}
           </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-3">
+          <div>
+            <div className="flex items-center gap-2.5">
               <span className="text-[17px] font-semibold" style={{ color: T.text }}>{affiliate.name}</span>
               <Chip tone={isActive ? "good" : "danger"}>{isActive ? "active" : "inactive"}</Chip>
             </div>
-            <div className="text-[13.5px] mt-1" style={{ color: T.muted }}>{affiliate.code} · {affiliate.email} · {affiliate.commissionRate}% commission</div>
-            <div className="flex flex-wrap items-center gap-4 mt-3 text-[12px]" style={{ color: T.faint }}>
-              <span>Joined {affiliate.joinedAt}</span>
-              <span>·</span>
-              <span>Conversion {conversion}%</span>
-            </div>
+            <div className="text-[13px] mt-0.5" style={{ color: T.muted }}>{affiliate.code} · {affiliate.email} · Joined {affiliate.joinedAt}</div>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <GhostBtn className="!text-[12px] !h-8 !px-3" onClick={() => setShowEditModal(true)}>
-              Edit
-            </GhostBtn>
-            <GhostBtn className="!text-[12px] !h-8 !px-3" onClick={() => setIsActive((v) => !v)}>
-              {isActive ? "Deactivate" : "Activate"}
-            </GhostBtn>
-          </div>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <GhostBtn className="!text-[12px] !h-8 !px-3" onClick={() => setShowEditModal(true)}>
+            Edit
+          </GhostBtn>
+          <GhostBtn className="!text-[12px] !h-8 !px-3" onClick={() => setIsActive((v) => !v)}>
+            {isActive ? "Deactivate" : "Activate"}
+          </GhostBtn>
         </div>
       </div>
 
@@ -84,6 +78,61 @@ export default function AffiliateDetailPage({ params }: { params: Promise<{ id: 
         <StatCard label="Purchases" value={affiliate.totalPurchases} />
         <StatCard label="Commission accrued" value={inr(affiliate.totalAccrued)} />
       </div>
+
+      {/* Commission setup */}
+      <Card className="mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <span className="text-[11px] tracking-[0.08em] uppercase font-medium" style={{ color: T.faint }}>Commission setup</span>
+            {commissionToast && (
+              <span className="text-[12px] font-medium" style={{ color: T.good }}>
+                ✓ {commissionToast}
+              </span>
+            )}
+          </div>
+          {commissionEditing ? (
+            <GoldBtn
+              className="!h-7 !px-3 !text-[11px]"
+              onClick={() => {
+                setCommissionEditing(false);
+                setCommissionToast("Commission saved");
+                setTimeout(() => setCommissionToast(""), 3000);
+              }}
+            >
+              Save
+            </GoldBtn>
+          ) : (
+            <GhostBtn className="!h-7 !px-3 !text-[11px]" onClick={() => setCommissionEditing(true)}>
+              Edit
+            </GhostBtn>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {(["stone", "jewellery", "consultation"] as const).map((cat) => (
+            <div key={cat} className="rounded-[10px] p-4" style={{ background: T.panel, border: `1px solid ${T.borderSoft}` }}>
+              <div className="text-[11px] tracking-[0.06em] uppercase mb-2" style={{ color: T.faint }}>{cat}</div>
+              {commissionEditing ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    value={specificRates[cat]}
+                    onChange={(e) => setSpecificRates((p) => ({ ...p, [cat]: e.target.value }))}
+                    className="w-full h-9 px-3 rounded-[8px] text-[13px] outline-none"
+                    style={{ background: T.card, border: `1px solid ${T.border}`, color: T.text }}
+                  />
+                  <span className="text-[13px] font-medium shrink-0" style={{ color: T.muted }}>%</span>
+                </div>
+              ) : (
+                <div className="text-[18px] font-semibold tabular-nums" style={{ color: T.text }}>
+                  {specificRates[cat]}%
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+      </Card>
 
       {/* Payment & Payouts — combined */}
       <Card className="mb-6">

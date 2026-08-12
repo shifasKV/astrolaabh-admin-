@@ -12,9 +12,10 @@ function getExpertStats(expertId: string) {
   const upcoming = consultations.filter((c) => c.status === "scheduled").length;
   const pendingSummaries = consultations.filter((c) => c.status === "summary_pending").length;
   const completed = consultations.filter((c) => c.status === "closed" || c.status === "completed").length;
+  const noShows = consultations.filter((c) => c.status === "no_show" && c.noShowBy === "expert").length;
   const recommendations = MOCK_STONE_RECOMMENDATIONS.filter((r) => r.expertId === expertId).length;
 
-  return { upcoming, pendingSummaries, completed, recommendations };
+  return { upcoming, pendingSummaries, completed, noShows, recommendations };
 }
 
 export default function AstroGemologistsPage() {
@@ -25,6 +26,7 @@ export default function AstroGemologistsPage() {
 
   const totalUpcoming = MOCK_CONSULTATIONS.filter((c) => c.status === "scheduled").length;
   const totalPendingSummaries = MOCK_CONSULTATIONS.filter((c) => c.status === "summary_pending").length;
+  const totalNoShows = MOCK_CONSULTATIONS.filter((c) => c.status === "no_show" && c.noShowBy === "expert").length;
   const totalRecommendations = MOCK_STONE_RECOMMENDATIONS.length;
 
   return (
@@ -35,10 +37,11 @@ export default function AstroGemologistsPage() {
         action={<GoldBtn onClick={() => setShowModal(true)}>+ New Astro-Gemologist</GoldBtn>}
       />
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
         <StatCard label="Active experts" value={EXPERT_PROFILES.filter((e) => e.status === "active").length} />
         <StatCard label="Upcoming sessions" value={totalUpcoming} onClick={() => router.push("/consultations")} />
-        <StatCard label="Summaries pending" value={totalPendingSummaries} sub={totalPendingSummaries > 0 ? "action needed" : undefined} onClick={() => router.push("/consultations")} />
+        <StatCard label="Summaries pending" value={totalPendingSummaries} onClick={() => router.push("/consultations")} />
+        <StatCard label="No show" value={totalNoShows} onClick={() => router.push("/consultations")} />
         <StatCard label="Recommendations" value={totalRecommendations} onClick={() => router.push(`/astro-gemologists/${EXPERT_PROFILES[0]?.id}/recommendations`)} />
       </div>
 
@@ -81,7 +84,7 @@ export default function AstroGemologistsPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 pt-4" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-4 pt-4" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
                   <div>
                     <div className="text-[11px] uppercase tracking-wider" style={{ color: T.faint }}>Upcoming</div>
                     <div className="text-[15px] font-semibold mt-0.5" style={{ color: T.text }}>{stats.upcoming}</div>
@@ -93,6 +96,10 @@ export default function AstroGemologistsPage() {
                   <div>
                     <div className="text-[11px] uppercase tracking-wider" style={{ color: T.faint }}>Completed</div>
                     <div className="text-[15px] font-semibold mt-0.5" style={{ color: T.text }}>{stats.completed}</div>
+                  </div>
+                  <div>
+                    <div className="text-[11px] uppercase tracking-wider" style={{ color: T.faint }}>No show</div>
+                    <div className="text-[15px] font-semibold mt-0.5" style={{ color: stats.noShows > 0 ? T.danger : T.text }}>{stats.noShows}</div>
                   </div>
                   <div>
                     <div className="text-[11px] uppercase tracking-wider" style={{ color: T.faint }}>Recommendations</div>

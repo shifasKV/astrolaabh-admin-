@@ -1,8 +1,7 @@
 "use client";
 import { use, useState } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, Timeline, GoldBtn, GhostBtn, Modal, Input, Textarea, BackLink } from "@/components/ui";
-import type { TimelineEvent } from "@/components/ui";
+import { PageHeader, Card, Chip, GoldBtn, GhostBtn, Modal, Input, Textarea, BackLink } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_CONSULTATIONS, MOCK_CUSTOMERS, MOCK_STONE_RECOMMENDATIONS, MOCK_REMEDY_RECOMMENDATIONS, EXPERT_PROFILES, getExpertDates, getExpertSlots } from "@/lib/mock";
 import type { ExpertProfile, TimeSlot } from "@/lib/mock";
@@ -34,7 +33,7 @@ export default function ConsultationDetailPage({ params }: { params: Promise<{ i
     return (
       <div className="py-20 text-center">
         <p className="text-[14px]" style={{ color: T.muted }}>Consultation not found.</p>
-        <div className="mt-3 flex justify-center"><BackLink label="Back to consultations" href="/consultations" /></div>
+        <div className="mt-3 flex justify-center"><BackLink label="Consultations" href="/consultations" /></div>
       </div>
     );
   }
@@ -42,14 +41,6 @@ export default function ConsultationDetailPage({ params }: { params: Promise<{ i
   const customer = MOCK_CUSTOMERS.find((c) => c.id === consultation.customerId);
   const recommendation = MOCK_STONE_RECOMMENDATIONS.find((r) => r.consultationId === consultation.id);
   const remedy = MOCK_REMEDY_RECOMMENDATIONS.find((r) => r.consultationId === consultation.id);
-
-  const timeline: TimelineEvent[] = [
-    { id: "t1", title: "Consultation created", time: consultation.createdAt, tone: "muted" },
-    { id: "t2", title: `Scheduled for ${new Date(consultation.scheduledAt).toLocaleDateString("en-IN")}`, time: consultation.createdAt, tone: "gold" },
-    ...(consultation.status === "completed" || consultation.status === "closed" ? [{ id: "t3", title: "Consultation completed", time: consultation.updatedAt, tone: "good" as const }] : []),
-    ...(consultation.summarySubmittedAt ? [{ id: "t4", title: "Summary submitted", time: consultation.summarySubmittedAt, tone: "good" as const }] : []),
-    ...(consultation.rescheduleReason ? [{ id: "t5", title: `Reschedule requested: ${consultation.rescheduleReason}`, time: consultation.updatedAt, tone: "danger" as const }] : []),
-  ];
 
   const openRescheduleModal = () => {
     const currentExpert = EXPERT_PROFILES.find((e) => e.id === consultation.expertId) ?? EXPERT_PROFILES[0];
@@ -92,33 +83,42 @@ export default function ConsultationDetailPage({ params }: { params: Promise<{ i
     <>
       <PageHeader
         back={{ label: "Consultations", href: "/consultations" }}
-        title={consultation.customerName}
-        sub={`${consultation.id} · with ${consultation.expertName}`}
+        title=""
       />
+
+      {/* Payment pending banner */}
+      {consultation.paymentStatus === "pending" && (
+        <div
+          className="flex items-center gap-3 rounded-[10px] px-4 py-3 mb-4"
+          style={{ background: "rgba(195,160,88,0.12)", border: "1px solid rgba(195,160,88,0.3)" }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          <div className="flex-1">
+            <span className="text-[13.5px] font-medium" style={{ color: T.text }}>Payment pending</span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button onClick={() => { setToast("Payment marked as received"); setTimeout(() => setToast(""), 3000); }} className="text-[12px] font-medium px-3 py-1.5 rounded-[8px] cursor-pointer hover:brightness-110 transition-all" style={{ background: T.primary, color: T.primaryInk }}>Mark as paid</button>
+            <button onClick={() => { setToast("Payment link sent to customer"); setTimeout(() => setToast(""), 3000); }} className="text-[12px] font-medium px-3 py-1.5 rounded-[8px] cursor-pointer hover:opacity-90 transition-opacity" style={{ background: T.accent, color: T.accentInk }}>Resend link</button>
+          </div>
+        </div>
+      )}
 
       {/* Consultation details card */}
       <Card className="mb-5">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            {consultation.status === "reschedule_requested" && <Chip tone="danger">Reschedule request</Chip>}
-            {consultation.status === "summary_pending" && <Chip tone="danger">Summary due</Chip>}
-          </div>
-        </div>
-
-        <div className="rounded-[9px] p-4 mb-4" style={{ background: T.bg, border: `1px solid ${T.borderSoft}` }}>
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-[13.5px] font-semibold mb-1" style={{ color: T.accent }}>{consultation.type.replace(/_/g, " ")}</div>
-              <div className="text-[12px]" style={{ color: T.muted }}>{consultation.customerName} · {consultation.expertName}</div>
+        <div className="mb-4">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-[18px] font-semibold" style={{ color: T.text }}>
+              {consultation.customerName} with {consultation.expertName}
+            </h2>
+            <div className="flex items-center gap-2 shrink-0">
+              {consultation.status === "reschedule_requested" && <Chip tone="danger">Reschedule request</Chip>}
+              {consultation.status === "summary_pending" && <Chip tone="danger">Summary due</Chip>}
+              {consultation.status === "no_show" && (
+                <Chip tone="danger">{consultation.noShowBy === "expert" ? "Expert no show" : "Customer no show"}</Chip>
+              )}
             </div>
-            {consultation.paymentStatus === "pending" ? (
-              <Chip tone="gold">Payment pending</Chip>
-            ) : (consultation.status === "closed" || consultation.status === "completed") ? (
-              <Chip tone="good">Completed</Chip>
-            ) : (
-              <Chip tone="gold">Scheduled</Chip>
-            )}
           </div>
+          <div className="text-[12px] mt-1" style={{ color: T.muted }}>{consultation.id}</div>
         </div>
 
         <div className="flex items-center gap-4">
@@ -136,17 +136,96 @@ export default function ConsultationDetailPage({ params }: { params: Promise<{ i
               <div style={{ color: T.text }}>{new Date(consultation.scheduledAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })}</div>
             </div>
           </div>
-          {(consultation.status === "scheduled" || consultation.status === "reschedule_requested") && (
+          {(consultation.status === "scheduled" || consultation.status === "reschedule_requested" || consultation.status === "no_show") && (
             <span
               onClick={openRescheduleModal}
               className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[9px] text-[12px] font-medium cursor-pointer hover:opacity-90 transition-opacity shrink-0"
               style={{ border: `1px solid ${T.border}`, color: T.text }}
             >
-              Update
+              Reschedule
             </span>
           )}
         </div>
       </Card>
+
+      {/* Recommendation */}
+      {(consultation.summary || recommendation || remedy) && (
+        <Card className="mb-4">
+          <div className="text-[11px] tracking-[0.08em] uppercase mb-4" style={{ color: T.faint }}>Recommendation</div>
+          <div className="grid md:grid-cols-2 gap-4">
+            {/* Consultation Summary */}
+            <div className="rounded-[9px] p-4" style={{ background: T.bg, border: `1px solid ${T.borderSoft}` }}>
+              <div className="text-[11px] tracking-[0.08em] uppercase mb-2" style={{ color: T.faint }}>Consultation summary</div>
+              {consultation.summary ? (
+                <>
+                  <p className="text-[13.5px] leading-relaxed" style={{ color: T.text }}>{consultation.summary}</p>
+                  {consultation.summarySubmittedAt && (
+                    <p className="text-[11px] mt-3" style={{ color: T.faint }}>Submitted {new Date(consultation.summarySubmittedAt).toLocaleDateString("en-IN", { dateStyle: "medium" })}</p>
+                  )}
+                </>
+              ) : (
+                <p className="text-[13px]" style={{ color: T.faint }}>Summary not submitted yet.</p>
+              )}
+            </div>
+
+            {/* Recommended stone */}
+            {recommendation && recommendation.status === "converted_to_order" && recommendation.orderId ? (
+              <Link href={`/orders/${recommendation.orderId}`} className="block rounded-[9px] p-4 transition-all hover:brightness-[0.97] hover:shadow-md cursor-pointer" style={{ background: T.bg, border: `1px solid ${T.borderSoft}` }}>
+                <div className="text-[11px] tracking-[0.08em] uppercase mb-2" style={{ color: T.faint }}>Recommended stone</div>
+                <div>
+                  <div className="text-[14px] font-semibold mb-2" style={{ color: T.accent }}>{recommendation.gemstone}</div>
+                  <div className="space-y-1.5 text-[12px]">
+                    {[
+                      ["Weight", recommendation.weightRange],
+                      ["Purpose", recommendation.purpose ?? "—"],
+                    ].map(([k, v]) => (
+                      <div key={k} className="flex justify-between gap-2">
+                        <span style={{ color: T.muted }}>{k}</span>
+                        <span className="text-right" style={{ color: T.text }}>{v}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </Link>
+            ) : (
+              <div className="rounded-[9px] p-4" style={{ background: T.bg, border: `1px solid ${T.borderSoft}` }}>
+                <div className="text-[11px] tracking-[0.08em] uppercase mb-2" style={{ color: T.faint }}>Recommended stone</div>
+                {recommendation ? (
+                  <div>
+                    <div className="text-[14px] font-semibold mb-2" style={{ color: T.accent }}>{recommendation.gemstone}</div>
+                    <div className="space-y-1.5 text-[12px] mb-3">
+                      {[
+                        ["Weight", recommendation.weightRange],
+                        ["Purpose", recommendation.purpose ?? "—"],
+                      ].map(([k, v]) => (
+                        <div key={k} className="flex justify-between gap-2">
+                          <span style={{ color: T.muted }}>{k}</span>
+                          <span className="text-right" style={{ color: T.text }}>{v}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <GoldBtn onClick={() => setShowSendLinkModal(true)}>Resend payment link to customer</GoldBtn>
+                  </div>
+                ) : (
+                  <p className="text-[13px]" style={{ color: T.faint }}>No stone recommended yet.</p>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Other Remedy */}
+          {remedy && (
+            <div className="rounded-[9px] p-4 mt-4" style={{ background: T.bg, border: `1px solid ${T.borderSoft}` }}>
+              <div className="text-[11px] tracking-[0.08em] uppercase mb-2" style={{ color: T.faint }}>Other remedy</div>
+              <p className="text-[13.5px] leading-relaxed" style={{ color: T.text }}>
+                <span className="font-medium capitalize">{remedy.type}</span> — {remedy.instructions}
+                {remedy.frequency && ` (${remedy.frequency})`}
+                {remedy.duration && `. Duration: ${remedy.duration}`}
+              </p>
+            </div>
+          )}
+        </Card>
+      )}
 
       {/* Meeting link section — like energisation session */}
       {editingMeetLink ? (
@@ -236,10 +315,7 @@ export default function ConsultationDetailPage({ params }: { params: Promise<{ i
               className="card-interactive rounded-[12px] p-5 h-full cursor-pointer"
               style={{ background: T.card, border: `1px solid ${T.border}` }}
             >
-              <div className="flex items-center justify-between mb-3">
-                <div className="text-[11px] tracking-[0.08em] uppercase" style={{ color: T.faint }}>Customer context</div>
-                <span className="text-[11px]" style={{ color: T.muted }}>View profile →</span>
-              </div>
+              <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.faint }}>Customer context</div>
               <div className="space-y-2 text-[13px]">
                 {[
                   ["Name", customer.name],
@@ -283,80 +359,6 @@ export default function ConsultationDetailPage({ params }: { params: Promise<{ i
           </div>
         </Card>
       </div>
-
-      {/* Recommendation */}
-      {(consultation.summary || recommendation || remedy) && (
-        <Card className="mb-4">
-          <div className="text-[11px] tracking-[0.08em] uppercase mb-4" style={{ color: T.faint }}>Recommendation</div>
-          <div className="grid md:grid-cols-2 gap-4">
-            {/* Consultation Summary */}
-            <div className="rounded-[9px] p-4" style={{ background: T.bg, border: `1px solid ${T.borderSoft}` }}>
-              <div className="text-[11px] tracking-[0.08em] uppercase mb-2" style={{ color: T.faint }}>Consultation summary</div>
-              {consultation.summary ? (
-                <>
-                  <p className="text-[13.5px] leading-relaxed" style={{ color: T.text }}>{consultation.summary}</p>
-                  {consultation.summarySubmittedAt && (
-                    <p className="text-[11px] mt-3" style={{ color: T.faint }}>Submitted {new Date(consultation.summarySubmittedAt).toLocaleDateString("en-IN", { dateStyle: "medium" })}</p>
-                  )}
-                </>
-              ) : (
-                <p className="text-[13px]" style={{ color: T.faint }}>Summary not submitted yet.</p>
-              )}
-            </div>
-
-            {/* Recommended stone */}
-            <div className="rounded-[9px] p-4" style={{ background: T.bg, border: `1px solid ${T.borderSoft}` }}>
-              <div className="text-[11px] tracking-[0.08em] uppercase mb-2" style={{ color: T.faint }}>Recommended stone</div>
-              {recommendation ? (
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <Link href="/inventory" className="text-[14px] font-semibold hover:underline" style={{ color: T.accent }}>{recommendation.gemstone}</Link>
-                    <Link href="/inventory" style={{ color: T.accent }}>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M7 17L17 7M17 7H7M17 7v10"/></svg>
-                    </Link>
-                  </div>
-                  <div className="space-y-1.5 text-[12px] mb-3">
-                    {[
-                      ["Weight", recommendation.weightRange],
-                      ["Purpose", recommendation.purpose ?? "—"],
-                    ].map(([k, v]) => (
-                      <div key={k} className="flex justify-between gap-2">
-                        <span style={{ color: T.muted }}>{k}</span>
-                        <span className="text-right" style={{ color: T.text }}>{v}</span>
-                      </div>
-                    ))}
-                  </div>
-                  {recommendation.status === "converted_to_order" && recommendation.orderId ? (
-                    <Link href={`/orders/${recommendation.orderId}`} className="text-[12px] font-medium hover:underline" style={{ color: T.accent }}>View order →</Link>
-                  ) : (
-                    <GoldBtn onClick={() => setShowSendLinkModal(true)}>Resend payment link to customer</GoldBtn>
-                  )}
-                </div>
-              ) : (
-                <p className="text-[13px]" style={{ color: T.faint }}>No stone recommended yet.</p>
-              )}
-            </div>
-          </div>
-
-          {/* Other Remedy */}
-          {remedy && (
-            <div className="rounded-[9px] p-4 mt-4" style={{ background: T.bg, border: `1px solid ${T.borderSoft}` }}>
-              <div className="text-[11px] tracking-[0.08em] uppercase mb-2" style={{ color: T.faint }}>Other remedy</div>
-              <p className="text-[13.5px] leading-relaxed" style={{ color: T.text }}>
-                <span className="font-medium capitalize">{remedy.type}</span> — {remedy.instructions}
-                {remedy.frequency && ` (${remedy.frequency})`}
-                {remedy.duration && `. Duration: ${remedy.duration}`}
-              </p>
-            </div>
-          )}
-        </Card>
-      )}
-
-      {/* Timeline */}
-      <Card>
-        <div className="text-[11px] tracking-[0.08em] uppercase mb-4" style={{ color: T.faint }}>Activity</div>
-        <Timeline events={timeline} />
-      </Card>
 
       {/* Send Payment Link Confirmation */}
       <Modal open={showSendLinkModal} onClose={() => setShowSendLinkModal(false)} title="Send payment link">

@@ -92,7 +92,7 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
     return (
       <div className="py-20 text-center">
         <p className="text-[14px]" style={{ color: T.muted }}>Consultation not found.</p>
-        <div className="mt-3 flex justify-center"><BackLink label="Back to appointments" href="/appointments" /></div>
+        <div className="mt-3 flex justify-center"><BackLink label="Appointments" href="/appointments" /></div>
       </div>
     );
   }

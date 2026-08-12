@@ -3,7 +3,7 @@ import { use, useState } from "react";
 import Link from "next/link";
 import { Card, Chip, GhostBtn, BackLink, Tabs } from "@/components/ui";
 import { T } from "@/lib/theme";
-import { MOCK_CUSTOMERS, MOCK_ORDERS, MOCK_CONSULTATIONS, MOCK_PAYMENTS } from "@/lib/mock";
+import { MOCK_CUSTOMERS, MOCK_ORDERS, MOCK_CONSULTATIONS, MOCK_PAYMENTS, MOCK_INCOMPLETE_ORDERS, MOCK_INCOMPLETE_CONSULTATIONS } from "@/lib/mock";
 import { inr } from "@/lib/types";
 
 function fmtDate(d: string) {
@@ -33,7 +33,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
     return (
       <div className="py-20 text-center">
         <p className="text-[14px]" style={{ color: T.muted }}>Customer not found.</p>
-        <div className="mt-3 flex justify-center"><BackLink label="Back to customers" href="/customers" /></div>
+        <div className="mt-3 flex justify-center"><BackLink label="Customers" href="/customers" /></div>
       </div>
     );
   }
@@ -42,6 +42,10 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
     .sort((a, b) => new Date(b.placedAt).getTime() - new Date(a.placedAt).getTime());
   const consultations = MOCK_CONSULTATIONS.filter((c) => c.customerId === customer.id)
     .sort((a, b) => new Date(b.scheduledAt).getTime() - new Date(a.scheduledAt).getTime());
+  const incompleteOrders = MOCK_INCOMPLETE_ORDERS.filter((o) => o.customerId === customer.id)
+    .sort((a, b) => new Date(b.failedAt).getTime() - new Date(a.failedAt).getTime());
+  const incompleteConsultations = MOCK_INCOMPLETE_CONSULTATIONS.filter((c) => c.customerId === customer.id)
+    .sort((a, b) => new Date(b.viewedAt).getTime() - new Date(a.viewedAt).getTime());
   const payments = MOCK_PAYMENTS.filter((p) => p.customerId === customer.id);
   const totalSpent = orders.reduce((s, o) => s + o.total, 0);
 
@@ -143,6 +147,8 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
                 tabs={[
                   { key: "consultations", label: "Consultations", count: consultations.length },
                   { key: "orders", label: "Orders", count: orders.length },
+                  ...(incompleteOrders.length > 0 ? [{ key: "incomplete_orders", label: "Incomplete orders", count: incompleteOrders.length }] : []),
+                  ...(incompleteConsultations.length > 0 ? [{ key: "incomplete_consultations", label: "Incomplete consultations", count: incompleteConsultations.length }] : []),
                 ]}
                 active={activeTab}
                 onChange={setActiveTab}
@@ -215,6 +221,75 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
                     <span style={{ color: T.faint }}>→</span>
                   </div>
                 </Link>
+              ))
+            ))}
+
+            {activeTab === "incomplete_orders" && (incompleteOrders.length === 0 ? (
+              <p className="text-[13px] py-5 text-center" style={{ color: T.faint }}>No incomplete orders.</p>
+            ) : (
+              incompleteOrders.map((o, i) => (
+                <Link
+                  key={o.id}
+                  href={`/inventory?q=${encodeURIComponent(o.itemName.split("—")[0].trim())}`}
+                  className="flex items-center justify-between gap-4 py-3 row-interactive rounded-[9px] px-2 -mx-2"
+                  style={{ borderBottom: i < incompleteOrders.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="text-[13.5px] font-medium truncate" style={{ color: T.text }}>{o.itemName}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-[12px]" style={{ color: T.muted }}>
+                      <span>{fmtDate(o.failedAt)}</span>
+                      {o.paymentAttempts && (
+                        <>
+                          <span style={{ color: T.faint }}>·</span>
+                          <span>{o.paymentAttempts} attempt{o.paymentAttempts > 1 ? "s" : ""}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <Chip tone={o.reason === "abandoned_cart" ? "gold" : "danger"}>
+                      {o.reason === "payment_failed" ? "Payment failed" : o.reason === "abandoned_cart" ? "Abandoned cart" : o.reason === "payment_expired" ? "Payment expired" : "Card declined"}
+                    </Chip>
+                    <span className="text-[13.5px] font-semibold tabular-nums w-[90px] text-right" style={{ color: T.text }}>{inr(o.amount)}</span>
+                    <span style={{ color: T.faint }}>→</span>
+                  </div>
+                </Link>
+              ))
+            ))}
+
+            {activeTab === "incomplete_consultations" && (incompleteConsultations.length === 0 ? (
+              <p className="text-[13px] py-5 text-center" style={{ color: T.faint }}>No incomplete consultations.</p>
+            ) : (
+              incompleteConsultations.map((c, i) => (
+                <div
+                  key={c.id}
+                  className="flex items-center justify-between gap-4 py-3 px-2 -mx-2"
+                  style={{ borderBottom: i < incompleteConsultations.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="text-[13.5px] font-medium capitalize" style={{ color: T.text }}>{c.type.replace(/_/g, " ")}</span>
+                      <span className="text-[11px]" style={{ color: T.faint }}>·</span>
+                      <span className="text-[13px]" style={{ color: T.muted }}>{c.expertName}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-[12px]" style={{ color: T.muted }}>
+                      <span>{fmtDate(c.viewedAt)}</span>
+                      {c.slotDate && (
+                        <>
+                          <span style={{ color: T.faint }}>·</span>
+                          <span>Slot: {fmtDate(c.slotDate)}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <Chip tone={c.reason === "slot_viewed" ? "muted" : "gold"}>
+                      {c.reason === "slot_viewed" ? "Slot viewed" : c.reason === "slot_selected_not_booked" ? "Slot selected, not booked" : c.reason === "payment_abandoned" ? "Payment abandoned" : "Booking timeout"}
+                    </Chip>
+                  </div>
+                </div>
               ))
             ))}
           </Card>

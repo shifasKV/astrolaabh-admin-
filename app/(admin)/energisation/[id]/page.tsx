@@ -1,8 +1,7 @@
 "use client";
 import { use, useState } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, GoldBtn, GhostBtn, Input, Textarea, Modal, Timeline, DateInput, TimeInput, Select, BackLink } from "@/components/ui";
-import type { TimelineEvent } from "@/components/ui";
+import { PageHeader, Card, Chip, GoldBtn, GhostBtn, Input, Textarea, Modal, DateInput, TimeInput, Select, BackLink } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_ENERGISATION, MOCK_ORDERS, MOCK_CUSTOMERS } from "@/lib/mock";
 
@@ -37,20 +36,13 @@ export default function EnergisationDetailPage({ params }: { params: Promise<{ i
     return (
       <div className="py-20 text-center">
         <p className="text-[14px]" style={{ color: T.muted }}>Energisation task not found.</p>
-        <div className="mt-3 flex justify-center"><BackLink label="Back to energisation" href="/energisation" /></div>
+        <div className="mt-3 flex justify-center"><BackLink label="Energisation" href="/energisation" /></div>
       </div>
     );
   }
 
   const order = MOCK_ORDERS.find((o) => o.id === task.orderId);
   const customer = MOCK_CUSTOMERS.find((c) => c.id === task.customerId);
-
-  const statusTone = (s: string) => {
-    if (s === "completed") return "good" as const;
-    if (s === "scheduled" || s === "in_progress") return "gold" as const;
-    if (s === "exception") return "danger" as const;
-    return "muted" as const;
-  };
 
   const handleScheduleSubmit = () => {
     if (!scheduleDate) return;
@@ -84,20 +76,27 @@ export default function EnergisationDetailPage({ params }: { params: Promise<{ i
     setEditingLinks(false);
   };
 
-  const timeline: TimelineEvent[] = [
-    { id: "t1", title: "Task created", time: task.createdAt, tone: "muted" },
-    ...(localScheduledAt ? [{ id: "t2", title: `Scheduled — ${localScheduledAt}`, time: task.createdAt, tone: "gold" as const }] : []),
-    ...(task.buyerNotified ? [{ id: "t3", title: "Buyer notified", time: task.updatedAt, tone: "good" as const }] : []),
-    ...(localLiveLink ? [{ id: "t4", title: "Live link uploaded", time: new Date().toISOString().split("T")[0], tone: "gold" as const }] : []),
-    ...(task.completedAt ? [{ id: "t5", title: "Energisation completed", time: task.completedAt, tone: "good" as const }] : []),
-  ];
-
   return (
     <>
       <PageHeader
         back={{ label: "Energisation", href: "/energisation" }}
         title={task.customerName}
         sub={`${task.stoneDescription} · ${task.orderNumber}`}
+        action={
+          localStatus === "completed" ? (
+            <button
+              onClick={() => { setLocalStatus("scheduled"); setToast("Marked as not completed"); setTimeout(() => setToast(""), 3000); }}
+              className="text-[12px] font-medium px-3 py-1.5 rounded-[8px] cursor-pointer transition-all hover:brightness-110"
+              style={{ background: "rgba(160,125,56,0.12)", color: T.accent, border: `1px solid ${T.accentBorder}` }}
+            >
+              Undo completed
+            </button>
+          ) : (
+            <GoldBtn onClick={() => { setLocalStatus("completed"); setToast("Energisation marked as completed"); setTimeout(() => setToast(""), 3000); }}>
+              Mark as completed
+            </GoldBtn>
+          )
+        }
       />
 
       {/* Energisation details card */}
@@ -106,7 +105,6 @@ export default function EnergisationDetailPage({ params }: { params: Promise<{ i
           <div className="flex items-center justify-between mb-2">
             <div className="text-[13.5px] font-semibold" style={{ color: T.accent }}>{localMethod || "Method not assigned"}</div>
             <div className="flex items-center gap-2">
-              <Chip tone={statusTone(localStatus)}>{localStatus.replace(/_/g, " ")}</Chip>
               {!localLiveLink && localStatus === "scheduled" && <Chip tone="danger">Link missing</Chip>}
             </div>
           </div>
@@ -146,72 +144,11 @@ export default function EnergisationDetailPage({ params }: { params: Promise<{ i
               className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[9px] text-[12px] font-medium cursor-pointer hover:opacity-90 transition-opacity shrink-0"
               style={{ border: `1px solid ${T.border}`, color: T.text }}
             >
-              {localStatus === "scheduled" ? "Update" : "Schedule"}
+              {localStatus === "scheduled" ? "Reschedule" : "Schedule"}
             </span>
           )}
         </div>
       </Card>
-
-      {/* Order + Customer — two columns */}
-      <div className="grid md:grid-cols-2 gap-4 mb-5">
-        {order && (
-          <Link href={`/orders/${order.id}`} className="block group">
-            <div
-              className="card-interactive rounded-[12px] p-5 h-full cursor-pointer"
-              style={{ background: T.card, border: `1px solid ${T.border}` }}
-            >
-              <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.faint }}>Order</div>
-              <div className="space-y-2.5 text-[13px]">
-                <div className="flex justify-between gap-2">
-                  <span style={{ color: T.muted }}>Order ID</span>
-                  <span className="font-medium" style={{ color: T.accent }}>{order.id}</span>
-                </div>
-                <div className="flex justify-between gap-2">
-                  <span style={{ color: T.muted }}>Payment</span>
-                  <Chip tone={order.paymentStatus === "paid" ? "good" : "gold"}>{order.paymentStatus}</Chip>
-                </div>
-                <div className="flex justify-between gap-2">
-                  <span style={{ color: T.muted }}>Status</span>
-                  <span style={{ color: T.text }}>{order.operationalStatus.replace(/_/g, " ")}</span>
-                </div>
-                <div className="flex justify-between gap-2">
-                  <span style={{ color: T.muted }}>Total</span>
-                  <span className="font-semibold tabular-nums" style={{ color: T.text }}>₹{order.total.toLocaleString("en-IN")}</span>
-                </div>
-              </div>
-            </div>
-          </Link>
-        )}
-
-        {customer && (
-          <Link href={`/customers/${customer.id}`} className="block group">
-            <div
-              className="card-interactive rounded-[12px] p-5 h-full cursor-pointer"
-              style={{ background: T.card, border: `1px solid ${T.border}` }}
-            >
-              <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.faint }}>Customer</div>
-              <div className="space-y-2.5 text-[13px]">
-                <div className="flex justify-between gap-2">
-                  <span style={{ color: T.muted }}>Name</span>
-                  <span className="font-medium" style={{ color: T.text }}>{customer.name}</span>
-                </div>
-                <div className="flex justify-between gap-2">
-                  <span style={{ color: T.muted }}>Phone</span>
-                  <span style={{ color: T.text }}>{customer.phone}</span>
-                </div>
-                <div className="flex justify-between gap-2">
-                  <span style={{ color: T.muted }}>Email</span>
-                  <span className="text-right" style={{ color: T.text }}>{customer.email}</span>
-                </div>
-                <div className="flex justify-between gap-2">
-                  <span style={{ color: T.muted }}>Location</span>
-                  <span className="text-right" style={{ color: T.text }}>{customer.birthPlace}</span>
-                </div>
-              </div>
-            </div>
-          </Link>
-        )}
-      </div>
 
       {/* Session section */}
       {editingLinks ? (
@@ -287,14 +224,69 @@ export default function EnergisationDetailPage({ params }: { params: Promise<{ i
         </Card>
       )}
 
-      {/* Activity timeline */}
-      <Card>
-        <div className="text-[11px] tracking-[0.08em] uppercase mb-4" style={{ color: T.faint }}>Activity</div>
-        <Timeline events={timeline} />
-      </Card>
+      {/* Order + Customer — two columns */}
+      <div className="grid md:grid-cols-2 gap-4 mb-5">
+        {order && (
+          <Link href={`/orders/${order.id}`} className="block group">
+            <div
+              className="card-interactive rounded-[12px] p-5 h-full cursor-pointer"
+              style={{ background: T.card, border: `1px solid ${T.border}` }}
+            >
+              <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.faint }}>Order</div>
+              <div className="space-y-2.5 text-[13px]">
+                <div className="flex justify-between gap-2">
+                  <span style={{ color: T.muted }}>Order ID</span>
+                  <span className="font-medium" style={{ color: T.accent }}>{order.id}</span>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <span style={{ color: T.muted }}>Payment</span>
+                  <Chip tone={order.paymentStatus === "paid" ? "good" : "gold"}>{order.paymentStatus}</Chip>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <span style={{ color: T.muted }}>Status</span>
+                  <span style={{ color: T.text }}>{order.operationalStatus.replace(/_/g, " ")}</span>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <span style={{ color: T.muted }}>Total</span>
+                  <span className="font-semibold tabular-nums" style={{ color: T.text }}>₹{order.total.toLocaleString("en-IN")}</span>
+                </div>
+              </div>
+            </div>
+          </Link>
+        )}
+
+        {customer && (
+          <Link href={`/customers/${customer.id}`} className="block group">
+            <div
+              className="card-interactive rounded-[12px] p-5 h-full cursor-pointer"
+              style={{ background: T.card, border: `1px solid ${T.border}` }}
+            >
+              <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.faint }}>Customer</div>
+              <div className="space-y-2.5 text-[13px]">
+                <div className="flex justify-between gap-2">
+                  <span style={{ color: T.muted }}>Name</span>
+                  <span className="font-medium" style={{ color: T.text }}>{customer.name}</span>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <span style={{ color: T.muted }}>Phone</span>
+                  <span style={{ color: T.text }}>{customer.phone}</span>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <span style={{ color: T.muted }}>Email</span>
+                  <span className="text-right" style={{ color: T.text }}>{customer.email}</span>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <span style={{ color: T.muted }}>Location</span>
+                  <span className="text-right" style={{ color: T.text }}>{customer.birthPlace}</span>
+                </div>
+              </div>
+            </div>
+          </Link>
+        )}
+      </div>
 
       {/* Schedule / Update modal */}
-      <Modal open={action === "schedule"} onClose={() => setAction(null)} title={localStatus === "scheduled" ? "Update energisation" : "Schedule energisation"}>
+      <Modal open={action === "schedule"} onClose={() => setAction(null)} title={localStatus === "scheduled" ? "Reschedule energisation" : "Schedule energisation"}>
         <div className="space-y-3">
           <Select
             value={scheduleGuruji}
@@ -316,7 +308,7 @@ export default function EnergisationDetailPage({ params }: { params: Promise<{ i
           <Textarea value={formNotes} onChange={setFormNotes} label="Notes (optional)" placeholder="Ritual details, buyer preferences…" />
         </div>
         <div className="flex gap-2.5 mt-5">
-          <GoldBtn onClick={handleScheduleSubmit}>{localStatus === "scheduled" ? "Update" : "Schedule"}</GoldBtn>
+          <GoldBtn onClick={handleScheduleSubmit}>{localStatus === "scheduled" ? "Reschedule" : "Schedule"}</GoldBtn>
           <GhostBtn onClick={() => setAction(null)}>Cancel</GhostBtn>
         </div>
       </Modal>
