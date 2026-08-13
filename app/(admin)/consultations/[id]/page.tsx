@@ -1,5 +1,5 @@
 "use client";
-import { use, useState } from "react";
+import { use, useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { PageHeader, Card, Chip, GoldBtn, GhostBtn, Modal, Input, Textarea, BackLink } from "@/components/ui";
 import { T } from "@/lib/theme";
@@ -28,6 +28,18 @@ export default function ConsultationDetailPage({ params }: { params: Promise<{ i
   const [rsViewYear, setRsViewYear] = useState(new Date().getFullYear());
   const [rsViewMonth, setRsViewMonth] = useState(new Date().getMonth());
   const [toast, setToast] = useState("");
+  const [showActionMenu, setShowActionMenu] = useState(false);
+  const [localStatus, setLocalStatus] = useState(consultation?.status ?? "scheduled");
+  const [localNoShowBy, setLocalNoShowBy] = useState(consultation?.noShowBy ?? "");
+  const actionMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (actionMenuRef.current && !actionMenuRef.current.contains(e.target as Node)) setShowActionMenu(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   if (!consultation) {
     return (
@@ -103,18 +115,68 @@ export default function ConsultationDetailPage({ params }: { params: Promise<{ i
         </div>
       )}
 
+      {/* Reschedule Request Section */}
+      {consultation.status === "reschedule_requested" && consultation.rescheduleReason && (
+        <div
+          className="rounded-[12px] p-5 mb-5"
+          style={{ background: "rgba(176,84,84,0.06)", border: `1px solid rgba(176,84,84,0.25)` }}
+        >
+          <div className="text-[11px] tracking-[0.08em] uppercase mb-2 font-medium" style={{ color: T.danger }}>Reschedule requested</div>
+          <p className="text-[13.5px]" style={{ color: T.text }}>{consultation.rescheduleReason}</p>
+        </div>
+      )}
+
       {/* Consultation details card */}
       <Card className="mb-5">
         <div className="mb-4">
           <div className="flex items-center justify-between gap-3">
-            <h2 className="text-[18px] font-semibold" style={{ color: T.text }}>
-              {consultation.customerName} with {consultation.expertName}
-            </h2>
-            <div className="flex items-center gap-2 shrink-0">
-              {consultation.status === "reschedule_requested" && <Chip tone="danger">Reschedule request</Chip>}
-              {consultation.status === "summary_pending" && <Chip tone="danger">Summary due</Chip>}
-              {consultation.status === "no_show" && (
-                <Chip tone="danger">{consultation.noShowBy === "expert" ? "Expert no show" : "Customer no show"}</Chip>
+            <div className="flex items-center gap-2.5 min-w-0">
+              <h2 className="text-[18px] font-semibold" style={{ color: T.text }}>
+                {consultation.customerName} with {consultation.expertName}
+              </h2>
+              {consultation.status === "reschedule_requested" && <Chip tone="gold">Scheduled</Chip>}
+              {localStatus === "summary_pending" && <Chip tone="danger">Recommendation due</Chip>}
+              {localStatus === "no_show" && (
+                <Chip tone="danger">{(localNoShowBy || consultation.noShowBy) === "expert" ? "Expert no show" : "Customer no show"}</Chip>
+              )}
+            </div>
+            <div className="relative shrink-0" ref={actionMenuRef}>
+              <button
+                type="button"
+                onClick={() => setShowActionMenu((v) => !v)}
+                className="w-9 h-9 rounded-[9px] flex items-center justify-center transition-colors hover:bg-[rgba(89,82,54,0.08)] cursor-pointer"
+                style={{ border: `1px solid ${T.border}`, color: T.muted }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
+              </button>
+              {showActionMenu && (
+                <div className="absolute right-0 top-full mt-1 z-50 w-[220px] rounded-[10px] py-1.5 shadow-lg" style={{ background: T.popover, border: `1px solid ${T.border}` }}>
+                  <button
+                    onClick={() => { setShowActionMenu(false); openRescheduleModal(); }}
+                    className="w-full text-left px-3.5 py-2.5 text-[13px] transition-colors cursor-pointer hover:bg-[rgba(160,125,56,0.08)]"
+                    style={{ color: T.text }}
+                  >
+                    Reschedule
+                  </button>
+                  {(localStatus === "summary_pending" || consultation.status === "summary_pending") && (
+                    <>
+                      <button
+                        onClick={() => { setShowActionMenu(false); setLocalStatus("no_show"); setLocalNoShowBy("customer"); setToast("Marked as customer no show"); setTimeout(() => setToast(""), 3000); }}
+                        className="w-full text-left px-3.5 py-2.5 text-[13px] transition-colors cursor-pointer hover:bg-[rgba(160,125,56,0.08)]"
+                        style={{ color: T.text }}
+                      >
+                        Mark as customer no show
+                      </button>
+                      <button
+                        onClick={() => { setShowActionMenu(false); setLocalStatus("no_show"); setLocalNoShowBy("expert"); setToast("Marked as astrologer no show"); setTimeout(() => setToast(""), 3000); }}
+                        className="w-full text-left px-3.5 py-2.5 text-[13px] transition-colors cursor-pointer hover:bg-[rgba(160,125,56,0.08)]"
+                        style={{ color: T.text }}
+                      >
+                        Mark as astrologer no show
+                      </button>
+                    </>
+                  )}
+                </div>
               )}
             </div>
           </div>
@@ -136,28 +198,8 @@ export default function ConsultationDetailPage({ params }: { params: Promise<{ i
               <div style={{ color: T.text }}>{new Date(consultation.scheduledAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })}</div>
             </div>
           </div>
-          {(consultation.status === "scheduled" || consultation.status === "reschedule_requested" || consultation.status === "no_show") && (
-            <span
-              onClick={openRescheduleModal}
-              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[9px] text-[12px] font-medium cursor-pointer hover:opacity-90 transition-opacity shrink-0"
-              style={{ border: `1px solid ${T.border}`, color: T.text }}
-            >
-              Reschedule
-            </span>
-          )}
         </div>
       </Card>
-
-      {/* Reschedule Request Section */}
-      {consultation.status === "reschedule_requested" && consultation.rescheduleReason && (
-        <div
-          className="rounded-[12px] p-5 mb-5"
-          style={{ background: "rgba(176,84,84,0.06)", border: `1px solid rgba(176,84,84,0.25)` }}
-        >
-          <div className="text-[11px] tracking-[0.08em] uppercase mb-2 font-medium" style={{ color: T.danger }}>Reschedule requested</div>
-          <p className="text-[13.5px]" style={{ color: T.text }}>{consultation.rescheduleReason}</p>
-        </div>
-      )}
 
       {/* Recommendation */}
       {(consultation.summary || recommendation || remedy) && (

@@ -1,6 +1,7 @@
 "use client";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { PageHeader, Card, SearchFilter, Select, Chip, Modal, Input, GoldBtn, GhostBtn, ShopifyIcon, ShopifyButton, SHOPIFY_GREEN_DARK, SHOPIFY_TINT, SHOPIFY_BORDER } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { STONES, DESIGNS, ENERGISATION, INTENTS, ZODIAC, inr as catalogInr } from "@/lib/catalog";
@@ -110,6 +111,58 @@ function ExternalLink({ href, label, shopify }: { href: string; label: string; s
       {shopify && <ShopifyIcon size={12} />}
       {label} <span className="text-[11px]">↗</span>
     </a>
+  );
+}
+
+function StoneRowMenu({ shopifyUrl, websiteUrl, enabled, onToggle }: { shopifyUrl: string; websiteUrl: string; enabled: boolean; onToggle: () => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  const itemClass = "w-full text-left px-3.5 py-2 text-[12px] transition-colors cursor-pointer hover:bg-[rgba(160,125,56,0.08)] flex items-center gap-2";
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); e.preventDefault(); setOpen((v) => !v); }}
+        className="w-8 h-8 rounded-[8px] flex items-center justify-center transition-colors hover:bg-[rgba(89,82,54,0.08)] cursor-pointer"
+        style={{ border: `1px solid ${T.borderSoft}`, color: T.muted }}
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full mt-1 z-50 w-[180px] rounded-[10px] py-1.5 shadow-lg" style={{ background: T.popover, border: `1px solid ${T.border}` }}>
+          <a href={shopifyUrl} target="_blank" rel="noopener" onClick={(e) => e.stopPropagation()} className={itemClass} style={{ color: SHOPIFY_GREEN_DARK }}>
+            <ShopifyIcon size={12} /> Shopify <span className="text-[10px] ml-auto opacity-60">↗</span>
+          </a>
+          <a href={websiteUrl} target="_blank" rel="noopener" onClick={(e) => e.stopPropagation()} className={itemClass} style={{ color: T.text }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            Website <span className="text-[10px] ml-auto opacity-60">↗</span>
+          </a>
+          <Link href="/orders/create" onClick={(e) => e.stopPropagation()} className={itemClass} style={{ color: T.text }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            Create order
+          </Link>
+          <div className="mx-2 my-1.5" style={{ borderTop: `1px solid ${T.borderSoft}` }} />
+          <button
+            onClick={(e) => { e.stopPropagation(); e.preventDefault(); onToggle(); setOpen(false); }}
+            className={itemClass}
+            style={{ color: enabled ? T.danger : T.good }}
+          >
+            {enabled ? "Disable listing" : "Enable listing"}
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -325,7 +378,7 @@ export default function InventoryPage() {
             <span className="inline-flex items-center gap-1.5 text-[11px] tracking-[0.06em] font-medium px-2 py-[3px] rounded-[6px] whitespace-nowrap" style={{ color: SHOPIFY_GREEN_DARK, background: SHOPIFY_TINT }}><ShopifyIcon size={11} /> Synced · Shopify</span>
           </div>
           <div
-            className="hidden md:grid grid-cols-[minmax(200px,1.2fr)_100px_140px_130px_240px] gap-x-4 px-3 py-2.5 rounded-[8px] text-[11px] tracking-[0.07em] uppercase font-semibold"
+            className="hidden md:grid grid-cols-[minmax(200px,1.2fr)_100px_140px_130px_48px] gap-x-4 px-3 py-2.5 rounded-[8px] text-[11px] tracking-[0.07em] uppercase font-semibold"
             style={{ color: T.muted, background: "rgba(89,82,54,0.035)" }}
           >
             <span>Stone</span>
@@ -337,8 +390,8 @@ export default function InventoryPage() {
           {filteredStones.slice(0, 30).map((s, i, arr) => (
             <div
               key={s.sku}
-              className="grid md:grid-cols-[minmax(200px,1.2fr)_100px_140px_130px_240px] grid-cols-1 gap-x-4 gap-y-1.5 items-center px-3 py-3 text-[13.5px]"
-              style={{ borderBottom: i < Math.min(arr.length, 30) - 1 ? `1px solid ${T.borderSoft}` : "none" }}
+              className="grid md:grid-cols-[minmax(200px,1.2fr)_100px_140px_130px_48px] grid-cols-1 gap-x-4 gap-y-1.5 items-center px-3 py-3 text-[13.5px]"
+              style={{ borderBottom: i < Math.min(arr.length, 30) - 1 ? `1px solid ${T.borderSoft}` : "none", opacity: disabledStones.has(s.sku) ? 0.5 : 1 }}
             >
               <span className="flex items-center gap-3 min-w-0">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -357,10 +410,13 @@ export default function InventoryPage() {
               <span className="tabular-nums md:text-right" style={{ color: T.muted }}>{s.ratti} r</span>
               <span className="tabular-nums md:text-right text-[13px]" style={{ color: T.muted }}>{catalogInr(s.pricePerRatti)}</span>
               <span className="tabular-nums md:text-right font-semibold" style={{ color: T.text }}>{catalogInr(s.price)}</span>
-              <span className="flex items-center gap-3 md:justify-end">
-                <ExternalLink href={`https://admin.shopify.com/products/${s.sku}`} label="Shopify" shopify />
-                <ExternalLink href={`https://astrolaabh.house/stones/${s.slug}`} label="Website" />
-                <ToggleSwitch enabled={!disabledStones.has(s.sku)} onToggle={() => toggleStone(s.sku)} />
+              <span className="flex items-center justify-end">
+                <StoneRowMenu
+                  shopifyUrl={`https://admin.shopify.com/products/${s.sku}`}
+                  websiteUrl={`https://astrolaabh.house/stones/${s.slug}`}
+                  enabled={!disabledStones.has(s.sku)}
+                  onToggle={() => toggleStone(s.sku)}
+                />
               </span>
             </div>
           ))}

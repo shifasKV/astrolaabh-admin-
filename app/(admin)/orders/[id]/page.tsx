@@ -495,9 +495,11 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                         <Chip tone={localEnergStatus === "completed" ? "good" : localEnergStatus === "scheduled" || localEnergStatus === "in_progress" ? "gold" : "muted"}>
                           {localEnergStatus === "completed" ? "Completed" : localEnergStatus === "scheduled" || localEnergStatus === "in_progress" ? "Scheduled" : "Not scheduled"}
                         </Chip>
-                        <div className="text-[12px] font-medium tabular-nums mt-1" style={{ color: tier.fee === 0 ? T.good : T.text }}>
-                          {tier.fee === 0 ? "Included" : inr(tier.fee)}
-                        </div>
+                        {tier.fee > 0 && (
+                          <div className="text-[12px] font-medium tabular-nums mt-1" style={{ color: T.text }}>
+                            {inr(tier.fee)}
+                          </div>
+                        )}
                       </div>
                       {localEnergStatus !== "completed" && localEnergStatus !== "scheduled" && localEnergStatus !== "in_progress" && (
                         <span onClick={(e) => e.preventDefault()}>

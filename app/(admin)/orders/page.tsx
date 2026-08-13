@@ -3,7 +3,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { PageHeader, Card, Chip, SearchFilter, Tabs, GoldBtn, Select, ShopifyButton } from "@/components/ui";
 import { T } from "@/lib/theme";
-import { MOCK_ORDERS } from "@/lib/mock";
+import { MOCK_ORDERS, MOCK_INCOMPLETE_ORDERS } from "@/lib/mock";
 import { inr } from "@/lib/types";
 
 const TABS = [
@@ -12,7 +12,24 @@ const TABS = [
   { key: "not_shipped", label: "Not shipped" },
   { key: "cert_missing", label: "Cert missing" },
   { key: "energ_missing", label: "Energ missing" },
+  { key: "incomplete", label: "Incomplete" },
 ];
+
+const INCOMPLETE_REASON_LABEL: Record<string, string> = {
+  payment_failed: "Payment failed",
+  abandoned_cart: "Cart abandoned",
+  payment_expired: "Payment expired",
+  card_declined: "Card declined",
+  requested_call: "Requested call",
+};
+
+const INCOMPLETE_REASON_TONE: Record<string, "danger" | "gold" | "muted"> = {
+  payment_failed: "danger",
+  abandoned_cart: "gold",
+  payment_expired: "muted",
+  card_declined: "danger",
+  requested_call: "gold",
+};
 
 type SortKey = "date_desc" | "date_asc" | "amount_high" | "amount_low";
 
@@ -29,6 +46,17 @@ export default function OrdersPage() {
   const [dpYear, setDpYear] = useState(new Date().getFullYear());
   const [dpMonth, setDpMonth] = useState(new Date().getMonth());
   const [page, setPage] = useState(1);
+
+  // Incomplete tab filters
+  const [incFilterCustomer, setIncFilterCustomer] = useState("");
+  const [incFilterStone, setIncFilterStone] = useState("");
+  const [incFilterReason, setIncFilterReason] = useState("");
+  const [incFilterDateFrom, setIncFilterDateFrom] = useState("");
+  const [incFilterDateTo, setIncFilterDateTo] = useState("");
+  const [incShowDatePicker, setIncShowDatePicker] = useState(false);
+  const [incDpYear, setIncDpYear] = useState(new Date().getFullYear());
+  const [incDpMonth, setIncDpMonth] = useState(new Date().getMonth());
+  const [incSort, setIncSort] = useState<SortKey>("date_desc");
 
   const PER_PAGE = 9;
 
@@ -102,13 +130,16 @@ export default function OrdersPage() {
                     ? MOCK_ORDERS.filter((o) => o.certificateStatus === "missing" && o.paymentStatus === "paid").length
                     : t.key === "energ_missing"
                       ? MOCK_ORDERS.filter((o) => o.energisationStatus === "pending" && o.paymentStatus === "paid").length
-                      : undefined,
+                      : t.key === "incomplete"
+                        ? MOCK_INCOMPLETE_ORDERS.length
+                        : undefined,
           }))}
           active={tab}
           onChange={setTab}
         />
       </div>
 
+      {tab !== "incomplete" && <>
       {/* Full-width search */}
       <div className="mb-3">
         <SearchFilter search={search} onSearchChange={setSearch} placeholder="Search orders, customers, products…" />
@@ -367,6 +398,173 @@ export default function OrdersPage() {
           </div>
         </div>
       )}
+      </>}
+
+      {/* ============ INCOMPLETE ORDERS ============ */}
+      {tab === "incomplete" && (() => {
+        const incCustomers = [...new Set(MOCK_INCOMPLETE_ORDERS.map((o) => o.customerName))].sort();
+        const incStones = [...new Set(MOCK_INCOMPLETE_ORDERS.map((o) => o.itemName))].sort();
+        const hasIncFilters = !!incFilterCustomer || !!incFilterStone || !!incFilterReason || !!incFilterDateFrom || !!incFilterDateTo;
+
+        const incFiltered = MOCK_INCOMPLETE_ORDERS
+          .filter((o) => {
+            if (!search) return true;
+            const q = search.toLowerCase();
+            return o.customerName.toLowerCase().includes(q) || o.itemName.toLowerCase().includes(q);
+          })
+          .filter((o) => !incFilterCustomer || o.customerName === incFilterCustomer)
+          .filter((o) => !incFilterStone || o.itemName === incFilterStone)
+          .filter((o) => !incFilterReason || o.reason === incFilterReason)
+          .filter((o) => {
+            if (incFilterDateFrom && o.failedAt < incFilterDateFrom) return false;
+            if (incFilterDateTo && o.failedAt > incFilterDateTo) return false;
+            return true;
+          })
+          .sort((a, b) => {
+            if (incSort === "date_asc") return new Date(a.failedAt).getTime() - new Date(b.failedAt).getTime();
+            if (incSort === "amount_high") return b.amount - a.amount;
+            if (incSort === "amount_low") return a.amount - b.amount;
+            return new Date(b.failedAt).getTime() - new Date(a.failedAt).getTime();
+          });
+
+        return (
+          <>
+            <div className="mb-3">
+              <SearchFilter search={search} onSearchChange={setSearch} placeholder="Search customer, stone…" />
+            </div>
+            <div className="flex flex-wrap items-center gap-2.5 mb-4">
+              <div className="w-[200px]">
+                <Select value={incFilterCustomer} onChange={(v) => { setIncFilterCustomer(v); setPage(1); }} searchable compact placeholder="All customers" options={[{ value: "", label: "All customers" }, ...incCustomers.map((n) => ({ value: n, label: n }))]} />
+              </div>
+              <div className="w-[200px]">
+                <Select value={incFilterStone} onChange={(v) => { setIncFilterStone(v); setPage(1); }} searchable compact placeholder="All stones" options={[{ value: "", label: "All stones" }, ...incStones.map((n) => ({ value: n, label: n }))]} />
+              </div>
+              <div className="w-[180px]">
+                <Select value={incFilterReason} onChange={(v) => { setIncFilterReason(v); setPage(1); }} compact placeholder="All reasons" options={[{ value: "", label: "All reasons" }, ...Object.entries(INCOMPLETE_REASON_LABEL).map(([k, v]) => ({ value: k, label: v }))]} />
+              </div>
+
+              {/* Date range picker */}
+              <div className="relative">
+                <button
+                  onClick={() => setIncShowDatePicker(!incShowDatePicker)}
+                  className="h-9 px-3.5 rounded-[9px] text-[13.5px] flex items-center gap-2 cursor-pointer transition-all"
+                  style={{ background: T.popover, border: `1px solid ${(incFilterDateFrom || incFilterDateTo) ? T.accentBorder : T.border}`, color: T.text }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><rect x="3" y="4" width="18" height="17" rx="2" /><path d="M8 2v4M16 2v4M3 9h18" /></svg>
+                  {(incFilterDateFrom || incFilterDateTo)
+                    ? `${incFilterDateFrom ? new Date(incFilterDateFrom + "T00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "Start"} — ${incFilterDateTo ? new Date(incFilterDateTo + "T00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "End"}`
+                    : "All dates"
+                  }
+                </button>
+                {incShowDatePicker && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setIncShowDatePicker(false)} />
+                    <div className="absolute top-full left-0 mt-1 z-50 flex rounded-[9px] shadow-lg overflow-hidden" style={{ background: T.popover, border: `1px solid ${T.border}` }}>
+                      <div className="w-[130px] py-2 px-1.5 shrink-0" style={{ borderRight: `1px solid ${T.borderSoft}` }}>
+                        <div className="text-[9px] tracking-[0.06em] uppercase px-2 mb-1.5" style={{ color: T.faint }}>Quick select</div>
+                        {[
+                          { label: "Today", from: new Date().toISOString().slice(0, 10), to: new Date().toISOString().slice(0, 10) },
+                          { label: "Yesterday", from: new Date(Date.now() - 86400000).toISOString().slice(0, 10), to: new Date(Date.now() - 86400000).toISOString().slice(0, 10) },
+                          { label: "Last 7 days", from: new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10), to: new Date().toISOString().slice(0, 10) },
+                          { label: "Last 30 days", from: new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10), to: new Date().toISOString().slice(0, 10) },
+                        ].map((preset) => (
+                          <button key={preset.label} onClick={() => { setIncFilterDateFrom(preset.from); setIncFilterDateTo(preset.to); setIncShowDatePicker(false); setPage(1); }} className="w-full text-left px-2.5 py-2 rounded-[7px] text-[12px] transition-colors cursor-pointer hover:bg-[rgba(160,125,56,0.10)]" style={{ color: T.text }}>{preset.label}</button>
+                        ))}
+                        {(incFilterDateFrom || incFilterDateTo) && (
+                          <button onClick={() => { setIncFilterDateFrom(""); setIncFilterDateTo(""); setIncShowDatePicker(false); setPage(1); }} className="w-full text-left px-2.5 py-2 rounded-[7px] text-[11px] mt-1 transition-colors cursor-pointer hover:bg-[rgba(176,84,84,0.06)]" style={{ color: T.danger }}>Clear dates</button>
+                        )}
+                      </div>
+                      <div className="p-4 w-[280px]">
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="flex-1">
+                            <div className="text-[9px] uppercase tracking-[0.06em] mb-1" style={{ color: T.faint }}>After</div>
+                            <input type="date" value={incFilterDateFrom} onChange={(e) => { setIncFilterDateFrom(e.target.value); setPage(1); }} className="w-full h-8 px-2 rounded-[7px] text-[11px] outline-none" style={{ background: T.bg, border: `1px solid ${T.borderSoft}`, color: T.text }} />
+                          </div>
+                          <span className="text-[11px] mt-3" style={{ color: T.faint }}>—</span>
+                          <div className="flex-1">
+                            <div className="text-[9px] uppercase tracking-[0.06em] mb-1" style={{ color: T.faint }}>Before</div>
+                            <input type="date" value={incFilterDateTo} onChange={(e) => { setIncFilterDateTo(e.target.value); setPage(1); }} className="w-full h-8 px-2 rounded-[7px] text-[11px] outline-none" style={{ background: T.bg, border: `1px solid ${T.borderSoft}`, color: T.text }} />
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between mb-2">
+                          <button type="button" onClick={() => { if (incDpMonth === 0) { setIncDpMonth(11); setIncDpYear((y) => y - 1); } else setIncDpMonth((m) => m - 1); }} className="w-6 h-6 rounded-full flex items-center justify-center cursor-pointer hover:bg-[rgba(160,125,56,0.15)]" style={{ color: T.muted }}>‹</button>
+                          <span className="text-[11px] font-medium" style={{ color: T.text }}>{["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][incDpMonth]} {incDpYear}</span>
+                          <button type="button" onClick={() => { if (incDpMonth === 11) { setIncDpMonth(0); setIncDpYear((y) => y + 1); } else setIncDpMonth((m) => m + 1); }} className="w-6 h-6 rounded-full flex items-center justify-center cursor-pointer hover:bg-[rgba(160,125,56,0.15)]" style={{ color: T.muted }}>›</button>
+                        </div>
+                        <div className="grid grid-cols-7 gap-0.5 mb-1">
+                          {["Mo","Tu","We","Th","Fr","Sa","Su"].map((d) => <div key={d} className="text-center text-[9px] py-0.5" style={{ color: T.faint }}>{d}</div>)}
+                        </div>
+                        <div className="grid grid-cols-7 gap-0.5">
+                          {Array.from({ length: (() => { const fd = new Date(incDpYear, incDpMonth, 1).getDay(); return fd === 0 ? 6 : fd - 1; })() }).map((_, i) => <div key={`e${i}`} />)}
+                          {Array.from({ length: new Date(incDpYear, incDpMonth + 1, 0).getDate() }).map((_, i) => {
+                            const day = i + 1;
+                            const iso = `${incDpYear}-${String(incDpMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+                            const isFrom = incFilterDateFrom === iso;
+                            const isTo = incFilterDateTo === iso;
+                            const inRange = incFilterDateFrom && incFilterDateTo && iso >= incFilterDateFrom && iso <= incFilterDateTo;
+                            return (
+                              <button key={day} type="button" onClick={() => { if (!incFilterDateFrom || (incFilterDateFrom && incFilterDateTo)) { setIncFilterDateFrom(iso); setIncFilterDateTo(""); } else { if (iso < incFilterDateFrom) { setIncFilterDateTo(incFilterDateFrom); setIncFilterDateFrom(iso); } else { setIncFilterDateTo(iso); } } setPage(1); }}
+                                className="w-[34px] h-[34px] rounded-full flex items-center justify-center text-[11px] transition-colors cursor-pointer"
+                                style={{ background: (isFrom || isTo) ? T.accent : inRange ? "rgba(160,125,56,0.16)" : "transparent", color: (isFrom || isTo) ? T.accentInk : T.text, fontWeight: (isFrom || isTo) ? 700 : 400 }}
+                              >{day}</button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <div className="ml-auto flex items-center gap-2">
+                {hasIncFilters && (
+                  <button onClick={() => { setIncFilterCustomer(""); setIncFilterStone(""); setIncFilterReason(""); setIncFilterDateFrom(""); setIncFilterDateTo(""); setPage(1); }} className="text-[11px] px-2.5 py-1.5 rounded-[7px] cursor-pointer transition-opacity hover:opacity-80" style={{ color: T.danger, background: "rgba(176,84,84,0.08)", border: "1px solid rgba(176,84,84,0.15)" }}>Clear filters</button>
+                )}
+                <div className="w-[200px]">
+                  <Select value={incSort} onChange={(v) => { setIncSort(v as SortKey); setPage(1); }} compact prefix="Sort: " options={[{ value: "date_desc", label: "Newest first" }, { value: "date_asc", label: "Oldest first" }, { value: "amount_high", label: "Amount: high" }, { value: "amount_low", label: "Amount: low" }]} />
+                </div>
+              </div>
+            </div>
+
+            <Card>
+              <div className="hidden sm:grid grid-cols-[1fr_1fr_110px_120px_110px] gap-3 px-3 py-2 text-[11px] tracking-[0.06em] uppercase" style={{ color: T.faint, borderBottom: `1px solid ${T.borderSoft}` }}>
+                <span>Customer</span>
+                <span>Stone / Item</span>
+                <span>Date</span>
+                <span>Status</span>
+                <span className="text-right">Amount</span>
+              </div>
+              {incFiltered.length === 0 ? (
+                <p className="text-[13.5px] py-6 text-center" style={{ color: T.muted }}>No incomplete orders found.</p>
+              ) : (
+                incFiltered.map((o) => (
+                  <div
+                    key={o.id}
+                    className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_110px_120px_110px] gap-2 sm:gap-3 items-center px-3 py-3.5 transition-all duration-150 rounded-[8px] hover:bg-[rgba(160,125,56,0.07)]"
+                    style={{ borderBottom: `1px solid ${T.borderSoft}` }}
+                  >
+                    <div className="min-w-0">
+                      <Link href={`/customers/${o.customerId}`} className="text-[14px] font-medium hover:underline" style={{ color: T.text }}>{o.customerName}</Link>
+                    </div>
+                    <div className="min-w-0">
+                      <span className="text-[13px] truncate block" style={{ color: T.muted }}>{o.itemName}</span>
+                    </div>
+                    <div className="min-w-0">
+                      <span className="text-[12px]" style={{ color: T.text }}>{new Date(o.failedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</span>
+                    </div>
+                    <div>
+                      <Chip tone={INCOMPLETE_REASON_TONE[o.reason] || "muted"}>{INCOMPLETE_REASON_LABEL[o.reason] || o.reason}</Chip>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[14px] font-semibold tabular-nums" style={{ color: T.text }}>{inr(o.amount)}</span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </Card>
+          </>
+        );
+      })()}
     </>
   );
 

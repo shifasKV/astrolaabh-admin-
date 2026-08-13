@@ -7,12 +7,11 @@ import { MOCK_ENERGISATION } from "@/lib/mock";
 
 const TABS = [
   { key: "all", label: "All" },
-  { key: "upcoming", label: "Upcoming" },
   { key: "not_scheduled", label: "Not scheduled" },
   { key: "link_pending", label: "Link pending" },
 ];
 
-type SortKey = "newest" | "oldest" | "order_desc" | "order_asc";
+type SortKey = "newest" | "oldest" | "upcoming" | "order_desc" | "order_asc";
 type ViewMode = "list" | "calendar";
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
@@ -87,6 +86,13 @@ export default function EnergisationPage() {
   }).sort((a, b) => {
     if (sort === "newest") return (b.scheduledAt ?? "").localeCompare(a.scheduledAt ?? "");
     if (sort === "oldest") return (a.scheduledAt ?? "").localeCompare(b.scheduledAt ?? "");
+    if (sort === "upcoming") {
+      const now = new Date().toISOString();
+      const aFuture = (a.scheduledAt ?? "") >= now ? 0 : 1;
+      const bFuture = (b.scheduledAt ?? "") >= now ? 0 : 1;
+      if (aFuture !== bFuture) return aFuture - bFuture;
+      return (a.scheduledAt ?? "").localeCompare(b.scheduledAt ?? "");
+    }
     if (sort === "order_desc") return b.orderNumber.localeCompare(a.orderNumber);
     if (sort === "order_asc") return a.orderNumber.localeCompare(b.orderNumber);
     return 0;
@@ -313,10 +319,11 @@ export default function EnergisationPage() {
               compact
               prefix="Sort: "
               options={[
-                { value: "newest", label: "Newest first" },
-                { value: "oldest", label: "Oldest first" },
-                { value: "order_desc", label: "Order: newest" },
-                { value: "order_asc", label: "Order: oldest" },
+                { value: "newest", label: "Newest" },
+                { value: "oldest", label: "Oldest" },
+                { value: "upcoming", label: "Upcoming" },
+                { value: "order_desc", label: "Order date: Newest" },
+                { value: "order_asc", label: "Order date: Oldest" },
               ]}
             />
           </div>

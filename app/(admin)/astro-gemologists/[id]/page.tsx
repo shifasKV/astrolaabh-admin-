@@ -14,7 +14,7 @@ type SortKey = "date_desc" | "date_asc";
 const DETAIL_TABS = [
   { key: "upcoming", label: "Consultations" },
   { key: "availability", label: "Availability" },
-  { key: "summary_due", label: "Summary due" },
+  { key: "summary_due", label: "Recommendation due" },
   { key: "no_show", label: "No show" },
   { key: "recommendations", label: "Recommendations" },
 ];
@@ -110,7 +110,7 @@ export default function AstroGemologistDetailPage() {
   }, [showMenu]);
 
   const [activeTab, setActiveTab] = useState("upcoming");
-  const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
+  const [viewMode, setViewMode] = useState<"list" | "calendar">("calendar");
 
   // Consultations tab state (list + calendar)
   const [consSearch, setConsSearch] = useState("");
@@ -271,7 +271,7 @@ export default function AstroGemologistDetailPage() {
           ) : (
             <Chip tone={statusTone(c.status)}>
               {c.status === "scheduled" ? "Scheduled" :
-               c.status === "summary_pending" ? "Summary due" :
+               c.status === "summary_pending" ? "Recommendation due" :
                c.status === "no_show" ? (c.noShowBy === "expert" ? "Expert no show" : "Customer no show") :
                c.status === "closed" || c.status === "completed" ? "Completed" :
                c.status.replace(/_/g, " ")}

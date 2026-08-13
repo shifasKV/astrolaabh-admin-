@@ -1,7 +1,7 @@
 "use client";
-import { use, useState } from "react";
+import { use, useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { Card, Chip, GhostBtn, BackLink, Tabs } from "@/components/ui";
+import { Card, Chip, GhostBtn, BackLink, Tabs, Pagination } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_CUSTOMERS, MOCK_ORDERS, MOCK_CONSULTATIONS, MOCK_PAYMENTS, MOCK_INCOMPLETE_ORDERS, MOCK_INCOMPLETE_CONSULTATIONS } from "@/lib/mock";
 import { inr } from "@/lib/types";
@@ -27,7 +27,22 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
   const { id } = use(params);
   const [toast, setToast] = useState("");
   const [activeTab, setActiveTab] = useState("consultations");
+  const [showActionMenu, setShowActionMenu] = useState(false);
+  const actionMenuRef = useRef<HTMLDivElement>(null);
+  const [consPage, setConsPage] = useState(1);
+  const [ordersPage, setOrdersPage] = useState(1);
+  const [incOrdersPage, setIncOrdersPage] = useState(1);
+  const [incConsPage, setIncConsPage] = useState(1);
+  const PER_PAGE = 5;
   const customer = MOCK_CUSTOMERS.find((c) => c.id === id);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (actionMenuRef.current && !actionMenuRef.current.contains(e.target as Node)) setShowActionMenu(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   if (!customer) {
     return (
@@ -45,7 +60,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
   const incompleteOrders = MOCK_INCOMPLETE_ORDERS.filter((o) => o.customerId === customer.id)
     .sort((a, b) => new Date(b.failedAt).getTime() - new Date(a.failedAt).getTime());
   const incompleteConsultations = MOCK_INCOMPLETE_CONSULTATIONS.filter((c) => c.customerId === customer.id)
-    .sort((a, b) => new Date(b.viewedAt).getTime() - new Date(a.viewedAt).getTime());
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   const payments = MOCK_PAYMENTS.filter((p) => p.customerId === customer.id);
   const totalSpent = orders.reduce((s, o) => s + o.total, 0);
 
@@ -78,9 +93,27 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
               </span>
             </div>
           </div>
-          <GhostBtn className="!text-[12px] !h-8 !px-3 shrink-0" onClick={() => { setToast("Customer deactivated"); setTimeout(() => setToast(""), 3000); }}>
-            Deactivate
-          </GhostBtn>
+          <div className="relative shrink-0" ref={actionMenuRef}>
+            <button
+              type="button"
+              onClick={() => setShowActionMenu((v) => !v)}
+              className="w-9 h-9 rounded-[9px] flex items-center justify-center transition-colors hover:bg-[rgba(89,82,54,0.08)] cursor-pointer"
+              style={{ border: `1px solid ${T.border}`, color: T.muted }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
+            </button>
+            {showActionMenu && (
+              <div className="absolute right-0 top-full mt-1 z-50 w-[180px] rounded-[10px] py-1.5 shadow-lg" style={{ background: T.popover, border: `1px solid ${T.border}` }}>
+                <button
+                  onClick={() => { setShowActionMenu(false); setToast("Customer deactivated"); setTimeout(() => setToast(""), 3000); }}
+                  className="w-full text-left px-3.5 py-2.5 text-[13px] transition-colors cursor-pointer hover:bg-[rgba(160,125,56,0.08)]"
+                  style={{ color: T.danger }}
+                >
+                  Deactivate
+                </button>
+              </div>
+            )}
+          </div>
         </div>
         <div
           className="px-6 py-3"
@@ -157,140 +190,160 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
             {activeTab === "consultations" && (consultations.length === 0 ? (
               <p className="text-[13px] py-5 text-center" style={{ color: T.faint }}>No consultations yet.</p>
             ) : (
-              consultations.map((c, i) => (
-                <Link
-                  key={c.id}
-                  href={`/consultations/${c.id}`}
-                  className="flex items-center justify-between gap-4 py-3 row-interactive rounded-[9px] px-2 -mx-2"
-                  style={{ borderBottom: i < consultations.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <span className="text-[13.5px] font-medium capitalize" style={{ color: T.text }}>{c.type.replace(/_/g, " ")}</span>
-                      <span className="text-[11px]" style={{ color: T.faint }}>·</span>
-                      <span className="text-[13px]" style={{ color: T.muted }}>{c.expertName}</span>
+              <>
+                {consultations.slice((consPage - 1) * PER_PAGE, consPage * PER_PAGE).map((c, i, arr) => (
+                  <Link
+                    key={c.id}
+                    href={`/consultations/${c.id}`}
+                    className="flex items-center justify-between gap-4 py-3 row-interactive rounded-[9px] px-2 -mx-2"
+                    style={{ borderBottom: i < arr.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className="text-[13.5px] font-medium capitalize" style={{ color: T.text }}>{c.type.replace(/_/g, " ")}</span>
+                        <span className="text-[11px]" style={{ color: T.faint }}>·</span>
+                        <span className="text-[13px]" style={{ color: T.muted }}>{c.expertName}</span>
+                      </div>
+                      <div className="text-[12px]" style={{ color: T.muted }}>
+                        {fmtDate(c.scheduledAt)}
+                        <span className="mx-1.5" style={{ color: T.faint }}>·</span>
+                        <span className="uppercase tracking-[0.05em] text-[11px]" style={{ color: T.faint }}>{c.id}</span>
+                      </div>
                     </div>
-                    <div className="text-[12px]" style={{ color: T.muted }}>
-                      {fmtDate(c.scheduledAt)}
-                      <span className="mx-1.5" style={{ color: T.faint }}>·</span>
-                      <span className="uppercase tracking-[0.05em] text-[11px]" style={{ color: T.faint }}>{c.id}</span>
+                    <div className="flex items-center gap-3 shrink-0">
+                      {c.paymentStatus === "pending" ? (
+                        <Chip tone="gold">Payment pending</Chip>
+                      ) : c.status === "reschedule_requested" ? (
+                        <Chip tone="gold">Reschedule request</Chip>
+                      ) : (c.status === "closed" || c.status === "completed") ? (
+                        <Chip tone="good">Completed</Chip>
+                      ) : (
+                        <Chip tone="gold">Scheduled</Chip>
+                      )}
+                      <span style={{ color: T.faint }}>→</span>
                     </div>
+                  </Link>
+                ))}
+                {consultations.length > PER_PAGE && (
+                  <div className="mt-3">
+                    <Pagination page={consPage - 1} totalPages={Math.ceil(consultations.length / PER_PAGE)} onPageChange={(p) => setConsPage(p + 1)} perPage={PER_PAGE} totalItems={consultations.length} />
                   </div>
-                  <div className="flex items-center gap-3 shrink-0">
-                    {c.paymentStatus === "pending" ? (
-                      <Chip tone="gold">Payment pending</Chip>
-                    ) : c.status === "reschedule_requested" ? (
-                      <Chip tone="danger">Reschedule request</Chip>
-                    ) : (c.status === "closed" || c.status === "completed") ? (
-                      <Chip tone="good">Completed</Chip>
-                    ) : (
-                      <Chip tone="gold">Scheduled</Chip>
-                    )}
-                    <span style={{ color: T.faint }}>→</span>
-                  </div>
-                </Link>
-              ))
+                )}
+              </>
             ))}
             {activeTab === "orders" && (orders.length === 0 ? (
               <p className="text-[13px] py-5 text-center" style={{ color: T.faint }}>No orders yet.</p>
             ) : (
-              orders.map((o, i) => (
-                <Link
-                  key={o.id}
-                  href={`/orders/${o.id}`}
-                  className="flex items-center justify-between gap-4 py-3 row-interactive rounded-[9px] px-2 -mx-2"
-                  style={{ borderBottom: i < orders.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-baseline gap-2 mb-0.5 min-w-0">
-                      <span className="text-[13.5px] font-medium truncate" style={{ color: T.text }}>
-                        {o.items[0]?.name}
-                      </span>
-                      {o.items.length > 1 && <span className="text-[12px] shrink-0" style={{ color: T.faint }}>+{o.items.length - 1} more</span>}
+              <>
+                {orders.slice((ordersPage - 1) * PER_PAGE, ordersPage * PER_PAGE).map((o, i, arr) => (
+                  <Link
+                    key={o.id}
+                    href={`/orders/${o.id}`}
+                    className="flex items-center justify-between gap-4 py-3 row-interactive rounded-[9px] px-2 -mx-2"
+                    style={{ borderBottom: i < arr.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-baseline gap-2 mb-0.5 min-w-0">
+                        <span className="text-[13.5px] font-medium truncate" style={{ color: T.text }}>
+                          {o.items[0]?.name}
+                        </span>
+                        {o.items.length > 1 && <span className="text-[12px] shrink-0" style={{ color: T.faint }}>+{o.items.length - 1} more</span>}
+                      </div>
+                      <div className="flex items-baseline gap-3 text-[12px]" style={{ color: T.muted }}>
+                        <span>Placed {fmtDate(o.placedAt)}</span>
+                        <span className="uppercase tracking-[0.05em] text-[11px]" style={{ color: T.faint }}>{o.id}</span>
+                      </div>
                     </div>
-                    <div className="flex items-baseline gap-3 text-[12px]" style={{ color: T.muted }}>
-                      <span>Placed {fmtDate(o.placedAt)}</span>
-                      <span className="uppercase tracking-[0.05em] text-[11px]" style={{ color: T.faint }}>{o.id}</span>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <Chip tone={o.shopifyStatus === "fulfilled" ? "good" : o.paymentStatus === "pending" ? "gold" : "muted"}>
+                        {o.shopifyStatus === "fulfilled" ? "Delivered" : o.paymentStatus === "pending" ? "Payment pending" : o.tracking ? "In transit" : "In progress"}
+                      </Chip>
+                      <span className="text-[13.5px] font-semibold tabular-nums w-[90px] text-right" style={{ color: T.text }}>{inr(o.total)}</span>
+                      <span style={{ color: T.faint }}>→</span>
                     </div>
+                  </Link>
+                ))}
+                {orders.length > PER_PAGE && (
+                  <div className="mt-3">
+                    <Pagination page={ordersPage - 1} totalPages={Math.ceil(orders.length / PER_PAGE)} onPageChange={(p) => setOrdersPage(p + 1)} perPage={PER_PAGE} totalItems={orders.length} />
                   </div>
-                  <div className="flex items-center gap-3 shrink-0">
-                    <Chip tone={o.shopifyStatus === "fulfilled" ? "good" : o.paymentStatus === "pending" ? "gold" : "muted"}>
-                      {o.shopifyStatus === "fulfilled" ? "Delivered" : o.paymentStatus === "pending" ? "Payment pending" : o.tracking ? "In transit" : "In progress"}
-                    </Chip>
-                    <span className="text-[13.5px] font-semibold tabular-nums w-[90px] text-right" style={{ color: T.text }}>{inr(o.total)}</span>
-                    <span style={{ color: T.faint }}>→</span>
-                  </div>
-                </Link>
-              ))
+                )}
+              </>
             ))}
 
             {activeTab === "incomplete_orders" && (incompleteOrders.length === 0 ? (
               <p className="text-[13px] py-5 text-center" style={{ color: T.faint }}>No incomplete orders.</p>
             ) : (
-              incompleteOrders.map((o, i) => (
-                <Link
-                  key={o.id}
-                  href={`/inventory?q=${encodeURIComponent(o.itemName.split("—")[0].trim())}`}
-                  className="flex items-center justify-between gap-4 py-3 row-interactive rounded-[9px] px-2 -mx-2"
-                  style={{ borderBottom: i < incompleteOrders.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <span className="text-[13.5px] font-medium truncate" style={{ color: T.text }}>{o.itemName}</span>
+              <>
+                {incompleteOrders.slice((incOrdersPage - 1) * PER_PAGE, incOrdersPage * PER_PAGE).map((o, i, arr) => (
+                  <Link
+                    key={o.id}
+                    href={`/inventory?q=${encodeURIComponent(o.itemName.split("—")[0].trim())}`}
+                    className="flex items-center justify-between gap-4 py-3 row-interactive rounded-[9px] px-2 -mx-2"
+                    style={{ borderBottom: i < arr.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className="text-[13.5px] font-medium truncate" style={{ color: T.text }}>{o.itemName}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-[12px]" style={{ color: T.muted }}>
+                        <span>{fmtDate(o.failedAt)}</span>
+                        {o.paymentAttempts && (
+                          <>
+                            <span style={{ color: T.faint }}>·</span>
+                            <span>{o.paymentAttempts} attempt{o.paymentAttempts > 1 ? "s" : ""}</span>
+                          </>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 text-[12px]" style={{ color: T.muted }}>
-                      <span>{fmtDate(o.failedAt)}</span>
-                      {o.paymentAttempts && (
-                        <>
-                          <span style={{ color: T.faint }}>·</span>
-                          <span>{o.paymentAttempts} attempt{o.paymentAttempts > 1 ? "s" : ""}</span>
-                        </>
-                      )}
+                    <div className="flex items-center gap-3 shrink-0">
+                      <Chip tone={o.reason === "abandoned_cart" ? "gold" : "danger"}>
+                        {o.reason === "payment_failed" ? "Payment failed" : o.reason === "abandoned_cart" ? "Abandoned cart" : o.reason === "payment_expired" ? "Payment expired" : "Card declined"}
+                      </Chip>
+                      <span className="text-[13.5px] font-semibold tabular-nums w-[90px] text-right" style={{ color: T.text }}>{inr(o.amount)}</span>
+                      <span style={{ color: T.faint }}>→</span>
                     </div>
+                  </Link>
+                ))}
+                {incompleteOrders.length > PER_PAGE && (
+                  <div className="mt-3">
+                    <Pagination page={incOrdersPage - 1} totalPages={Math.ceil(incompleteOrders.length / PER_PAGE)} onPageChange={(p) => setIncOrdersPage(p + 1)} perPage={PER_PAGE} totalItems={incompleteOrders.length} />
                   </div>
-                  <div className="flex items-center gap-3 shrink-0">
-                    <Chip tone={o.reason === "abandoned_cart" ? "gold" : "danger"}>
-                      {o.reason === "payment_failed" ? "Payment failed" : o.reason === "abandoned_cart" ? "Abandoned cart" : o.reason === "payment_expired" ? "Payment expired" : "Card declined"}
-                    </Chip>
-                    <span className="text-[13.5px] font-semibold tabular-nums w-[90px] text-right" style={{ color: T.text }}>{inr(o.amount)}</span>
-                    <span style={{ color: T.faint }}>→</span>
-                  </div>
-                </Link>
-              ))
+                )}
+              </>
             ))}
 
             {activeTab === "incomplete_consultations" && (incompleteConsultations.length === 0 ? (
               <p className="text-[13px] py-5 text-center" style={{ color: T.faint }}>No incomplete consultations.</p>
             ) : (
-              incompleteConsultations.map((c, i) => (
-                <div
-                  key={c.id}
-                  className="flex items-center justify-between gap-4 py-3 px-2 -mx-2"
-                  style={{ borderBottom: i < incompleteConsultations.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <span className="text-[13.5px] font-medium capitalize" style={{ color: T.text }}>{c.type.replace(/_/g, " ")}</span>
-                      <span className="text-[11px]" style={{ color: T.faint }}>·</span>
-                      <span className="text-[13px]" style={{ color: T.muted }}>{c.expertName}</span>
+              <>
+                {incompleteConsultations.slice((incConsPage - 1) * PER_PAGE, incConsPage * PER_PAGE).map((c, i, arr) => (
+                  <div
+                    key={c.id}
+                    className="flex items-center justify-between gap-4 py-3 px-2 -mx-2"
+                    style={{ borderBottom: i < arr.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className="text-[13.5px] font-medium" style={{ color: T.text }}>{c.expertName}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-[12px]" style={{ color: T.muted }}>
+                        <span>{fmtDate(c.date)}</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 text-[12px]" style={{ color: T.muted }}>
-                      <span>{fmtDate(c.viewedAt)}</span>
-                      {c.slotDate && (
-                        <>
-                          <span style={{ color: T.faint }}>·</span>
-                          <span>Slot: {fmtDate(c.slotDate)}</span>
-                        </>
-                      )}
+                    <div className="flex items-center gap-3 shrink-0">
+                      <Chip tone={c.reason === "payment_failed" ? "danger" : c.reason === "requested_call" ? "gold" : "muted"}>
+                        {c.reason === "slot_check" ? "Slot check" : c.reason === "payment_failed" ? "Payment failed" : "Requested call"}
+                      </Chip>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 shrink-0">
-                    <Chip tone={c.reason === "slot_viewed" ? "muted" : "gold"}>
-                      {c.reason === "slot_viewed" ? "Slot viewed" : c.reason === "slot_selected_not_booked" ? "Slot selected, not booked" : c.reason === "payment_abandoned" ? "Payment abandoned" : "Booking timeout"}
-                    </Chip>
+                ))}
+                {incompleteConsultations.length > PER_PAGE && (
+                  <div className="mt-3">
+                    <Pagination page={incConsPage - 1} totalPages={Math.ceil(incompleteConsultations.length / PER_PAGE)} onPageChange={(p) => setIncConsPage(p + 1)} perPage={PER_PAGE} totalItems={incompleteConsultations.length} />
                   </div>
-                </div>
-              ))
+                )}
+              </>
             ))}
           </Card>
         </div>

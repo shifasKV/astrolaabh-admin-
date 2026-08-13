@@ -1,5 +1,5 @@
 "use client";
-import { use, useState } from "react";
+import { use, useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { PageHeader, Card, Chip, GoldBtn, GhostBtn, Textarea, Input, Modal, SearchFilter, StepIndicator, BackLink } from "@/components/ui";
 import { T } from "@/lib/theme";
@@ -45,8 +45,15 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
     consultation?.summary ? "submitted" : "empty"
   );
 
-  const [notes, setNotes] = useState("");
   const [editingSummary, setEditingSummary] = useState(false);
+  const [activeWorkTab, setActiveWorkTab] = useState<"summary" | "stone" | "remedy">("summary");
+
+  // Remedy local state
+  const [remedyType, setRemedyType] = useState("");
+  const [remedyInstructions, setRemedyInstructions] = useState("");
+  const [remedyFrequency, setRemedyFrequency] = useState("");
+  const [remedyDuration, setRemedyDuration] = useState("");
+  const [remedySaved, setRemedySaved] = useState(false);
 
   // Recommendation local state — seeded from mock
   const mockRec = MOCK_STONE_RECOMMENDATIONS.find((r) => r.consultationId === id);
@@ -87,6 +94,18 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
   const [toast, setToast] = useState("");
   const [showReschedule, setShowReschedule] = useState(false);
   const [rescheduleReason, setRescheduleReason] = useState("");
+  const [showActionMenu, setShowActionMenu] = useState(false);
+  const actionMenuRef = useRef<HTMLDivElement>(null);
+  const [localStatus, setLocalStatus] = useState(consultation?.status ?? "scheduled");
+  const [localNoShowBy, setLocalNoShowBy] = useState("");
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (actionMenuRef.current && !actionMenuRef.current.contains(e.target as Node)) setShowActionMenu(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   if (!consultation) {
     return (
@@ -173,40 +192,116 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
     showToast("Summary saved as draft");
   };
 
-  const consultStatusTone = consultation.status === "scheduled" ? "gold" as const
-    : (consultation.status === "closed" || consultation.status === "completed") ? "good" as const
-    : "muted" as const;
+  const effectiveStatus = localStatus;
+  const statusChipLabel = effectiveStatus === "no_show"
+    ? (localNoShowBy === "expert" ? "Expert no show" : "Customer no show")
+    : effectiveStatus === "summary_pending" ? "Recommendation due"
+    : effectiveStatus === "scheduled" || effectiveStatus === "reschedule_requested" ? "Scheduled"
+    : (effectiveStatus === "closed" || effectiveStatus === "completed") ? "Done"
+    : effectiveStatus.replace(/_/g, " ");
+  const statusChipTone = effectiveStatus === "no_show" ? "danger" as const
+    : effectiveStatus === "summary_pending" ? "danger" as const
+    : (effectiveStatus === "closed" || effectiveStatus === "completed") ? "good" as const
+    : "gold" as const;
 
   const canEditRec = recData.status === "not_recommended" || recData.status === "draft";
-  const isUpcoming = consultation.status === "scheduled" || consultation.status === "reschedule_requested";
+  const isUpcoming = effectiveStatus === "scheduled" || effectiveStatus === "reschedule_requested";
+  const isRecommendationDue = effectiveStatus === "summary_pending";
+  const isNoShow = effectiveStatus === "no_show";
 
   return (
     <>
-      <div className="mb-6">
-        <BackLink label="Appointments" href="/appointments" className="mb-4" />
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <h1 className="text-[17px] font-semibold" style={{ color: T.text }}>
-              {consultation.customerName} — {consultation.type.replace(/_/g, " ")}
-            </h1>
-            <Chip tone={consultStatusTone}>{consultation.status.replace(/_/g, " ")}</Chip>
-            {consultation.rescheduleReason && <Chip tone="gold">Reschedule requested</Chip>}
+      <div className="mb-5">
+        <BackLink label="Appointments" href="/appointments" />
+      </div>
+
+      {/* Main consultation card — matching admin detail style */}
+      <Card className="mb-5">
+        <div className="mb-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <h2 className="text-[18px] font-semibold" style={{ color: T.text }}>
+                {consultation.customerName} — {consultation.type.replace(/_/g, " ")}
+              </h2>
+              <Chip tone={statusChipTone}>{statusChipLabel}</Chip>
+              {consultation.status === "reschedule_requested" && <Chip tone="gold">Reschedule requested</Chip>}
+            </div>
+            <div className="flex items-center gap-2.5 shrink-0">
+              {consultation.meetingLink && isUpcoming && (
+                <a href={consultation.meetingLink} target="_blank" rel="noopener">
+                  <GoldBtn>Join meeting ↗</GoldBtn>
+                </a>
+              )}
+              <div className="relative" ref={actionMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => setShowActionMenu((v) => !v)}
+                  className="w-9 h-9 rounded-[9px] flex items-center justify-center transition-colors hover:bg-[rgba(89,82,54,0.08)] cursor-pointer"
+                  style={{ border: `1px solid ${T.border}`, color: T.muted }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
+                </button>
+                {showActionMenu && (
+                  <div className="absolute right-0 top-full mt-1 z-50 w-[220px] rounded-[10px] py-1.5 shadow-lg" style={{ background: T.popover, border: `1px solid ${T.border}` }}>
+                    {isUpcoming && (
+                      <button
+                        onClick={() => { setShowActionMenu(false); setShowReschedule(true); }}
+                        className="w-full text-left px-3.5 py-2.5 text-[13px] transition-colors cursor-pointer hover:bg-[rgba(160,125,56,0.08)]"
+                        style={{ color: T.text }}
+                      >
+                        Request reschedule
+                      </button>
+                    )}
+                    {isRecommendationDue && (
+                      <>
+                        <button
+                          onClick={() => { setShowActionMenu(false); setLocalStatus("no_show"); setLocalNoShowBy("customer"); showToast("Marked as customer no show"); }}
+                          className="w-full text-left px-3.5 py-2.5 text-[13px] transition-colors cursor-pointer hover:bg-[rgba(160,125,56,0.08)]"
+                          style={{ color: T.text }}
+                        >
+                          Mark as customer no show
+                        </button>
+                        <button
+                          onClick={() => { setShowActionMenu(false); setLocalStatus("no_show"); setLocalNoShowBy("expert"); showToast("Marked as astrologer no show"); }}
+                          className="w-full text-left px-3.5 py-2.5 text-[13px] transition-colors cursor-pointer hover:bg-[rgba(160,125,56,0.08)]"
+                          style={{ color: T.text }}
+                        >
+                          Mark as astrologer no show
+                        </button>
+                      </>
+                    )}
+                    {isNoShow && (
+                      <button
+                        onClick={() => { setShowActionMenu(false); setShowReschedule(true); showToast("Reschedule request sent"); }}
+                        className="w-full text-left px-3.5 py-2.5 text-[13px] transition-colors cursor-pointer hover:bg-[rgba(160,125,56,0.08)]"
+                        style={{ color: T.text }}
+                      >
+                        Request reschedule
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
-          <div className="flex items-center gap-2.5">
-            {isUpcoming && (
-              <GhostBtn onClick={() => setShowReschedule(true)}>Request reschedule</GhostBtn>
-            )}
-            {consultation.meetingLink && isUpcoming && (
-              <a href={consultation.meetingLink} target="_blank" rel="noopener">
-                <GoldBtn>Join meeting ↗</GoldBtn>
-              </a>
-            )}
+          <div className="text-[12px] mt-1" style={{ color: T.muted }}>{consultation.id}</div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-4 text-[13px]">
+          <div>
+            <div className="text-[11px] tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>Customer</div>
+            <div style={{ color: T.text }}>{consultation.customerName}</div>
+          </div>
+          <div>
+            <div className="text-[11px] tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>Date</div>
+            <div style={{ color: T.text }}>{new Date(consultation.scheduledAt).toLocaleDateString("en-IN", { dateStyle: "medium" })}</div>
+          </div>
+          <div>
+            <div className="text-[11px] tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>Time</div>
+            <div style={{ color: T.text }}>{new Date(consultation.scheduledAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })} · {consultation.duration}min</div>
           </div>
         </div>
-        <p className="text-[13px] mt-1" style={{ color: T.muted }}>
-          {new Date(consultation.scheduledAt).toLocaleString("en-IN")} · {consultation.duration}min
-        </p>
-      </div>
+      </Card>
 
       {/* Customer context */}
       <div className="grid md:grid-cols-2 gap-4 mb-4">
@@ -256,110 +351,185 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
         </Card>
       </div>
 
-      {/* Working notes */}
-      <Card className="mb-4">
-        <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.faint }}>Working notes (private)</div>
-        <Textarea value={notes} onChange={setNotes} placeholder="Personal notes during consultation — not shared with customer" rows={3} />
-        <div className="flex justify-end mt-3">
-          <GhostBtn disabled={!notes.trim()} onClick={() => showToast("Notes saved")}>Save notes</GhostBtn>
-        </div>
-      </Card>
-
-      {/* Post-consultation summary (only for past/ongoing appointments) */}
-      {!isUpcoming && <Card className="mb-4">
-        <div className="flex items-center justify-between mb-3">
-          <div className="text-[11px] tracking-[0.08em] uppercase" style={{ color: T.faint }}>Post-consultation summary</div>
-          <div className="flex items-center gap-2">
-            {summaryStatus === "submitted" && <Chip tone="good">Submitted</Chip>}
-            {summaryStatus === "draft" && <Chip tone="muted">Draft saved</Chip>}
-            {summaryStatus === "submitted" && !editingSummary && (
-              <button
-                onClick={() => setEditingSummary(true)}
-                className="text-[11px] font-medium cursor-pointer transition-opacity hover:opacity-80"
-                style={{ color: T.accent }}
-              >
-                Edit
-              </button>
-            )}
-          </div>
-        </div>
-        {summaryStatus === "submitted" && !editingSummary ? (
-          <p className="text-[13.5px] leading-relaxed" style={{ color: T.text }}>{summaryText}</p>
-        ) : (
-          <>
-            <Textarea value={summaryText} onChange={setSummaryText} placeholder="Key observations, interpretation, conclusion, agreed next steps…" rows={4} />
-            <div className="flex items-center justify-end gap-2.5 mt-3">
-              {summaryStatus === "submitted" && editingSummary && (
-                <GhostBtn onClick={() => setEditingSummary(false)}>Cancel</GhostBtn>
-              )}
-              {summaryStatus !== "submitted" && (
-                <GhostBtn disabled={!summaryText.trim()} onClick={handleSaveDraft}>Save draft</GhostBtn>
-              )}
-              <GoldBtn disabled={!summaryText.trim()} onClick={handleSubmitSummary}>
-                {summaryStatus === "submitted" ? "Update summary" : "Submit summary"}
-              </GoldBtn>
-            </div>
-          </>
-        )}
-      </Card>}
-
-      {/* Stone recommendation (only for past/ongoing appointments) */}
-      {!isUpcoming && <Card className="mb-4">
-        <div className="flex items-center justify-between mb-3">
-          <div className="text-[11px] tracking-[0.08em] uppercase" style={{ color: T.faint }}>Stone recommendation</div>
-          <div className="flex items-center gap-2.5">
-            {recData.status !== "not_recommended" && (
-              <Chip tone={recStatusTone(recData.status)}>{recData.status.replace(/_/g, " ")}</Chip>
-            )}
-            {canEditRec && (
-              <GoldBtn onClick={openRecModal}>
-                {recData.status === "draft" ? "Edit draft" : "+ New recommendation"}
-              </GoldBtn>
-            )}
-          </div>
-        </div>
-
-        {recData.status === "not_recommended" && (
-          <p className="text-[13px]" style={{ color: T.muted }}>No recommendation yet. Click above to create one.</p>
-        )}
-
-        {recData.status === "draft" && (
-          <div className="space-y-1.5 text-[13px]">
-            <div><span style={{ color: T.muted }}>Gemstone: </span><span style={{ color: T.text }}>{recData.gemstone}</span></div>
-            <div><span style={{ color: T.muted }}>Weight: </span><span style={{ color: T.text }}>{recData.weightRange}</span></div>
-            <div><span style={{ color: T.muted }}>Setting: </span><span style={{ color: T.text }}>{recData.metalSetting}</span></div>
-            <div><span style={{ color: T.muted }}>Rationale: </span><span style={{ color: T.text }}>{recData.rationale}</span></div>
-          </div>
-        )}
-
-        {(recData.status === "recommended" || recData.status === "purchased") && (
-          <div className="space-y-1.5 text-[13px]">
-            <div><span style={{ color: T.muted }}>Gemstone: </span><span style={{ color: T.text }}>{recData.gemstone}</span></div>
-            <div><span style={{ color: T.muted }}>Weight: </span><span style={{ color: T.text }}>{recData.weightRange}</span></div>
-            <div><span style={{ color: T.muted }}>Setting: </span><span style={{ color: T.text }}>{recData.metalSetting}</span></div>
-            <div><span style={{ color: T.muted }}>Purpose: </span><span style={{ color: T.text }}>{recData.purpose}</span></div>
-            <div><span style={{ color: T.muted }}>Finger: </span><span style={{ color: T.text }}>{recData.fingerGuidance}</span></div>
-            <div><span style={{ color: T.muted }}>Timing: </span><span style={{ color: T.text }}>{recData.timingGuidance}</span></div>
-            <div><span style={{ color: T.muted }}>Rationale: </span><span style={{ color: T.text }}>{recData.rationale}</span></div>
-            {recData.stoneSku && (
-              <div className="mt-2 pt-2" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
-                <span style={{ color: T.muted }}>Matched SKU: </span><span style={{ color: T.accent }}>{recData.stoneSku}</span>
-              </div>
-            )}
-          </div>
-        )}
-      </Card>}
-
-      {/* Remedy recommendation (only for past/ongoing) */}
-      {!isUpcoming && remedyRec && (
+      {/* ========= Unified Recommendation Workspace ========= */}
+      {!isUpcoming && (
         <Card className="mb-4">
-          <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.faint }}>Other remedy</div>
-          <div className="space-y-1.5 text-[13px]">
-            <div><span style={{ color: T.muted }}>Type: </span><span style={{ color: T.text }}>{remedyRec.type}</span></div>
-            <div><span style={{ color: T.muted }}>Instructions: </span><span style={{ color: T.text }}>{remedyRec.instructions}</span></div>
-            {remedyRec.frequency && <div><span style={{ color: T.muted }}>Frequency: </span><span style={{ color: T.text }}>{remedyRec.frequency}</span></div>}
-            {remedyRec.duration && <div><span style={{ color: T.muted }}>Duration: </span><span style={{ color: T.text }}>{remedyRec.duration}</span></div>}
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-[15px] font-semibold" style={{ color: T.text }}>Post-consultation</h3>
+            <div className="flex items-center gap-2">
+              {summaryStatus === "submitted" && recData.status !== "not_recommended" && remedySaved && (
+                <Chip tone="good">All submitted</Chip>
+              )}
+            </div>
           </div>
+
+          {/* Tab bar with completion indicators */}
+          <div className="flex items-center gap-1 mb-5 pb-3" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
+            {([
+              { key: "summary" as const, label: "Summary", done: summaryStatus === "submitted" },
+              { key: "stone" as const, label: "Stone recommendation", done: recData.status === "recommended" || recData.status === "purchased" },
+              { key: "remedy" as const, label: "Other remedy", done: remedySaved || !!remedyRec },
+            ]).map((t) => {
+              const active = activeWorkTab === t.key;
+              return (
+                <button
+                  key={t.key}
+                  onClick={() => setActiveWorkTab(t.key)}
+                  className="flex items-center gap-2 px-3 py-2 rounded-[8px] text-[13px] font-medium transition-all cursor-pointer"
+                  style={{
+                    background: active ? "rgba(160,125,56,0.12)" : "transparent",
+                    color: active ? T.accent : T.muted,
+                  }}
+                >
+                  <span
+                    className="w-[18px] h-[18px] rounded-full flex items-center justify-center text-[10px] shrink-0"
+                    style={{
+                      background: t.done ? T.good : "rgba(89,82,54,0.08)",
+                      color: t.done ? "#fff" : T.faint,
+                      border: t.done ? "none" : `1px solid ${T.borderSoft}`,
+                    }}
+                  >
+                    {t.done ? "✓" : ""}
+                  </span>
+                  {t.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* ---- Summary tab ---- */}
+          {activeWorkTab === "summary" && (
+            <div>
+              {summaryStatus === "submitted" && !editingSummary ? (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <Chip tone="good">Submitted</Chip>
+                    <button onClick={() => setEditingSummary(true)} className="text-[12px] font-medium cursor-pointer transition-opacity hover:opacity-80" style={{ color: T.accent }}>Edit</button>
+                  </div>
+                  <p className="text-[13.5px] leading-relaxed" style={{ color: T.text }}>{summaryText}</p>
+                </div>
+              ) : (
+                <div>
+                  <div className="text-[12px] mb-2" style={{ color: T.muted }}>Key observations, interpretation, conclusion, and agreed next steps</div>
+                  <Textarea value={summaryText} onChange={setSummaryText} placeholder="Write your consultation summary here…" rows={5} />
+                  <div className="flex items-center justify-end gap-2.5 mt-3">
+                    {summaryStatus === "submitted" && editingSummary && (
+                      <GhostBtn onClick={() => setEditingSummary(false)}>Cancel</GhostBtn>
+                    )}
+                    {summaryStatus !== "submitted" && (
+                      <GhostBtn disabled={!summaryText.trim()} onClick={handleSaveDraft}>Save draft</GhostBtn>
+                    )}
+                    <GoldBtn disabled={!summaryText.trim()} onClick={handleSubmitSummary}>
+                      {summaryStatus === "submitted" ? "Update summary" : "Submit summary"}
+                    </GoldBtn>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ---- Stone recommendation tab ---- */}
+          {activeWorkTab === "stone" && (
+            <div>
+              {recData.status === "not_recommended" && (
+                <div className="text-center py-6">
+                  <div className="w-12 h-12 rounded-full mx-auto mb-3 flex items-center justify-center text-[20px]" style={{ background: "rgba(160,125,56,0.1)" }}>💎</div>
+                  <p className="text-[13.5px] mb-3" style={{ color: T.muted }}>No stone recommendation yet</p>
+                  <GoldBtn onClick={openRecModal}>Select stone from inventory</GoldBtn>
+                </div>
+              )}
+
+              {recData.status === "draft" && (
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <Chip tone="muted">Draft</Chip>
+                    <GoldBtn onClick={openRecModal}>Edit draft</GoldBtn>
+                  </div>
+                  <div className="rounded-[9px] p-4 space-y-2 text-[13px]" style={{ background: T.bg, border: `1px solid ${T.borderSoft}` }}>
+                    <div className="flex justify-between"><span style={{ color: T.muted }}>Gemstone</span><span style={{ color: T.text }}>{recData.gemstone}</span></div>
+                    <div className="flex justify-between"><span style={{ color: T.muted }}>Weight</span><span style={{ color: T.text }}>{recData.weightRange}</span></div>
+                    <div className="flex justify-between"><span style={{ color: T.muted }}>Setting</span><span style={{ color: T.text }}>{recData.metalSetting}</span></div>
+                    <div className="flex justify-between"><span style={{ color: T.muted }}>Rationale</span><span className="text-right max-w-[60%]" style={{ color: T.text }}>{recData.rationale}</span></div>
+                  </div>
+                </div>
+              )}
+
+              {(recData.status === "recommended" || recData.status === "purchased") && (
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Chip tone={recStatusTone(recData.status)}>{recData.status === "purchased" ? "Purchased" : "Recommended"}</Chip>
+                  </div>
+                  <div className="rounded-[9px] p-4 space-y-2 text-[13px]" style={{ background: T.bg, border: `1px solid ${T.borderSoft}` }}>
+                    <div className="flex justify-between"><span style={{ color: T.muted }}>Gemstone</span><span style={{ color: T.text }}>{recData.gemstone}</span></div>
+                    <div className="flex justify-between"><span style={{ color: T.muted }}>Weight</span><span style={{ color: T.text }}>{recData.weightRange}</span></div>
+                    <div className="flex justify-between"><span style={{ color: T.muted }}>Setting</span><span style={{ color: T.text }}>{recData.metalSetting}</span></div>
+                    <div className="flex justify-between"><span style={{ color: T.muted }}>Purpose</span><span className="text-right max-w-[60%]" style={{ color: T.text }}>{recData.purpose}</span></div>
+                    <div className="flex justify-between"><span style={{ color: T.muted }}>Finger</span><span style={{ color: T.text }}>{recData.fingerGuidance}</span></div>
+                    <div className="flex justify-between"><span style={{ color: T.muted }}>Timing</span><span style={{ color: T.text }}>{recData.timingGuidance}</span></div>
+                    <div className="flex justify-between"><span style={{ color: T.muted }}>Rationale</span><span className="text-right max-w-[60%]" style={{ color: T.text }}>{recData.rationale}</span></div>
+                    {recData.stoneSku && (
+                      <div className="pt-2 mt-2 flex justify-between" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+                        <span style={{ color: T.muted }}>Matched SKU</span><span style={{ color: T.accent }}>{recData.stoneSku}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ---- Other remedy tab ---- */}
+          {activeWorkTab === "remedy" && (
+            <div>
+              {(remedySaved || remedyRec) ? (
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <Chip tone="good">Saved</Chip>
+                    <button onClick={() => setRemedySaved(false)} className="text-[12px] font-medium cursor-pointer transition-opacity hover:opacity-80" style={{ color: T.accent }}>Edit</button>
+                  </div>
+                  <div className="rounded-[9px] p-4 space-y-2 text-[13px]" style={{ background: T.bg, border: `1px solid ${T.borderSoft}` }}>
+                    <div className="flex justify-between"><span style={{ color: T.muted }}>Type</span><span style={{ color: T.text }}>{remedyType || remedyRec?.type || "—"}</span></div>
+                    <div className="flex justify-between"><span style={{ color: T.muted }}>Instructions</span><span className="text-right max-w-[60%]" style={{ color: T.text }}>{remedyInstructions || remedyRec?.instructions || "—"}</span></div>
+                    {(remedyFrequency || remedyRec?.frequency) && <div className="flex justify-between"><span style={{ color: T.muted }}>Frequency</span><span style={{ color: T.text }}>{remedyFrequency || remedyRec?.frequency}</span></div>}
+                    {(remedyDuration || remedyRec?.duration) && <div className="flex justify-between"><span style={{ color: T.muted }}>Duration</span><span style={{ color: T.text }}>{remedyDuration || remedyRec?.duration}</span></div>}
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <div className="text-[12px] mb-3" style={{ color: T.muted }}>Prescribe mantras, rituals, or lifestyle changes</div>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-[12px] block mb-1.5" style={{ color: T.muted }}>Remedy type</label>
+                      <div className="flex flex-wrap gap-2">
+                        {["Mantra", "Havan / Puja", "Gemstone wearing ritual", "Charity / Daan", "Lifestyle", "Other"].map((type) => (
+                          <button
+                            key={type}
+                            onClick={() => setRemedyType(type)}
+                            className="px-3 py-1.5 rounded-[8px] text-[12px] font-medium transition-all cursor-pointer"
+                            style={{
+                              background: remedyType === type ? "rgba(160,125,56,0.15)" : T.bg,
+                              border: `1.5px solid ${remedyType === type ? "rgba(160,125,56,0.65)" : T.borderSoft}`,
+                              color: remedyType === type ? T.accent : T.text,
+                            }}
+                          >{type}</button>
+                        ))}
+                      </div>
+                    </div>
+                    <Textarea value={remedyInstructions} onChange={setRemedyInstructions} label="Instructions" placeholder="Detailed instructions for the customer…" rows={3} />
+                    <div className="grid sm:grid-cols-2 gap-3">
+                      <Input value={remedyFrequency} onChange={setRemedyFrequency} label="Frequency (optional)" placeholder="E.g. Daily, Every Saturday" />
+                      <Input value={remedyDuration} onChange={setRemedyDuration} label="Duration (optional)" placeholder="E.g. 40 days, 3 months" />
+                    </div>
+                  </div>
+                  <div className="flex justify-end mt-4">
+                    <GoldBtn disabled={!remedyType || !remedyInstructions.trim()} onClick={() => { setRemedySaved(true); showToast("Remedy saved"); }}>
+                      Save remedy
+                    </GoldBtn>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </Card>
       )}
 

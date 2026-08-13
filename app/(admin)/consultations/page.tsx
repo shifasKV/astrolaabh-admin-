@@ -3,17 +3,20 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import { PageHeader, Card, Chip, Tabs, SearchFilter, GoldBtn, Select } from "@/components/ui";
 import { T } from "@/lib/theme";
-import { MOCK_CONSULTATIONS } from "@/lib/mock";
+import { MOCK_CONSULTATIONS, MOCK_INCOMPLETE_CONSULTATIONS } from "@/lib/mock";
 
 const TABS = [
   { key: "all", label: "All" },
-  { key: "upcoming", label: "Upcoming" },
   { key: "reschedule", label: "Reschedule request" },
-  { key: "summary_due", label: "Summary due" },
+  { key: "summary_due", label: "Recommendation due" },
   { key: "no_show", label: "No show" },
+  { key: "incomplete", label: "Incomplete booking" },
 ];
 
-type SortKey = "date_desc" | "date_asc";
+const INC_REASON_LABEL: Record<string, string> = { slot_check: "Slot check", payment_failed: "Payment failed", requested_call: "Requested call" };
+const INC_REASON_TONE: Record<string, "danger" | "gold" | "muted"> = { slot_check: "muted", payment_failed: "danger", requested_call: "gold" };
+
+type SortKey = "date_desc" | "date_asc" | "upcoming";
 type ViewMode = "list" | "calendar";
 
 const CAL_HOURS = Array.from({ length: 24 }, (_, i) => i);
@@ -100,6 +103,13 @@ export default function ConsultationsPage() {
     .sort((a, b) => {
       if (sort === "date_desc") return new Date(b.scheduledAt).getTime() - new Date(a.scheduledAt).getTime();
       if (sort === "date_asc") return new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime();
+      if (sort === "upcoming") {
+        const now = Date.now();
+        const aF = new Date(a.scheduledAt).getTime() >= now ? 0 : 1;
+        const bF = new Date(b.scheduledAt).getTime() >= now ? 0 : 1;
+        if (aF !== bF) return aF - bF;
+        return new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime();
+      }
       return 0;
     });
 
@@ -131,16 +141,17 @@ export default function ConsultationsPage() {
   const statusTone = (s: string) => {
     if (s === "closed" || s === "completed") return "good" as const;
     if (s === "scheduled") return "gold" as const;
-    if (s === "summary_pending" || s === "reschedule_requested" || s === "no_show") return "danger" as const;
+    if (s === "summary_pending" || s === "no_show") return "danger" as const;
+    if (s === "reschedule_requested") return "gold" as const;
     if (s === "cancelled") return "muted" as const;
     return "muted" as const;
   };
 
   const statusLabel = (c: typeof MOCK_CONSULTATIONS[number]) => {
     if (c.paymentStatus === "pending") return "Payment pending";
-    if (c.status === "reschedule_requested") return "Reschedule";
-    if (c.status === "summary_pending") return "Summary due";
-    if (c.status === "closed" || c.status === "completed") return "Completed";
+    if (c.status === "reschedule_requested") return "Scheduled";
+    if (c.status === "summary_pending") return "Recommendation due";
+    if (c.status === "closed" || c.status === "completed") return "Done";
     if (c.status === "scheduled") return "Scheduled";
     if (c.status === "no_show") return c.noShowBy === "expert" ? "Expert no show" : "Customer no show";
     if (c.status === "cancelled") return "Cancelled";
@@ -163,13 +174,14 @@ export default function ConsultationsPage() {
         <Tabs
           tabs={TABS.map((t) => ({
             ...t,
-            count: MOCK_CONSULTATIONS.filter((c) => filterByTab(c, t.key)).length,
+            count: t.key === "incomplete" ? MOCK_INCOMPLETE_CONSULTATIONS.length : MOCK_CONSULTATIONS.filter((c) => filterByTab(c, t.key)).length,
           }))}
           active={tab}
           onChange={(key) => { setTab(key); if (key !== "all") setViewMode("list"); }}
         />
       </div>
 
+      {tab !== "incomplete" && <>
       {/* Search / View toggle — fixed height row */}
       <div className="flex items-center gap-3 mb-3 h-10">
         <div className="flex-1 min-w-0">
@@ -246,7 +258,7 @@ export default function ConsultationsPage() {
               { value: "scheduled", label: "Scheduled" },
               { value: "reschedule_requested", label: "Reschedule" },
               { value: "no_show", label: "No show" },
-              { value: "completed", label: "Completed" },
+              { value: "completed", label: "Done" },
             ]}
           />
         </div>
@@ -360,8 +372,9 @@ export default function ConsultationsPage() {
               compact
               prefix="Sort: "
               options={[
-                { value: "date_desc", label: "Newest first" },
-                { value: "date_asc", label: "Oldest first" },
+                { value: "date_desc", label: "Newest" },
+                { value: "date_asc", label: "Oldest" },
+                { value: "upcoming", label: "Upcoming" },
               ]}
             />
           </div>
@@ -370,7 +383,7 @@ export default function ConsultationsPage() {
 
       <Card>
         {/* Table header */}
-        <div className="hidden sm:grid grid-cols-[1fr_140px_140px_120px] gap-3 px-3 py-2 text-[11px] tracking-[0.06em] uppercase" style={{ color: T.faint, borderBottom: `1px solid ${T.borderSoft}` }}>
+        <div className="hidden sm:grid grid-cols-[1fr_140px_140px_160px] gap-3 px-3 py-2 text-[11px] tracking-[0.06em] uppercase" style={{ color: T.faint, borderBottom: `1px solid ${T.borderSoft}` }}>
           <span>Consultation details</span>
           <span>Customer</span>
           <span>Scheduled date</span>
@@ -384,12 +397,15 @@ export default function ConsultationsPage() {
             <Link
               key={c.id}
               href={`/consultations/${c.id}`}
-              className="group grid grid-cols-1 sm:grid-cols-[1fr_140px_140px_120px] gap-2 sm:gap-3 items-center px-3 py-3.5 transition-all duration-150 rounded-[8px] hover:bg-[rgba(160,125,56,0.07)]"
+              className="group grid grid-cols-1 sm:grid-cols-[1fr_140px_140px_160px] gap-2 sm:gap-3 items-center px-3 py-3.5 transition-all duration-150 rounded-[8px] hover:bg-[rgba(160,125,56,0.07)]"
               style={{ borderBottom: `1px solid ${T.borderSoft}` }}
             >
               {/* Consultation details */}
               <div className="min-w-0">
-                <span className="text-[11px] tracking-[0.06em] uppercase font-medium" style={{ color: T.accent }}>{c.id}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] tracking-[0.06em] uppercase font-medium" style={{ color: T.accent }}>{c.id}</span>
+                  {c.status === "reschedule_requested" && <Chip tone="gold">Reschedule request</Chip>}
+                </div>
                 <div className="text-[14px] mt-0.5 truncate" style={{ color: T.text }}>
                   {c.expertName}
                 </div>
@@ -564,6 +580,88 @@ export default function ConsultationsPage() {
           </Card>
         </>
       )}
+      </>}
+
+      {/* ============ INCOMPLETE BOOKINGS ============ */}
+      {tab === "incomplete" && (() => {
+        const incSearch = search.toLowerCase();
+        const incFiltered = MOCK_INCOMPLETE_CONSULTATIONS
+          .filter((c) => {
+            if (!incSearch) return true;
+            return c.customerName.toLowerCase().includes(incSearch) || c.expertName.toLowerCase().includes(incSearch);
+          })
+          .filter((c) => !filterCustomer || c.customerName === filterCustomer)
+          .filter((c) => !filterExpert || c.expertName === filterExpert)
+          .filter((c) => !filterStatus || c.reason === filterStatus)
+          .filter((c) => {
+            if (filterDateFrom && c.date < filterDateFrom) return false;
+            if (filterDateTo && c.date > filterDateTo) return false;
+            return true;
+          })
+          .sort((a, b) => sort === "date_asc" ? new Date(a.date).getTime() - new Date(b.date).getTime() : new Date(b.date).getTime() - new Date(a.date).getTime());
+
+        const incCustomers = [...new Set(MOCK_INCOMPLETE_CONSULTATIONS.map((c) => c.customerName))].sort();
+        const incExperts = [...new Set(MOCK_INCOMPLETE_CONSULTATIONS.map((c) => c.expertName))].sort();
+        const hasIncFilters = !!filterCustomer || !!filterExpert || !!filterStatus || !!filterDateFrom || !!filterDateTo;
+
+        return (
+          <>
+            <div className="mb-3">
+              <SearchFilter search={search} onSearchChange={setSearch} placeholder="Search customer, astrologer…" />
+            </div>
+            <div className="flex flex-wrap items-center gap-2.5 mb-4">
+              <div className="w-[200px]">
+                <Select value={filterCustomer} onChange={(v) => { setFilterCustomer(v); setPage(1); }} searchable compact placeholder="All customers" options={[{ value: "", label: "All customers" }, ...incCustomers.map((n) => ({ value: n, label: n }))]} />
+              </div>
+              <div className="w-[200px]">
+                <Select value={filterExpert} onChange={(v) => { setFilterExpert(v); setPage(1); }} searchable compact placeholder="All astrologers" options={[{ value: "", label: "All astrologers" }, ...incExperts.map((n) => ({ value: n, label: n }))]} />
+              </div>
+              <div className="w-[180px]">
+                <Select value={filterStatus} onChange={(v) => { setFilterStatus(v as string); setPage(1); }} compact placeholder="All reasons" options={[{ value: "", label: "All reasons" }, { value: "slot_check", label: "Slot check" }, { value: "payment_failed", label: "Payment failed" }, { value: "requested_call", label: "Requested call" }]} />
+              </div>
+              {hasIncFilters && (
+                <button onClick={() => { setFilterCustomer(""); setFilterExpert(""); setFilterStatus(""); setFilterDateFrom(""); setFilterDateTo(""); setPage(1); }} className="text-[11px] font-medium px-2.5 py-1.5 rounded-[7px] cursor-pointer hover:opacity-80 transition-opacity" style={{ background: "rgba(160,125,56,0.12)", color: T.accent }}>Clear filters</button>
+              )}
+              <div className="flex-1" />
+              <div className="w-[180px]">
+                <Select value={sort} onChange={(v) => { setSort(v as SortKey); setPage(1); }} compact prefix="Sort: " options={[{ value: "date_desc", label: "Newest first" }, { value: "date_asc", label: "Oldest first" }]} />
+              </div>
+            </div>
+            <Card>
+              <div className="hidden sm:grid grid-cols-[1fr_1fr_110px_130px] gap-3 px-3 py-2 text-[11px] tracking-[0.06em] uppercase" style={{ color: T.faint, borderBottom: `1px solid ${T.borderSoft}` }}>
+                <span>Customer</span>
+                <span>Astrologer</span>
+                <span>Date</span>
+                <span>Status</span>
+              </div>
+              {incFiltered.length === 0 ? (
+                <p className="text-[13.5px] py-6 text-center" style={{ color: T.muted }}>No incomplete bookings found.</p>
+              ) : (
+                incFiltered.map((c) => (
+                  <div
+                    key={c.id}
+                    className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_110px_130px] gap-2 sm:gap-3 items-center px-3 py-3.5 transition-all duration-150 rounded-[8px] hover:bg-[rgba(160,125,56,0.07)]"
+                    style={{ borderBottom: `1px solid ${T.borderSoft}` }}
+                  >
+                    <div className="min-w-0">
+                      <Link href={`/customers/${c.customerId}`} className="text-[14px] font-medium hover:underline" style={{ color: T.text }}>{c.customerName}</Link>
+                    </div>
+                    <div className="min-w-0">
+                      <Link href={`/astro-gemologists/${c.expertId}`} className="text-[13px] hover:underline" style={{ color: T.accent }}>{c.expertName}</Link>
+                    </div>
+                    <div className="min-w-0">
+                      <span className="text-[12px]" style={{ color: T.text }}>{new Date(c.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</span>
+                    </div>
+                    <div>
+                      <Chip tone={INC_REASON_TONE[c.reason] || "muted"}>{INC_REASON_LABEL[c.reason] || c.reason}</Chip>
+                    </div>
+                  </div>
+                ))
+              )}
+            </Card>
+          </>
+        );
+      })()}
     </>
   );
 }
