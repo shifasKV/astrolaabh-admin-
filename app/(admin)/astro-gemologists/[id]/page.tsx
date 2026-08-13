@@ -99,6 +99,9 @@ export default function AstroGemologistDetailPage() {
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const [toast, setToast] = useState("");
+  const [commissionEditing, setCommissionEditing] = useState(false);
+  const [commissionToast, setCommissionToast] = useState("");
+  const [commissionRates, setCommissionRates] = useState({ stone: "8", jewellery: "6", consultation: "15" });
 
   useEffect(() => {
     if (!showMenu) return;
@@ -417,6 +420,56 @@ export default function AstroGemologistDetailPage() {
         </div>
       </div>
 
+      {/* Commission setup */}
+      <Card className="mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <span className="text-[11px] tracking-[0.08em] uppercase font-medium" style={{ color: T.faint }}>Commission setup</span>
+            {commissionToast && (
+              <span className="text-[12px] font-medium" style={{ color: T.good }}>✓ {commissionToast}</span>
+            )}
+          </div>
+          {commissionEditing ? (
+            <GoldBtn
+              className="!h-7 !px-3 !text-[11px]"
+              onClick={() => {
+                setCommissionEditing(false);
+                setCommissionToast("Commission saved");
+                setTimeout(() => setCommissionToast(""), 3000);
+              }}
+            >
+              Save
+            </GoldBtn>
+          ) : (
+            <GhostBtn className="!h-7 !px-3 !text-[11px]" onClick={() => setCommissionEditing(true)}>
+              Edit
+            </GhostBtn>
+          )}
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {(["stone", "jewellery", "consultation"] as const).map((cat) => (
+            <div key={cat} className="rounded-[10px] p-4" style={{ background: T.panel, border: `1px solid ${T.borderSoft}` }}>
+              <div className="text-[11px] tracking-[0.06em] uppercase mb-2" style={{ color: T.faint }}>{cat}</div>
+              {commissionEditing ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    value={commissionRates[cat]}
+                    onChange={(e) => setCommissionRates((p) => ({ ...p, [cat]: e.target.value }))}
+                    className="w-full h-9 px-3 rounded-[8px] text-[13px] outline-none"
+                    style={{ background: T.card, border: `1px solid ${T.border}`, color: T.text }}
+                  />
+                  <span className="text-[13px] font-medium shrink-0" style={{ color: T.muted }}>%</span>
+                </div>
+              ) : (
+                <div className="text-[18px] font-semibold tabular-nums" style={{ color: T.text }}>
+                  {commissionRates[cat]}%
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </Card>
 
       {/* Tabs */}
       <div className="mb-4">
