@@ -841,7 +841,7 @@ export default function CreateOrderPage() {
               </div>
             </div>
             <p className="text-[12px] mt-4" style={{ color: T.faint }}>
-              Order will be created with pending payment status. Generate a payment request from the order detail page to collect payment.
+              Customer will get a payment link once you create an order.
             </p>
             <div className="mt-4">
               <GoldBtn onClick={handleCreate}>Create order</GoldBtn>

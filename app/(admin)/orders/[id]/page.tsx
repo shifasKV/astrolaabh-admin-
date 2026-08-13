@@ -1,5 +1,5 @@
 "use client";
-import { use, useState, useEffect } from "react";
+import { use, useState } from "react";
 import Link from "next/link";
 import { PageHeader, Card, Chip, GoldBtn, GhostBtn, Modal, Input, Select, FileInput, Textarea, DateInput, TimeInput, ShopifyButton, BackLink } from "@/components/ui";
 import { T } from "@/lib/theme";
@@ -24,13 +24,12 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const [certUploadTarget, setCertUploadTarget] = useState<CertUploadTarget>(null);
   const [toast, setToast] = useState("");
   const [certNumber, setCertNumber] = useState("");
-  const [certAuthority, setCertAuthority] = useState("");
   const [certIssueDate, setCertIssueDate] = useState("");
   const [certWeight, setCertWeight] = useState("");
   const [certOrigin, setCertOrigin] = useState("");
-  const [certTreatment, setCertTreatment] = useState("");
   const [certNotes, setCertNotes] = useState("");
   const [certRitualMethod, setCertRitualMethod] = useState("");
+  const [certIssueDateActual, setCertIssueDateActual] = useState("");
 
   const [showSchedule, setShowSchedule] = useState(false);
   const [scheduleDate, setScheduleDate] = useState("");
@@ -52,7 +51,6 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const [localTracking, setLocalTracking] = useState(order?.tracking ?? "");
   const [trackingCourier, setTrackingCourier] = useState("");
   const [trackingInput, setTrackingInput] = useState("");
-  const [qcPassed, setQcPassed] = useState(false);
   const [dispatched, setDispatched] = useState(false);
   const [receivedNotes, setReceivedNotes] = useState("");
 
@@ -99,12 +97,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
     return false;
   };
 
-  useEffect(() => {
-    if (viewStep !== null && isStepComplete(viewStep)) {
-      setViewStep(null);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sourceComplete, energiseComplete, certifyComplete, shipComplete]);
+  // Removed auto-advance — user should navigate pipeline steps manually
 
   const isStepUnlocked = (s: PipelineStep) => {
     if (!isPaid) return false;
@@ -126,9 +119,10 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   };
 
   const handleCertUpload = () => {
+    const isGenerate = certUploadTarget === "energisation";
     setCertUploadTarget(null);
-    setCertNumber(""); setCertAuthority(""); setCertIssueDate(""); setCertWeight(""); setCertOrigin(""); setCertTreatment(""); setCertNotes("");
-    flash("Certificate uploaded");
+    setCertNumber(""); setCertIssueDate(""); setCertWeight(""); setCertOrigin(""); setCertNotes(""); setCertRitualMethod(""); setCertIssueDateActual("");
+    flash(isGenerate ? "Certificate generated" : "Certificate uploaded");
   };
 
   const handleScheduleSubmit = () => {
@@ -187,14 +181,16 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       <Card className="mb-4">
         <div className="flex items-center justify-between mb-3">
           <div className="text-[11px] tracking-[0.08em] uppercase" style={{ color: T.faint }}>Order summary</div>
-          <button
-            onClick={() => flash("Invoice downloaded")}
-            className="inline-flex items-center gap-1.5 text-[12px] font-medium px-3 py-1.5 rounded-[8px] cursor-pointer transition-all hover:brightness-110"
-            style={{ background: "rgba(160,125,56,0.12)", color: T.accent, border: `1px solid ${T.accentBorder}` }}
-          >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            Download invoice
-          </button>
+          {isPaid && (
+            <button
+              onClick={() => flash("Invoice downloaded")}
+              className="inline-flex items-center gap-1.5 text-[12px] font-medium px-3 py-1.5 rounded-[8px] cursor-pointer transition-all hover:brightness-110"
+              style={{ background: "rgba(160,125,56,0.12)", color: T.accent, border: `1px solid ${T.accentBorder}` }}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Download invoice
+            </button>
+          )}
         </div>
 
         {/* Column header */}
@@ -308,7 +304,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
       {/* ============ FULFILLMENT PIPELINE ============ */}
       <Card className="mb-4">
-        <div className="text-[11px] tracking-[0.08em] uppercase mb-4" style={{ color: T.faint }}>Fulfillment pipeline</div>
+        <div className="text-[11px] tracking-[0.08em] uppercase mb-4" style={{ color: T.faint }}>Fulfillment</div>
 
         {/* Stepper */}
         <div className="flex items-center gap-1 mb-5 overflow-x-auto no-scrollbar">
@@ -330,9 +326,9 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                   }}
                   className="flex items-center gap-2 text-[12px] px-3 py-1.5 rounded-full whitespace-nowrap transition-all duration-200"
                   style={{
-                    background: isActive ? T.accentMuted : complete ? "rgba(95,112,64,0.10)" : "transparent",
-                    border: `1px solid ${isActive ? T.accentBorder : complete ? "rgba(95,112,64,0.25)" : T.borderSoft}`,
-                    color: isActive ? T.accent : complete ? T.good : locked ? T.faint : T.muted,
+                    background: isActive && complete ? "rgba(95,112,64,0.10)" : isActive ? T.accentMuted : complete ? "rgba(95,112,64,0.10)" : "transparent",
+                    border: `1px solid ${isActive && complete ? "rgba(95,112,64,0.25)" : isActive ? T.accentBorder : complete ? "rgba(95,112,64,0.25)" : T.borderSoft}`,
+                    color: isActive && complete ? T.good : isActive ? T.accent : complete ? T.good : locked ? T.faint : T.muted,
                     fontWeight: isActive ? 600 : 400,
                     cursor: unlocked || complete ? "pointer" : "default",
                     opacity: unlocked || complete || isActive ? 1 : 0.5,
@@ -341,7 +337,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                   <span
                     className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0"
                     style={{
-                      background: isActive ? T.accent : complete ? T.good : T.border,
+                      background: complete ? T.good : isActive ? T.accent : T.border,
                       color: isActive || complete ? T.accentInk : T.faint,
                     }}
                   >
@@ -443,6 +439,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                           onClick={() => {
                             const next = received ? "in_transit" : "order_received";
                             setLocalItemStatuses((prev) => ({ ...prev, [item.sku]: next }));
+                            setViewStep(0);
                             flash(`${item.name.split("·")[0].trim()} ${received ? "→ In transit" : "marked as received"}`);
                           }}
                           className="w-9 h-9 rounded-[8px] flex items-center justify-center cursor-pointer transition-all hover:brightness-110"
@@ -467,8 +464,8 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
           {/* ---- STEP 1: ENERGISE ---- */}
           {displayStep === 1 && (
-            <Link href={energisation ? `/energisation/${energisation.id}` : "#"} className="block group cursor-pointer">
-              {!allStonesReceived && (
+            <div>
+              {!allStonesReceived && !energiseComplete && (
                 <div
                   className="flex items-center gap-3 rounded-[10px] px-4 py-3 mb-4"
                   style={{ background: "rgba(195,160,88,0.12)", border: "1px solid rgba(195,160,88,0.3)" }}
@@ -478,77 +475,52 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                   <span className="text-[11.5px]" style={{ color: T.muted }}>— advised to schedule energisation after receiving stones.</span>
                 </div>
               )}
-              <>
-                  {tier && (
-                    <div className="rounded-[9px] p-4 mb-4" style={{ background: T.card, border: `1px solid ${T.borderSoft}` }}>
-                      <div className="flex items-center justify-between mb-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-[13.5px] font-semibold group-hover:underline" style={{ color: T.accent }}>{tier.name}</span>
-                          <span className="text-[11px]" style={{ color: T.faint }}>{tier.sanskrit}</span>
-                        </div>
-                        <div className="flex items-center gap-2.5">
-                          <Chip tone={localEnergStatus === "completed" ? "good" : localEnergStatus === "scheduled" || localEnergStatus === "in_progress" ? "gold" : "muted"}>
-                            {localEnergStatus === "completed" ? "Completed" : localEnergStatus === "scheduled" || localEnergStatus === "in_progress" ? "Scheduled" : "Not scheduled"}
-                          </Chip>
-                          <span className="text-[12px] font-medium tabular-nums" style={{ color: tier.fee === 0 ? T.good : T.text }}>
-                            {tier.fee === 0 ? "Included" : inr(tier.fee)}
-                          </span>
-                        </div>
+
+              {tier && (
+                <Link
+                  href={energisation ? `/energisation/${energisation.id}` : "#"}
+                  className="block rounded-[9px] p-4 transition-all duration-150 hover:brightness-[0.97] hover:shadow-md cursor-pointer group"
+                  style={{ background: T.card, border: `1px solid ${T.borderSoft}` }}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-[13.5px] font-semibold group-hover:underline" style={{ color: T.accent }}>{tier.name}</span>
+                        <span className="text-[11px]" style={{ color: T.faint }}>{tier.sanskrit}</span>
                       </div>
                       <div className="text-[12px]" style={{ color: T.muted }}>{tier.duration}</div>
                     </div>
-                  )}
-
-                  {energisation ? (
-                    <div>
-                      <div className="flex items-center gap-4 text-[13px]">
-                        <div className="flex-1 grid sm:grid-cols-3 gap-4">
-                          <div>
-                            <div className="text-[11px] tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>Guruji</div>
-                            <div style={{ color: energisation.assignedTo ? T.text : T.faint }}>{energisation.assignedTo ?? "Unassigned"}</div>
-                          </div>
-                          <div>
-                            <div className="text-[11px] tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>
-                              {energisation.completedAt ? "Completed" : energisation.scheduledAt ? "Scheduled" : "Not scheduled"}
-                            </div>
-                            <div style={{ color: energisation.scheduledAt || energisation.completedAt ? T.text : T.danger }}>
-                              {energisation.completedAt
-                                ? new Date(energisation.completedAt).toLocaleDateString("en-IN", { dateStyle: "medium" })
-                                : energisation.scheduledAt
-                                  ? new Date(energisation.scheduledAt).toLocaleDateString("en-IN", { dateStyle: "medium" })
-                                  : "—"}
-                            </div>
-                          </div>
-                          <div>
-                            <div className="text-[11px] tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>Session link</div>
-                            <div style={{ color: energisation.liveLink ? T.good : T.faint }}>
-                              {energisation.liveLink ? "Uploaded" : "Not uploaded"}
-                            </div>
-                          </div>
+                    <div className="flex items-center gap-4 shrink-0">
+                      <div className="text-right">
+                        <Chip tone={localEnergStatus === "completed" ? "good" : localEnergStatus === "scheduled" || localEnergStatus === "in_progress" ? "gold" : "muted"}>
+                          {localEnergStatus === "completed" ? "Completed" : localEnergStatus === "scheduled" || localEnergStatus === "in_progress" ? "Scheduled" : "Not scheduled"}
+                        </Chip>
+                        <div className="text-[12px] font-medium tabular-nums mt-1" style={{ color: tier.fee === 0 ? T.good : T.text }}>
+                          {tier.fee === 0 ? "Included" : inr(tier.fee)}
                         </div>
-                        {(localEnergStatus === "scheduled" || localEnergStatus === "pending") && (
-                          <div className="shrink-0" onClick={(e) => e.preventDefault()}>
-                            <GhostBtn onClick={() => setShowSchedule(true)}>Reschedule</GhostBtn>
-                          </div>
-                        )}
                       </div>
-
-                      {localEnergStatus !== "completed" && (
-                        <div className="flex pt-4 mt-4" style={{ borderTop: `1px solid ${T.borderSoft}` }} onClick={(e) => e.preventDefault()}>
-                          <GoldBtn onClick={() => { setLocalEnergStatus("completed"); flash("Energisation marked as completed"); }}>
-                            Mark as completed
-                          </GoldBtn>
-                        </div>
+                      {localEnergStatus !== "completed" && localEnergStatus !== "scheduled" && localEnergStatus !== "in_progress" && (
+                        <span onClick={(e) => e.preventDefault()}>
+                          <GoldBtn onClick={() => setShowSchedule(true)}>Schedule</GoldBtn>
+                        </span>
+                      )}
+                      {(localEnergStatus === "scheduled" || localEnergStatus === "in_progress") && (
+                        <span onClick={(e) => e.preventDefault()}>
+                          <GoldBtn onClick={() => { setLocalEnergStatus("completed"); flash("Energisation marked as completed"); }}>Mark as completed</GoldBtn>
+                        </span>
                       )}
                     </div>
-                  ) : (
-                    <div className="text-center py-6" onClick={(e) => e.preventDefault()}>
-                      <p className="text-[13px] mb-3" style={{ color: T.muted }}>Schedule the energisation — assign a Guruji, date, time, and meeting link.</p>
-                      <GoldBtn onClick={() => setShowSchedule(true)}>Schedule energisation</GoldBtn>
-                    </div>
-                  )}
-                </>
-            </Link>
+                  </div>
+                </Link>
+              )}
+
+              {!tier && !energisation && (
+                <div className="text-center py-6">
+                  <p className="text-[13px] mb-3" style={{ color: T.muted }}>Schedule the energisation — assign a Guruji, date, time, and meeting link.</p>
+                  <GoldBtn onClick={() => setShowSchedule(true)}>Schedule energisation</GoldBtn>
+                </div>
+              )}
+            </div>
           )}
 
           {/* ---- STEP 2: CERTIFY ---- */}
@@ -607,7 +579,14 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                         </div>
                       </div>
                     ) : (
-                      <GoldBtn onClick={() => setCertUploadTarget("energisation")}>Upload certificate</GoldBtn>
+                      <GoldBtn onClick={() => {
+                        const stone = order.items.find((i) => i.itemType === "stone");
+                        setCertWeight(stone?.caratWeight ?? "");
+                        setCertOrigin(order.customerName ?? "");
+                        if (energisation?.completedAt) setCertIssueDate(energisation.completedAt.split("T")[0]);
+                        if (energisation?.method) setCertRitualMethod(energisation.method);
+                        setCertUploadTarget("energisation");
+                      }}>Generate certificate</GoldBtn>
                     )}
                   </div>
                 </div>
@@ -643,35 +622,20 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                   </div>
                 </div>
               ) : (
-                <div className="space-y-4">
-                  {/* QC */}
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-[13px] font-medium" style={{ color: T.text }}>Quality check</div>
-                      <div className="text-[11px] mt-0.5" style={{ color: T.muted }}>Verify all items before packaging</div>
-                    </div>
-                    {qcPassed ? (
-                      <span className="text-[12px] font-medium" style={{ color: T.good }}>✓ Passed</span>
-                    ) : (
-                      <GoldBtn onClick={() => { setQcPassed(true); flash("Quality check passed"); }}>Mark QC passed</GoldBtn>
-                    )}
-                  </div>
-
-                  <div style={{ borderTop: `1px solid ${T.borderSoft}` }} />
-
-                  {/* Tracking */}
-                  <div className={qcPassed ? "" : "opacity-40 pointer-events-none"}>
-                    <div className="text-[13px] font-medium mb-3" style={{ color: T.text }}>Shipping details</div>
-                    <div className="grid sm:grid-cols-2 gap-3 mb-4">
+                <div>
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="flex-1 grid sm:grid-cols-2 gap-3">
                       <Input value={trackingInput} onChange={setTrackingInput} label="Tracking ID" placeholder="e.g. AWB-BLU-5518234" />
                       <Input value={trackingCourier} onChange={setTrackingCourier} label="Courier" placeholder="e.g. BlueDart, DTDC" />
                     </div>
-                    <GoldBtn
-                      onClick={() => { setLocalTracking(trackingInput); setDispatched(true); flash("Order dispatched"); }}
-                      disabled={!trackingInput}
-                    >
-                      Mark as dispatched
-                    </GoldBtn>
+                    <div className="shrink-0 self-end">
+                      <GoldBtn
+                        onClick={() => { setLocalTracking(trackingInput); setDispatched(true); flash("Order dispatched"); }}
+                        disabled={!trackingInput}
+                      >
+                        Mark as dispatched
+                      </GoldBtn>
+                    </div>
                   </div>
                 </div>
               )}
@@ -710,44 +674,18 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       <Modal
         open={!!certUploadTarget}
         onClose={() => setCertUploadTarget(null)}
-        title={certUploadTarget === "lab_authenticity" ? "Upload Lab Authenticity Certificate" : "Upload AstroLaabh Certificate"}
+        title={certUploadTarget === "lab_authenticity" ? "Upload Lab Authenticity Certificate" : "Generate AstroLaabh Certificate"}
       >
         <div className="space-y-3">
           {certUploadTarget === "lab_authenticity" ? (
             <>
-              <Select value={certAuthority} onChange={setCertAuthority} label="Issuing laboratory" searchable placeholder="Select lab…" options={[
-                { value: "", label: "Select lab…" },
-                { value: "GIA (Gemological Institute of America)", label: "GIA — Gemological Institute of America" },
-                { value: "GRS (Gem Research Swisslab)", label: "GRS — Gem Research Swisslab" },
-                { value: "IGI (International Gemological Institute)", label: "IGI — International Gemological Institute" },
-                { value: "Gübelin Gem Lab", label: "Gübelin Gem Lab" },
-                { value: "SSEF (Swiss Gemmological Institute)", label: "SSEF — Swiss Gemmological Institute" },
-                { value: "Lotus Gemology", label: "Lotus Gemology" },
-                { value: "AGL (American Gemological Laboratories)", label: "AGL — American Gemological Laboratories" },
-                { value: "C. Dunaigre", label: "C. Dunaigre Consulting" },
-              ]} />
-              <Input value={certNumber} onChange={setCertNumber} label="Certificate / report number" placeholder="e.g. GIA-2026-78451" />
-              <DateInput value={certIssueDate} onChange={setCertIssueDate} label="Issue date" placeholder="Select date…" />
-              <Input value={certWeight} onChange={setCertWeight} label="Certified weight (carat)" placeholder="e.g. 5.21 ct" />
-              <Input value={certOrigin} onChange={setCertOrigin} label="Origin determination" placeholder="e.g. Ceylon (Sri Lanka)" />
-              <Select value={certTreatment} onChange={setCertTreatment} label="Treatment disclosure" options={[
-                { value: "", label: "Select…" },
-                { value: "No indication of heating", label: "No indication of heating (natural unheated)" },
-                { value: "Natural, untreated", label: "Natural, untreated" },
-                { value: "Heat treatment detected", label: "Heat treatment detected" },
-                { value: "Minor residues (standard)", label: "Minor residues — standard enhancement" },
-              ]} />
-              <Textarea value={certNotes} onChange={setCertNotes} label="Additional notes (optional)" placeholder="Colour grade, clarity, special remarks…" rows={2} />
+              <FileInput label="Certificate file (PDF or image)" accept=".pdf,.jpg,.jpeg,.png" onSelect={() => {}} />
+              <Input value={certNumber} onChange={setCertNumber} label="Certificate / report number (optional)" placeholder="e.g. GIA-2026-78451" />
+              <Textarea value={certNotes} onChange={setCertNotes} label="Notes (optional)" placeholder="Any remarks about this certificate…" rows={2} />
             </>
           ) : (
             <>
-              <Input value={certNumber} onChange={setCertNumber} label="AstroLaabh certificate number" placeholder="e.g. AEC-2026-003" />
-              <Select value={certAuthority} onChange={setCertAuthority} label="Issued by" options={[
-                { value: "", label: "Select…" },
-                { value: "AstroLaabh Puja Division", label: "AstroLaabh Puja Division" },
-                { value: "Pt. Sandeep Kochaar", label: "Pt. Sandeep Kochaar" },
-                { value: "Dr. Meenakshi Joshi", label: "Dr. Meenakshi Joshi" },
-              ]} />
+              <Input value={certNumber} onChange={setCertNumber} label="AstroLaabh certificate number" placeholder="Auto-generated, e.g. AEC-2026-003" />
               <DateInput value={certIssueDate} onChange={setCertIssueDate} label="Ritual completion date" placeholder="Select date…" />
               <Select value={certRitualMethod} onChange={setCertRitualMethod} label="Mantra / ritual method" options={[
                 { value: "Vedic Brihaspati Mantra — 108 repetitions", label: "Vedic Brihaspati Mantra — 108 repetitions" },
@@ -756,13 +694,15 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                 { value: "Budh Mantra — Wednesday puja", label: "Budh Mantra — Wednesday puja" },
                 { value: "Custom ritual", label: "Custom ritual" },
               ]} />
-              <Textarea value={certNotes} onChange={setCertNotes} label="Ritual notes / remarks" placeholder="Gotra, nakshatra, special instructions…" rows={2} />
+              <Input value={certWeight} onChange={setCertWeight} label="Stone weight (carat)" placeholder="e.g. 5.21 ct" />
+              <Input value={certOrigin} onChange={setCertOrigin} label="Customer name (for certificate)" placeholder="e.g. Radhika Oberoi" />
+              <DateInput value={certIssueDateActual} onChange={setCertIssueDateActual} label="Issue date" placeholder="Select date…" />
+              <Textarea value={certNotes} onChange={setCertNotes} label="Comments" placeholder="Gotra, nakshatra, special instructions…" rows={2} />
             </>
           )}
-          <FileInput label="Certificate file (PDF or image)" accept=".pdf,.jpg,.jpeg,.png" onSelect={() => {}} />
         </div>
         <div className="flex gap-2.5 mt-5">
-          <GoldBtn onClick={handleCertUpload}>Upload certificate</GoldBtn>
+          <GoldBtn onClick={handleCertUpload}>{certUploadTarget === "lab_authenticity" ? "Upload certificate" : "Generate certificate"}</GoldBtn>
           <GhostBtn onClick={() => setCertUploadTarget(null)}>Cancel</GhostBtn>
         </div>
       </Modal>

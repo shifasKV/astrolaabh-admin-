@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { PageHeader, Card, Chip, StatCard, GoldBtn, Modal, Input, SearchFilter } from "@/components/ui";
+import { PageHeader, Card, Chip, StatCard, GoldBtn, SearchFilter } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { EXPERT_PROFILES, MOCK_CONSULTATIONS, MOCK_STONE_RECOMMENDATIONS } from "@/lib/mock";
 import { inr } from "@/lib/types";
@@ -20,8 +20,6 @@ function getExpertStats(expertId: string) {
 
 export default function AstroGemologistsPage() {
   const router = useRouter();
-  const [showModal, setShowModal] = useState(false);
-  const [newExpert, setNewExpert] = useState({ name: "", email: "", phone: "" });
   const [search, setSearch] = useState("");
 
   const totalUpcoming = MOCK_CONSULTATIONS.filter((c) => c.status === "scheduled").length;
@@ -34,7 +32,7 @@ export default function AstroGemologistsPage() {
       <PageHeader
         title="Astro-Gemologists"
         sub="Manage experts — their schedules, consultations, and performance"
-        action={<GoldBtn onClick={() => setShowModal(true)}>+ New Astro-Gemologist</GoldBtn>}
+        action={<GoldBtn onClick={() => router.push("/astro-gemologists/create")}>+ New Astro-Gemologist</GoldBtn>}
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
@@ -80,7 +78,11 @@ export default function AstroGemologistsPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <Chip tone={expert.status === "active" ? "good" : "muted"}>{expert.status}</Chip>
+                    {expert.status === "active" && expert.calendlyStatus === "pending" ? (
+                      <Chip tone="gold">Calendly pending</Chip>
+                    ) : (
+                      <Chip tone={expert.status === "active" ? "good" : "muted"}>{expert.status}</Chip>
+                    )}
                   </div>
                 </div>
 
@@ -112,16 +114,6 @@ export default function AstroGemologistsPage() {
         })}
       </div>
 
-      <Modal open={showModal} onClose={() => setShowModal(false)} title="Add Astro-Gemologist">
-        <div className="space-y-4">
-          <Input value={newExpert.name} onChange={(v) => setNewExpert((p) => ({ ...p, name: v }))} label="Full name" placeholder="Pt. Name Surname" />
-          <Input value={newExpert.email} onChange={(v) => setNewExpert((p) => ({ ...p, email: v }))} label="Email" type="email" placeholder="name@astrolaabh.house" />
-          <Input value={newExpert.phone} onChange={(v) => setNewExpert((p) => ({ ...p, phone: v }))} label="Phone number" placeholder="+91 98765 43210" />
-          <div className="pt-2">
-            <GoldBtn onClick={() => setShowModal(false)}>Create expert</GoldBtn>
-          </div>
-        </div>
-      </Modal>
     </>
   );
 }

@@ -16,7 +16,7 @@ const TABS = [
 type SortKey = "date_desc" | "date_asc";
 type ViewMode = "list" | "calendar";
 
-const CAL_HOURS = Array.from({ length: 16 }, (_, i) => i + 5);
+const CAL_HOURS = Array.from({ length: 24 }, (_, i) => i);
 
 function toISODate(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -159,26 +159,6 @@ export default function ConsultationsPage() {
         }
       />
 
-      {/* View toggle */}
-      <div className="flex justify-end mb-4">
-        <div className="flex gap-0 rounded-[9px] overflow-hidden shrink-0" style={{ border: `1px solid ${T.border}` }}>
-          {(["list", "calendar"] as const).map((mode) => (
-            <button
-              key={mode}
-              onClick={() => setViewMode(mode)}
-              className="px-4 py-1.5 text-[12px] font-medium transition-all cursor-pointer capitalize"
-              style={{
-                background: viewMode === mode ? T.accent : "transparent",
-                color: viewMode === mode ? T.accentInk : T.muted,
-              }}
-            >
-              {mode === "list" ? "List" : "Calendar"}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {viewMode === "list" && <>
       <div className="mb-4">
         <Tabs
           tabs={TABS.map((t) => ({
@@ -186,14 +166,44 @@ export default function ConsultationsPage() {
             count: MOCK_CONSULTATIONS.filter((c) => filterByTab(c, t.key)).length,
           }))}
           active={tab}
-          onChange={setTab}
+          onChange={(key) => { setTab(key); if (key !== "all") setViewMode("list"); }}
         />
       </div>
 
-      {/* Full-width search */}
-      <div className="mb-3">
-        <SearchFilter search={search} onSearchChange={setSearch} placeholder="Search customer, expert, consultation ID…" />
+      {/* Search / View toggle — fixed height row */}
+      <div className="flex items-center gap-3 mb-3 h-10">
+        <div className="flex-1 min-w-0">
+          {viewMode === "list" && (
+            <div className="w-1/2">
+              <SearchFilter search={search} onSearchChange={setSearch} placeholder="Search customer, expert, consultation ID…" />
+            </div>
+          )}
+        </div>
+        {tab === "all" && (
+          <div className="inline-flex rounded-[9px] overflow-hidden shrink-0" style={{ border: `1px solid ${T.border}` }}>
+            {(["list", "calendar"] as const).map((mode) => (
+              <button
+                key={mode}
+                onClick={() => setViewMode(mode)}
+                className="flex items-center gap-1.5 px-3 py-[6px] text-[12px] font-medium transition-all cursor-pointer"
+                style={{
+                  background: viewMode === mode ? T.accent : "transparent",
+                  color: viewMode === mode ? T.accentInk : T.muted,
+                }}
+              >
+                {mode === "list" ? (
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                ) : (
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 9h18"/></svg>
+                )}
+                {mode === "list" ? "List" : "Calendar"}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
+
+      {viewMode === "list" && <>
 
       {/* Filters & Sort */}
       <div className="flex flex-wrap items-center gap-2.5 mb-4">
@@ -379,7 +389,7 @@ export default function ConsultationsPage() {
             >
               {/* Consultation details */}
               <div className="min-w-0">
-                <span className="text-[11px] tracking-[0.06em] uppercase font-medium group-hover:underline" style={{ color: T.accent }}>{c.id}</span>
+                <span className="text-[11px] tracking-[0.06em] uppercase font-medium" style={{ color: T.accent }}>{c.id}</span>
                 <div className="text-[14px] mt-0.5 truncate" style={{ color: T.text }}>
                   {c.expertName}
                 </div>
@@ -437,7 +447,7 @@ export default function ConsultationsPage() {
       {/* ============ Calendar view ============ */}
       {viewMode === "calendar" && (
         <>
-          {/* Week navigation */}
+          {/* Week navigation + view toggle inline */}
           <div className="flex flex-wrap items-center gap-3 pb-3 mb-3" style={{ borderBottom: `1px solid ${T.border}` }}>
             <button onClick={prevWeek} className="w-9 h-9 rounded-[9px] flex items-center justify-center text-[14px] transition-colors hover:bg-[rgba(160,125,56,0.1)] cursor-pointer" style={{ color: T.muted, background: T.popover, border: `1px solid ${T.border}` }}>‹</button>
             <button onClick={nextWeek} className="w-9 h-9 rounded-[9px] flex items-center justify-center text-[14px] transition-colors hover:bg-[rgba(160,125,56,0.1)] cursor-pointer" style={{ color: T.muted, background: T.popover, border: `1px solid ${T.border}` }}>›</button>
@@ -484,34 +494,28 @@ export default function ConsultationsPage() {
             </div>
           </div>
 
-          {/* Info */}
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-1.5 h-1.5 rounded-full" style={{ background: T.accent }} />
-            <span className="text-[12px]" style={{ color: T.muted }}>Showing scheduled consultations only</span>
-          </div>
-
           {/* Calendar grid */}
           <Card className="overflow-hidden p-0">
             <div className="overflow-x-auto">
               <div style={{ minWidth: 800 }}>
                 {/* Day headers */}
                 <div className="grid sticky top-0 z-10" style={{ gridTemplateColumns: "60px repeat(7, 1fr)", background: T.card, borderBottom: `1px solid ${T.border}` }}>
-                  <div className="p-2" />
+                  <div className="py-1.5" />
                   {weekDays.map((day) => {
                     const iso = toISODate(day);
                     const isToday3 = iso === todayISO;
                     return (
-                      <div key={iso} className="text-center py-3 px-1" style={{ borderLeft: `1px solid ${T.borderSoft}` }}>
+                      <div key={iso} className="text-center py-2 px-1" style={{ borderLeft: `1px solid ${T.borderSoft}` }}>
                         <div className="text-[10px] tracking-[0.06em] uppercase" style={{ color: T.faint }}>{day.toLocaleDateString("en-IN", { weekday: "short" })}</div>
                         <div
-                          className="text-[18px] font-semibold mt-0.5 mx-auto"
+                          className="text-[15px] font-semibold mx-auto"
                           style={{
                             color: isToday3 ? T.accentInk : T.text,
                             background: isToday3 ? T.accent : "transparent",
                             borderRadius: isToday3 ? "50%" : undefined,
-                            width: isToday3 ? 34 : undefined,
-                            height: isToday3 ? 34 : undefined,
-                            lineHeight: isToday3 ? "34px" : undefined,
+                            width: isToday3 ? 28 : undefined,
+                            height: isToday3 ? 28 : undefined,
+                            lineHeight: isToday3 ? "28px" : undefined,
                           }}
                         >{day.getDate()}</div>
                       </div>
@@ -522,8 +526,8 @@ export default function ConsultationsPage() {
                 {/* Hour rows */}
                 <div className="max-h-[600px] overflow-y-auto">
                   {CAL_HOURS.map((hour) => (
-                    <div key={hour} className="grid" style={{ gridTemplateColumns: "60px repeat(7, 1fr)", minHeight: 60 }}>
-                      <div className="text-[10px] tabular-nums text-right pr-2 pt-1" style={{ color: T.faint, borderTop: `1px solid ${T.borderSoft}` }}>{formatHour(hour)}</div>
+                    <div key={hour} className="grid" style={{ gridTemplateColumns: "60px repeat(7, 1fr)", minHeight: 40 }}>
+                      <div className="text-[10px] tabular-nums text-right pr-2 pt-0.5" style={{ color: T.faint, borderTop: `1px solid ${T.borderSoft}` }}>{formatHour(hour)}</div>
                       {weekDays.map((day) => {
                         const iso = toISODate(day);
                         const events = (calEvents.get(iso) ?? []).filter((c) => new Date(c.scheduledAt).getHours() === hour);

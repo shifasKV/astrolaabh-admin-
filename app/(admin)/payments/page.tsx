@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, Tabs, SearchFilter, GoldBtn, Select } from "@/components/ui";
+import { PageHeader, Card, Chip, Tabs, SearchFilter, Select } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_PAYMENTS } from "@/lib/mock";
 import { inr } from "@/lib/types";
@@ -119,7 +119,7 @@ export default function PaymentsPage() {
       <PageHeader
         title="Payments"
         sub="Track all payment transactions across orders and consultations"
-        action={<Link href="/payments/create"><GoldBtn>+ New request</GoldBtn></Link>}
+        action={undefined}
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">

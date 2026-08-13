@@ -172,7 +172,7 @@ export default function ExpertRecommendationsPage() {
             );
           })
         )}
-        <Pagination page={page} totalPages={totalPages} totalItems={filtered.length} onPageChange={setPage} />
+        <Pagination page={page} totalPages={totalPages} totalItems={filtered.length} perPage={PAGE_SIZE} onPageChange={setPage} />
       </Card>
     </>
   );

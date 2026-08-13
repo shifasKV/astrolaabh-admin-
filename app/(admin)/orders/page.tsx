@@ -301,7 +301,7 @@ export default function OrdersPage() {
               {/* Order details — who, then what, then the reference */}
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-[14px] font-medium group-hover:underline" style={{ color: T.text }}>{o.customerName}</span>
+                  <span className="text-[14px] font-medium" style={{ color: T.text }}>{o.customerName}</span>
                   {o.paymentStatus === "pending" && <Chip tone="gold">Payment pending</Chip>}
                   {o.certificateStatus === "missing" && o.paymentStatus === "paid" && <Chip tone="danger">Cert missing</Chip>}
                   {o.energisationStatus === "pending" && o.paymentStatus === "paid" && <Chip tone="danger">Energ pending</Chip>}

@@ -125,7 +125,7 @@ export default function ConsultationDetailPage({ params }: { params: Promise<{ i
           <div className="grid grid-cols-3 gap-4 text-[13px] flex-1">
             <div>
               <div className="text-[11px] tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>Expert</div>
-              <div style={{ color: T.text }}>{consultation.expertName}</div>
+              <Link href={`/astro-gemologists/${consultation.expertId}`} className="hover:underline" style={{ color: T.accent }}>{consultation.expertName}</Link>
             </div>
             <div>
               <div className="text-[11px] tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>Date</div>
@@ -147,6 +147,17 @@ export default function ConsultationDetailPage({ params }: { params: Promise<{ i
           )}
         </div>
       </Card>
+
+      {/* Reschedule Request Section */}
+      {consultation.status === "reschedule_requested" && consultation.rescheduleReason && (
+        <div
+          className="rounded-[12px] p-5 mb-5"
+          style={{ background: "rgba(176,84,84,0.06)", border: `1px solid rgba(176,84,84,0.25)` }}
+        >
+          <div className="text-[11px] tracking-[0.08em] uppercase mb-2 font-medium" style={{ color: T.danger }}>Reschedule requested</div>
+          <p className="text-[13.5px]" style={{ color: T.text }}>{consultation.rescheduleReason}</p>
+        </div>
+      )}
 
       {/* Recommendation */}
       {(consultation.summary || recommendation || remedy) && (
@@ -291,22 +302,6 @@ export default function ConsultationDetailPage({ params }: { params: Promise<{ i
         </Card>
       )}
 
-      {/* Reschedule Request Section */}
-      {consultation.status === "reschedule_requested" && consultation.rescheduleReason && (
-        <div
-          className="rounded-[12px] p-5 mb-5"
-          style={{ background: "rgba(176,84,84,0.06)", border: `1px solid rgba(176,84,84,0.25)` }}
-        >
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <div className="text-[11px] tracking-[0.08em] uppercase mb-2 font-medium" style={{ color: T.danger }}>Reschedule requested</div>
-              <p className="text-[13.5px]" style={{ color: T.text }}>{consultation.rescheduleReason}</p>
-            </div>
-            <GoldBtn onClick={openRescheduleModal}>Accept & reschedule</GoldBtn>
-          </div>
-        </div>
-      )}
-
       <div className="grid md:grid-cols-2 gap-4 mb-4">
         {/* Customer context — clickable to customer page */}
         {customer ? (
@@ -339,13 +334,14 @@ export default function ConsultationDetailPage({ params }: { params: Promise<{ i
           </Card>
         )}
 
-        {/* Consultation details */}
-        <Card>
-          <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.faint }}>Consultation details</div>
+        {/* Payment details */}
+        <div
+          className="card-interactive rounded-[12px] p-5 h-full cursor-pointer"
+          style={{ background: T.card, border: `1px solid ${T.border}` }}
+        >
+          <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.faint }}>Payment details</div>
           <div className="space-y-2 text-[13px]">
             {[
-              ["Type", consultation.type.replace(/_/g, " ")],
-              ["Expert", consultation.expertName],
               ["Scheduled", new Date(consultation.scheduledAt).toLocaleString("en-IN")],
               ["Fee", consultation.fee ? `₹${consultation.fee.toLocaleString("en-IN")}` : "—"],
               ["Payment", consultation.paymentStatus === "paid" ? "Paid" : "Pending"],
@@ -357,7 +353,7 @@ export default function ConsultationDetailPage({ params }: { params: Promise<{ i
               </div>
             ))}
           </div>
-        </Card>
+        </div>
       </div>
 
       {/* Send Payment Link Confirmation */}

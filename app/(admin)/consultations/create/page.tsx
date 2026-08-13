@@ -1,17 +1,10 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { PageHeader, Card, GoldBtn, GhostBtn, SearchFilter, Input, Select, Textarea, StepIndicator } from "@/components/ui";
+import { PageHeader, Card, GoldBtn, GhostBtn, SearchFilter, Input, Textarea, StepIndicator } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_CUSTOMERS, EXPERT_PROFILES, getExpertDates, getExpertSlots } from "@/lib/mock";
 import type { ExpertProfile, TimeSlot } from "@/lib/mock";
-
-const TYPES = [
-  { value: "initial", label: "Initial consultation" },
-  { value: "follow_up", label: "Follow-up" },
-  { value: "stone_selection", label: "Stone selection" },
-  { value: "remedy_review", label: "Remedy review" },
-];
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const DAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
@@ -38,7 +31,6 @@ export default function CreateConsultationPage() {
   const [createdCustomer, setCreatedCustomer] = useState<{ id: string; name: string; email: string; phone: string } | null>(null);
 
   // Details
-  const [type, setType] = useState("initial");
   const [problem, setProblem] = useState("");
 
   // Schedule
@@ -154,10 +146,8 @@ export default function CreateConsultationPage() {
         {/* STEP: Customer */}
         {step === "customer" && (
           <Card>
-            <div className="flex items-center justify-between mb-3">
-              <div className="text-[11px] tracking-[0.08em] uppercase" style={{ color: T.faint }}>
-                {showNewCustomer ? "Add customer" : "Select customer"}
-              </div>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-[15px] font-semibold" style={{ color: T.text }}>Customer Details</h3>
               <button
                 onClick={() => setShowNewCustomer((v) => !v)}
                 className="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-[8px] text-[12px] font-medium cursor-pointer transition-all hover:brightness-110 active:scale-[0.97]"
@@ -177,65 +167,58 @@ export default function CreateConsultationPage() {
             </div>
 
             {showNewCustomer ? (
-              <div className="space-y-5">
-                {/* Contact */}
-                <div>
-                  <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.accent }}>Contact</div>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <Input
-                      value={newCustomer.name}
-                      onChange={(v) => setNewCustomer((p) => ({ ...p, name: v }))}
-                      label="Name"
-                      placeholder="e.g. Priya Sharma"
-                    />
-                    <Input
-                      value={newCustomer.phone}
-                      onChange={(v) => setNewCustomer((p) => ({ ...p, phone: v }))}
-                      label="Phone / WhatsApp"
-                      placeholder="e.g. +91 98765 43210"
-                    />
-                    <Input
-                      value={newCustomer.email}
-                      onChange={(v) => setNewCustomer((p) => ({ ...p, email: v }))}
-                      label="Email"
-                      placeholder="e.g. priya@example.com"
-                    />
-                  </div>
-                </div>
-
-                {/* Birth details */}
-                <div>
-                  <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.accent }}>Birth details — the chart on file</div>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <Input
-                      value={newCustomer.birthDate}
-                      onChange={(v) => setNewCustomer((p) => ({ ...p, birthDate: v }))}
-                      label="Birth date"
-                      placeholder="e.g. 15 Mar 1992"
-                    />
-                    <Input
-                      value={newCustomer.birthTime}
-                      onChange={(v) => setNewCustomer((p) => ({ ...p, birthTime: v }))}
-                      label="Birth time"
-                      placeholder="e.g. 10:30 AM"
-                    />
-                    <Input
-                      value={newCustomer.birthPlace}
-                      onChange={(v) => setNewCustomer((p) => ({ ...p, birthPlace: v }))}
-                      label="Birth place"
-                      placeholder="e.g. Kochi, Kerala"
-                    />
-                  </div>
-                </div>
-
-                <div className="max-w-lg space-y-3 mt-3">
-                  <Select value={type} onChange={setType} label="Consultation type" options={TYPES} />
-                  <Textarea
-                    value={problem}
-                    onChange={setProblem}
-                    label="Problem statement / reason"
-                    placeholder="Brief description of what the customer needs…"
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <Input
+                    value={newCustomer.name}
+                    onChange={(v) => setNewCustomer((p) => ({ ...p, name: v }))}
+                    label="Name"
+                    placeholder="e.g. Priya Sharma"
                   />
+                  <Input
+                    value={newCustomer.phone}
+                    onChange={(v) => setNewCustomer((p) => ({ ...p, phone: v }))}
+                    label="Phone / WhatsApp"
+                    placeholder="e.g. +91 98765 43210"
+                  />
+                  <Input
+                    value={newCustomer.email}
+                    onChange={(v) => setNewCustomer((p) => ({ ...p, email: v }))}
+                    label="Email"
+                    placeholder="e.g. priya@example.com"
+                  />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <Input
+                    value={newCustomer.birthDate}
+                    onChange={(v) => setNewCustomer((p) => ({ ...p, birthDate: v }))}
+                    label="Birth date"
+                    placeholder="e.g. 15 Mar 1992"
+                  />
+                  <Input
+                    value={newCustomer.birthTime}
+                    onChange={(v) => setNewCustomer((p) => ({ ...p, birthTime: v }))}
+                    label="Birth time"
+                    placeholder="e.g. 10:30 AM"
+                  />
+                  <Input
+                    value={newCustomer.birthPlace}
+                    onChange={(v) => setNewCustomer((p) => ({ ...p, birthPlace: v }))}
+                    label="Birth place"
+                    placeholder="e.g. Kochi, Kerala"
+                  />
+                </div>
+
+                <div className="pt-4 mt-2" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+                  <h3 className="text-[15px] font-semibold mb-3" style={{ color: T.text }}>Problem Statement</h3>
+                  <div className="max-w-lg">
+                    <Textarea
+                      value={problem}
+                      onChange={setProblem}
+                      label="Problem statement / reason"
+                      placeholder="Brief description of what the customer needs…"
+                    />
+                  </div>
                 </div>
                 <div className="flex gap-2.5 pt-2">
                   <GoldBtn onClick={handleCreateCustomer}>Create & continue</GoldBtn>
@@ -278,14 +261,16 @@ export default function CreateConsultationPage() {
                   ))}
                 </div>
                 {customerId && (
-                  <div className="max-w-lg space-y-3 mt-4 pt-3" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
-                    <Select value={type} onChange={setType} label="Consultation type" options={TYPES} />
-                    <Textarea
-                      value={problem}
-                      onChange={setProblem}
-                      label="Problem statement / reason"
-                      placeholder="Brief description of what the customer needs…"
-                    />
+                  <div className="mt-4 pt-4" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+                    <h3 className="text-[15px] font-semibold mb-3" style={{ color: T.text }}>Problem Statement</h3>
+                    <div className="max-w-lg">
+                      <Textarea
+                        value={problem}
+                        onChange={setProblem}
+                        label="Problem statement / reason"
+                        placeholder="Brief description of what the customer needs…"
+                      />
+                    </div>
                   </div>
                 )}
               </>
@@ -309,7 +294,19 @@ export default function CreateConsultationPage() {
                   <button
                     key={ep.id}
                     type="button"
-                    onClick={() => { setSelectedExpert(ep); setSelectedDate(""); setSelectedSlot(""); }}
+                    onClick={() => {
+                      setSelectedExpert(ep);
+                      setSelectedSlot("");
+                      const dates = getExpertDates(ep.id);
+                      if (dates.length > 0) {
+                        setSelectedDate(dates[0]);
+                        const d = new Date(dates[0]);
+                        setViewYear(d.getFullYear());
+                        setViewMonth(d.getMonth());
+                      } else {
+                        setSelectedDate("");
+                      }
+                    }}
                     className="text-left rounded-[12px] p-4 transition-all hover:scale-[1.02] cursor-pointer"
                     style={{
                       background: T.card,
@@ -440,7 +437,6 @@ export default function CreateConsultationPage() {
             <div className="space-y-3 text-[13.5px]">
               {[
                 ["Customer", customerName],
-                ["Type", TYPES.find((t) => t.value === type)?.label ?? type],
                 ["Expert", selectedExpert.name],
                 ["Date", selectedDate ? new Date(selectedDate).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" }) : ""],
                 ["Time", selectedSlot],

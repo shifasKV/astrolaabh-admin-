@@ -32,7 +32,7 @@ export function StatCard({ label, value, sub, trend, onClick }: StatCardProps) {
   return (
     <Wrapper
       onClick={onClick}
-      className={`rounded-[12px] p-5 text-left transition-all duration-300 ${onClick ? "cursor-pointer hover:-translate-y-[2px] hover:border-[rgba(160,125,56,0.35)] hover:shadow-[0_2px_6px_rgba(43,42,34,0.05),0_16px_32px_-16px_rgba(43,42,34,0.18)]" : ""}`}
+      className={`rounded-[12px] p-5 text-left transition-all duration-300 ${onClick ? "card-interactive cursor-pointer hover:-translate-y-[2px] hover:border-[rgba(160,125,56,0.35)] hover:shadow-[0_2px_6px_rgba(43,42,34,0.05),0_16px_32px_-16px_rgba(43,42,34,0.18)]" : ""}`}
       style={{ background: T.card, border: `1px solid ${T.border}`, boxShadow: T.shadow }}
     >
       <div className="text-[11px] font-medium tracking-[0.09em] uppercase" style={{ color: T.faint }}>

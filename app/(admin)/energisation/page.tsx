@@ -15,7 +15,7 @@ const TABS = [
 type SortKey = "newest" | "oldest" | "order_desc" | "order_asc";
 type ViewMode = "list" | "calendar";
 
-const HOURS = Array.from({ length: 16 }, (_, i) => i + 5); // 5 AM to 8 PM
+const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
 function toISODate(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -133,26 +133,6 @@ export default function EnergisationPage() {
         sub="Track preparation and completion of gemstone energisation rituals"
       />
 
-      {/* View toggle */}
-      <div className="flex justify-end mb-4">
-        <div className="flex gap-0 rounded-[9px] overflow-hidden shrink-0" style={{ border: `1px solid ${T.border}` }}>
-          {(["list", "calendar"] as const).map((mode) => (
-            <button
-              key={mode}
-              onClick={() => setViewMode(mode)}
-              className="px-4 py-1.5 text-[12px] font-medium transition-all cursor-pointer capitalize"
-              style={{
-                background: viewMode === mode ? T.accent : "transparent",
-                color: viewMode === mode ? T.accentInk : T.muted,
-              }}
-            >
-              {mode === "list" ? "List" : "Calendar"}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {viewMode === "list" && <>
       <div className="mb-4">
         <Tabs
           tabs={TABS.map((t) => ({
@@ -165,14 +145,49 @@ export default function EnergisationPage() {
             ).length,
           }))}
           active={tab}
-          onChange={setTab}
+          onChange={(key) => { setTab(key); if (key !== "all") setViewMode("list"); }}
         />
       </div>
 
-      {/* Full-width search */}
-      <div className="mb-3">
-        <SearchFilter search={search} onSearchChange={setSearch} placeholder="Search customer, order, stone…" />
+      {/* Search / Info + View toggle — fixed height row */}
+      <div className="flex items-center gap-3 mb-3 h-10">
+        <div className="flex-1 min-w-0">
+          {viewMode === "list" ? (
+            <div className="w-1/2">
+              <SearchFilter search={search} onSearchChange={setSearch} placeholder="Search customer, order, stone…" />
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: T.accent }} />
+              <span className="text-[12px]" style={{ color: T.muted }}>Showing scheduled energisation rituals only</span>
+            </div>
+          )}
+        </div>
+        {tab === "all" && (
+          <div className="inline-flex rounded-[9px] overflow-hidden shrink-0" style={{ border: `1px solid ${T.border}` }}>
+            {(["list", "calendar"] as const).map((mode) => (
+              <button
+                key={mode}
+                onClick={() => setViewMode(mode)}
+                className="flex items-center gap-1.5 px-3 py-[6px] text-[12px] font-medium transition-all cursor-pointer"
+                style={{
+                  background: viewMode === mode ? T.accent : "transparent",
+                  color: viewMode === mode ? T.accentInk : T.muted,
+                }}
+              >
+                {mode === "list" ? (
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                ) : (
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 9h18"/></svg>
+                )}
+                {mode === "list" ? "List" : "Calendar"}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
+
+      {viewMode === "list" && <>
 
       {/* Filters & Sort */}
       <div className="flex flex-wrap items-center gap-2.5 mb-4">
@@ -330,7 +345,7 @@ export default function EnergisationPage() {
               {/* Energisation details */}
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-[14px] font-medium group-hover:underline" style={{ color: T.text }}>{e.customerName}</span>
+                  <span className="text-[14px] font-medium" style={{ color: T.text }}>{e.customerName}</span>
                   {!e.liveLink && e.status === "scheduled" && <Chip tone="danger">Link pending</Chip>}
                 </div>
                 <div className="flex items-baseline gap-3 mt-0.5 min-w-0">
@@ -415,7 +430,6 @@ export default function EnergisationPage() {
               Today
             </button>
 
-            {/* Clickable date range → opens calendar picker */}
             <div className="relative ml-1">
               <button
                 onClick={() => { setGoToDateOpen((o) => !o); setGtdYear(calWeekBase.getFullYear()); setGtdMonth(calWeekBase.getMonth()); }}
@@ -469,40 +483,34 @@ export default function EnergisationPage() {
             </div>
           </div>
 
-          {/* Info bar */}
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-1.5 h-1.5 rounded-full" style={{ background: T.accent }} />
-            <span className="text-[12px]" style={{ color: T.muted }}>Showing scheduled energisation rituals only</span>
-          </div>
-
           {/* Calendar grid */}
           <Card className="overflow-hidden p-0">
             <div className="overflow-x-auto">
               <div style={{ minWidth: 800 }}>
                 {/* Day headers */}
                 <div className="grid sticky top-0 z-10" style={{ gridTemplateColumns: "60px repeat(7, 1fr)", background: T.card, borderBottom: `1px solid ${T.border}` }}>
-                  <div className="p-2" />
+                  <div className="py-1.5" />
                   {weekDays.map((day) => {
                     const iso = toISODate(day);
                     const isToday = iso === todayISO;
                     return (
                       <div
                         key={iso}
-                        className="text-center py-3 px-1"
+                        className="text-center py-2 px-1"
                         style={{ borderLeft: `1px solid ${T.borderSoft}` }}
                       >
                         <div className="text-[10px] tracking-[0.06em] uppercase" style={{ color: T.faint }}>
                           {day.toLocaleDateString("en-IN", { weekday: "short" })}
                         </div>
                         <div
-                          className="text-[18px] font-semibold mt-0.5 mx-auto"
+                          className="text-[15px] font-semibold mx-auto"
                           style={{
                             color: isToday ? T.accentInk : T.text,
                             background: isToday ? T.accent : "transparent",
                             borderRadius: isToday ? "50%" : undefined,
-                            width: isToday ? 34 : undefined,
-                            height: isToday ? 34 : undefined,
-                            lineHeight: isToday ? "34px" : undefined,
+                            width: isToday ? 28 : undefined,
+                            height: isToday ? 28 : undefined,
+                            lineHeight: isToday ? "28px" : undefined,
                           }}
                         >
                           {day.getDate()}
@@ -518,10 +526,10 @@ export default function EnergisationPage() {
                     <div
                       key={hour}
                       className="grid"
-                      style={{ gridTemplateColumns: "60px repeat(7, 1fr)", minHeight: 60 }}
+                      style={{ gridTemplateColumns: "60px repeat(7, 1fr)", minHeight: 40 }}
                     >
                       <div
-                        className="text-[10px] tabular-nums text-right pr-2 pt-1"
+                        className="text-[10px] tabular-nums text-right pr-2 pt-0.5"
                         style={{ color: T.faint, borderTop: `1px solid ${T.borderSoft}` }}
                       >
                         {formatHour(hour)}
