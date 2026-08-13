@@ -26,6 +26,7 @@ const ICONS = {
   recommendation: <><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8l-6.2 4.5 2.4-7.4L2 9.4h7.6z" strokeWidth="1.5" strokeLinejoin="round" /></>,
   activity: <><path d="M22 12h-4l-3 9L9 3l-3 9H2" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></>,
   astroGemologist: <><circle cx="12" cy="12" r="4" strokeWidth="1.5" /><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" strokeWidth="1.5" strokeLinecap="round" /></>,
+  sales: <><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" strokeWidth="1.5" /><circle cx="9" cy="7" r="4" strokeWidth="1.5" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" strokeWidth="1.5" strokeLinecap="round" /><path d="M16 3.13a4 4 0 0 1 0 7.75" strokeWidth="1.5" strokeLinecap="round" /></>,
 };
 
 export const ADMIN_NAV: NavGroup[] = [
@@ -50,6 +51,7 @@ export const ADMIN_NAV: NavGroup[] = [
     label: "People",
     items: [
       { key: "astro-gemologists", label: "Astro-Gemologists", href: "/astro-gemologists", icon: ICONS.astroGemologist },
+      { key: "sales", label: "Sales", href: "/sales", icon: ICONS.sales },
       { key: "affiliates", label: "Affiliates", href: "/affiliates", icon: ICONS.affiliates },
       { key: "customers", label: "Customers", href: "/customers", icon: ICONS.customers },
     ],

@@ -527,24 +527,26 @@ export default function OrdersPage() {
             </div>
 
             <Card>
-              <div className="hidden sm:grid grid-cols-[1fr_1fr_110px_120px_110px] gap-3 px-3 py-2 text-[11px] tracking-[0.06em] uppercase" style={{ color: T.faint, borderBottom: `1px solid ${T.borderSoft}` }}>
+              <div className="hidden sm:grid grid-cols-[1fr_1fr_100px_120px_100px_110px] gap-3 px-3 py-2 text-[11px] tracking-[0.06em] uppercase" style={{ color: T.faint, borderBottom: `1px solid ${T.borderSoft}` }}>
                 <span>Customer</span>
                 <span>Stone / Item</span>
                 <span>Date</span>
                 <span>Status</span>
+                <span>Assignee</span>
                 <span className="text-right">Amount</span>
               </div>
               {incFiltered.length === 0 ? (
                 <p className="text-[13.5px] py-6 text-center" style={{ color: T.muted }}>No incomplete orders found.</p>
               ) : (
                 incFiltered.map((o) => (
-                  <div
+                  <Link
                     key={o.id}
-                    className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_110px_120px_110px] gap-2 sm:gap-3 items-center px-3 py-3.5 transition-all duration-150 rounded-[8px] hover:bg-[rgba(160,125,56,0.07)]"
+                    href={`/orders/incomplete/${o.id}`}
+                    className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_100px_120px_100px_110px] gap-2 sm:gap-3 items-center px-3 py-3.5 transition-all duration-150 rounded-[8px] hover:bg-[rgba(160,125,56,0.07)]"
                     style={{ borderBottom: `1px solid ${T.borderSoft}` }}
                   >
                     <div className="min-w-0">
-                      <Link href={`/customers/${o.customerId}`} className="text-[14px] font-medium hover:underline" style={{ color: T.text }}>{o.customerName}</Link>
+                      <span className="text-[14px] font-medium" style={{ color: T.text }}>{o.customerName}</span>
                     </div>
                     <div className="min-w-0">
                       <span className="text-[13px] truncate block" style={{ color: T.muted }}>{o.itemName}</span>
@@ -555,10 +557,13 @@ export default function OrdersPage() {
                     <div>
                       <Chip tone={INCOMPLETE_REASON_TONE[o.reason] || "muted"}>{INCOMPLETE_REASON_LABEL[o.reason] || o.reason}</Chip>
                     </div>
+                    <div className="min-w-0">
+                      <span className="text-[12px]" style={{ color: T.faint }}>—</span>
+                    </div>
                     <div className="text-right">
                       <span className="text-[14px] font-semibold tabular-nums" style={{ color: T.text }}>{inr(o.amount)}</span>
                     </div>
-                  </div>
+                  </Link>
                 ))
               )}
             </Card>

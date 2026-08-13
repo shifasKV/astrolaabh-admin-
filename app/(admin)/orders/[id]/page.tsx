@@ -46,6 +46,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const [localItemStatuses, setLocalItemStatuses] = useState<Record<string, string>>({});
   const [localVendorNames, setLocalVendorNames] = useState<Record<string, string>>({});
   const [localVendorOrderIds, setLocalVendorOrderIds] = useState<Record<string, string>>({});
+  const [localRemarks, setLocalRemarks] = useState<Record<string, string>>({});
   const [localEnergStatus, setLocalEnergStatus] = useState(order?.energisationStatus ?? "pending");
   const [localCertStatus, setLocalCertStatus] = useState<string>(order?.certificateStatus ?? "missing");
   const [localTracking, setLocalTracking] = useState(order?.tracking ?? "");
@@ -362,11 +363,12 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
           {displayStep === 0 && (
             <div>
               {/* Header row */}
-              <div className="hidden sm:grid grid-cols-[1fr_140px_150px_130px_60px] gap-3 px-3 py-2 text-[10px] tracking-[0.06em] uppercase font-semibold rounded-[6px] mb-1" style={{ color: T.muted, background: "rgba(89,82,54,0.04)" }}>
+              <div className="hidden sm:grid grid-cols-[minmax(160px,1fr)_130px_130px_120px_150px_50px] gap-3 px-3 py-2 text-[10px] tracking-[0.06em] uppercase font-semibold rounded-[6px] mb-1" style={{ color: T.muted, background: "rgba(89,82,54,0.04)" }}>
                 <span>Item</span>
                 <span>Vendor</span>
                 <span>Vendor order</span>
                 <span>Status</span>
+                <span>Remarks</span>
                 <span className="text-center">Received</span>
               </div>
 
@@ -377,7 +379,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                 const vendorOrderId = localVendorOrderIds[item.sku] ?? item.vendorOrderId ?? "";
 
                 return (
-                  <div key={item.sku} className="grid grid-cols-1 sm:grid-cols-[1fr_140px_150px_130px_60px] gap-2 sm:gap-3 items-center px-3 py-3" style={{ borderBottom: i < order.items.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}>
+                  <div key={item.sku} className="grid grid-cols-1 sm:grid-cols-[minmax(160px,1fr)_130px_130px_120px_150px_50px] gap-2 sm:gap-3 items-center px-3 py-3" style={{ borderBottom: i < order.items.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}>
                     <div className="min-w-0">
                       <div className="text-[13px] font-medium truncate" style={{ color: T.text }}>{item.name}</div>
                       <div className="text-[11px] mt-0.5" style={{ color: T.faint }}>{item.sku} {item.caratWeight && `· ${item.caratWeight}`}</div>
@@ -433,6 +435,20 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                         <Chip tone={itemStatusTone(status)}>{itemStatusLabel(status)}</Chip>
                       )}
                     </div>
+                    <div>
+                      {isPaid ? (
+                        <input
+                          type="text"
+                          value={localRemarks[item.sku] ?? ""}
+                          onChange={(e) => setLocalRemarks((prev) => ({ ...prev, [item.sku]: e.target.value }))}
+                          placeholder="Add remarks"
+                          className="w-full h-7 px-2 rounded-[6px] text-[11px] outline-none truncate"
+                          style={{ background: T.card, border: `1px solid ${T.borderSoft}`, color: T.text }}
+                        />
+                      ) : (
+                        <div className="text-[12px] truncate" style={{ color: T.muted }}>{localRemarks[item.sku] || "—"}</div>
+                      )}
+                    </div>
                     <div className="flex justify-center">
                       {isPaid && (
                         <button
@@ -482,25 +498,43 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                   className="block rounded-[9px] p-4 transition-all duration-150 hover:brightness-[0.97] hover:shadow-md cursor-pointer group"
                   style={{ background: T.card, border: `1px solid ${T.borderSoft}` }}
                 >
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-[13.5px] font-semibold group-hover:underline" style={{ color: T.accent }}>{tier.name}</span>
                         <span className="text-[11px]" style={{ color: T.faint }}>{tier.sanskrit}</span>
-                      </div>
-                      <div className="text-[12px]" style={{ color: T.muted }}>{tier.duration}</div>
-                    </div>
-                    <div className="flex items-center gap-4 shrink-0">
-                      <div className="text-right">
                         <Chip tone={localEnergStatus === "completed" ? "good" : localEnergStatus === "scheduled" || localEnergStatus === "in_progress" ? "gold" : "muted"}>
                           {localEnergStatus === "completed" ? "Completed" : localEnergStatus === "scheduled" || localEnergStatus === "in_progress" ? "Scheduled" : "Not scheduled"}
                         </Chip>
-                        {tier.fee > 0 && (
-                          <div className="text-[12px] font-medium tabular-nums mt-1" style={{ color: T.text }}>
-                            {inr(tier.fee)}
-                          </div>
+                      </div>
+                      <div className="flex items-center gap-3 text-[12px]" style={{ color: T.muted }}>
+                        <span>{tier.duration}</span>
+                        {energisation?.scheduledAt && (
+                          <>
+                            <span style={{ color: T.faint }}>·</span>
+                            <span className="tabular-nums">
+                              {new Date(energisation.scheduledAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                            </span>
+                            <span style={{ color: T.faint }}>·</span>
+                            <span className="tabular-nums">
+                              {new Date(energisation.scheduledAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })}
+                            </span>
+                          </>
+                        )}
+                        {energisation?.assignedTo && (
+                          <>
+                            <span style={{ color: T.faint }}>·</span>
+                            <span>{energisation.assignedTo}</span>
+                          </>
                         )}
                       </div>
+                      {tier.fee > 0 && (
+                        <div className="text-[12px] font-medium tabular-nums mt-1" style={{ color: T.text }}>
+                          {inr(tier.fee)}
+                        </div>
+                      )}
+                    </div>
+                    <div className="shrink-0">
                       {localEnergStatus !== "completed" && localEnergStatus !== "scheduled" && localEnergStatus !== "in_progress" && (
                         <span onClick={(e) => e.preventDefault()}>
                           <GoldBtn onClick={() => setShowSchedule(true)}>Schedule</GoldBtn>

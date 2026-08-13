@@ -628,26 +628,28 @@ export default function ConsultationsPage() {
               </div>
             </div>
             <Card>
-              <div className="hidden sm:grid grid-cols-[1fr_1fr_110px_130px] gap-3 px-3 py-2 text-[11px] tracking-[0.06em] uppercase" style={{ color: T.faint, borderBottom: `1px solid ${T.borderSoft}` }}>
+              <div className="hidden sm:grid grid-cols-[1fr_1fr_100px_130px_100px] gap-3 px-3 py-2 text-[11px] tracking-[0.06em] uppercase" style={{ color: T.faint, borderBottom: `1px solid ${T.borderSoft}` }}>
                 <span>Customer</span>
                 <span>Astrologer</span>
                 <span>Date</span>
                 <span>Status</span>
+                <span>Assignee</span>
               </div>
               {incFiltered.length === 0 ? (
                 <p className="text-[13.5px] py-6 text-center" style={{ color: T.muted }}>No incomplete bookings found.</p>
               ) : (
                 incFiltered.map((c) => (
-                  <div
+                  <Link
                     key={c.id}
-                    className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_110px_130px] gap-2 sm:gap-3 items-center px-3 py-3.5 transition-all duration-150 rounded-[8px] hover:bg-[rgba(160,125,56,0.07)]"
+                    href={`/consultations/incomplete/${c.id}`}
+                    className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_100px_130px_100px] gap-2 sm:gap-3 items-center px-3 py-3.5 transition-all duration-150 rounded-[8px] hover:bg-[rgba(160,125,56,0.07)]"
                     style={{ borderBottom: `1px solid ${T.borderSoft}` }}
                   >
                     <div className="min-w-0">
-                      <Link href={`/customers/${c.customerId}`} className="text-[14px] font-medium hover:underline" style={{ color: T.text }}>{c.customerName}</Link>
+                      <span className="text-[14px] font-medium" style={{ color: T.text }}>{c.customerName}</span>
                     </div>
                     <div className="min-w-0">
-                      <Link href={`/astro-gemologists/${c.expertId}`} className="text-[13px] hover:underline" style={{ color: T.accent }}>{c.expertName}</Link>
+                      <span className="text-[13px]" style={{ color: T.accent }}>{c.expertName}</span>
                     </div>
                     <div className="min-w-0">
                       <span className="text-[12px]" style={{ color: T.text }}>{new Date(c.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</span>
@@ -655,7 +657,10 @@ export default function ConsultationsPage() {
                     <div>
                       <Chip tone={INC_REASON_TONE[c.reason] || "muted"}>{INC_REASON_LABEL[c.reason] || c.reason}</Chip>
                     </div>
-                  </div>
+                    <div className="min-w-0">
+                      <span className="text-[12px]" style={{ color: T.faint }}>—</span>
+                    </div>
+                  </Link>
                 ))
               )}
             </Card>

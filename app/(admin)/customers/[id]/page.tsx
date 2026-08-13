@@ -278,7 +278,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
                 {incompleteOrders.slice((incOrdersPage - 1) * PER_PAGE, incOrdersPage * PER_PAGE).map((o, i, arr) => (
                   <Link
                     key={o.id}
-                    href={`/inventory?q=${encodeURIComponent(o.itemName.split("—")[0].trim())}`}
+                    href={`/orders/incomplete/${o.id}`}
                     className="flex items-center justify-between gap-4 py-3 row-interactive rounded-[9px] px-2 -mx-2"
                     style={{ borderBottom: i < arr.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
                   >
@@ -297,8 +297,8 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
                       </div>
                     </div>
                     <div className="flex items-center gap-3 shrink-0">
-                      <Chip tone={o.reason === "abandoned_cart" ? "gold" : "danger"}>
-                        {o.reason === "payment_failed" ? "Payment failed" : o.reason === "abandoned_cart" ? "Abandoned cart" : o.reason === "payment_expired" ? "Payment expired" : "Card declined"}
+                      <Chip tone={o.reason === "abandoned_cart" || o.reason === "requested_call" ? "gold" : "danger"}>
+                        {o.reason === "payment_failed" ? "Payment failed" : o.reason === "abandoned_cart" ? "Abandoned cart" : o.reason === "payment_expired" ? "Payment expired" : o.reason === "requested_call" ? "Requested call" : "Card declined"}
                       </Chip>
                       <span className="text-[13.5px] font-semibold tabular-nums w-[90px] text-right" style={{ color: T.text }}>{inr(o.amount)}</span>
                       <span style={{ color: T.faint }}>→</span>
@@ -318,9 +318,10 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
             ) : (
               <>
                 {incompleteConsultations.slice((incConsPage - 1) * PER_PAGE, incConsPage * PER_PAGE).map((c, i, arr) => (
-                  <div
+                  <Link
                     key={c.id}
-                    className="flex items-center justify-between gap-4 py-3 px-2 -mx-2"
+                    href={`/consultations/incomplete/${c.id}`}
+                    className="flex items-center justify-between gap-4 py-3 px-2 -mx-2 row-interactive rounded-[9px]"
                     style={{ borderBottom: i < arr.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
                   >
                     <div className="min-w-0 flex-1">
@@ -335,8 +336,9 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
                       <Chip tone={c.reason === "payment_failed" ? "danger" : c.reason === "requested_call" ? "gold" : "muted"}>
                         {c.reason === "slot_check" ? "Slot check" : c.reason === "payment_failed" ? "Payment failed" : "Requested call"}
                       </Chip>
+                      <span style={{ color: T.faint }}>→</span>
                     </div>
-                  </div>
+                  </Link>
                 ))}
                 {incompleteConsultations.length > PER_PAGE && (
                   <div className="mt-3">
