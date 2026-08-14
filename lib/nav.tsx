@@ -77,6 +77,17 @@ export const EXPERT_NAV: NavGroup[] = [
   },
 ];
 
+export const SALES_NAV: NavGroup[] = [
+  {
+    label: "Leads",
+    items: [
+      { key: "dashboard", label: "Dashboard", href: "/sales-dashboard", icon: ICONS.dashboard },
+      { key: "stone-leads", label: "Stone Leads", href: "/stone-leads", icon: ICONS.stones },
+      { key: "consultation-leads", label: "Consultation Leads", href: "/consultation-leads", icon: ICONS.consultations },
+    ],
+  },
+];
+
 export const AFFILIATE_NAV: NavGroup[] = [
   {
     label: "Performance",

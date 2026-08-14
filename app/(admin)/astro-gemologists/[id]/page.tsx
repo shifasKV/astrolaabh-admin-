@@ -2,7 +2,7 @@
 import { useCallback, useMemo, useState, useRef, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Card, Chip, StatCard, GhostBtn, GoldBtn, SectionLink, BackLink, Tabs, SearchFilter, Pagination, Select } from "@/components/ui";
+import { Card, Chip, StatCard, GhostBtn, GoldBtn, SectionLink, BackLink, Tabs, SearchFilter, Pagination, Select, Modal, Input } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { EXPERT_PROFILES, EXPERT_AVAILABILITY, MOCK_CONSULTATIONS, MOCK_STONE_RECOMMENDATIONS, MOCK_ORDERS, MOCK_PAYMENTS } from "@/lib/mock";
 import { inr } from "@/lib/types";
@@ -17,6 +17,7 @@ const DETAIL_TABS = [
   { key: "summary_due", label: "Recommendation due" },
   { key: "no_show", label: "No show" },
   { key: "recommendations", label: "Recommendations" },
+  { key: "payments", label: "Payments" },
 ];
 
 const CAL_HOURS = Array.from({ length: 24 }, (_, i) => i);
@@ -102,6 +103,8 @@ export default function AstroGemologistDetailPage() {
   const [commissionEditing, setCommissionEditing] = useState(false);
   const [commissionToast, setCommissionToast] = useState("");
   const [commissionRates, setCommissionRates] = useState({ stone: "8", jewellery: "6", consultation: "15" });
+  const [showPayoutModal, setShowPayoutModal] = useState(false);
+  const [payoutForm, setPayoutForm] = useState({ amount: "", notes: "" });
 
   useEffect(() => {
     if (!showMenu) return;
@@ -143,6 +146,11 @@ export default function AstroGemologistDetailPage() {
   const [recFilterStone, setRecFilterStone] = useState("");
   const [recFilterStatus, setRecFilterStatus] = useState("");
   const [recPage, setRecPage] = useState(0);
+
+  // Payments state
+  const [paySearch, setPaySearch] = useState("");
+  const [paySort, setPaySort] = useState<SortKey>("date_desc");
+  const [payPage, setPayPage] = useState(0);
 
   // Calendar state
   const [calWeekBase, setCalWeekBase] = useState(() => new Date());
@@ -237,12 +245,31 @@ export default function AstroGemologistDetailPage() {
   const recTotalPages = Math.ceil(recFiltered.length / PAGE_SIZE);
   const recPaginated = recFiltered.slice(recPage * PAGE_SIZE, (recPage + 1) * PAGE_SIZE);
 
+  // Payments filtered — payments linked to this expert's consultations
+  const expertConsIds = new Set(consultations.map((c) => c.id));
+  const expertPayments = MOCK_PAYMENTS.filter((p) => p.linkedAppointmentId && expertConsIds.has(p.linkedAppointmentId));
+  const payFiltered = expertPayments
+    .filter((p) => {
+      if (!paySearch) return true;
+      const q = paySearch.toLowerCase();
+      return p.customerName.toLowerCase().includes(q) || p.id.toLowerCase().includes(q) || p.purpose.toLowerCase().includes(q);
+    })
+    .sort((a, b) => {
+      const aTime = new Date(a.paidAt ?? a.createdAt).getTime();
+      const bTime = new Date(b.paidAt ?? b.createdAt).getTime();
+      return paySort === "date_asc" ? aTime - bTime : bTime - aTime;
+    });
+  const payTotalPages = Math.ceil(payFiltered.length / PAGE_SIZE);
+  const payPaginated = payFiltered.slice(payPage * PAGE_SIZE, (payPage + 1) * PAGE_SIZE);
+  const totalEarnings = expertPayments.filter((p) => p.status === "paid").reduce((sum, p) => sum + p.amount, 0);
+
   const tabCounts: Record<string, number> = {
     availability: next7Days.length,
     recommendations: allRecommendations.length,
     upcoming: consultations.length,
     summary_due: allPendingSummaries.length,
     no_show: allNoShows.length,
+    payments: expertPayments.length,
   };
 
   const statusTone = (s: string) => {
@@ -252,11 +279,14 @@ export default function AstroGemologistDetailPage() {
     return "muted" as const;
   };
 
+  const consCommission = (fee: number) => Math.round(fee * parseFloat(commissionRates.consultation) / 100);
+
   function ConsultationRow({ c, showStatus }: { c: typeof consultations[number]; showStatus?: string }) {
+    const comm = c.paymentStatus === "paid" ? consCommission(c.fee) : 0;
     return (
       <Link
         href={`/consultations/${c.id}`}
-        className="group grid grid-cols-1 sm:grid-cols-[1fr_140px_120px] gap-2 sm:gap-3 items-center px-3 py-3.5 transition-all duration-150 rounded-[8px] hover:bg-[rgba(160,125,56,0.07)]"
+        className="group grid grid-cols-1 sm:grid-cols-[1fr_140px_100px_120px] gap-2 sm:gap-3 items-center px-3 py-3.5 transition-all duration-150 rounded-[8px] hover:bg-[rgba(160,125,56,0.07)]"
         style={{ borderBottom: `1px solid ${T.borderSoft}` }}
       >
         <div className="min-w-0">
@@ -267,6 +297,9 @@ export default function AstroGemologistDetailPage() {
           <span className="text-[12px] tabular-nums" style={{ color: T.text }}>
             {new Date(c.scheduledAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }).replace(/ (\d{4})$/, ", $1")}
           </span>
+        </div>
+        <div className="text-[12px] tabular-nums text-right" style={{ color: comm > 0 ? T.accent : T.faint }}>
+          {comm > 0 ? inr(comm) : "—"}
         </div>
         <div>
           {showStatus === "summary" ? (
@@ -287,7 +320,7 @@ export default function AstroGemologistDetailPage() {
 
   function TableHeader({ cols }: { cols: string[] }) {
     return (
-      <div className={`hidden sm:grid gap-3 px-3 py-2 text-[11px] tracking-[0.06em] uppercase`} style={{ color: T.faint, borderBottom: `1px solid ${T.borderSoft}`, gridTemplateColumns: "1fr 140px 120px" }}>
+      <div className={`hidden sm:grid gap-3 px-3 py-2 text-[11px] tracking-[0.06em] uppercase`} style={{ color: T.faint, borderBottom: `1px solid ${T.borderSoft}`, gridTemplateColumns: "1fr 140px 100px 120px" }}>
         {cols.map((c) => <span key={c}>{c}</span>)}
       </div>
     );
@@ -317,34 +350,21 @@ export default function AstroGemologistDetailPage() {
         <BackLink label="Astro-Gemologists" href="/astro-gemologists" />
       </div>
 
-      {/* Profile Card */}
+      {/* Profile + Commission + Account — combined card */}
       <div className="rounded-[14px] p-6 mb-6" style={{ background: `linear-gradient(135deg, ${T.card} 0%, ${T.panel} 100%)`, border: `1px solid ${T.border}` }}>
+        {/* Expert info + 3-dot menu */}
         <div className="flex flex-wrap items-start gap-5">
-          <div
-            className="w-14 h-14 rounded-full flex items-center justify-center text-[20px] font-bold shrink-0"
-            style={{ background: `${T.accent}15`, border: `2px solid ${T.accent}40`, color: T.accent }}
-          >
-            {expert.name[0]}
-          </div>
+          <div className="w-14 h-14 rounded-full flex items-center justify-center text-[20px] font-bold shrink-0" style={{ background: `${T.accent}15`, border: `2px solid ${T.accent}40`, color: T.accent }}>{expert.name[0]}</div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3">
               <span className="text-[17px] font-semibold" style={{ color: T.text }}>{expert.name}</span>
-              {isActive ? (
-                expert.calendlyStatus === "pending"
-                  ? <Chip tone="gold">Calendly invite pending</Chip>
-                  : <Chip tone="good">active</Chip>
-              ) : (
-                <Chip tone="danger">inactive</Chip>
-              )}
+              {isActive ? (expert.calendlyStatus === "pending" ? <Chip tone="gold">Calendly invite pending</Chip> : <Chip tone="good">active</Chip>) : <Chip tone="danger">inactive</Chip>}
             </div>
             <div className="text-[13.5px] mt-1" style={{ color: T.muted }}>{expert.specialization}</div>
             <div className="flex flex-wrap items-center gap-4 mt-3 text-[12px]" style={{ color: T.faint }}>
-              <span>{expert.experience}</span>
-              <span>·</span>
-              <span>{expert.languages.join(", ")}</span>
-              <span>·</span>
-              <span style={{ color: T.accent }}>{inr(expert.fee)}/session</span>
-              <span>·</span>
+              <span>{expert.experience}</span><span>·</span>
+              <span>{expert.languages.join(", ")}</span><span>·</span>
+              <span style={{ color: T.accent }}>{inr(expert.fee)}/session</span><span>·</span>
               <span className="flex items-center gap-1">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
                 {expert.phone}
@@ -352,124 +372,91 @@ export default function AstroGemologistDetailPage() {
             </div>
           </div>
           <div className="relative shrink-0" ref={menuRef}>
-            <button
-              type="button"
-              onClick={() => setShowMenu((v) => !v)}
-              className="w-9 h-9 rounded-[9px] flex items-center justify-center transition-colors hover:bg-[rgba(89,82,54,0.08)] cursor-pointer"
-              style={{ border: `1px solid ${T.border}`, color: T.muted }}
-            >
+            <button type="button" onClick={() => setShowMenu((v) => !v)} className="w-9 h-9 rounded-[9px] flex items-center justify-center transition-colors hover:bg-[rgba(89,82,54,0.08)] cursor-pointer" style={{ border: `1px solid ${T.border}`, color: T.muted }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
             </button>
             {showMenu && (
-              <div
-                className="absolute right-0 top-full mt-1 z-50 rounded-[10px] overflow-hidden shadow-lg py-1 min-w-[190px]"
-                style={{ background: T.popover, border: `1px solid ${T.border}`, animation: "fadeIn 120ms ease-out" }}
-              >
-                <button
-                  type="button"
-                  onClick={() => { setShowMenu(false); router.push(`/astro-gemologists/${id}/edit`); }}
-                  className="w-full text-left px-4 py-2.5 text-[13px] flex items-center gap-2.5 transition-colors hover:bg-[rgba(160,125,56,0.08)] cursor-pointer"
-                  style={{ color: T.text }}
-                >
+              <div className="absolute right-0 top-full mt-1 z-50 rounded-[10px] overflow-hidden shadow-lg py-1 min-w-[190px]" style={{ background: T.popover, border: `1px solid ${T.border}`, animation: "fadeIn 120ms ease-out" }}>
+                <button type="button" onClick={() => { setShowMenu(false); router.push(`/astro-gemologists/${id}/edit`); }} className="w-full text-left px-4 py-2.5 text-[13px] flex items-center gap-2.5 transition-colors hover:bg-[rgba(160,125,56,0.08)] cursor-pointer" style={{ color: T.text }}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17 3a2.83 2.83 0 114 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
                   Edit profile
                 </button>
                 {expert.calendlyStatus === "pending" && isActive && (
-                  <button
-                    type="button"
-                    onClick={() => { setShowMenu(false); setToast("Calendly invitation resent"); setTimeout(() => setToast(""), 3000); }}
-                    className="w-full text-left px-4 py-2.5 text-[13px] flex items-center gap-2.5 transition-colors hover:bg-[rgba(160,125,56,0.08)] cursor-pointer"
-                    style={{ color: T.text }}
-                  >
+                  <button type="button" onClick={() => { setShowMenu(false); setToast("Calendly invitation resent"); setTimeout(() => setToast(""), 3000); }} className="w-full text-left px-4 py-2.5 text-[13px] flex items-center gap-2.5 transition-colors hover:bg-[rgba(160,125,56,0.08)] cursor-pointer" style={{ color: T.text }}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M22 2L11 13"/><path d="M22 2L15 22l-4-9-9-4z"/></svg>
                     Resend invitation
                   </button>
                 )}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowMenu(false);
-                    if (isActive) {
-                      setIsActive(false);
-                      setToast("Gemologist deactivated");
-                      setTimeout(() => setToast(""), 3000);
-                    } else {
-                      setIsActive(true);
-                      setToast("Gemologist activated");
-                      setTimeout(() => setToast(""), 3000);
-                    }
-                  }}
-                  className="w-full text-left px-4 py-2.5 text-[13px] flex items-center gap-2.5 transition-colors hover:bg-[rgba(160,125,56,0.08)] cursor-pointer"
-                  style={{ color: isActive ? T.danger : T.good }}
-                >
-                  {isActive ? (
-                    <>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/></svg>
-                      Deactivate
-                    </>
-                  ) : (
-                    <>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M20 6L9 17l-5-5"/></svg>
-                      Activate
-                    </>
-                  )}
+                <button type="button" onClick={() => { setShowMenu(false); setShowPayoutModal(true); }} className="w-full text-left px-4 py-2.5 text-[13px] flex items-center gap-2.5 transition-colors hover:bg-[rgba(160,125,56,0.08)] cursor-pointer" style={{ color: T.text }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 2v20M6 6h9a3 3 0 0 1 0 6H5M7 12h8a3 3 0 0 1 0 6H6"/></svg>
+                  Make payout
+                </button>
+                <div className="mx-2 my-1" style={{ borderTop: `1px solid ${T.borderSoft}` }} />
+                <button type="button" onClick={() => { setShowMenu(false); setIsActive((v) => !v); setToast(isActive ? "Gemologist deactivated" : "Gemologist activated"); setTimeout(() => setToast(""), 3000); }} className="w-full text-left px-4 py-2.5 text-[13px] flex items-center gap-2.5 transition-colors hover:bg-[rgba(160,125,56,0.08)] cursor-pointer" style={{ color: isActive ? T.danger : T.good }}>
+                  {isActive ? <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/></svg>Deactivate</> : <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M20 6L9 17l-5-5"/></svg>Activate</>}
                 </button>
               </div>
             )}
           </div>
         </div>
-      </div>
 
-      {/* Commission setup */}
-      <Card className="mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <span className="text-[11px] tracking-[0.08em] uppercase font-medium" style={{ color: T.faint }}>Commission setup</span>
-            {commissionToast && (
-              <span className="text-[12px] font-medium" style={{ color: T.good }}>✓ {commissionToast}</span>
+        {/* Commission rates */}
+        <div className="mt-5 pt-5" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-3">
+              <span className="text-[11px] tracking-[0.08em] uppercase font-medium" style={{ color: T.faint }}>Commission rates</span>
+              {commissionToast && <span className="text-[12px] font-medium" style={{ color: T.good }}>✓ {commissionToast}</span>}
+            </div>
+            {commissionEditing ? (
+              <GoldBtn className="!h-7 !px-3 !text-[11px]" onClick={() => { setCommissionEditing(false); setCommissionToast("Commission saved"); setTimeout(() => setCommissionToast(""), 3000); }}>Save</GoldBtn>
+            ) : (
+              <GhostBtn className="!h-7 !px-3 !text-[11px]" onClick={() => setCommissionEditing(true)}>Edit</GhostBtn>
             )}
           </div>
-          {commissionEditing ? (
-            <GoldBtn
-              className="!h-7 !px-3 !text-[11px]"
-              onClick={() => {
-                setCommissionEditing(false);
-                setCommissionToast("Commission saved");
-                setTimeout(() => setCommissionToast(""), 3000);
-              }}
-            >
-              Save
-            </GoldBtn>
-          ) : (
-            <GhostBtn className="!h-7 !px-3 !text-[11px]" onClick={() => setCommissionEditing(true)}>
-              Edit
-            </GhostBtn>
-          )}
+          <div className="grid grid-cols-3 gap-4">
+            {(["stone", "jewellery", "consultation"] as const).map((cat) => (
+              <div key={cat} className="rounded-[10px] p-3" style={{ background: "rgba(250,246,236,0.6)", border: `1px solid ${T.borderSoft}` }}>
+                <div className="text-[10px] tracking-[0.06em] uppercase mb-1" style={{ color: T.faint }}>{cat}</div>
+                {commissionEditing ? (
+                  <div className="flex items-center gap-1.5">
+                    <input type="number" value={commissionRates[cat]} onChange={(e) => setCommissionRates((p) => ({ ...p, [cat]: e.target.value }))} className="w-full h-8 px-2 rounded-[7px] text-[13px] outline-none" style={{ background: T.card, border: `1px solid ${T.border}`, color: T.text }} />
+                    <span className="text-[12px] font-medium shrink-0" style={{ color: T.muted }}>%</span>
+                  </div>
+                ) : (
+                  <div className="text-[16px] font-semibold tabular-nums" style={{ color: T.text }}>{commissionRates[cat]}%</div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {(["stone", "jewellery", "consultation"] as const).map((cat) => (
-            <div key={cat} className="rounded-[10px] p-4" style={{ background: T.panel, border: `1px solid ${T.borderSoft}` }}>
-              <div className="text-[11px] tracking-[0.06em] uppercase mb-2" style={{ color: T.faint }}>{cat}</div>
-              {commissionEditing ? (
-                <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    value={commissionRates[cat]}
-                    onChange={(e) => setCommissionRates((p) => ({ ...p, [cat]: e.target.value }))}
-                    className="w-full h-9 px-3 rounded-[8px] text-[13px] outline-none"
-                    style={{ background: T.card, border: `1px solid ${T.border}`, color: T.text }}
-                  />
-                  <span className="text-[13px] font-medium shrink-0" style={{ color: T.muted }}>%</span>
-                </div>
-              ) : (
-                <div className="text-[18px] font-semibold tabular-nums" style={{ color: T.text }}>
-                  {commissionRates[cat]}%
-                </div>
-              )}
-            </div>
-          ))}
+
+        {/* Bank details */}
+        <div className="mt-4 pt-4" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div><div className="text-[10px] uppercase tracking-wider" style={{ color: T.faint }}>Bank</div><div className="text-[13px] mt-0.5" style={{ color: T.text }}>HDFC Bank</div></div>
+            <div><div className="text-[10px] uppercase tracking-wider" style={{ color: T.faint }}>Account</div><div className="text-[13px] mt-0.5" style={{ color: T.text }}>1234 5678 6789</div></div>
+            <div><div className="text-[10px] uppercase tracking-wider" style={{ color: T.faint }}>IFSC</div><div className="text-[13px] mt-0.5" style={{ color: T.text }}>HDFC0001234</div></div>
+            <div><div className="text-[10px] uppercase tracking-wider" style={{ color: T.faint }}>UPI</div><div className="text-[13px] mt-0.5" style={{ color: T.accent }}>{expert.name.split(" ").pop()?.toLowerCase()}@upi</div></div>
+          </div>
         </div>
-      </Card>
+      </div>
+
+      {/* Dashboard stats — header / value / status */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
+        {[
+          { label: "Consultations", value: allCompleted.length, status: "completed", tone: T.good },
+          { label: "Purchases", value: allRecommendations.filter((r) => r.status === "converted_to_order").length, status: "completed", tone: T.good },
+          { label: "Recommendation", value: allPendingSummaries.length, status: "due", tone: allPendingSummaries.length > 0 ? T.danger : T.good },
+          { label: "Commission", value: inr(Math.max(0, totalEarnings - expertPayments.filter((p) => p.status === "paid").reduce((s, p) => s + p.amount, 0))), status: "due", tone: T.accent },
+          { label: "Commission", value: inr(totalEarnings), status: "earned", tone: T.good },
+        ].map((stat, i) => (
+          <div key={i} className="rounded-[12px] p-5" style={{ background: T.card, border: `1px solid ${T.border}` }}>
+            <div className="text-[11px] tracking-[0.08em] uppercase" style={{ color: T.faint }}>{stat.label}</div>
+            <div className="text-[20px] font-semibold mt-1 tabular-nums" style={{ color: T.text }}>{stat.value}</div>
+            <div className="text-[11px] font-medium mt-1" style={{ color: stat.tone }}>{stat.status}</div>
+          </div>
+        ))}
+      </div>
 
       {/* Tabs */}
       <div className="mb-4">
@@ -606,7 +593,7 @@ export default function AstroGemologistDetailPage() {
               </div>
 
               <Card>
-                <TableHeader cols={["Consultation", "Date", "Status"]} />
+                <TableHeader cols={["Consultation", "Date", "Commission", "Status"]} />
                 {consPaginated.length === 0 ? (
                   <p className="text-[13.5px] py-8 text-center" style={{ color: T.muted }}>No consultations match your filters.</p>
                 ) : (
@@ -798,7 +785,7 @@ export default function AstroGemologistDetailPage() {
           </div>
 
           <Card>
-            <TableHeader cols={["Customer", "Date", "Status"]} />
+            <TableHeader cols={["Customer", "Date", "Commission", "Status"]} />
             {sdPaginated.length === 0 ? (
               <p className="text-[13.5px] py-8 text-center" style={{ color: T.muted }}>No summaries pending.</p>
             ) : (
@@ -820,7 +807,7 @@ export default function AstroGemologistDetailPage() {
           </div>
 
           <Card>
-            <TableHeader cols={["Customer", "Date", "Status"]} />
+            <TableHeader cols={["Customer", "Date", "Commission", "Status"]} />
             {nsPaginated.length === 0 ? (
               <p className="text-[13.5px] py-8 text-center" style={{ color: T.muted }}>No no-show records.</p>
             ) : (
@@ -867,10 +854,11 @@ export default function AstroGemologistDetailPage() {
           </div>
 
           <Card>
-            <div className="hidden sm:grid grid-cols-[1fr_140px_120px_140px_130px] gap-3 px-3 py-2 text-[11px] tracking-[0.06em] uppercase" style={{ color: T.faint, borderBottom: `1px solid ${T.borderSoft}` }}>
+            <div className="hidden sm:grid grid-cols-[1fr_130px_100px_100px_120px_120px] gap-3 px-3 py-2 text-[11px] tracking-[0.06em] uppercase" style={{ color: T.faint, borderBottom: `1px solid ${T.borderSoft}` }}>
               <span>Stone</span>
               <span>Customer</span>
-              <span>Price</span>
+              <span className="text-right">Price</span>
+              <span className="text-right">Commission</span>
               <span>Recommended</span>
               <span>Status</span>
             </div>
@@ -880,11 +868,12 @@ export default function AstroGemologistDetailPage() {
               recPaginated.map((r) => {
                 const href = r.orderId ? `/orders/${r.orderId}` : `/consultations/${r.consultationId}`;
                 const price = getEstimatedPrice(r);
+                const recComm = price != null && r.status === "converted_to_order" ? Math.round(price * parseFloat(commissionRates.stone) / 100) : 0;
                 return (
                   <Link
                     key={r.id}
                     href={href}
-                    className="group grid grid-cols-1 sm:grid-cols-[1fr_140px_120px_140px_130px] gap-2 sm:gap-3 items-center px-3 py-3.5 transition-all duration-150 rounded-[8px] hover:bg-[rgba(160,125,56,0.07)]"
+                    className="group grid grid-cols-1 sm:grid-cols-[1fr_130px_100px_100px_120px_120px] gap-2 sm:gap-3 items-center px-3 py-3.5 transition-all duration-150 rounded-[8px] hover:bg-[rgba(160,125,56,0.07)]"
                     style={{ borderBottom: `1px solid ${T.borderSoft}` }}
                   >
                     <div className="min-w-0">
@@ -894,8 +883,11 @@ export default function AstroGemologistDetailPage() {
                     <div className="min-w-0">
                       <span className="text-[12px] truncate block" style={{ color: T.text }}>{r.customerName}</span>
                     </div>
-                    <div className="min-w-0">
+                    <div className="min-w-0 text-right">
                       <span className="text-[12px] tabular-nums font-medium" style={{ color: T.text }}>{price != null ? inr(price) : "—"}</span>
+                    </div>
+                    <div className="min-w-0 text-right">
+                      <span className="text-[12px] tabular-nums" style={{ color: recComm > 0 ? T.accent : T.faint }}>{recComm > 0 ? inr(recComm) : "—"}</span>
                     </div>
                     <div className="min-w-0">
                       <span className="text-[12px] tabular-nums" style={{ color: T.text }}>
@@ -915,6 +907,77 @@ export default function AstroGemologistDetailPage() {
           </Card>
         </>
       )}
+
+      {/* ========= PAYMENTS TAB ========= */}
+      {activeTab === "payments" && (
+        <>
+          <div className="flex flex-wrap items-center gap-2.5 mb-4">
+            <div className="flex-1 min-w-[200px]">
+              <SearchFilter search={paySearch} onSearchChange={(v) => { setPaySearch(v); setPayPage(0); }} placeholder="Search customer, payment ID…" />
+            </div>
+            <SortControl value={paySort} onChange={(v) => { setPaySort(v); setPayPage(0); }} />
+          </div>
+
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+            <StatCard label="Total earnings" value={inr(totalEarnings)} />
+            <StatCard label="Total payments" value={expertPayments.length} />
+            <StatCard label="Pending" value={expertPayments.filter((p) => p.status !== "paid").length} />
+          </div>
+
+          <Card>
+            <div className="hidden sm:grid grid-cols-[1fr_1fr_120px_100px_120px] gap-3 px-3 py-2 text-[11px] tracking-[0.06em] uppercase" style={{ color: T.faint, borderBottom: `1px solid ${T.borderSoft}` }}>
+              <span>Payment</span>
+              <span>Customer</span>
+              <span>Date</span>
+              <span>Status</span>
+              <span className="text-right">Amount</span>
+            </div>
+            {payPaginated.length === 0 ? (
+              <p className="text-[13.5px] py-8 text-center" style={{ color: T.muted }}>No payments found.</p>
+            ) : (
+              payPaginated.map((p) => (
+                <div key={p.id} className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_120px_100px_120px] gap-3 items-center px-3 py-3" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
+                  <div className="min-w-0">
+                    <div className="text-[11px] tracking-[0.06em] uppercase font-medium" style={{ color: T.accent }}>{p.id}</div>
+                    <div className="text-[12px] mt-0.5 truncate" style={{ color: T.muted }}>{p.purpose}</div>
+                  </div>
+                  <div className="text-[13px]" style={{ color: T.text }}>{p.customerName}</div>
+                  <div className="text-[12px] tabular-nums" style={{ color: T.muted }}>
+                    {new Date(p.paidAt ?? p.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }).replace(/ (\d{4})$/, ", $1")}
+                  </div>
+                  <div><Chip tone={p.status === "paid" ? "good" : p.status === "sent" ? "gold" : "muted"}>{p.status}</Chip></div>
+                  <div className="text-[13px] text-right font-semibold tabular-nums" style={{ color: T.text }}>{inr(p.amount)}</div>
+                </div>
+              ))
+            )}
+            <Pagination page={payPage} totalPages={payTotalPages} totalItems={payFiltered.length} perPage={PAGE_SIZE} onPageChange={setPayPage} />
+          </Card>
+        </>
+      )}
+
+      {/* Make Payout Modal */}
+      <Modal open={showPayoutModal} onClose={() => setShowPayoutModal(false)} title="Initiate payout">
+        <div className="space-y-5">
+          <div className="p-4 rounded-[10px]" style={{ background: T.panel, border: `1px solid ${T.borderSoft}` }}>
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-[13.5px] font-medium" style={{ color: T.text }}>{expert.name}</div>
+                <div className="text-[12px] mt-0.5" style={{ color: T.muted }}>{expert.specialization}</div>
+              </div>
+              <div className="text-right">
+                <div className="text-[11px] uppercase tracking-wider" style={{ color: T.faint }}>Total earnings</div>
+                <div className="text-[16px] font-semibold" style={{ color: T.accent }}>{inr(totalEarnings)}</div>
+              </div>
+            </div>
+          </div>
+          <Input value={payoutForm.amount} onChange={(v) => setPayoutForm((p) => ({ ...p, amount: v }))} label="Payout amount (₹)" placeholder={String(totalEarnings)} />
+          <Input value={payoutForm.notes} onChange={(v) => setPayoutForm((p) => ({ ...p, notes: v }))} label="Period / notes" placeholder="e.g. May – Jul 2026" />
+          <div className="pt-2">
+            <GoldBtn onClick={() => { setShowPayoutModal(false); setToast("Payout initiated"); setTimeout(() => setToast(""), 3000); }}>Proceed to payment →</GoldBtn>
+          </div>
+          <p className="text-[11px] text-center" style={{ color: T.faint }}>You will be redirected to the payment gateway to complete the transfer.</p>
+        </div>
+      </Modal>
 
       {toast && (
         <div

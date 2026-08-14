@@ -1,7 +1,7 @@
 "use client";
 import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
 
-export type Role = "admin" | "expert" | "affiliate";
+export type Role = "admin" | "expert" | "affiliate" | "sales_admin" | "sales_exec";
 
 export interface AuthUser {
   id: string;
@@ -14,6 +14,8 @@ const DEMO_USERS: Record<Role, AuthUser> = {
   admin: { id: "usr_admin_01", name: "Ops Admin", email: "ops@astrolaabh.house", role: "admin" },
   expert: { id: "usr_expert_01", name: "Pt. Sandeep Kochaar", email: "sandeep@astrolaabh.house", role: "expert" },
   affiliate: { id: "usr_aff_01", name: "Dr. Meenakshi Joshi", email: "meenakshi@astrolaabh.house", role: "affiliate" },
+  sales_admin: { id: "sales_01", name: "Priya Sharma", email: "priya.sharma@astrolaabh.com", role: "sales_admin" },
+  sales_exec: { id: "sales_02", name: "Rahul Verma", email: "rahul.verma@astrolaabh.com", role: "sales_exec" },
 };
 
 interface AuthState {

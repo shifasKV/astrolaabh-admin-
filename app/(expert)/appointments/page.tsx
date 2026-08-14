@@ -4,6 +4,7 @@ import Link from "next/link";
 import { PageHeader, Card, Chip, Tabs, SearchFilter, Select } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_CONSULTATIONS } from "@/lib/mock";
+import { inr } from "@/lib/types";
 import type { Consultation } from "@/lib/types";
 
 const TABS = [
@@ -288,9 +289,10 @@ export default function AppointmentsPage() {
 
       {/* Table */}
       <Card>
-        <div className="hidden sm:grid items-center gap-4 pb-3 mb-1" style={{ gridTemplateColumns: "1fr 150px 130px", borderBottom: `1px solid ${T.border}` }}>
+        <div className="hidden sm:grid items-center gap-4 pb-3 mb-1" style={{ gridTemplateColumns: "1fr 150px 100px 130px", borderBottom: `1px solid ${T.border}` }}>
           <div className="text-[11px] tracking-[0.08em] uppercase" style={{ color: T.faint }}>Booking details</div>
           <div className="text-[11px] tracking-[0.08em] uppercase" style={{ color: T.faint }}>Scheduled time</div>
+          <div className="text-[11px] tracking-[0.08em] uppercase text-right" style={{ color: T.faint }}>Commission</div>
           <div className="text-[11px] tracking-[0.08em] uppercase text-right" style={{ color: T.faint }}>Status</div>
         </div>
 
@@ -300,10 +302,11 @@ export default function AppointmentsPage() {
           paginated.map((c) => {
             const dt = new Date(c.scheduledAt);
             const es = expertStatus(c);
+            const commEarned = es === "done" ? Math.round(c.fee * 0.15) : 0;
             return (
               <Link key={c.id} href={`/appointments/${c.id}`}
                 className="grid items-center gap-4 py-3.5 transition-all duration-150 rounded-[8px] hover:bg-[rgba(160,125,56,0.07)]"
-                style={{ borderBottom: `1px solid ${T.borderSoft}`, gridTemplateColumns: "1fr 150px 130px" }}
+                style={{ borderBottom: `1px solid ${T.borderSoft}`, gridTemplateColumns: "1fr 150px 100px 130px" }}
               >
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -320,6 +323,9 @@ export default function AppointmentsPage() {
                   <div className="text-[12px] mt-0.5 tabular-nums" style={{ color: T.muted }}>
                     {dt.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true })} · {c.duration}min
                   </div>
+                </div>
+                <div className="text-right shrink-0">
+                  <span className="text-[12px] tabular-nums" style={{ color: commEarned > 0 ? T.accent : T.faint }}>{commEarned > 0 ? inr(commEarned) : "—"}</span>
                 </div>
                 <div className="flex items-center justify-end shrink-0">
                   <Chip tone={expertStatusTone(es)}>{expertStatusLabel(es)}</Chip>

@@ -91,6 +91,13 @@ export default function EditAstroGemologistPage({ params }: { params: Promise<{ 
   const [fee, setFee] = useState(expert ? String(expert.fee) : "");
   const [experience, setExperience] = useState(expert ? experienceToKey(expert.experience) : "");
   const [bio, setBio] = useState("");
+  const [stoneRate, setStoneRate] = useState("8");
+  const [jewelleryRate, setJewelleryRate] = useState("6");
+  const [consultationRate, setConsultationRate] = useState("15");
+  const [bankName, setBankName] = useState("HDFC Bank");
+  const [accountNumber, setAccountNumber] = useState("1234 5678 6789");
+  const [ifsc, setIfsc] = useState("HDFC0001234");
+  const [upi, setUpi] = useState(`${expert?.name.split(" ").pop()?.toLowerCase()}@upi`);
 
   if (!expert) {
     return (
@@ -129,10 +136,10 @@ export default function EditAstroGemologistPage({ params }: { params: Promise<{ 
         back={{ label: expert.name, href: `/astro-gemologists/${id}` }}
       />
 
-      <div className="space-y-6 max-w-[820px]">
-        {/* Personal information */}
+      <div className="space-y-6 max-w-[720px]">
+        {/* Astrologer details */}
         <Card>
-          <div className="text-[11px] tracking-[0.08em] uppercase mb-4" style={{ color: T.accent }}>Personal information</div>
+          <div className="text-[11px] tracking-[0.08em] uppercase mb-4" style={{ color: T.accent }}>Astrologer details</div>
           <div className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Input value={name} onChange={setName} label="Full name" placeholder="e.g. Pt. Sandeep Kochaar" />
@@ -150,43 +157,16 @@ export default function EditAstroGemologistPage({ params }: { params: Promise<{ 
               <div className="flex items-center gap-4">
                 {photoPreview ? (
                   <div className="relative">
-                    <img
-                      src={photoPreview}
-                      alt="Preview"
-                      className="w-16 h-16 rounded-full object-cover"
-                      style={{ border: `2px solid ${T.accent}40` }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => { setPhoto(null); setPhotoPreview(""); }}
-                      className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-[10px] cursor-pointer"
-                      style={{ background: T.danger, color: "#fff" }}
-                    >
-                      ✕
-                    </button>
+                    <img src={photoPreview} alt="Preview" className="w-16 h-16 rounded-full object-cover" style={{ border: `2px solid ${T.accent}40` }} />
+                    <button type="button" onClick={() => { setPhoto(null); setPhotoPreview(""); }} className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-[10px] cursor-pointer" style={{ background: T.danger, color: "#fff" }}>✕</button>
                   </div>
                 ) : (
-                  <div
-                    className="w-16 h-16 rounded-full flex items-center justify-center text-[20px] font-bold"
-                    style={{ background: `${T.accent}15`, border: `2px solid ${T.accent}40`, color: T.accent }}
-                  >
-                    {expert.name[0]}
-                  </div>
+                  <div className="w-16 h-16 rounded-full flex items-center justify-center text-[20px] font-bold" style={{ background: `${T.accent}15`, border: `2px solid ${T.accent}40`, color: T.accent }}>{expert.name[0]}</div>
                 )}
-                <FileInput
-                  onSelect={handlePhoto}
-                  accept="image/*"
-                  className="flex-1"
-                />
+                <FileInput onSelect={handlePhoto} accept="image/*" className="flex-1" />
               </div>
             </div>
-          </div>
-        </Card>
 
-        {/* Professional details */}
-        <Card>
-          <div className="text-[11px] tracking-[0.08em] uppercase mb-4" style={{ color: T.accent }}>Professional details</div>
-          <div className="space-y-4">
             {/* Languages */}
             <div>
               <label className="block text-[11px] tracking-[0.12em] uppercase mb-2" style={{ color: T.faint }}>Languages spoken</label>
@@ -194,19 +174,8 @@ export default function EditAstroGemologistPage({ params }: { params: Promise<{ 
                 {LANGUAGE_OPTIONS.map((lang) => {
                   const selected = languages.includes(lang.value);
                   return (
-                    <button
-                      key={lang.value}
-                      type="button"
-                      onClick={() => toggleMulti(languages, lang.value, setLanguages)}
-                      className="h-8 px-3 rounded-[8px] text-[12px] font-medium transition-all cursor-pointer"
-                      style={{
-                        background: selected ? `${T.accent}18` : "transparent",
-                        border: `1px solid ${selected ? T.accent : T.borderSoft}`,
-                        color: selected ? T.accent : T.muted,
-                      }}
-                    >
-                      {selected && <span className="mr-1">✓</span>}
-                      {lang.label}
+                    <button key={lang.value} type="button" onClick={() => toggleMulti(languages, lang.value, setLanguages)} className="h-8 px-3 rounded-[8px] text-[12px] font-medium transition-all cursor-pointer" style={{ background: selected ? `${T.accent}18` : "transparent", border: `1px solid ${selected ? T.accent : T.borderSoft}`, color: selected ? T.accent : T.muted }}>
+                      {selected && <span className="mr-1">✓</span>}{lang.label}
                     </button>
                   );
                 })}
@@ -220,19 +189,8 @@ export default function EditAstroGemologistPage({ params }: { params: Promise<{ 
                 {SKILL_OPTIONS.map((skill) => {
                   const selected = skills.includes(skill.value);
                   return (
-                    <button
-                      key={skill.value}
-                      type="button"
-                      onClick={() => toggleMulti(skills, skill.value, setSkills)}
-                      className="h-8 px-3 rounded-[8px] text-[12px] font-medium transition-all cursor-pointer"
-                      style={{
-                        background: selected ? `${T.accent}18` : "transparent",
-                        border: `1px solid ${selected ? T.accent : T.borderSoft}`,
-                        color: selected ? T.accent : T.muted,
-                      }}
-                    >
-                      {selected && <span className="mr-1">✓</span>}
-                      {skill.label}
+                    <button key={skill.value} type="button" onClick={() => toggleMulti(skills, skill.value, setSkills)} className="h-8 px-3 rounded-[8px] text-[12px] font-medium transition-all cursor-pointer" style={{ background: selected ? `${T.accent}18` : "transparent", border: `1px solid ${selected ? T.accent : T.borderSoft}`, color: selected ? T.accent : T.muted }}>
+                      {selected && <span className="mr-1">✓</span>}{skill.label}
                     </button>
                   );
                 })}
@@ -245,6 +203,36 @@ export default function EditAstroGemologistPage({ params }: { params: Promise<{ 
             </div>
 
             <Textarea value={bio} onChange={setBio} label="Bio / About" placeholder="Brief description about the expert's background and expertise…" rows={3} />
+          </div>
+        </Card>
+
+        {/* Commission setup & Account details */}
+        <Card>
+          <div className="text-[11px] tracking-[0.08em] uppercase mb-4" style={{ color: T.accent }}>Commission & payment details</div>
+          <p className="text-[12px] mb-4" style={{ color: T.muted }}>Commission percentages and bank details for payouts.</p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
+            {([["stone", stoneRate, setStoneRate], ["jewellery", jewelleryRate, setJewelleryRate], ["consultation", consultationRate, setConsultationRate]] as const).map(([cat, val, setter]) => (
+              <div key={cat} className="rounded-[10px] p-4" style={{ background: T.panel, border: `1px solid ${T.borderSoft}` }}>
+                <div className="text-[11px] tracking-[0.06em] uppercase mb-2" style={{ color: T.faint }}>{cat}</div>
+                <div className="flex items-center gap-2">
+                  <input type="number" value={val} onChange={(e) => setter(e.target.value)} className="w-full h-9 px-3 rounded-[8px] text-[13px] outline-none" style={{ background: T.card, border: `1px solid ${T.border}`, color: T.text }} />
+                  <span className="text-[13px] font-medium shrink-0" style={{ color: T.muted }}>%</span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="pt-4" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+            <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.faint }}>Account details</div>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Input value={bankName} onChange={setBankName} label="Bank name" placeholder="e.g. HDFC Bank" />
+                <Input value={accountNumber} onChange={setAccountNumber} label="Account number" placeholder="e.g. 1234 5678 6789" />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Input value={ifsc} onChange={setIfsc} label="IFSC code" placeholder="e.g. HDFC0001234" />
+                <Input value={upi} onChange={setUpi} label="UPI ID" placeholder="e.g. name@upi" />
+              </div>
+            </div>
           </div>
         </Card>
 

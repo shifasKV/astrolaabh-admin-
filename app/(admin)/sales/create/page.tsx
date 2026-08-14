@@ -5,8 +5,8 @@ import { PageHeader, Card, GoldBtn, GhostBtn, Input, Select } from "@/components
 import { T } from "@/lib/theme";
 
 const ROLE_OPTIONS = [
+  { value: "Sales Executive", label: "Sales Executive" },
   { value: "Sales Lead", label: "Sales Lead" },
-  { value: "Sales Manager", label: "Sales Manager" },
 ];
 
 export default function CreateSalesMemberPage() {

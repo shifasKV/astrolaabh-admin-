@@ -114,7 +114,7 @@ function ExternalLink({ href, label, shopify }: { href: string; label: string; s
   );
 }
 
-function StoneRowMenu({ shopifyUrl, websiteUrl, enabled, onToggle }: { shopifyUrl: string; websiteUrl: string; enabled: boolean; onToggle: () => void }) {
+function ItemRowMenu({ shopifyUrl, websiteUrl, enabled, onToggle, outOfStock, onOutOfStock }: { shopifyUrl: string; websiteUrl: string; enabled: boolean; onToggle: () => void; outOfStock?: boolean; onOutOfStock?: () => void }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -153,6 +153,15 @@ function StoneRowMenu({ shopifyUrl, websiteUrl, enabled, onToggle }: { shopifyUr
             Create order
           </Link>
           <div className="mx-2 my-1.5" style={{ borderTop: `1px solid ${T.borderSoft}` }} />
+          {onOutOfStock && (
+            <button
+              onClick={(e) => { e.stopPropagation(); e.preventDefault(); onOutOfStock(); setOpen(false); }}
+              className={itemClass}
+              style={{ color: outOfStock ? T.good : T.danger }}
+            >
+              {outOfStock ? "Mark as in stock" : "Mark as out of stock"}
+            </button>
+          )}
           <button
             onClick={(e) => { e.stopPropagation(); e.preventDefault(); onToggle(); setOpen(false); }}
             className={itemClass}
@@ -177,7 +186,9 @@ export default function InventoryPage() {
   const [search, setSearch] = useState("");
   const [toast, setToast] = useState("");
   const [disabledStones, setDisabledStones] = useState<Set<string>>(new Set());
+  const [outOfStockStones, setOutOfStockStones] = useState<Set<string>>(new Set());
   const [disabledDesigns, setDisabledDesigns] = useState<Set<string>>(new Set());
+  const [outOfStockDesigns, setOutOfStockDesigns] = useState<Set<string>>(new Set());
 
   const [stoneType, setStoneType] = useState("");
   const [color, setColor] = useState("");
@@ -201,6 +212,17 @@ export default function InventoryPage() {
     setTimeout(() => setToast(""), 3000);
   };
 
+  const toggleStoneStock = (sku: string) => {
+    const wasOOS = outOfStockStones.has(sku);
+    setOutOfStockStones((prev) => {
+      const next = new Set(prev);
+      if (next.has(sku)) next.delete(sku); else next.add(sku);
+      return next;
+    });
+    setToast(wasOOS ? "Stone marked as in stock" : "Stone marked as out of stock");
+    setTimeout(() => setToast(""), 3000);
+  };
+
   const toggleDesign = (slug: string) => {
     const wasDisabled = disabledDesigns.has(slug);
     setDisabledDesigns((prev) => {
@@ -209,6 +231,17 @@ export default function InventoryPage() {
       return next;
     });
     setToast(wasDisabled ? "Design activated" : "Design deactivated");
+    setTimeout(() => setToast(""), 3000);
+  };
+
+  const toggleDesignStock = (slug: string) => {
+    const wasOOS = outOfStockDesigns.has(slug);
+    setOutOfStockDesigns((prev) => {
+      const next = new Set(prev);
+      if (next.has(slug)) next.delete(slug); else next.add(slug);
+      return next;
+    });
+    setToast(wasOOS ? "Design marked as in stock" : "Design marked as out of stock");
     setTimeout(() => setToast(""), 3000);
   };
 
@@ -378,20 +411,22 @@ export default function InventoryPage() {
             <span className="inline-flex items-center gap-1.5 text-[11px] tracking-[0.06em] font-medium px-2 py-[3px] rounded-[6px] whitespace-nowrap" style={{ color: SHOPIFY_GREEN_DARK, background: SHOPIFY_TINT }}><ShopifyIcon size={11} /> Synced · Shopify</span>
           </div>
           <div
-            className="hidden md:grid grid-cols-[minmax(200px,1.2fr)_100px_140px_130px_48px] gap-x-4 px-3 py-2.5 rounded-[8px] text-[11px] tracking-[0.07em] uppercase font-semibold"
+            className="hidden md:grid grid-cols-[minmax(220px,1.4fr)_130px_130px_100px_80px_120px_48px] gap-x-4 px-3 py-2.5 rounded-[8px] text-[11px] tracking-[0.07em] uppercase font-semibold"
             style={{ color: T.muted, background: "rgba(89,82,54,0.035)" }}
           >
             <span>Stone</span>
-            <span className="text-right">Weight</span>
-            <span className="text-right">Price / ratti</span>
+            <span>Intent</span>
+            <span>Zodiac</span>
+            <span>Colour</span>
+            <span className="text-right">Inventory</span>
             <span className="text-right">Total</span>
             <span />
           </div>
           {filteredStones.slice(0, 30).map((s, i, arr) => (
             <div
               key={s.sku}
-              className="grid md:grid-cols-[minmax(200px,1.2fr)_100px_140px_130px_48px] grid-cols-1 gap-x-4 gap-y-1.5 items-center px-3 py-3 text-[13.5px]"
-              style={{ borderBottom: i < Math.min(arr.length, 30) - 1 ? `1px solid ${T.borderSoft}` : "none", opacity: disabledStones.has(s.sku) ? 0.5 : 1 }}
+              className="grid md:grid-cols-[minmax(220px,1.4fr)_130px_130px_100px_80px_120px_48px] grid-cols-1 gap-x-4 gap-y-1.5 items-center px-3 py-3 text-[13.5px]"
+              style={{ borderBottom: i < Math.min(arr.length, 30) - 1 ? `1px solid ${T.borderSoft}` : "none", opacity: disabledStones.has(s.sku) || outOfStockStones.has(s.sku) ? 0.5 : 1 }}
             >
               <span className="flex items-center gap-3 min-w-0">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -404,18 +439,22 @@ export default function InventoryPage() {
                 />
                 <span className="min-w-0">
                   <span className="block font-medium truncate" style={{ color: T.text }}>{s.gemName}</span>
-                  <span className="block text-[11px] tracking-[0.05em] uppercase tabular-nums" style={{ color: T.faint }}>{s.sku}</span>
+                  <span className="block text-[11px] tracking-[0.05em] uppercase tabular-nums" style={{ color: T.faint }}>{s.sku} · {s.ratti} r</span>
                 </span>
               </span>
-              <span className="tabular-nums md:text-right" style={{ color: T.muted }}>{s.ratti} r</span>
-              <span className="tabular-nums md:text-right text-[13px]" style={{ color: T.muted }}>{catalogInr(s.pricePerRatti)}</span>
+              <span className="text-[12px] truncate" style={{ color: T.muted }}>{s.purpose?.[0] || "—"}</span>
+              <span className="text-[12px]" style={{ color: T.muted }}>{s.planetGlyph} {s.planet}</span>
+              <span className="text-[12px]" style={{ color: T.muted }}>{s.shade || s.colour || "—"}</span>
+              <span className="tabular-nums md:text-right text-[12px]" style={{ color: outOfStockStones.has(s.sku) ? T.danger : T.muted }}>{outOfStockStones.has(s.sku) ? "0" : "1"}</span>
               <span className="tabular-nums md:text-right font-semibold" style={{ color: T.text }}>{catalogInr(s.price)}</span>
               <span className="flex items-center justify-end">
-                <StoneRowMenu
+                <ItemRowMenu
                   shopifyUrl={`https://admin.shopify.com/products/${s.sku}`}
                   websiteUrl={`https://astrolaabh.house/stones/${s.slug}`}
                   enabled={!disabledStones.has(s.sku)}
                   onToggle={() => toggleStone(s.sku)}
+                  outOfStock={outOfStockStones.has(s.sku)}
+                  onOutOfStock={() => toggleStoneStock(s.sku)}
                 />
               </span>
             </div>
@@ -436,13 +475,23 @@ export default function InventoryPage() {
               {filteredDesigns.length} designs
             </div>
           </div>
+          <div
+            className="hidden md:grid grid-cols-[minmax(200px,1.2fr)_120px_120px_120px_48px] gap-x-4 px-3 py-2.5 rounded-[8px] text-[11px] tracking-[0.07em] uppercase font-semibold"
+            style={{ color: T.muted, background: "rgba(89,82,54,0.035)" }}
+          >
+            <span>Design</span>
+            <span>Design type</span>
+            <span>Metal type</span>
+            <span className="text-right">Remaining</span>
+            <span />
+          </div>
           {filteredDesigns.map((d, i, arr) => (
             <div
               key={d.slug}
-              className="flex flex-wrap items-center gap-x-4 gap-y-1.5 py-3 text-[13.5px]"
-              style={{ borderBottom: i < arr.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
+              className="grid md:grid-cols-[minmax(200px,1.2fr)_120px_120px_120px_48px] grid-cols-1 gap-x-4 gap-y-1.5 items-center px-3 py-3 text-[13.5px]"
+              style={{ borderBottom: i < arr.length - 1 ? `1px solid ${T.borderSoft}` : "none", opacity: disabledDesigns.has(d.slug) || outOfStockDesigns.has(d.slug) ? 0.5 : 1 }}
             >
-              <span className="flex items-center gap-3 w-[220px] min-w-0">
+              <span className="flex items-center gap-3 min-w-0">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={designThumb(d)}
@@ -453,13 +502,21 @@ export default function InventoryPage() {
                 />
                 <span className="min-w-0">
                   <span className="block font-medium truncate" style={{ color: T.text }}>{d.name}</span>
-                  <span className="block text-[11.5px]" style={{ color: T.faint }}>{d.form} · {d.metal}</span>
+                  <span className="block text-[11px] tracking-[0.05em] uppercase" style={{ color: T.faint }}>{d.slug}</span>
                 </span>
               </span>
-              <span className="text-[13px]" style={{ color: T.muted }}>run {d.runSize} · {d.remaining} remain</span>
-              <span className="ml-auto flex items-center gap-3">
-                <ExternalLink href={`https://admin.shopify.com/products/${d.slug}`} label="Shopify" shopify />
-                <ToggleSwitch enabled={!disabledDesigns.has(d.slug)} onToggle={() => toggleDesign(d.slug)} />
+              <span className="text-[13px]" style={{ color: T.muted }}>{d.form}</span>
+              <span className="text-[13px]" style={{ color: T.muted }}>{d.metal}</span>
+              <span className="tabular-nums md:text-right font-medium" style={{ color: d.remaining === 0 ? T.danger : T.text }}>{d.remaining}</span>
+              <span className="flex items-center justify-end">
+                <ItemRowMenu
+                  shopifyUrl={`https://admin.shopify.com/products/${d.slug}`}
+                  websiteUrl={`https://astrolaabh.house/designs/${d.slug}`}
+                  enabled={!disabledDesigns.has(d.slug)}
+                  onToggle={() => toggleDesign(d.slug)}
+                  outOfStock={outOfStockDesigns.has(d.slug)}
+                  onOutOfStock={() => toggleDesignStock(d.slug)}
+                />
               </span>
             </div>
           ))}

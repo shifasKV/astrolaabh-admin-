@@ -9,13 +9,13 @@ import { inr } from "@/lib/types";
 
 function getExpertStats(expertId: string) {
   const consultations = MOCK_CONSULTATIONS.filter((c) => c.expertId === expertId);
-  const upcoming = consultations.filter((c) => c.status === "scheduled").length;
-  const pendingSummaries = consultations.filter((c) => c.status === "summary_pending").length;
   const completed = consultations.filter((c) => c.status === "closed" || c.status === "completed").length;
-  const noShows = consultations.filter((c) => c.status === "no_show" && c.noShowBy === "expert").length;
-  const recommendations = MOCK_STONE_RECOMMENDATIONS.filter((r) => r.expertId === expertId).length;
+  const purchases = MOCK_STONE_RECOMMENDATIONS.filter((r) => r.expertId === expertId && r.status === "converted_to_order").length;
+  const pendingSummaries = consultations.filter((c) => c.status === "summary_pending").length;
+  const totalCommission = completed * 5000 * 0.15;
+  const commissionDue = pendingSummaries * 5000 * 0.15;
 
-  return { upcoming, pendingSummaries, completed, noShows, recommendations };
+  return { completed, purchases, pendingSummaries, totalCommission, commissionDue };
 }
 
 export default function AstroGemologistsPage() {
@@ -86,27 +86,19 @@ export default function AstroGemologistsPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-4 pt-4" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
-                  <div>
-                    <div className="text-[11px] uppercase tracking-wider" style={{ color: T.faint }}>Upcoming</div>
-                    <div className="text-[15px] font-semibold mt-0.5" style={{ color: T.text }}>{stats.upcoming}</div>
-                  </div>
-                  <div>
-                    <div className="text-[11px] uppercase tracking-wider" style={{ color: T.faint }}>Pending summaries</div>
-                    <div className="text-[15px] font-semibold mt-0.5" style={{ color: stats.pendingSummaries > 0 ? T.danger : T.text }}>{stats.pendingSummaries}</div>
-                  </div>
-                  <div>
-                    <div className="text-[11px] uppercase tracking-wider" style={{ color: T.faint }}>Completed</div>
-                    <div className="text-[15px] font-semibold mt-0.5" style={{ color: T.text }}>{stats.completed}</div>
-                  </div>
-                  <div>
-                    <div className="text-[11px] uppercase tracking-wider" style={{ color: T.faint }}>No show</div>
-                    <div className="text-[15px] font-semibold mt-0.5" style={{ color: stats.noShows > 0 ? T.danger : T.text }}>{stats.noShows}</div>
-                  </div>
-                  <div>
-                    <div className="text-[11px] uppercase tracking-wider" style={{ color: T.faint }}>Recommendations</div>
-                    <div className="text-[15px] font-semibold mt-0.5" style={{ color: T.text }}>{stats.recommendations}</div>
-                  </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 pt-4" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+                  {[
+                    { label: "Consultations", value: stats.completed, status: "completed", tone: T.good },
+                    { label: "Purchases", value: stats.purchases, status: "completed", tone: T.good },
+                    { label: "Recommendation", value: stats.pendingSummaries, status: "due", tone: stats.pendingSummaries > 0 ? T.danger : T.good },
+                    { label: "Commission", value: inr(stats.commissionDue), status: "due", tone: T.accent },
+                  ].map((s, i) => (
+                    <div key={i}>
+                      <div className="text-[11px] uppercase tracking-wider" style={{ color: T.faint }}>{s.label}</div>
+                      <div className="text-[15px] font-semibold mt-0.5 tabular-nums" style={{ color: T.text }}>{s.value}</div>
+                      <div className="text-[10px] font-medium mt-0.5" style={{ color: s.tone }}>{s.status}</div>
+                    </div>
+                  ))}
                 </div>
               </Card>
             </Link>

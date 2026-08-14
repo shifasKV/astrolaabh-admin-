@@ -134,40 +134,60 @@ export default function ExpertRecommendationsPage() {
       </div>
 
       <Card>
+        <div className="hidden sm:grid grid-cols-[1fr_140px_140px_100px_120px_150px] gap-3 px-3 py-2 text-[11px] tracking-[0.06em] uppercase" style={{ color: T.faint, borderBottom: `1px solid ${T.borderSoft}` }}>
+          <span>Order details</span>
+          <span>Customer</span>
+          <span className="text-right">Appointment date</span>
+          <span>Status</span>
+          <span className="text-right">Commission</span>
+          <span className="text-right">Order info</span>
+        </div>
         {paginated.length === 0 ? (
           <p className="text-[13.5px] py-8 text-center" style={{ color: T.muted }}>No recommendations found.</p>
         ) : (
           paginated.map((r) => {
             const href = r.orderId ? `/orders/${r.orderId}` : `/consultations/${r.consultationId}`;
             const price = getEstimatedPrice(r);
+            const commEarned = price != null && r.status === "converted_to_order" ? Math.round(price * 0.08) : 0;
+            const order = r.orderId ? MOCK_ORDERS.find((o) => o.id === r.orderId) : null;
+            const orderedDate = order ? new Date(order.placedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : null;
             return (
               <Link
                 key={r.id}
                 href={href}
-                className="flex items-center justify-between gap-4 py-3.5 row-interactive rounded-[9px] px-2 -mx-2"
+                className="grid grid-cols-1 sm:grid-cols-[1fr_140px_140px_100px_120px_150px] gap-2 sm:gap-3 items-center px-3 py-3.5 transition-all duration-150 rounded-[8px] hover:bg-[rgba(160,125,56,0.07)]"
                 style={{ borderBottom: `1px solid ${T.borderSoft}` }}
               >
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <span className="text-[14px] font-medium" style={{ color: T.accent }}>{r.gemstone}</span>
-                    <span className="text-[11px]" style={{ color: T.faint }}>·</span>
-                    <span className="text-[13px]" style={{ color: T.text }}>{r.customerName}</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-[12px]" style={{ color: T.muted }}>
-                    <span>{r.weightRange}</span>
-                    {price != null && (
-                      <>
-                        <span style={{ color: T.faint }}>·</span>
-                        <span className="tabular-nums font-medium" style={{ color: T.text }}>{inr(price)}</span>
-                      </>
-                    )}
-                    <span style={{ color: T.faint }}>·</span>
-                    <span>{new Date(r.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</span>
-                  </div>
+                <div className="min-w-0">
+                  <span className="text-[13.5px] font-medium" style={{ color: T.text }}>{r.gemstone}</span>
+                  <div className="text-[12px] mt-0.5" style={{ color: T.muted }}>{r.weightRange}{orderedDate ? ` · Ordered ${orderedDate}` : ""}</div>
                 </div>
-                <Chip tone={r.status === "converted_to_order" ? "good" : "gold"}>
-                  {r.status === "converted_to_order" ? "Converted to order" : "Submitted"}
-                </Chip>
+                <div className="min-w-0">
+                  <span className="text-[13px] truncate block" style={{ color: T.text }}>{r.customerName}</span>
+                </div>
+                <div className="min-w-0 text-right">
+                  <span className="text-[12px] tabular-nums" style={{ color: T.muted }}>
+                    {new Date(r.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                  </span>
+                </div>
+                <div>
+                  <Chip tone={r.status === "converted_to_order" ? "good" : "gold"}>
+                    {r.status === "converted_to_order" ? "Converted" : r.status === "draft" ? "Draft" : "Submitted"}
+                  </Chip>
+                </div>
+                <div className="min-w-0 text-right">
+                  <span className="text-[12px] tabular-nums font-medium" style={{ color: commEarned > 0 ? T.accent : T.faint }}>{commEarned > 0 ? inr(commEarned) : "—"}</span>
+                </div>
+                <div className="min-w-0 text-right">
+                  {r.orderId ? (
+                    <div>
+                      <div className="text-[12px] font-medium" style={{ color: T.accent }}>{r.orderId}</div>
+                      {orderedDate && <div className="text-[11px]" style={{ color: T.muted }}>Ordered {orderedDate}</div>}
+                    </div>
+                  ) : (
+                    <span className="text-[12px]" style={{ color: T.faint }}>—</span>
+                  )}
+                </div>
               </Link>
             );
           })

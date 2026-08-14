@@ -11,6 +11,7 @@ import {
   formatTime24to12,
 } from "@/lib/mock";
 import type { TimeRange } from "@/lib/mock";
+import { inr } from "@/lib/types";
 
 function toISODate(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -47,9 +48,12 @@ export default function ExpertDashboard() {
   const myConsultations = MOCK_CONSULTATIONS.filter((c) => c.expertId === EXPERT_ID);
   const todayAppts = myConsultations.filter((c) => c.scheduledAt.startsWith(todayISO) && c.status !== "cancelled" && c.status !== "no_show");
   const tomorrowAppts = myConsultations.filter((c) => c.scheduledAt.startsWith(tomorrowISO) && c.status !== "cancelled" && c.status !== "no_show");
+  const completedCount = myConsultations.filter((c) => c.status === "closed" || c.status === "completed").length;
   const summariesDue = myConsultations.filter((c) => c.status === "summary_pending").length;
   const rescheduleReqs = myConsultations.filter((c) => c.status === "reschedule_requested").length;
   const draftRecs = MOCK_STONE_RECOMMENDATIONS.filter((r) => r.expertId === EXPERT_ID && r.status === "draft").length;
+  const purchases = MOCK_STONE_RECOMMENDATIONS.filter((r) => r.expertId === EXPERT_ID && r.status === "converted_to_order").length;
+  const totalCommission = completedCount * Math.round(5000 * 0.15);
 
   const getSlotsForDate = (dateISO: string): string[] => {
     if (!schedule) return [];
@@ -189,11 +193,20 @@ export default function ExpertDashboard() {
       <PageHeader title="Dashboard" sub="Your day at a glance — metrics, actions, and slots" />
 
       {/* Metrics */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-        <StatCard label="Today" value={todayAppts.length} sub="appointments" />
-        <StatCard label="Tomorrow" value={tomorrowAppts.length} sub="appointments" />
-        <StatCard label="Summaries due" value={summariesDue} sub={summariesDue > 0 ? "action needed" : "all clear"} />
-        <StatCard label="Reschedule requests" value={rescheduleReqs} sub={rescheduleReqs > 0 ? "action needed" : "none"} />
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
+        {[
+          { label: "Consultations", value: completedCount, status: "completed", tone: T.good },
+          { label: "Purchases", value: purchases, status: "completed", tone: T.good },
+          { label: "Recommendation", value: summariesDue, status: "due", tone: summariesDue > 0 ? T.danger : T.good },
+          { label: "Commission", value: inr(totalCommission), status: "earned", tone: T.good },
+          { label: "Today", value: todayAppts.length, status: "appointments", tone: T.accent },
+        ].map((stat, i) => (
+          <div key={i} className="rounded-[12px] p-5" style={{ background: T.card, border: `1px solid ${T.border}` }}>
+            <div className="text-[11px] tracking-[0.08em] uppercase" style={{ color: T.faint }}>{stat.label}</div>
+            <div className="text-[20px] font-semibold mt-1 tabular-nums" style={{ color: T.text }}>{stat.value}</div>
+            <div className="text-[11px] font-medium mt-1" style={{ color: stat.tone }}>{stat.status}</div>
+          </div>
+        ))}
       </div>
 
       {/* Actions required */}
