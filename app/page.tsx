@@ -7,7 +7,6 @@ const ROLES: { key: Role; label: string; note: string }[] = [
   { key: "admin", label: "Admin", note: "Full access — operations, catalogue, affiliation & audit" },
   { key: "expert", label: "Astrologer & Gemologist", note: "Appointments, consultations, recommendations & certification" },
   { key: "affiliate", label: "Affiliated Partner", note: "Referral links, conversions, earnings & payouts" },
-  { key: "sales_admin", label: "Sales Admin", note: "All leads, assign & reassign across the sales team" },
   { key: "sales_exec", label: "Sales Executive", note: "Your assigned leads — stone & consultation follow-ups" },
 ];
 

@@ -66,8 +66,7 @@ export default function SalesPage() {
                     </span>
                     <div>
                       <div className="text-[14px] font-semibold" style={{ color: T.text }}>{member.name}</div>
-                      <div className="text-[13px] mt-0.5" style={{ color: T.muted }}>{member.role}</div>
-                      <div className="flex items-center gap-2 mt-1.5">
+                      <div className="flex items-center gap-2 mt-1">
                         <span className="text-[12px]" style={{ color: T.faint }}>{member.email}</span>
                         <span className="text-[12px]" style={{ color: T.faint }}>·</span>
                         <span className="text-[12px]" style={{ color: T.faint }}>{member.phone}</span>

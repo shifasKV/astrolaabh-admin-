@@ -1,13 +1,9 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { PageHeader, Card, GoldBtn, GhostBtn, Input, Select } from "@/components/ui";
+import { PageHeader, Card, GoldBtn, GhostBtn, Input } from "@/components/ui";
 import { T } from "@/lib/theme";
 
-const ROLE_OPTIONS = [
-  { value: "Sales Executive", label: "Sales Executive" },
-  { value: "Sales Lead", label: "Sales Lead" },
-];
 
 export default function CreateSalesMemberPage() {
   const router = useRouter();
@@ -16,7 +12,6 @@ export default function CreateSalesMemberPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [role, setRole] = useState("");
 
   const canSubmit = name.trim() && email.trim() && phone.trim();
 
@@ -46,7 +41,6 @@ export default function CreateSalesMemberPage() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Input value={phone} onChange={setPhone} label="Mobile number" placeholder="e.g. +91 98765 43210" />
-              <Select value={role} onChange={setRole} label="Role" options={ROLE_OPTIONS} placeholder="Select role" />
             </div>
           </div>
         </Card>

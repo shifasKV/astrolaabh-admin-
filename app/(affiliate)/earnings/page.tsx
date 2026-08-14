@@ -1,5 +1,6 @@
 "use client";
-import { PageHeader, Card, StatCard, Chip, GhostBtn } from "@/components/ui";
+import { useState } from "react";
+import { PageHeader, Card, StatCard, Chip, GhostBtn, Input, GoldBtn } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_AFFILIATES, MOCK_PAYOUTS, MOCK_REFERRAL_EVENTS } from "@/lib/mock";
 import { inr } from "@/lib/types";
@@ -11,6 +12,14 @@ export default function EarningsPage() {
 
   const pendingAmount = myReferrals.filter((r) => r.commissionStatus === "pending").reduce((s, r) => s + (r.commissionAmount || 0), 0);
   const approvedAmount = myReferrals.filter((r) => r.commissionStatus === "approved").reduce((s, r) => s + (r.commissionAmount || 0), 0);
+
+  const [editingBank, setEditingBank] = useState(false);
+  const [holderName, setHolderName] = useState("Pt. Sandeep Kochaar");
+  const [bankName, setBankName] = useState("HDFC Bank");
+  const [accountNumber, setAccountNumber] = useState("50100123456789");
+  const [confirmAccount, setConfirmAccount] = useState("50100123456789");
+  const [ifsc, setIfsc] = useState("HDFC0001234");
+  const [upiId, setUpiId] = useState("sandeep@upi");
 
   return (
     <>
@@ -27,6 +36,7 @@ export default function EarningsPage() {
         <StatCard label="Lifetime earned" value={inr(affiliate.totalPaid + affiliate.totalAccrued)} />
       </div>
 
+      {/* Payout history */}
       <Card className="mb-4">
         <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.faint }}>Payout history</div>
         {myPayouts.map((p) => (
@@ -45,6 +55,50 @@ export default function EarningsPage() {
         ))}
       </Card>
 
+      {/* Account details */}
+      <Card className="mb-4">
+        <div className="flex items-center justify-between mb-4">
+          <div className="text-[11px] tracking-[0.08em] uppercase" style={{ color: T.faint }}>Account details</div>
+          {!editingBank && (
+            <GhostBtn className="!h-8 !px-3 !text-[11px]" onClick={() => setEditingBank(true)}>Edit</GhostBtn>
+          )}
+        </div>
+
+        {editingBank ? (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <Input value={holderName} onChange={setHolderName} label="Bank account holder name" />
+              <Input value={bankName} onChange={setBankName} label="Bank name" />
+              <Input value={accountNumber} onChange={setAccountNumber} label="Bank account number" />
+              <Input value={confirmAccount} onChange={setConfirmAccount} label="Confirm bank account number" />
+              <Input value={ifsc} onChange={setIfsc} label="IFSC code" />
+              <Input value={upiId} onChange={setUpiId} label="UPI ID" placeholder="e.g. name@upi" />
+            </div>
+            <div className="mt-4 flex gap-2.5">
+              <GoldBtn onClick={() => setEditingBank(false)}>Save details</GoldBtn>
+              <GhostBtn onClick={() => setEditingBank(false)}>Cancel</GhostBtn>
+            </div>
+            <p className="text-[11px] mt-3" style={{ color: T.faint }}>Banking details are encrypted and only visible to authorized finance team.</p>
+          </>
+        ) : (
+          <div className="space-y-2.5 text-[13px]">
+            {[
+              ["Account holder", holderName],
+              ["Bank name", bankName],
+              ["Account number", "••••" + accountNumber.slice(-4)],
+              ["IFSC code", ifsc],
+              ["UPI ID", upiId || "—"],
+            ].map(([k, v]) => (
+              <div key={k} className="flex justify-between gap-2">
+                <span style={{ color: T.muted }}>{k}</span>
+                <span className="font-medium" style={{ color: T.text }}>{v}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+
+      {/* Payout policy */}
       <Card>
         <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.faint }}>Payout policy</div>
         <div className="space-y-2 text-[13px]">
