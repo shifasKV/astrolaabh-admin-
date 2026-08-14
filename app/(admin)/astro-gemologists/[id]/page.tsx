@@ -282,7 +282,7 @@ export default function AstroGemologistDetailPage() {
   const consCommission = (fee: number) => Math.round(fee * parseFloat(commissionRates.consultation) / 100);
 
   function ConsultationRow({ c, showStatus }: { c: typeof consultations[number]; showStatus?: string }) {
-    const comm = c.paymentStatus === "paid" ? consCommission(c.fee) : 0;
+    const comm = c.paymentStatus === "paid" ? consCommission(c.fee ?? 0) : 0;
     return (
       <Link
         href={`/consultations/${c.id}`}

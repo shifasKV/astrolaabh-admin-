@@ -302,7 +302,7 @@ export default function AppointmentsPage() {
           paginated.map((c) => {
             const dt = new Date(c.scheduledAt);
             const es = expertStatus(c);
-            const commEarned = es === "done" ? Math.round(c.fee * 0.15) : 0;
+            const commEarned = es === "done" ? Math.round((c.fee ?? 0) * 0.15) : 0;
             return (
               <Link key={c.id} href={`/appointments/${c.id}`}
                 className="grid items-center gap-4 py-3.5 transition-all duration-150 rounded-[8px] hover:bg-[rgba(160,125,56,0.07)]"

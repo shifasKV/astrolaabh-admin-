@@ -15,7 +15,7 @@ function getAffiliateStats(affiliate: typeof MOCK_AFFILIATES[number]) {
   const rate = affiliate.commissionRate / 100;
   const totalCommission =
     orders.filter((o) => o.paymentStatus === "paid").reduce((s, o) => s + Math.round(o.total * rate), 0) +
-    consultations.filter((c) => c.paymentStatus === "paid").reduce((s, c) => s + Math.round(c.fee * rate), 0);
+    consultations.filter((c) => c.paymentStatus === "paid").reduce((s, c) => s + Math.round((c.fee ?? 0) * rate), 0);
 
   return {
     purchases: orders.length,

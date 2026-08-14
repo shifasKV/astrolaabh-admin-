@@ -69,7 +69,7 @@ export default function AffiliateDetailPage({ params }: { params: Promise<{ id: 
 
   const commissionRate = affiliate.commissionRate / 100;
   const totalOrderCommission = allOrders.filter((o) => o.paymentStatus === "paid").reduce((sum, o) => sum + Math.round(o.total * commissionRate), 0);
-  const totalConsultationCommission = allConsultations.filter((c) => c.paymentStatus === "paid").reduce((sum, c) => sum + Math.round(c.fee * commissionRate), 0);
+  const totalConsultationCommission = allConsultations.filter((c) => c.paymentStatus === "paid").reduce((sum, c) => sum + Math.round((c.fee ?? 0) * commissionRate), 0);
   const totalCommission = totalOrderCommission + totalConsultationCommission;
   const totalPaid = payouts.filter((p) => p.status === "paid").reduce((sum, p) => sum + p.amount, 0);
   const commissionDue = Math.max(0, totalCommission - totalPaid);
@@ -323,12 +323,12 @@ export default function AffiliateDetailPage({ params }: { params: Promise<{ id: 
           {consultationsData.paged.length === 0 && <div className="text-center py-8 text-[13px]" style={{ color: T.muted }}>No consultations found.</div>}
           {consultationsData.paged.map((c) => {
             const st = consStatusLabel(c.status);
-            const comm = c.paymentStatus === "paid" ? Math.round(c.fee * commissionRate) : 0;
+            const comm = c.paymentStatus === "paid" ? Math.round((c.fee ?? 0) * commissionRate) : 0;
             return (
               <Link key={c.id} href={`/consultations/${c.id}`} className="grid grid-cols-1 sm:grid-cols-[minmax(100px,1fr)_1fr_1fr_100px_120px_110px] gap-3 items-center px-3 py-3 transition-all rounded-[8px] hover:bg-[rgba(160,125,56,0.07)]" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
                 <div className="min-w-0">
                   <div className="text-[11px] tracking-[0.06em] uppercase font-medium" style={{ color: T.accent }}>{c.id}</div>
-                  <div className="text-[12px] mt-0.5" style={{ color: T.muted }}>{inr(c.fee)}</div>
+                  <div className="text-[12px] mt-0.5" style={{ color: T.muted }}>{inr(c.fee ?? 0)}</div>
                 </div>
                 <div className="text-[13px] truncate" style={{ color: T.text }}>{c.customerName}</div>
                 <div className="text-[13px] truncate" style={{ color: T.muted }}>{c.expertName}</div>

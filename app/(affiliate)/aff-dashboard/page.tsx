@@ -29,12 +29,12 @@ export default function AffiliateDashboard() {
   const myReferrals = MOCK_REFERRAL_EVENTS.filter((r) => r.affiliateId === affiliate.id);
 
   const totalOrders = myReferrals.filter((r) => r.eventType === "order").length;
-  const totalConsultations = myReferrals.filter((r) => r.eventType === "consultation" || r.eventType === "click" || r.eventType === "booking").length;
+  const totalConsultations = myReferrals.filter((r) => r.eventType === "booking").length;
   const pendingCommission = myReferrals.filter((r) => r.commissionStatus === "pending").reduce((s, r) => s + (r.commissionAmount || 0), 0);
   const paidCommission = MOCK_PAYOUTS.filter((p) => p.affiliateId === affiliate.id && p.status === "paid").reduce((s, p) => s + p.amount, 0);
   const totalCommission = paidCommission + pendingCommission;
   const pendingOrders = myReferrals.filter((r) => r.eventType === "order" && r.commissionStatus === "pending").length;
-  const pendingConsultations = myReferrals.filter((r) => (r.eventType === "consultation" || r.eventType === "booking") && (!r.commissionStatus || r.commissionStatus === "pending")).length;
+  const pendingConsultations = myReferrals.filter((r) => r.eventType === "booking" && (!r.commissionStatus || r.commissionStatus === "pending")).length;
   const linksGenerated = myLinks.length;
 
   const [chartOffset, setChartOffset] = useState(0);
