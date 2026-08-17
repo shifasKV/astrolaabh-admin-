@@ -1,6 +1,6 @@
 "use client";
-import { useState, useMemo } from "react";
-import { PageHeader, StatCard, Card } from "@/components/ui";
+import { useState, useMemo, useEffect } from "react";
+import { PageHeader, StatCard, Card, StatCardSkeleton } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_AFFILIATES, MOCK_AFFILIATE_LINKS, MOCK_REFERRAL_EVENTS, MOCK_PAYOUTS } from "@/lib/mock";
 import { inr } from "@/lib/types";
@@ -38,6 +38,13 @@ export default function AffiliateDashboard() {
   const linksGenerated = myLinks.length;
 
   const [chartOffset, setChartOffset] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const t = setTimeout(() => setLoading(false), 700);
+    return () => clearTimeout(t);
+  }, []);
+
   const earningsData = useMemo(() => generateEarningsData(), []);
 
   const totalWindows = Math.ceil(earningsData.length / WINDOW);
@@ -65,6 +72,10 @@ export default function AffiliateDashboard() {
     <>
       <PageHeader title="Dashboard" sub={`Welcome back, ${affiliate.name} · ${affiliate.code}`} />
 
+      {loading ? (
+        <StatCardSkeleton count={5} />
+      ) : (
+      <>
       {/* Row 1: Primary stats */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-3">
         <StatCard label="Total orders" value={totalOrders} />
@@ -185,6 +196,8 @@ export default function AffiliateDashboard() {
           </div>
         </div>
       </Card>
+      </>
+      )}
     </>
   );
 }

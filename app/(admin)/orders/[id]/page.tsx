@@ -1,7 +1,7 @@
 "use client";
-import { use, useState } from "react";
+import { use, useState, useEffect } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, GoldBtn, GhostBtn, Modal, Input, Select, FileInput, Textarea, DateInput, TimeInput, ShopifyButton, BackLink } from "@/components/ui";
+import { PageHeader, Card, Chip, GoldBtn, GhostBtn, Modal, Input, Select, FileInput, Textarea, DateInput, TimeInput, ShopifyButton, BackLink, LoadingState, ConfirmDialog } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_ORDERS, MOCK_CUSTOMERS, MOCK_CERTIFICATES, MOCK_ENERGISATION } from "@/lib/mock";
 import { ENERGISATION } from "@/lib/catalog";
@@ -53,9 +53,16 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const [trackingCourier, setTrackingCourier] = useState("");
   const [trackingInput, setTrackingInput] = useState("");
   const [dispatched, setDispatched] = useState(false);
+  const [confirmDispatch, setConfirmDispatch] = useState(false);
   const [receivedNotes, setReceivedNotes] = useState("");
 
   const [viewStep, setViewStep] = useState<PipelineStep | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const t = setTimeout(() => setLoading(false), 700);
+    return () => clearTimeout(t);
+  }, []);
 
   if (!order) {
     return (
@@ -160,6 +167,10 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
         }
       />
 
+      {loading ? (
+        <Card className="mb-4"><LoadingState lines={8} /></Card>
+      ) : (
+      <>
       {/* ============ PAYMENT BANNER ============ */}
       {!isPaid && (
         <div
@@ -666,7 +677,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                     </div>
                     <div className="shrink-0 self-end">
                       <GoldBtn
-                        onClick={() => { setLocalTracking(trackingInput); setDispatched(true); flash("Order dispatched"); }}
+                        onClick={() => setConfirmDispatch(true)}
                         disabled={!trackingInput}
                       >
                         Mark as dispatched
@@ -679,6 +690,8 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
           )}
         </div>
       </Card>
+      </>
+      )}
 
       {/* ============ MODALS ============ */}
 
@@ -772,6 +785,16 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
           {toast}
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmDispatch}
+        onClose={() => setConfirmDispatch(false)}
+        onConfirm={() => { setLocalTracking(trackingInput); setDispatched(true); flash("Order dispatched"); }}
+        title="Mark as dispatched?"
+        description="This will notify the customer and update tracking."
+        variant="default"
+        confirmLabel="Mark as dispatched"
+      />
     </>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
-import { useState, useMemo } from "react";
-import { PageHeader, Card, Chip, Tabs, SearchFilter, Select, Pagination } from "@/components/ui";
+import { useState, useMemo, useEffect } from "react";
+import { PageHeader, Card, Chip, Tabs, SearchFilter, Select, Pagination, TableSkeleton, ExportButton } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_REFERRAL_EVENTS } from "@/lib/mock";
 import { inr } from "@/lib/types";
@@ -24,6 +24,12 @@ export default function ReferralsPage() {
   const [sort, setSort] = useState<SortKey>("date_desc");
   const [statusFilter, setStatusFilter] = useState("");
   const [page, setPage] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const t = setTimeout(() => setLoading(false), 700);
+    return () => clearTimeout(t);
+  }, []);
 
   const myReferrals = MOCK_REFERRAL_EVENTS.filter((r) => r.affiliateId === "aff_001");
   const orders = myReferrals.filter((r) => r.eventType === "order");
@@ -65,6 +71,17 @@ export default function ReferralsPage() {
   const totalPages = Math.max(1, Math.ceil(activeItems.length / PER_PAGE));
   const paged = activeItems.slice(page * PER_PAGE, (page + 1) * PER_PAGE);
 
+  const exportData = activeItems.map((r) => ({
+    id: r.id,
+    type: r.eventType,
+    customer: r.maskedCustomer ?? "",
+    campaign: r.campaign ?? "",
+    date: r.eventDate,
+    amount: r.orderValue ?? "",
+    commission: r.commissionAmount ?? "",
+    status: r.commissionStatus ?? "",
+  }));
+
   const orderSortOptions = [
     { value: "date_desc", label: "Newest" },
     { value: "date_asc", label: "Oldest" },
@@ -99,8 +116,13 @@ export default function ReferralsPage() {
         <div className="ml-auto w-[170px]">
           <Select value={sort} onChange={(v) => { setSort(v as SortKey); setPage(0); }} compact prefix="Sort: " options={orderSortOptions} />
         </div>
+        <ExportButton data={exportData} filename="referrals" className="ml-2" />
       </div>
 
+      {loading ? (
+        <Card><TableSkeleton rows={5} cols={5} /></Card>
+      ) : (
+      <>
       {/* ===== ORDERS TAB ===== */}
       {tab === "orders" && (
         <Card>
@@ -173,6 +195,8 @@ export default function ReferralsPage() {
           ))}
           <Pagination page={page} totalPages={totalPages} onPageChange={setPage} perPage={PER_PAGE} totalItems={activeItems.length} />
         </Card>
+      )}
+      </>
       )}
     </>
   );

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { PageHeader, Card, GoldBtn, GhostBtn, SearchFilter, Chip, Input, StepIndicator } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_CUSTOMERS } from "@/lib/mock";
+import { V, validate, hasErrors, type ValidationErrors } from "@/lib/validation";
 
 type Step = "customer" | "address";
 const STEPS: { key: Step; label: string }[] = [
@@ -24,6 +25,23 @@ export default function CreateCustomerPage() {
   const [showNewAddress, setShowNewAddress] = useState(false);
   const [newAddress, setNewAddress] = useState({ line1: "", line2: "", city: "", state: "", pincode: "" });
 
+  const [errors, setErrors] = useState<ValidationErrors>({});
+  const [touched, setTouched] = useState<Set<string>>(new Set());
+  const [submitAttempted, setSubmitAttempted] = useState(false);
+
+  const markTouched = (field: string) => setTouched((prev) => new Set(prev).add(field));
+  const showError = (field: string) => (touched.has(field) || submitAttempted) ? errors[field] : undefined;
+
+  const validateCustomer = () => {
+    const errs = validate({
+      name: V.required(newCustomer.name),
+      email: V.email(newCustomer.email),
+      phone: V.phone(newCustomer.phone),
+    });
+    setErrors(errs);
+    return errs;
+  };
+
   const stepIndex = STEPS.findIndex((s) => s.key === step);
 
   const canNavigateTo = (targetIndex: number) => {
@@ -38,9 +56,13 @@ export default function CreateCustomerPage() {
   };
 
   const handleCreateCustomer = () => {
-    if (!newCustomer.name || !newCustomer.phone) return;
+    setSubmitAttempted(true);
+    setTouched(new Set(["name", "email", "phone"]));
+    const errs = validateCustomer();
+    if (hasErrors(errs)) return;
     const id = `cust_new_${Date.now()}`;
     setCreatedCustomer({ id, ...newCustomer });
+    setSubmitAttempted(false);
     goTo("address");
   };
 
@@ -93,21 +115,24 @@ export default function CreateCustomerPage() {
             <div className="space-y-3">
               <Input
                 value={newCustomer.name}
-                onChange={(v) => setNewCustomer((p) => ({ ...p, name: v }))}
+                onChange={(v) => { markTouched("name"); setNewCustomer((p) => ({ ...p, name: v })); }}
                 label="Full name"
                 placeholder="e.g. Priya Sharma"
+                error={showError("name")}
               />
               <Input
                 value={newCustomer.email}
-                onChange={(v) => setNewCustomer((p) => ({ ...p, email: v }))}
+                onChange={(v) => { markTouched("email"); setNewCustomer((p) => ({ ...p, email: v })); }}
                 label="Email"
                 placeholder="e.g. priya@example.com"
+                error={showError("email")}
               />
               <Input
                 value={newCustomer.phone}
-                onChange={(v) => setNewCustomer((p) => ({ ...p, phone: v }))}
+                onChange={(v) => { markTouched("phone"); setNewCustomer((p) => ({ ...p, phone: v })); }}
                 label="Mobile number"
                 placeholder="e.g. +91 98765 43210"
+                error={showError("phone")}
               />
             </div>
 

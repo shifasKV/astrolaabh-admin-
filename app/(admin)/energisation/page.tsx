@@ -1,7 +1,7 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, Tabs, Select, SearchFilter } from "@/components/ui";
+import { PageHeader, Card, Chip, Tabs, Select, SearchFilter, TableSkeleton, Pagination, ExportButton } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_ENERGISATION } from "@/lib/mock";
 
@@ -50,11 +50,14 @@ export default function EnergisationPage() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [dpYear, setDpYear] = useState(new Date().getFullYear());
   const [dpMonth, setDpMonth] = useState(new Date().getMonth());
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(0);
   const [calWeekBase, setCalWeekBase] = useState(() => new Date());
   const [goToDateOpen, setGoToDateOpen] = useState(false);
   const [gtdYear, setGtdYear] = useState(new Date().getFullYear());
   const [gtdMonth, setGtdMonth] = useState(new Date().getMonth());
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => { const t = setTimeout(() => setLoading(false), 700); return () => clearTimeout(t); }, []);
 
   const PER_PAGE = 9;
 
@@ -99,8 +102,17 @@ export default function EnergisationPage() {
   });
 
   const totalPages = Math.ceil(filtered.length / PER_PAGE);
-  const currentPage = page > totalPages && totalPages > 0 ? totalPages : page;
-  const paginated = filtered.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE);
+  const paginated = filtered.slice(page * PER_PAGE, (page + 1) * PER_PAGE);
+
+  const exportData = filtered.map((e) => ({
+    id: e.id,
+    customer: e.customerName,
+    orderNumber: e.orderNumber,
+    stone: e.stoneDescription,
+    status: e.status,
+    scheduledAt: e.scheduledAt ?? "",
+    method: e.method ?? "",
+  }));
 
   const uniqueCustomers = [...new Set(MOCK_ENERGISATION.filter((e) => e.status !== "not_required").map((e) => e.customerName))].sort();
   const hasActiveFilters = !!filterCustomer || !!filterStatus || !!filterDateFrom || !!filterDateTo;
@@ -151,7 +163,7 @@ export default function EnergisationPage() {
             ).length,
           }))}
           active={tab}
-          onChange={(key) => { setTab(key); if (key !== "all") setViewMode("list"); }}
+          onChange={(key) => { setTab(key); setPage(0); if (key !== "all") setViewMode("list"); }}
         />
       </div>
 
@@ -200,7 +212,7 @@ export default function EnergisationPage() {
         <div className="w-[200px]">
           <Select
             value={filterCustomer}
-            onChange={(v) => { setFilterCustomer(v); setPage(1); }}
+            onChange={(v) => { setFilterCustomer(v); setPage(0); }}
             searchable
             compact
             placeholder="All customers"
@@ -214,7 +226,7 @@ export default function EnergisationPage() {
         <div className="w-[180px]">
           <Select
             value={filterStatus}
-            onChange={(v) => { setFilterStatus(v); setPage(1); }}
+            onChange={(v) => { setFilterStatus(v); setPage(0); }}
             compact
             placeholder="All status"
             options={[
@@ -254,22 +266,22 @@ export default function EnergisationPage() {
                     { label: "Last 7 days", from: new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10), to: new Date().toISOString().slice(0, 10) },
                     { label: "Last 30 days", from: new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10), to: new Date().toISOString().slice(0, 10) },
                   ].map((preset) => (
-                    <button key={preset.label} onClick={() => { setFilterDateFrom(preset.from); setFilterDateTo(preset.to); setShowDatePicker(false); setPage(1); }} className="w-full text-left px-2.5 py-2 rounded-[7px] text-[12px] transition-colors cursor-pointer hover:bg-[rgba(160,125,56,0.10)]" style={{ color: T.text }}>{preset.label}</button>
+                    <button key={preset.label} onClick={() => { setFilterDateFrom(preset.from); setFilterDateTo(preset.to); setShowDatePicker(false); setPage(0); }} className="w-full text-left px-2.5 py-2 rounded-[7px] text-[12px] transition-colors cursor-pointer hover:bg-[rgba(160,125,56,0.10)]" style={{ color: T.text }}>{preset.label}</button>
                   ))}
                   {(filterDateFrom || filterDateTo) && (
-                    <button onClick={() => { setFilterDateFrom(""); setFilterDateTo(""); setShowDatePicker(false); setPage(1); }} className="w-full text-left px-2.5 py-2 rounded-[7px] text-[11px] mt-1 transition-colors cursor-pointer hover:bg-[rgba(176,84,84,0.06)]" style={{ color: T.danger }}>Clear dates</button>
+                    <button onClick={() => { setFilterDateFrom(""); setFilterDateTo(""); setShowDatePicker(false); setPage(0); }} className="w-full text-left px-2.5 py-2 rounded-[7px] text-[11px] mt-1 transition-colors cursor-pointer hover:bg-[rgba(176,84,84,0.06)]" style={{ color: T.danger }}>Clear dates</button>
                   )}
                 </div>
                 <div className="p-4 w-[280px]">
                   <div className="flex items-center gap-2 mb-3">
                     <div className="flex-1">
                       <div className="text-[9px] uppercase tracking-[0.06em] mb-1" style={{ color: T.faint }}>After</div>
-                      <input type="date" value={filterDateFrom} onChange={(e) => { setFilterDateFrom(e.target.value); setPage(1); }} className="w-full h-8 px-2 rounded-[7px] text-[11px] outline-none" style={{ background: T.bg, border: `1px solid ${T.borderSoft}`, color: T.text }} />
+                      <input type="date" value={filterDateFrom} onChange={(e) => { setFilterDateFrom(e.target.value); setPage(0); }} className="w-full h-8 px-2 rounded-[7px] text-[11px] outline-none" style={{ background: T.bg, border: `1px solid ${T.borderSoft}`, color: T.text }} />
                     </div>
                     <span className="text-[11px] mt-3" style={{ color: T.faint }}>—</span>
                     <div className="flex-1">
                       <div className="text-[9px] uppercase tracking-[0.06em] mb-1" style={{ color: T.faint }}>Before</div>
-                      <input type="date" value={filterDateTo} onChange={(e) => { setFilterDateTo(e.target.value); setPage(1); }} className="w-full h-8 px-2 rounded-[7px] text-[11px] outline-none" style={{ background: T.bg, border: `1px solid ${T.borderSoft}`, color: T.text }} />
+                      <input type="date" value={filterDateTo} onChange={(e) => { setFilterDateTo(e.target.value); setPage(0); }} className="w-full h-8 px-2 rounded-[7px] text-[11px] outline-none" style={{ background: T.bg, border: `1px solid ${T.borderSoft}`, color: T.text }} />
                     </div>
                   </div>
                   <div className="flex items-center justify-between mb-2">
@@ -289,7 +301,7 @@ export default function EnergisationPage() {
                       const isTo = filterDateTo === iso;
                       const inRange = filterDateFrom && filterDateTo && iso >= filterDateFrom && iso <= filterDateTo;
                       return (
-                        <button key={day} type="button" onClick={() => { if (!filterDateFrom || (filterDateFrom && filterDateTo)) { setFilterDateFrom(iso); setFilterDateTo(""); } else { if (iso < filterDateFrom) { setFilterDateTo(filterDateFrom); setFilterDateFrom(iso); } else { setFilterDateTo(iso); } } setPage(1); }}
+                        <button key={day} type="button" onClick={() => { if (!filterDateFrom || (filterDateFrom && filterDateTo)) { setFilterDateFrom(iso); setFilterDateTo(""); } else { if (iso < filterDateFrom) { setFilterDateTo(filterDateFrom); setFilterDateFrom(iso); } else { setFilterDateTo(iso); } } setPage(0); }}
                           className="w-[34px] h-[34px] rounded-full flex items-center justify-center text-[11px] transition-colors cursor-pointer"
                           style={{ background: (isFrom || isTo) ? T.accent : inRange ? "rgba(160,125,56,0.16)" : "transparent", color: (isFrom || isTo) ? T.accentInk : T.text, fontWeight: (isFrom || isTo) ? 700 : 400 }}
                         >{day}</button>
@@ -305,7 +317,7 @@ export default function EnergisationPage() {
         <div className="ml-auto flex items-center gap-2">
           {hasActiveFilters && (
             <button
-              onClick={() => { setFilterCustomer(""); setFilterStatus(""); setFilterDateFrom(""); setFilterDateTo(""); setPage(1); }}
+              onClick={() => { setFilterCustomer(""); setFilterStatus(""); setFilterDateFrom(""); setFilterDateTo(""); setPage(0); }}
               className="text-[11px] px-2.5 py-1.5 rounded-[7px] cursor-pointer transition-opacity hover:opacity-80"
               style={{ color: T.danger, background: "rgba(176,84,84,0.08)", border: "1px solid rgba(176,84,84,0.15)" }}
             >
@@ -315,7 +327,7 @@ export default function EnergisationPage() {
           <div className="w-[180px]">
             <Select
               value={sort}
-              onChange={(val) => { setSort(val as SortKey); setPage(1); }}
+              onChange={(val) => { setSort(val as SortKey); setPage(0); }}
               compact
               prefix="Sort: "
               options={[
@@ -327,11 +339,16 @@ export default function EnergisationPage() {
               ]}
             />
           </div>
+          <ExportButton data={exportData} filename="energisation" className="ml-2" />
         </div>
       </div>
 
-      {/* List view */}
-      <Card>
+      {loading ? (
+        <Card><TableSkeleton rows={6} cols={5} /></Card>
+      ) : (
+        <>
+          {/* List view */}
+          <Card>
         {/* Table header */}
         <div className="hidden sm:grid grid-cols-[1fr_140px_120px] gap-3 px-3 py-2 text-[11px] tracking-[0.06em] uppercase" style={{ color: T.faint, borderBottom: `1px solid ${T.borderSoft}` }}>
           <span>Energisation details</span>
@@ -385,33 +402,18 @@ export default function EnergisationPage() {
       </Card>
 
       {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between mt-4">
-          <div className="text-[12px]" style={{ color: T.faint }}>
-            Showing {(currentPage - 1) * PER_PAGE + 1}–{Math.min(currentPage * PER_PAGE, filtered.length)} of {filtered.length}
-          </div>
-          <div className="flex items-center gap-1">
-            <button onClick={() => setPage(1)} disabled={currentPage === 1} className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[12px] transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed" style={{ background: T.popover, border: `1px solid ${T.borderSoft}`, color: T.muted }}>«</button>
-            <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1} className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[12px] transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed" style={{ background: T.popover, border: `1px solid ${T.borderSoft}`, color: T.muted }}>‹</button>
-            {Array.from({ length: totalPages }).map((_, i) => {
-              const p = i + 1;
-              if (totalPages > 7 && Math.abs(p - currentPage) > 2 && p !== 1 && p !== totalPages) {
-                if (p === currentPage - 3 || p === currentPage + 3) return <span key={p} className="w-6 text-center text-[11px]" style={{ color: T.faint }}>…</span>;
-                return null;
-              }
-              return (
-                <button key={p} onClick={() => setPage(p)} className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[12px] font-medium transition-all cursor-pointer" style={{ background: p === currentPage ? T.accent : T.panel, border: `1px solid ${p === currentPage ? T.accent : T.borderSoft}`, color: p === currentPage ? T.accentInk : T.text }}>{p}</button>
-              );
-            })}
-            <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[12px] transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed" style={{ background: T.popover, border: `1px solid ${T.borderSoft}`, color: T.muted }}>›</button>
-            <button onClick={() => setPage(totalPages)} disabled={currentPage === totalPages} className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[12px] transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed" style={{ background: T.popover, border: `1px solid ${T.borderSoft}`, color: T.muted }}>»</button>
-          </div>
-        </div>
+      {filtered.length > PER_PAGE && (
+        <Pagination page={page} totalPages={totalPages} totalItems={filtered.length} perPage={PER_PAGE} onPageChange={setPage} />
+      )}
+        </>
       )}
       </>}
 
       {/* ============ Calendar view ============ */}
       {viewMode === "calendar" && (
+        loading ? (
+          <Card><TableSkeleton rows={6} cols={5} /></Card>
+        ) : (
         <>
           {/* Week navigation */}
           <div className="flex flex-wrap items-center gap-3 pb-3 mb-3" style={{ borderBottom: `1px solid ${T.border}` }}>
@@ -588,6 +590,7 @@ export default function EnergisationPage() {
             </div>
           </Card>
         </>
+        )
       )}
     </>
   );

@@ -13,9 +13,10 @@ interface InputProps {
   className?: string;
   disabled?: boolean;
   onKeyDown?: (e: React.KeyboardEvent) => void;
+  error?: string;
 }
 
-export function Input({ value, onChange, placeholder, type = "text", label, className = "", disabled, onKeyDown }: InputProps) {
+export function Input({ value, onChange, placeholder, type = "text", label, className = "", disabled, onKeyDown, error }: InputProps) {
   return (
     <div className={className}>
       {label && (
@@ -31,8 +32,9 @@ export function Input({ value, onChange, placeholder, type = "text", label, clas
         placeholder={placeholder}
         disabled={disabled}
         className={`${INPUT_CLASS} disabled:opacity-50`}
-        style={INPUT_STYLE}
+        style={{ ...INPUT_STYLE, ...(error ? { borderColor: T.danger } : {}) }}
       />
+      {error && <p className="text-[11px] mt-1" style={{ color: T.danger }}>{error}</p>}
     </div>
   );
 }

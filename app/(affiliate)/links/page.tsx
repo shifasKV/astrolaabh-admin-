@@ -1,14 +1,17 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { PageHeader, Card, GoldBtn, GhostBtn } from "@/components/ui";
+import { PageHeader, Card, GoldBtn, GhostBtn, Pagination, ConfirmDialog, TableSkeleton } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_AFFILIATE_LINKS, MOCK_REFERRAL_EVENTS, MOCK_AFFILIATES } from "@/lib/mock";
 import { inr } from "@/lib/types";
 
+const PER_PAGE = 8;
+
 export default function LinksPage() {
   const router = useRouter();
   const affiliate = MOCK_AFFILIATES[0];
+  const [page, setPage] = useState(0);
   const [codeCopied, setCodeCopied] = useState(false);
   const myLinks = MOCK_AFFILIATE_LINKS.filter((l) => l.affiliateCode === affiliate.code);
   const [activeState, setActiveState] = useState<Record<string, boolean>>(() => {
@@ -23,7 +26,17 @@ export default function LinksPage() {
   const ordersByLink = (linkId: string) =>
     MOCK_REFERRAL_EVENTS.filter((r) => r.linkId === linkId && r.eventType === "order").length;
 
+  const paged = myLinks.slice(page * PER_PAGE, (page + 1) * PER_PAGE);
+
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [confirmDeactivateLinkId, setConfirmDeactivateLinkId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const t = setTimeout(() => setLoading(false), 700);
+    return () => clearTimeout(t);
+  }, []);
+
   const copyLink = (id: string, url: string) => {
     navigator.clipboard.writeText(url);
     setCopiedId(id);
@@ -57,6 +70,9 @@ export default function LinksPage() {
         action={<GoldBtn onClick={() => router.push("/links/create")}>+ New link</GoldBtn>}
       />
 
+      {loading ? (
+        <Card><TableSkeleton rows={4} cols={6} /></Card>
+      ) : (
       <Card>
         {/* Header */}
         <div className={`grid ${cols} gap-3 px-3 py-2.5 rounded-[8px] mb-1`} style={{ background: T.panel }}>
@@ -66,7 +82,7 @@ export default function LinksPage() {
         </div>
 
         {/* Rows */}
-        {myLinks.map((link) => {
+        {paged.map((link) => {
           const isActive = activeState[link.id] ?? link.active;
           const orders = ordersByLink(link.id);
           const commission = commissionByLink(link.id);
@@ -107,7 +123,13 @@ export default function LinksPage() {
               <div>
                 <button
                   type="button"
-                  onClick={() => setActiveState((prev) => ({ ...prev, [link.id]: !prev[link.id] }))}
+                  onClick={() => {
+                    if (isActive) {
+                      setConfirmDeactivateLinkId(link.id);
+                    } else {
+                      setActiveState((prev) => ({ ...prev, [link.id]: true }));
+                    }
+                  }}
                   className="relative w-10 h-[22px] rounded-full transition-all duration-200 cursor-pointer"
                   style={{ background: isActive ? T.accent : T.borderSoft }}
                 >
@@ -124,7 +146,27 @@ export default function LinksPage() {
         {myLinks.length === 0 && (
           <div className="text-center py-10 text-[13px]" style={{ color: T.muted }}>No links created yet.</div>
         )}
+        {myLinks.length > PER_PAGE && (
+          <div className="mt-4 px-3">
+            <Pagination page={page} totalPages={Math.ceil(myLinks.length / PER_PAGE)} totalItems={myLinks.length} perPage={PER_PAGE} onPageChange={setPage} />
+          </div>
+        )}
       </Card>
+      )}
+
+      <ConfirmDialog
+        open={confirmDeactivateLinkId !== null}
+        onClose={() => setConfirmDeactivateLinkId(null)}
+        onConfirm={() => {
+          if (confirmDeactivateLinkId) {
+            setActiveState((prev) => ({ ...prev, [confirmDeactivateLinkId]: false }));
+          }
+        }}
+        title="Deactivate link?"
+        description="This link will stop tracking referrals."
+        variant="danger"
+        confirmLabel="Deactivate"
+      />
     </>
   );
 }

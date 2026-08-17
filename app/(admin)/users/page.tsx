@@ -1,7 +1,7 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, GoldBtn, Modal, Input, Select, Tabs, SearchFilter } from "@/components/ui";
+import { PageHeader, Card, Chip, GoldBtn, Modal, Input, Select, Tabs, SearchFilter, Pagination, TableSkeleton } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_CUSTOMERS, MOCK_AFFILIATES, EXPERT_PROFILES } from "@/lib/mock";
 import type { User } from "@/lib/types";
@@ -68,11 +68,17 @@ const TABS = [
   { key: "admin", label: "Admins" },
 ];
 
+const PER_PAGE = 10;
+
 export default function UsersPage() {
   const [tab, setTab] = useState("all");
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(0);
   const [showModal, setShowModal] = useState(false);
   const [newUser, setNewUser] = useState({ name: "", email: "", role: "expert" });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => { const t = setTimeout(() => setLoading(false), 700); return () => clearTimeout(t); }, []);
 
   const allUsers = buildUnifiedList();
 
@@ -83,6 +89,8 @@ export default function UsersPage() {
       const q = search.toLowerCase();
       return u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q);
     });
+
+  const paged = filtered.slice(page * PER_PAGE, (page + 1) * PER_PAGE);
 
   const roleTone = (role: string) => {
     if (role === "admin") return "gold" as const;
@@ -111,57 +119,66 @@ export default function UsersPage() {
             count: allUsers.filter((u) => t.key === "all" || u.role === t.key).length,
           }))}
           active={tab}
-          onChange={setTab}
+          onChange={(k) => { setTab(k); setPage(0); }}
         />
       </div>
 
       <div className="mb-4">
-        <SearchFilter search={search} onSearchChange={setSearch} placeholder="Search name or email…" />
+        <SearchFilter search={search} onSearchChange={(v) => { setSearch(v); setPage(0); }} placeholder="Search name or email…" />
       </div>
 
-      <Card>
-        {filtered.length === 0 ? (
-          <p className="text-[13.5px] text-center py-6" style={{ color: T.muted }}>No users found.</p>
-        ) : (
-          filtered.map((u) => {
-            const inner = (
-              <div className="flex flex-wrap items-center justify-between gap-3 py-3.5" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2.5">
-                    <span
-                      className="w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-semibold shrink-0"
-                      style={{ background: T.panel, border: `1px solid ${T.border}`, color: T.accent }}
-                    >
-                      {u.name[0]}
-                    </span>
-                    <div>
-                      <div className="text-[14px] font-medium" style={{ color: T.text }}>{u.name}</div>
-                      <div className="text-[12px]" style={{ color: T.muted }}>{u.email}</div>
+      {loading ? (
+        <Card><TableSkeleton rows={6} cols={4} /></Card>
+      ) : (
+        <Card>
+          {filtered.length === 0 ? (
+            <p className="text-[13.5px] text-center py-6" style={{ color: T.muted }}>No users found.</p>
+          ) : (
+            paged.map((u) => {
+              const inner = (
+                <div className="flex flex-wrap items-center justify-between gap-3 py-3.5" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2.5">
+                      <span
+                        className="w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-semibold shrink-0"
+                        style={{ background: T.panel, border: `1px solid ${T.border}`, color: T.accent }}
+                      >
+                        {u.name[0]}
+                      </span>
+                      <div>
+                        <div className="text-[14px] font-medium" style={{ color: T.text }}>{u.name}</div>
+                        <div className="text-[12px]" style={{ color: T.muted }}>{u.email}</div>
+                      </div>
                     </div>
                   </div>
+                  <div className="flex items-center gap-2.5 shrink-0">
+                    <Chip tone={roleTone(u.role)}>{roleLabel(u.role)}</Chip>
+                    <Chip tone={u.status === "active" ? "good" : u.status === "suspended" ? "danger" : "muted"}>
+                      {u.status}
+                    </Chip>
+                    {u.lastLoginAt && <span className="text-[11px]" style={{ color: T.faint }}>Last: {u.lastLoginAt}</span>}
+                    {u.href && <span style={{ color: T.faint }}>→</span>}
+                  </div>
                 </div>
-                <div className="flex items-center gap-2.5 shrink-0">
-                  <Chip tone={roleTone(u.role)}>{roleLabel(u.role)}</Chip>
-                  <Chip tone={u.status === "active" ? "good" : u.status === "suspended" ? "danger" : "muted"}>
-                    {u.status}
-                  </Chip>
-                  {u.lastLoginAt && <span className="text-[11px]" style={{ color: T.faint }}>Last: {u.lastLoginAt}</span>}
-                  {u.href && <span style={{ color: T.faint }}>→</span>}
-                </div>
-              </div>
-            );
-
-            if (u.href) {
-              return (
-                <Link key={u.id} href={u.href} className="block row-interactive rounded-[9px]">
-                  {inner}
-                </Link>
               );
-            }
-            return <div key={u.id}>{inner}</div>;
-          })
-        )}
-      </Card>
+
+              if (u.href) {
+                return (
+                  <Link key={u.id} href={u.href} className="block row-interactive rounded-[9px]">
+                    {inner}
+                  </Link>
+                );
+              }
+              return <div key={u.id}>{inner}</div>;
+            })
+          )}
+          {filtered.length > PER_PAGE && (
+            <div className="mt-4">
+              <Pagination page={page} totalPages={Math.ceil(filtered.length / PER_PAGE)} totalItems={filtered.length} perPage={PER_PAGE} onPageChange={setPage} />
+            </div>
+          )}
+        </Card>
+      )}
 
       <Modal open={showModal} onClose={() => setShowModal(false)} title="Add user">
         <div className="space-y-4">

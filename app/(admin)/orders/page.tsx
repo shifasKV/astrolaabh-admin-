@@ -1,7 +1,7 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, SearchFilter, Tabs, GoldBtn, Select, ShopifyButton } from "@/components/ui";
+import { PageHeader, Card, Chip, SearchFilter, Tabs, GoldBtn, Select, ShopifyButton, TableSkeleton, Pagination, ExportButton } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_ORDERS, MOCK_INCOMPLETE_ORDERS } from "@/lib/mock";
 import { inr } from "@/lib/types";
@@ -45,7 +45,7 @@ export default function OrdersPage() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [dpYear, setDpYear] = useState(new Date().getFullYear());
   const [dpMonth, setDpMonth] = useState(new Date().getMonth());
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(0);
 
   // Incomplete tab filters
   const [incFilterCustomer, setIncFilterCustomer] = useState("");
@@ -57,6 +57,9 @@ export default function OrdersPage() {
   const [incDpYear, setIncDpYear] = useState(new Date().getFullYear());
   const [incDpMonth, setIncDpMonth] = useState(new Date().getMonth());
   const [incSort, setIncSort] = useState<SortKey>("date_desc");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => { const t = setTimeout(() => setLoading(false), 700); return () => clearTimeout(t); }, []);
 
   const PER_PAGE = 9;
 
@@ -96,8 +99,16 @@ export default function OrdersPage() {
   });
 
   const totalPages = Math.ceil(filtered.length / PER_PAGE);
-  const currentPage = page > totalPages && totalPages > 0 ? totalPages : page;
-  const paginated = filtered.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE);
+  const paginated = filtered.slice(page * PER_PAGE, (page + 1) * PER_PAGE);
+
+  const exportData = filtered.map((o) => ({
+    id: o.id,
+    customer: o.customerName,
+    date: o.placedAt,
+    total: o.total,
+    status: o.shopifyStatus === "fulfilled" ? "Delivered" : o.tracking ? "In transit" : "Not shipped",
+    paymentStatus: o.paymentStatus,
+  }));
 
   const uniqueCustomers = [...new Set(MOCK_ORDERS.map((o) => o.customerName))].sort();
   const uniquePlacedBy = [...new Set(MOCK_ORDERS.map((o) => o.placedBy).filter(Boolean))] as string[];
@@ -135,14 +146,14 @@ export default function OrdersPage() {
                         : undefined,
           }))}
           active={tab}
-          onChange={setTab}
+          onChange={(key) => { setTab(key); setPage(0); }}
         />
       </div>
 
       {tab !== "incomplete" && <>
       {/* Full-width search */}
       <div className="mb-3">
-        <SearchFilter search={search} onSearchChange={setSearch} placeholder="Search orders, customers, products…" />
+        <SearchFilter search={search} onSearchChange={(v) => { setSearch(v); setPage(0); }} placeholder="Search orders, customers, products…" />
       </div>
 
       {/* Filters & Sort */}
@@ -150,7 +161,7 @@ export default function OrdersPage() {
         <div className="w-[200px]">
           <Select
             value={filterCustomer}
-            onChange={(v) => { setFilterCustomer(v); setPage(1); }}
+            onChange={(v) => { setFilterCustomer(v); setPage(0); }}
             searchable
             compact
             placeholder="All customers"
@@ -164,7 +175,7 @@ export default function OrdersPage() {
         <div className="w-[180px]">
           <Select
             value={filterShipment}
-            onChange={(v) => { setFilterShipment(v); setPage(1); }}
+            onChange={(v) => { setFilterShipment(v); setPage(0); }}
             compact
             placeholder="All shipment status"
             options={[
@@ -179,7 +190,7 @@ export default function OrdersPage() {
         <div className="w-[180px]">
           <Select
             value={filterPlacedBy}
-            onChange={(v) => { setFilterPlacedBy(v); setPage(1); }}
+            onChange={(v) => { setFilterPlacedBy(v); setPage(0); }}
             compact
             placeholder="All created by"
             options={[
@@ -223,7 +234,7 @@ export default function OrdersPage() {
                   ].map((preset) => (
                     <button
                       key={preset.label}
-                      onClick={() => { setFilterDateFrom(preset.from); setFilterDateTo(preset.to); setShowDatePicker(false); setPage(1); }}
+                      onClick={() => { setFilterDateFrom(preset.from); setFilterDateTo(preset.to); setShowDatePicker(false); setPage(0); }}
                       className="w-full text-left px-2.5 py-2 rounded-[7px] text-[12px] transition-colors cursor-pointer hover:bg-[rgba(160,125,56,0.10)]"
                       style={{ color: T.text }}
                     >
@@ -232,7 +243,7 @@ export default function OrdersPage() {
                   ))}
                   {(filterDateFrom || filterDateTo) && (
                     <button
-                      onClick={() => { setFilterDateFrom(""); setFilterDateTo(""); setShowDatePicker(false); setPage(1); }}
+                      onClick={() => { setFilterDateFrom(""); setFilterDateTo(""); setShowDatePicker(false); setPage(0); }}
                       className="w-full text-left px-2.5 py-2 rounded-[7px] text-[11px] mt-1 transition-colors cursor-pointer hover:bg-[rgba(176,84,84,0.06)]"
                       style={{ color: T.danger }}
                     >
@@ -244,12 +255,12 @@ export default function OrdersPage() {
                   <div className="flex items-center gap-2 mb-3">
                     <div className="flex-1">
                       <div className="text-[9px] uppercase tracking-[0.06em] mb-1" style={{ color: T.faint }}>After</div>
-                      <input type="date" value={filterDateFrom} onChange={(e) => { setFilterDateFrom(e.target.value); setPage(1); }} className="w-full h-8 px-2 rounded-[7px] text-[11px] outline-none" style={{ background: T.bg, border: `1px solid ${T.borderSoft}`, color: T.text }} />
+                      <input type="date" value={filterDateFrom} onChange={(e) => { setFilterDateFrom(e.target.value); setPage(0); }} className="w-full h-8 px-2 rounded-[7px] text-[11px] outline-none" style={{ background: T.bg, border: `1px solid ${T.borderSoft}`, color: T.text }} />
                     </div>
                     <span className="text-[11px] mt-3" style={{ color: T.faint }}>—</span>
                     <div className="flex-1">
                       <div className="text-[9px] uppercase tracking-[0.06em] mb-1" style={{ color: T.faint }}>Before</div>
-                      <input type="date" value={filterDateTo} onChange={(e) => { setFilterDateTo(e.target.value); setPage(1); }} className="w-full h-8 px-2 rounded-[7px] text-[11px] outline-none" style={{ background: T.bg, border: `1px solid ${T.borderSoft}`, color: T.text }} />
+                      <input type="date" value={filterDateTo} onChange={(e) => { setFilterDateTo(e.target.value); setPage(0); }} className="w-full h-8 px-2 rounded-[7px] text-[11px] outline-none" style={{ background: T.bg, border: `1px solid ${T.borderSoft}`, color: T.text }} />
                     </div>
                   </div>
                   <div className="flex items-center justify-between mb-2">
@@ -269,7 +280,7 @@ export default function OrdersPage() {
                       const isTo = filterDateTo === iso;
                       const inRange = filterDateFrom && filterDateTo && iso >= filterDateFrom && iso <= filterDateTo;
                       return (
-                        <button key={day} type="button" onClick={() => { if (!filterDateFrom || (filterDateFrom && filterDateTo)) { setFilterDateFrom(iso); setFilterDateTo(""); } else { if (iso < filterDateFrom) { setFilterDateTo(filterDateFrom); setFilterDateFrom(iso); } else { setFilterDateTo(iso); } } setPage(1); }}
+                        <button key={day} type="button" onClick={() => { if (!filterDateFrom || (filterDateFrom && filterDateTo)) { setFilterDateFrom(iso); setFilterDateTo(""); } else { if (iso < filterDateFrom) { setFilterDateTo(filterDateFrom); setFilterDateFrom(iso); } else { setFilterDateTo(iso); } } setPage(0); }}
                           className="w-[34px] h-[34px] rounded-full flex items-center justify-center text-[11px] transition-colors cursor-pointer"
                           style={{ background: (isFrom || isTo) ? T.accent : inRange ? "rgba(160,125,56,0.16)" : "transparent", color: (isFrom || isTo) ? T.accentInk : T.text, fontWeight: (isFrom || isTo) ? 700 : 400 }}
                         >{day}</button>
@@ -285,7 +296,7 @@ export default function OrdersPage() {
         <div className="ml-auto flex items-center gap-2">
           {hasActiveFilters && (
             <button
-              onClick={() => { setFilterCustomer(""); setFilterShipment(""); setFilterPlacedBy(""); setFilterDateFrom(""); setFilterDateTo(""); setPage(1); }}
+              onClick={() => { setFilterCustomer(""); setFilterShipment(""); setFilterPlacedBy(""); setFilterDateFrom(""); setFilterDateTo(""); setPage(0); }}
               className="text-[11px] px-2.5 py-1.5 rounded-[7px] cursor-pointer transition-opacity hover:opacity-80"
               style={{ color: T.danger, background: "rgba(176,84,84,0.08)", border: "1px solid rgba(176,84,84,0.15)" }}
             >
@@ -306,97 +317,84 @@ export default function OrdersPage() {
               ]}
             />
           </div>
+          <ExportButton data={exportData} filename="orders" className="ml-2" />
         </div>
       </div>
 
-      <Card>
-        {/* Table header */}
-        <div className="hidden sm:grid grid-cols-[1fr_100px_140px_100px_110px] gap-3 px-3 py-2 text-[11px] tracking-[0.06em] uppercase" style={{ color: T.faint, borderBottom: `1px solid ${T.borderSoft}` }}>
-          <span>Order details</span>
-          <span>Created date</span>
-          <span>Created by</span>
-          <span>Status</span>
-          <span className="text-right">Amount</span>
-        </div>
+      {loading ? (
+        <Card><TableSkeleton rows={6} cols={6} /></Card>
+      ) : (
+        <>
+          <Card>
+            {/* Table header */}
+            <div className="hidden sm:grid grid-cols-[1fr_100px_140px_100px_110px] gap-3 px-3 py-2 text-[11px] tracking-[0.06em] uppercase" style={{ color: T.faint, borderBottom: `1px solid ${T.borderSoft}` }}>
+              <span>Order details</span>
+              <span>Created date</span>
+              <span>Created by</span>
+              <span>Status</span>
+              <span className="text-right">Amount</span>
+            </div>
 
-        {paginated.length === 0 ? (
-          <p className="text-[13.5px] py-6 text-center" style={{ color: T.muted }}>No orders match your filters.</p>
-        ) : (
-          paginated.map((o) => (
-            <Link
-              key={o.id}
-              href={`/orders/${o.id}`}
-              className="group grid grid-cols-1 sm:grid-cols-[1fr_100px_140px_100px_110px] gap-2 sm:gap-3 items-center px-3 py-3.5 transition-all duration-150 rounded-[8px] hover:bg-[rgba(160,125,56,0.07)]"
-              style={{ borderBottom: `1px solid ${T.borderSoft}` }}
-            >
-              {/* Order details — who, then what, then the reference */}
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-[14px] font-medium" style={{ color: T.text }}>{o.customerName}</span>
-                  {o.paymentStatus === "pending" && <Chip tone="gold">Payment pending</Chip>}
-                  {o.certificateStatus === "missing" && o.paymentStatus === "paid" && <Chip tone="danger">Cert missing</Chip>}
-                  {o.energisationStatus === "pending" && o.paymentStatus === "paid" && <Chip tone="danger">Energ pending</Chip>}
-                </div>
-                <div className="flex items-baseline gap-3 mt-0.5 min-w-0">
-                  <span className="text-[13px] truncate" style={{ color: T.muted }}>
-                    {o.items[0]?.name}
-                    {o.items.length > 1 && <span style={{ color: T.faint }}> +{o.items.length - 1} more</span>}
-                  </span>
-                  <span className="text-[11px] tracking-[0.05em] uppercase tabular-nums shrink-0" style={{ color: T.faint }}>{o.id}</span>
-                </div>
-              </div>
+            {paginated.length === 0 ? (
+              <p className="text-[13.5px] py-6 text-center" style={{ color: T.muted }}>No orders match your filters.</p>
+            ) : (
+              paginated.map((o) => (
+                <Link
+                  key={o.id}
+                  href={`/orders/${o.id}`}
+                  className="group grid grid-cols-1 sm:grid-cols-[1fr_100px_140px_100px_110px] gap-2 sm:gap-3 items-center px-3 py-3.5 transition-all duration-150 rounded-[8px] hover:bg-[rgba(160,125,56,0.07)]"
+                  style={{ borderBottom: `1px solid ${T.borderSoft}` }}
+                >
+                  {/* Order details — who, then what, then the reference */}
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-[14px] font-medium" style={{ color: T.text }}>{o.customerName}</span>
+                      {o.paymentStatus === "pending" && <Chip tone="gold">Payment pending</Chip>}
+                      {o.certificateStatus === "missing" && o.paymentStatus === "paid" && <Chip tone="danger">Cert missing</Chip>}
+                      {o.energisationStatus === "pending" && o.paymentStatus === "paid" && <Chip tone="danger">Energ pending</Chip>}
+                    </div>
+                    <div className="flex items-baseline gap-3 mt-0.5 min-w-0">
+                      <span className="text-[13px] truncate" style={{ color: T.muted }}>
+                        {o.items[0]?.name}
+                        {o.items.length > 1 && <span style={{ color: T.faint }}> +{o.items.length - 1} more</span>}
+                      </span>
+                      <span className="text-[11px] tracking-[0.05em] uppercase tabular-nums shrink-0" style={{ color: T.faint }}>{o.id}</span>
+                    </div>
+                  </div>
 
-              {/* Created date */}
-              <div className="min-w-0">
-                <span className="text-[12px]" style={{ color: T.text }}>{new Date(o.placedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }).replace(/ (\d{4})$/, ", $1")}</span>
-              </div>
+                  {/* Created date */}
+                  <div className="min-w-0">
+                    <span className="text-[12px]" style={{ color: T.text }}>{new Date(o.placedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }).replace(/ (\d{4})$/, ", $1")}</span>
+                  </div>
 
-              {/* Created by */}
-              <div className="min-w-0">
-                <span className="text-[12px] truncate block" style={{ color: T.muted }}>
-                  {o.placedBy || "Customer"}
-                </span>
-              </div>
+                  {/* Created by */}
+                  <div className="min-w-0">
+                    <span className="text-[12px] truncate block" style={{ color: T.muted }}>
+                      {o.placedBy || "Customer"}
+                    </span>
+                  </div>
 
-              {/* Status */}
-              <div>
-                <Chip tone={o.shopifyStatus === "fulfilled" ? "good" : o.tracking ? "gold" : "muted"}>
-                  {o.shopifyStatus === "fulfilled" ? "Delivered" : o.tracking ? "In transit" : "Not shipped"}
-                </Chip>
-              </div>
+                  {/* Status */}
+                  <div>
+                    <Chip tone={o.shopifyStatus === "fulfilled" ? "good" : o.tracking ? "gold" : "muted"}>
+                      {o.shopifyStatus === "fulfilled" ? "Delivered" : o.tracking ? "In transit" : "Not shipped"}
+                    </Chip>
+                  </div>
 
-              {/* Amount */}
-              <div className="text-right">
-                <span className="text-[14px] font-semibold tabular-nums" style={{ color: T.text }}>{inr(o.total)}</span>
-              </div>
-            </Link>
-          ))
-        )}
-      </Card>
+                  {/* Amount */}
+                  <div className="text-right">
+                    <span className="text-[14px] font-semibold tabular-nums" style={{ color: T.text }}>{inr(o.total)}</span>
+                  </div>
+                </Link>
+              ))
+            )}
+          </Card>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between mt-4">
-          <div className="text-[12px]" style={{ color: T.faint }}>
-            Showing {(currentPage - 1) * PER_PAGE + 1}–{Math.min(currentPage * PER_PAGE, filtered.length)} of {filtered.length}
-          </div>
-          <div className="flex items-center gap-1">
-            <button onClick={() => setPage(1)} disabled={currentPage === 1} className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[12px] transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed" style={{ background: T.popover, border: `1px solid ${T.borderSoft}`, color: T.muted }}>«</button>
-            <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1} className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[12px] transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed" style={{ background: T.popover, border: `1px solid ${T.borderSoft}`, color: T.muted }}>‹</button>
-            {Array.from({ length: totalPages }).map((_, i) => {
-              const p = i + 1;
-              if (totalPages > 7 && Math.abs(p - currentPage) > 2 && p !== 1 && p !== totalPages) {
-                if (p === currentPage - 3 || p === currentPage + 3) return <span key={p} className="w-6 text-center text-[11px]" style={{ color: T.faint }}>…</span>;
-                return null;
-              }
-              return (
-                <button key={p} onClick={() => setPage(p)} className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[12px] font-medium transition-all cursor-pointer" style={{ background: p === currentPage ? T.accent : T.panel, border: `1px solid ${p === currentPage ? T.accent : T.borderSoft}`, color: p === currentPage ? T.accentInk : T.text }}>{p}</button>
-              );
-            })}
-            <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[12px] transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed" style={{ background: T.popover, border: `1px solid ${T.borderSoft}`, color: T.muted }}>›</button>
-            <button onClick={() => setPage(totalPages)} disabled={currentPage === totalPages} className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[12px] transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed" style={{ background: T.popover, border: `1px solid ${T.borderSoft}`, color: T.muted }}>»</button>
-          </div>
-        </div>
+          {/* Pagination */}
+          {filtered.length > PER_PAGE && (
+            <Pagination page={page} totalPages={totalPages} totalItems={filtered.length} perPage={PER_PAGE} onPageChange={setPage} />
+          )}
+        </>
       )}
       </>}
 
@@ -430,17 +428,17 @@ export default function OrdersPage() {
         return (
           <>
             <div className="mb-3">
-              <SearchFilter search={search} onSearchChange={setSearch} placeholder="Search customer, stone…" />
+              <SearchFilter search={search} onSearchChange={(v) => { setSearch(v); setPage(0); }} placeholder="Search customer, stone…" />
             </div>
             <div className="flex flex-wrap items-center gap-2.5 mb-4">
               <div className="w-[200px]">
-                <Select value={incFilterCustomer} onChange={(v) => { setIncFilterCustomer(v); setPage(1); }} searchable compact placeholder="All customers" options={[{ value: "", label: "All customers" }, ...incCustomers.map((n) => ({ value: n, label: n }))]} />
+                <Select value={incFilterCustomer} onChange={(v) => { setIncFilterCustomer(v); setPage(0); }} searchable compact placeholder="All customers" options={[{ value: "", label: "All customers" }, ...incCustomers.map((n) => ({ value: n, label: n }))]} />
               </div>
               <div className="w-[200px]">
-                <Select value={incFilterStone} onChange={(v) => { setIncFilterStone(v); setPage(1); }} searchable compact placeholder="All stones" options={[{ value: "", label: "All stones" }, ...incStones.map((n) => ({ value: n, label: n }))]} />
+                <Select value={incFilterStone} onChange={(v) => { setIncFilterStone(v); setPage(0); }} searchable compact placeholder="All stones" options={[{ value: "", label: "All stones" }, ...incStones.map((n) => ({ value: n, label: n }))]} />
               </div>
               <div className="w-[180px]">
-                <Select value={incFilterReason} onChange={(v) => { setIncFilterReason(v); setPage(1); }} compact placeholder="All reasons" options={[{ value: "", label: "All reasons" }, ...Object.entries(INCOMPLETE_REASON_LABEL).map(([k, v]) => ({ value: k, label: v }))]} />
+                <Select value={incFilterReason} onChange={(v) => { setIncFilterReason(v); setPage(0); }} compact placeholder="All reasons" options={[{ value: "", label: "All reasons" }, ...Object.entries(INCOMPLETE_REASON_LABEL).map(([k, v]) => ({ value: k, label: v }))]} />
               </div>
 
               {/* Date range picker */}
@@ -468,22 +466,22 @@ export default function OrdersPage() {
                           { label: "Last 7 days", from: new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10), to: new Date().toISOString().slice(0, 10) },
                           { label: "Last 30 days", from: new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10), to: new Date().toISOString().slice(0, 10) },
                         ].map((preset) => (
-                          <button key={preset.label} onClick={() => { setIncFilterDateFrom(preset.from); setIncFilterDateTo(preset.to); setIncShowDatePicker(false); setPage(1); }} className="w-full text-left px-2.5 py-2 rounded-[7px] text-[12px] transition-colors cursor-pointer hover:bg-[rgba(160,125,56,0.10)]" style={{ color: T.text }}>{preset.label}</button>
+                          <button key={preset.label} onClick={() => { setIncFilterDateFrom(preset.from); setIncFilterDateTo(preset.to); setIncShowDatePicker(false); setPage(0); }} className="w-full text-left px-2.5 py-2 rounded-[7px] text-[12px] transition-colors cursor-pointer hover:bg-[rgba(160,125,56,0.10)]" style={{ color: T.text }}>{preset.label}</button>
                         ))}
                         {(incFilterDateFrom || incFilterDateTo) && (
-                          <button onClick={() => { setIncFilterDateFrom(""); setIncFilterDateTo(""); setIncShowDatePicker(false); setPage(1); }} className="w-full text-left px-2.5 py-2 rounded-[7px] text-[11px] mt-1 transition-colors cursor-pointer hover:bg-[rgba(176,84,84,0.06)]" style={{ color: T.danger }}>Clear dates</button>
+                          <button onClick={() => { setIncFilterDateFrom(""); setIncFilterDateTo(""); setIncShowDatePicker(false); setPage(0); }} className="w-full text-left px-2.5 py-2 rounded-[7px] text-[11px] mt-1 transition-colors cursor-pointer hover:bg-[rgba(176,84,84,0.06)]" style={{ color: T.danger }}>Clear dates</button>
                         )}
                       </div>
                       <div className="p-4 w-[280px]">
                         <div className="flex items-center gap-2 mb-3">
                           <div className="flex-1">
                             <div className="text-[9px] uppercase tracking-[0.06em] mb-1" style={{ color: T.faint }}>After</div>
-                            <input type="date" value={incFilterDateFrom} onChange={(e) => { setIncFilterDateFrom(e.target.value); setPage(1); }} className="w-full h-8 px-2 rounded-[7px] text-[11px] outline-none" style={{ background: T.bg, border: `1px solid ${T.borderSoft}`, color: T.text }} />
+                            <input type="date" value={incFilterDateFrom} onChange={(e) => { setIncFilterDateFrom(e.target.value); setPage(0); }} className="w-full h-8 px-2 rounded-[7px] text-[11px] outline-none" style={{ background: T.bg, border: `1px solid ${T.borderSoft}`, color: T.text }} />
                           </div>
                           <span className="text-[11px] mt-3" style={{ color: T.faint }}>—</span>
                           <div className="flex-1">
                             <div className="text-[9px] uppercase tracking-[0.06em] mb-1" style={{ color: T.faint }}>Before</div>
-                            <input type="date" value={incFilterDateTo} onChange={(e) => { setIncFilterDateTo(e.target.value); setPage(1); }} className="w-full h-8 px-2 rounded-[7px] text-[11px] outline-none" style={{ background: T.bg, border: `1px solid ${T.borderSoft}`, color: T.text }} />
+                            <input type="date" value={incFilterDateTo} onChange={(e) => { setIncFilterDateTo(e.target.value); setPage(0); }} className="w-full h-8 px-2 rounded-[7px] text-[11px] outline-none" style={{ background: T.bg, border: `1px solid ${T.borderSoft}`, color: T.text }} />
                           </div>
                         </div>
                         <div className="flex items-center justify-between mb-2">
@@ -503,7 +501,7 @@ export default function OrdersPage() {
                             const isTo = incFilterDateTo === iso;
                             const inRange = incFilterDateFrom && incFilterDateTo && iso >= incFilterDateFrom && iso <= incFilterDateTo;
                             return (
-                              <button key={day} type="button" onClick={() => { if (!incFilterDateFrom || (incFilterDateFrom && incFilterDateTo)) { setIncFilterDateFrom(iso); setIncFilterDateTo(""); } else { if (iso < incFilterDateFrom) { setIncFilterDateTo(incFilterDateFrom); setIncFilterDateFrom(iso); } else { setIncFilterDateTo(iso); } } setPage(1); }}
+                              <button key={day} type="button" onClick={() => { if (!incFilterDateFrom || (incFilterDateFrom && incFilterDateTo)) { setIncFilterDateFrom(iso); setIncFilterDateTo(""); } else { if (iso < incFilterDateFrom) { setIncFilterDateTo(incFilterDateFrom); setIncFilterDateFrom(iso); } else { setIncFilterDateTo(iso); } } setPage(0); }}
                                 className="w-[34px] h-[34px] rounded-full flex items-center justify-center text-[11px] transition-colors cursor-pointer"
                                 style={{ background: (isFrom || isTo) ? T.accent : inRange ? "rgba(160,125,56,0.16)" : "transparent", color: (isFrom || isTo) ? T.accentInk : T.text, fontWeight: (isFrom || isTo) ? 700 : 400 }}
                               >{day}</button>
@@ -518,55 +516,59 @@ export default function OrdersPage() {
 
               <div className="ml-auto flex items-center gap-2">
                 {hasIncFilters && (
-                  <button onClick={() => { setIncFilterCustomer(""); setIncFilterStone(""); setIncFilterReason(""); setIncFilterDateFrom(""); setIncFilterDateTo(""); setPage(1); }} className="text-[11px] px-2.5 py-1.5 rounded-[7px] cursor-pointer transition-opacity hover:opacity-80" style={{ color: T.danger, background: "rgba(176,84,84,0.08)", border: "1px solid rgba(176,84,84,0.15)" }}>Clear filters</button>
+                  <button onClick={() => { setIncFilterCustomer(""); setIncFilterStone(""); setIncFilterReason(""); setIncFilterDateFrom(""); setIncFilterDateTo(""); setPage(0); }} className="text-[11px] px-2.5 py-1.5 rounded-[7px] cursor-pointer transition-opacity hover:opacity-80" style={{ color: T.danger, background: "rgba(176,84,84,0.08)", border: "1px solid rgba(176,84,84,0.15)" }}>Clear filters</button>
                 )}
                 <div className="w-[200px]">
-                  <Select value={incSort} onChange={(v) => { setIncSort(v as SortKey); setPage(1); }} compact prefix="Sort: " options={[{ value: "date_desc", label: "Newest first" }, { value: "date_asc", label: "Oldest first" }, { value: "amount_high", label: "Amount: high" }, { value: "amount_low", label: "Amount: low" }]} />
+                  <Select value={incSort} onChange={(v) => { setIncSort(v as SortKey); setPage(0); }} compact prefix="Sort: " options={[{ value: "date_desc", label: "Newest first" }, { value: "date_asc", label: "Oldest first" }, { value: "amount_high", label: "Amount: high" }, { value: "amount_low", label: "Amount: low" }]} />
                 </div>
               </div>
             </div>
 
-            <Card>
-              <div className="hidden sm:grid grid-cols-[1fr_1fr_100px_120px_100px_110px] gap-3 px-3 py-2 text-[11px] tracking-[0.06em] uppercase" style={{ color: T.faint, borderBottom: `1px solid ${T.borderSoft}` }}>
-                <span>Customer</span>
-                <span>Stone / Item</span>
-                <span>Date</span>
-                <span>Status</span>
-                <span>Assignee</span>
-                <span className="text-right">Amount</span>
-              </div>
-              {incFiltered.length === 0 ? (
-                <p className="text-[13.5px] py-6 text-center" style={{ color: T.muted }}>No incomplete orders found.</p>
-              ) : (
-                incFiltered.map((o) => (
-                  <Link
-                    key={o.id}
-                    href={`/orders/incomplete/${o.id}`}
-                    className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_100px_120px_100px_110px] gap-2 sm:gap-3 items-center px-3 py-3.5 transition-all duration-150 rounded-[8px] hover:bg-[rgba(160,125,56,0.07)]"
-                    style={{ borderBottom: `1px solid ${T.borderSoft}` }}
-                  >
-                    <div className="min-w-0">
-                      <span className="text-[14px] font-medium" style={{ color: T.text }}>{o.customerName}</span>
-                    </div>
-                    <div className="min-w-0">
-                      <span className="text-[13px] truncate block" style={{ color: T.muted }}>{o.itemName}</span>
-                    </div>
-                    <div className="min-w-0">
-                      <span className="text-[12px]" style={{ color: T.text }}>{new Date(o.failedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</span>
-                    </div>
-                    <div>
-                      <Chip tone={INCOMPLETE_REASON_TONE[o.reason] || "muted"}>{INCOMPLETE_REASON_LABEL[o.reason] || o.reason}</Chip>
-                    </div>
-                    <div className="min-w-0">
-                      <span className="text-[12px]" style={{ color: T.faint }}>—</span>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-[14px] font-semibold tabular-nums" style={{ color: T.text }}>{inr(o.amount)}</span>
-                    </div>
-                  </Link>
-                ))
-              )}
-            </Card>
+            {loading ? (
+              <Card><TableSkeleton rows={6} cols={6} /></Card>
+            ) : (
+              <Card>
+                <div className="hidden sm:grid grid-cols-[1fr_1fr_100px_120px_100px_110px] gap-3 px-3 py-2 text-[11px] tracking-[0.06em] uppercase" style={{ color: T.faint, borderBottom: `1px solid ${T.borderSoft}` }}>
+                  <span>Customer</span>
+                  <span>Stone / Item</span>
+                  <span>Date</span>
+                  <span>Status</span>
+                  <span>Assignee</span>
+                  <span className="text-right">Amount</span>
+                </div>
+                {incFiltered.length === 0 ? (
+                  <p className="text-[13.5px] py-6 text-center" style={{ color: T.muted }}>No incomplete orders found.</p>
+                ) : (
+                  incFiltered.map((o) => (
+                    <Link
+                      key={o.id}
+                      href={`/orders/incomplete/${o.id}`}
+                      className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_100px_120px_100px_110px] gap-2 sm:gap-3 items-center px-3 py-3.5 transition-all duration-150 rounded-[8px] hover:bg-[rgba(160,125,56,0.07)]"
+                      style={{ borderBottom: `1px solid ${T.borderSoft}` }}
+                    >
+                      <div className="min-w-0">
+                        <span className="text-[14px] font-medium" style={{ color: T.text }}>{o.customerName}</span>
+                      </div>
+                      <div className="min-w-0">
+                        <span className="text-[13px] truncate block" style={{ color: T.muted }}>{o.itemName}</span>
+                      </div>
+                      <div className="min-w-0">
+                        <span className="text-[12px]" style={{ color: T.text }}>{new Date(o.failedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</span>
+                      </div>
+                      <div>
+                        <Chip tone={INCOMPLETE_REASON_TONE[o.reason] || "muted"}>{INCOMPLETE_REASON_LABEL[o.reason] || o.reason}</Chip>
+                      </div>
+                      <div className="min-w-0">
+                        <span className="text-[12px]" style={{ color: T.faint }}>—</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[14px] font-semibold tabular-nums" style={{ color: T.text }}>{inr(o.amount)}</span>
+                      </div>
+                    </Link>
+                  ))
+                )}
+              </Card>
+            )}
           </>
         );
       })()}
@@ -575,6 +577,6 @@ export default function OrdersPage() {
 
   function setSortBy(val: string) {
     setSort(val as SortKey);
-    setPage(1);
+    setPage(0);
   }
 }

@@ -5,6 +5,7 @@ import { PageHeader, Card, GoldBtn, GhostBtn, SearchFilter, Input, Textarea, Ste
 import { T } from "@/lib/theme";
 import { MOCK_CUSTOMERS, EXPERT_PROFILES, getExpertDates, getExpertSlots } from "@/lib/mock";
 import type { ExpertProfile, TimeSlot } from "@/lib/mock";
+import { V, validate, hasErrors, type ValidationErrors } from "@/lib/validation";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const DAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
@@ -44,6 +45,23 @@ export default function CreateConsultationPage() {
   const [editFee, setEditFee] = useState("");
   const [discount, setDiscount] = useState("");
 
+  const [errors, setErrors] = useState<ValidationErrors>({});
+  const [touched, setTouched] = useState<Set<string>>(new Set());
+  const [submitAttempted, setSubmitAttempted] = useState(false);
+
+  const markTouched = (field: string) => setTouched((prev) => new Set(prev).add(field));
+  const showError = (field: string) => (touched.has(field) || submitAttempted) ? errors[field] : undefined;
+
+  const validateNewCustomer = () => {
+    const errs = validate({
+      name: V.required(newCustomer.name),
+      phone: V.phone(newCustomer.phone),
+      email: newCustomer.email.trim() ? V.email(newCustomer.email) : "",
+    });
+    setErrors(errs);
+    return errs;
+  };
+
   const selectedCustomer = createdCustomer ?? MOCK_CUSTOMERS.find((c) => c.id === customerId);
   const customerName = selectedCustomer?.name ?? "";
   const availableDates = selectedExpert ? getExpertDates(selectedExpert.id) : [];
@@ -76,12 +94,16 @@ export default function CreateConsultationPage() {
   };
 
   const handleCreateCustomer = () => {
-    if (!newCustomer.name || !newCustomer.phone) return;
+    setSubmitAttempted(true);
+    setTouched(new Set(["name", "phone", "email"]));
+    const errs = validateNewCustomer();
+    if (hasErrors(errs)) return;
     const id = `cust_new_${Date.now()}`;
     setCreatedCustomer({ id, ...newCustomer });
     setCustomerId(id);
     setShowNewCustomer(false);
     setSearch("");
+    setSubmitAttempted(false);
     goTo("schedule");
   };
 
@@ -171,21 +193,24 @@ export default function CreateConsultationPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <Input
                     value={newCustomer.name}
-                    onChange={(v) => setNewCustomer((p) => ({ ...p, name: v }))}
+                    onChange={(v) => { markTouched("name"); setNewCustomer((p) => ({ ...p, name: v })); }}
                     label="Name"
                     placeholder="e.g. Priya Sharma"
+                    error={showError("name")}
                   />
                   <Input
                     value={newCustomer.phone}
-                    onChange={(v) => setNewCustomer((p) => ({ ...p, phone: v }))}
+                    onChange={(v) => { markTouched("phone"); setNewCustomer((p) => ({ ...p, phone: v })); }}
                     label="Phone / WhatsApp"
                     placeholder="e.g. +91 98765 43210"
+                    error={showError("phone")}
                   />
                   <Input
                     value={newCustomer.email}
-                    onChange={(v) => setNewCustomer((p) => ({ ...p, email: v }))}
+                    onChange={(v) => { markTouched("email"); setNewCustomer((p) => ({ ...p, email: v })); }}
                     label="Email"
                     placeholder="e.g. priya@example.com"
+                    error={showError("email")}
                   />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

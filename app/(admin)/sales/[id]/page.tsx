@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Card, Chip, StatCard, Tabs, SearchFilter, Pagination, Select, BackLink } from "@/components/ui";
+import { Card, Chip, StatCard, Tabs, SearchFilter, Pagination, Select, BackLink, ConfirmDialog, LoadingState } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_SALES_MEMBERS, MOCK_INCOMPLETE_ORDERS, MOCK_INCOMPLETE_CONSULTATIONS } from "@/lib/mock";
 import type { IncompleteOrderStatus, IncompleteConsultationStatus } from "@/lib/mock";
@@ -76,6 +76,13 @@ export default function SalesDetailPage() {
   const [stoneStatusFilter, setStoneStatusFilter] = useState("");
   const [conStatusFilter, setConStatusFilter] = useState("");
   const [toast, setToast] = useState("");
+  const [confirmDeactivate, setConfirmDeactivate] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const t = setTimeout(() => setLoading(false), 700);
+    return () => clearTimeout(t);
+  }, []);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -134,17 +141,25 @@ export default function SalesDetailPage() {
     { value: "lost", label: "Lost" },
   ];
 
-  const handleDeactivate = () => {
-    setIsActive(!isActive);
+  const handleToggleActive = () => {
     setShowMenu(false);
-    setToast(isActive ? "Sales member deactivated" : "Sales member activated");
-    setTimeout(() => setToast(""), 2500);
+    if (isActive) {
+      setConfirmDeactivate(true);
+    } else {
+      setIsActive(true);
+      setToast("Sales member activated");
+      setTimeout(() => setToast(""), 2500);
+    }
   };
 
   return (
     <>
       <BackLink href="/sales" label="Sales" />
 
+      {loading ? (
+        <Card className="mb-6"><LoadingState lines={6} /></Card>
+      ) : (
+      <>
       {/* Profile card */}
       <Card className="mb-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
@@ -190,7 +205,7 @@ export default function SalesDetailPage() {
                 </button>
                 <div style={{ borderTop: `1px solid ${T.borderSoft}`, margin: "2px 0" }} />
                 <button
-                  onClick={handleDeactivate}
+                  onClick={handleToggleActive}
                   className="w-full text-left px-3 py-2 text-[13px] hover:opacity-80 cursor-pointer"
                   style={{ color: isActive ? T.danger : T.good }}
                 >
@@ -334,6 +349,19 @@ export default function SalesDetailPage() {
           )}
         </div>
       )}
+
+      </>
+      )}
+
+      <ConfirmDialog
+        open={confirmDeactivate}
+        onClose={() => setConfirmDeactivate(false)}
+        onConfirm={() => { setIsActive(false); setToast("Sales member deactivated"); setTimeout(() => setToast(""), 2500); }}
+        title="Deactivate member?"
+        description="This member will lose access to leads."
+        variant="danger"
+        confirmLabel="Deactivate"
+      />
 
       {toast && (
         <div

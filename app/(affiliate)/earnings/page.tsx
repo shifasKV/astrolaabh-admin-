@@ -1,14 +1,19 @@
 "use client";
-import { useState } from "react";
-import { PageHeader, Card, StatCard, Chip, GhostBtn, Input, GoldBtn } from "@/components/ui";
+import { useState, useEffect } from "react";
+import { PageHeader, Card, StatCard, Chip, GhostBtn, Input, GoldBtn, Pagination, LoadingState } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_AFFILIATES, MOCK_PAYOUTS, MOCK_REFERRAL_EVENTS } from "@/lib/mock";
 import { inr } from "@/lib/types";
+
+const PER_PAGE = 8;
 
 export default function EarningsPage() {
   const affiliate = MOCK_AFFILIATES[0];
   const myPayouts = MOCK_PAYOUTS.filter((p) => p.affiliateId === affiliate.id);
   const myReferrals = MOCK_REFERRAL_EVENTS.filter((r) => r.affiliateId === affiliate.id);
+  const [payoutPage, setPayoutPage] = useState(0);
+
+  const pagedPayouts = myPayouts.slice(payoutPage * PER_PAGE, (payoutPage + 1) * PER_PAGE);
 
   const pendingAmount = myReferrals.filter((r) => r.commissionStatus === "pending").reduce((s, r) => s + (r.commissionAmount || 0), 0);
   const approvedAmount = myReferrals.filter((r) => r.commissionStatus === "approved").reduce((s, r) => s + (r.commissionAmount || 0), 0);
@@ -20,6 +25,12 @@ export default function EarningsPage() {
   const [confirmAccount, setConfirmAccount] = useState("50100123456789");
   const [ifsc, setIfsc] = useState("HDFC0001234");
   const [upiId, setUpiId] = useState("sandeep@upi");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const t = setTimeout(() => setLoading(false), 700);
+    return () => clearTimeout(t);
+  }, []);
 
   return (
     <>
@@ -29,6 +40,10 @@ export default function EarningsPage() {
         action={<GhostBtn>Download statement</GhostBtn>}
       />
 
+      {loading ? (
+        <LoadingState lines={5} />
+      ) : (
+      <>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         <StatCard label="Pending" value={inr(pendingAmount)} sub="in holding period" />
         <StatCard label="Approved" value={inr(approvedAmount)} sub="ready for payout" />
@@ -39,7 +54,7 @@ export default function EarningsPage() {
       {/* Payout history */}
       <Card className="mb-4">
         <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.faint }}>Payout history</div>
-        {myPayouts.map((p) => (
+        {pagedPayouts.map((p) => (
           <div key={p.id} className="flex flex-wrap items-center justify-between gap-3 py-3.5" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
             <div>
               <div className="text-[14px] font-medium" style={{ color: T.text }}>{p.period}</div>
@@ -53,6 +68,9 @@ export default function EarningsPage() {
             </div>
           </div>
         ))}
+        {myPayouts.length > PER_PAGE && (
+          <Pagination page={payoutPage} totalPages={Math.ceil(myPayouts.length / PER_PAGE)} totalItems={myPayouts.length} perPage={PER_PAGE} onPageChange={setPayoutPage} />
+        )}
       </Card>
 
       {/* Account details */}
@@ -116,6 +134,8 @@ export default function EarningsPage() {
           ))}
         </div>
       </Card>
+      </>
+      )}
     </>
   );
 }

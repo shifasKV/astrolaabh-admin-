@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, Input, GoldBtn, GhostBtn } from "@/components/ui";
 import { T } from "@/lib/theme";
+import { V, validate, hasErrors, type ValidationErrors } from "@/lib/validation";
 
 const STEPS = [
   { key: "personal", label: "Personal Details" },
@@ -29,11 +30,51 @@ export default function OnboardingPage() {
   const [panFile, setPanFile] = useState<string | null>(null);
   const [panDrag, setPanDrag] = useState(false);
 
+  const [errors, setErrors] = useState<ValidationErrors>({});
+  const [touched, setTouched] = useState<Set<string>>(new Set());
+  const [submitAttempted, setSubmitAttempted] = useState(false);
+
+  const markTouched = (field: string) => setTouched((prev) => new Set(prev).add(field));
+  const showError = (field: string) => (touched.has(field) || submitAttempted) ? errors[field] : undefined;
+
+  const validateStep0 = () => validate({
+    name: V.required(name),
+    email: V.email(email),
+    phone: V.phone(phone),
+  });
+
+  const validateStep1 = () => validate({
+    holderName: V.required(holderName),
+    bankName: V.required(bankName),
+    accountNumber: V.required(accountNumber),
+    accountMatch: V.accountMatch(accountNumber, confirmAccount),
+    ifsc: V.ifsc(ifsc),
+  });
+
   const canNext = () => {
-    if (step === 0) return name && email && phone;
-    if (step === 1) return holderName && bankName && accountNumber && confirmAccount && ifsc && accountNumber === confirmAccount;
-    if (step === 2) return panFile;
+    if (step === 0) return !hasErrors(validateStep0());
+    if (step === 1) return !hasErrors(validateStep1());
+    if (step === 2) return !!panFile;
     return false;
+  };
+
+  const handleContinue = () => {
+    setSubmitAttempted(true);
+    if (step === 0) {
+      setTouched(new Set(["name", "email", "phone"]));
+      const errs = validateStep0();
+      setErrors(errs);
+      if (hasErrors(errs)) return;
+    } else if (step === 1) {
+      setTouched(new Set(["holderName", "bankName", "accountNumber", "confirmAccount", "ifsc"]));
+      const errs = validateStep1();
+      setErrors(errs);
+      if (hasErrors(errs)) return;
+    }
+    setSubmitAttempted(false);
+    setTouched(new Set());
+    setErrors({});
+    setStep(step + 1);
   };
 
   const handleSubmit = () => {
@@ -90,9 +131,9 @@ export default function OnboardingPage() {
               <h2 className="text-[16px] font-semibold mb-1" style={{ color: T.text }}>Personal Details</h2>
               <p className="text-[13px] mb-5" style={{ color: T.muted }}>Tell us a bit about yourself</p>
               <div className="space-y-4">
-                <Input value={name} onChange={setName} label="Full name" placeholder="e.g. Pt. Sandeep Kochaar" />
-                <Input value={email} onChange={setEmail} label="Email address" type="email" placeholder="you@example.com" />
-                <Input value={phone} onChange={setPhone} label="Phone number" placeholder="+91 98100 00000" />
+                <Input value={name} onChange={(v) => { markTouched("name"); setName(v); }} label="Full name" placeholder="e.g. Pt. Sandeep Kochaar" error={showError("name")} />
+                <Input value={email} onChange={(v) => { markTouched("email"); setEmail(v); }} label="Email address" type="email" placeholder="you@example.com" error={showError("email")} />
+                <Input value={phone} onChange={(v) => { markTouched("phone"); setPhone(v); }} label="Phone number" placeholder="+91 98100 00000" error={showError("phone")} />
                 <Input value={city} onChange={setCity} label="City (optional)" placeholder="e.g. New Delhi" />
               </div>
             </>
@@ -104,17 +145,14 @@ export default function OnboardingPage() {
               <h2 className="text-[16px] font-semibold mb-1" style={{ color: T.text }}>Bank Details</h2>
               <p className="text-[13px] mb-5" style={{ color: T.muted }}>For commission payouts</p>
               <div className="space-y-4">
-                <Input value={holderName} onChange={setHolderName} label="Account holder name" placeholder="As on bank records" />
-                <Input value={bankName} onChange={setBankName} label="Bank name" placeholder="e.g. HDFC Bank" />
+                <Input value={holderName} onChange={(v) => { markTouched("holderName"); setHolderName(v); }} label="Account holder name" placeholder="As on bank records" error={showError("holderName")} />
+                <Input value={bankName} onChange={(v) => { markTouched("bankName"); setBankName(v); }} label="Bank name" placeholder="e.g. HDFC Bank" error={showError("bankName")} />
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Input value={accountNumber} onChange={setAccountNumber} label="Account number" placeholder="Enter account number" />
-                  <Input value={confirmAccount} onChange={setConfirmAccount} label="Confirm account number" placeholder="Re-enter account number" />
+                  <Input value={accountNumber} onChange={(v) => { markTouched("accountNumber"); setAccountNumber(v); }} label="Account number" placeholder="Enter account number" error={showError("accountNumber")} />
+                  <Input value={confirmAccount} onChange={(v) => { markTouched("confirmAccount"); setConfirmAccount(v); }} label="Confirm account number" placeholder="Re-enter account number" error={showError("accountMatch")} />
                 </div>
-                {accountNumber && confirmAccount && accountNumber !== confirmAccount && (
-                  <p className="text-[12px] -mt-2" style={{ color: T.danger }}>Account numbers do not match</p>
-                )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Input value={ifsc} onChange={setIfsc} label="IFSC code" placeholder="e.g. HDFC0001234" />
+                  <Input value={ifsc} onChange={(v) => { markTouched("ifsc"); setIfsc(v); }} label="IFSC code" placeholder="e.g. HDFC0001234" error={showError("ifsc")} />
                   <Input value={upiId} onChange={setUpiId} label="UPI ID (optional)" placeholder="e.g. name@upi" />
                 </div>
               </div>
@@ -178,7 +216,7 @@ export default function OnboardingPage() {
               <span />
             )}
             {step < STEPS.length - 1 ? (
-              <GoldBtn onClick={() => setStep(step + 1)} disabled={!canNext()}>
+              <GoldBtn onClick={handleContinue}>
                 Continue →
               </GoldBtn>
             ) : (

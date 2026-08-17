@@ -1,7 +1,7 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, Tabs, SearchFilter, Select } from "@/components/ui";
+import { PageHeader, Card, Chip, Tabs, SearchFilter, Select, TableSkeleton, Pagination, ExportButton } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_PAYMENTS } from "@/lib/mock";
 import { inr } from "@/lib/types";
@@ -52,6 +52,9 @@ export default function PaymentsPage() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [dpYear, setDpYear] = useState(new Date().getFullYear());
   const [dpMonth, setDpMonth] = useState(new Date().getMonth());
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => { const t = setTimeout(() => setLoading(false), 700); return () => clearTimeout(t); }, []);
 
   const uniqueCustomers = Array.from(new Set(MOCK_PAYMENTS.map((p) => p.customerName))).sort();
 
@@ -109,10 +112,20 @@ export default function PaymentsPage() {
   const pendingTotal = MOCK_PAYMENTS.filter((p) => p.status === "sent" || p.status === "opened" || p.status === "draft").reduce((sum, p) => sum + p.amount, 0);
 
   const PER_PAGE = 8;
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(0);
   const totalPages = Math.ceil(filtered.length / PER_PAGE);
-  const currentPage = page > totalPages && totalPages > 0 ? totalPages : page;
-  const paginated = filtered.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE);
+  const paginated = filtered.slice(page * PER_PAGE, (page + 1) * PER_PAGE);
+
+  const exportData = filtered.map((p) => ({
+    id: p.id,
+    customer: p.customerName,
+    purpose: p.purpose,
+    amount: p.amount,
+    status: p.status,
+    type: p.linkedOrderId ? "Order" : "Consultation",
+    date: p.paidAt || p.createdAt,
+    transactionRef: p.transactionRef ?? "",
+  }));
 
   return (
     <>
@@ -152,12 +165,12 @@ export default function PaymentsPage() {
             return { ...t, count };
           })}
           active={tab}
-          onChange={setTab}
+          onChange={(k) => { setTab(k); setPage(0); }}
         />
       </div>
 
       <div className="mb-4">
-        <SearchFilter search={search} onSearchChange={setSearch} placeholder="Search customer, purpose, transaction ref…" />
+        <SearchFilter search={search} onSearchChange={(v) => { setSearch(v); setPage(0); }} placeholder="Search customer, purpose, transaction ref…" />
       </div>
 
       {/* Filters & Sort */}
@@ -165,7 +178,7 @@ export default function PaymentsPage() {
         <div className="w-[200px]">
           <Select
             value={filterCustomer}
-            onChange={setFilterCustomer}
+            onChange={(v) => { setFilterCustomer(v); setPage(0); }}
             compact
             searchable
             placeholder="All customers"
@@ -179,7 +192,7 @@ export default function PaymentsPage() {
         <div className="w-[150px]">
           <Select
             value={filterType}
-            onChange={(v) => setFilterType(v as typeof filterType)}
+            onChange={(v) => { setFilterType(v as typeof filterType); setPage(0); }}
             compact
             placeholder="All types"
             options={[
@@ -224,7 +237,7 @@ export default function PaymentsPage() {
                   ].map((preset) => (
                     <button
                       key={preset.label}
-                      onClick={() => { setFilterDateFrom(preset.from); setFilterDateTo(preset.to); setShowDatePicker(false); }}
+                      onClick={() => { setFilterDateFrom(preset.from); setFilterDateTo(preset.to); setShowDatePicker(false); setPage(0); }}
                       className="w-full text-left px-2.5 py-2 rounded-[7px] text-[12px] transition-colors cursor-pointer hover:bg-[rgba(160,125,56,0.10)]"
                       style={{ color: T.text }}
                     >
@@ -233,7 +246,7 @@ export default function PaymentsPage() {
                   ))}
                   {(filterDateFrom || filterDateTo) && (
                     <button
-                      onClick={() => { setFilterDateFrom(""); setFilterDateTo(""); setShowDatePicker(false); }}
+                      onClick={() => { setFilterDateFrom(""); setFilterDateTo(""); setShowDatePicker(false); setPage(0); }}
                       className="w-full text-left px-2.5 py-2 rounded-[7px] text-[11px] mt-1 transition-colors cursor-pointer hover:bg-[rgba(176,84,84,0.06)]"
                       style={{ color: T.danger }}
                     >
@@ -250,7 +263,7 @@ export default function PaymentsPage() {
                       <input
                         type="date"
                         value={filterDateFrom}
-                        onChange={(e) => setFilterDateFrom(e.target.value)}
+                        onChange={(e) => { setFilterDateFrom(e.target.value); setPage(0); }}
                         className="w-full h-8 px-2 rounded-[7px] text-[11px] outline-none"
                         style={{ background: T.bg, border: `1px solid ${T.borderSoft}`, color: T.text }}
                       />
@@ -261,7 +274,7 @@ export default function PaymentsPage() {
                       <input
                         type="date"
                         value={filterDateTo}
-                        onChange={(e) => setFilterDateTo(e.target.value)}
+                        onChange={(e) => { setFilterDateTo(e.target.value); setPage(0); }}
                         className="w-full h-8 px-2 rounded-[7px] text-[11px] outline-none"
                         style={{ background: T.bg, border: `1px solid ${T.borderSoft}`, color: T.text }}
                       />
@@ -336,7 +349,7 @@ export default function PaymentsPage() {
         <div className="ml-auto flex items-center gap-2">
           {hasActiveFilters && (
             <button
-              onClick={() => { setFilterCustomer(""); setFilterDateFrom(""); setFilterDateTo(""); setFilterType(""); }}
+              onClick={() => { setFilterCustomer(""); setFilterDateFrom(""); setFilterDateTo(""); setFilterType(""); setPage(0); }}
               className="text-[11px] px-2.5 py-1.5 rounded-[7px] cursor-pointer transition-opacity hover:opacity-80"
               style={{ color: T.danger, background: "rgba(176,84,84,0.08)", border: "1px solid rgba(176,84,84,0.15)" }}
             >
@@ -346,7 +359,7 @@ export default function PaymentsPage() {
           <div className="w-[170px]">
             <Select
               value={sortBy}
-              onChange={(v) => setSortBy(v as typeof sortBy)}
+              onChange={(v) => { setSortBy(v as typeof sortBy); setPage(0); }}
               compact
               prefix="Sort: "
               options={[
@@ -357,156 +370,104 @@ export default function PaymentsPage() {
               ]}
             />
           </div>
+          <ExportButton data={exportData} filename="payments" className="ml-2" />
         </div>
       </div>
 
-      <Card>
-        {/* Table header */}
-        <div className="hidden sm:grid grid-cols-[1fr_110px_140px_130px_90px_120px] gap-3 px-3 py-2 text-[11px] tracking-[0.06em] uppercase" style={{ color: T.faint, borderBottom: `1px solid ${T.borderSoft}` }}>
-          <span>Details</span>
-          <span>Type</span>
-          <span>Date & Time</span>
-          <span>Transaction ID</span>
-          <span>Status</span>
-          <span className="text-right">Amount</span>
-        </div>
+      {loading ? (
+        <Card><TableSkeleton rows={6} cols={5} /></Card>
+      ) : (
+        <>
+          <Card>
+            {/* Table header */}
+            <div className="hidden sm:grid grid-cols-[1fr_110px_140px_130px_90px_120px] gap-3 px-3 py-2 text-[11px] tracking-[0.06em] uppercase" style={{ color: T.faint, borderBottom: `1px solid ${T.borderSoft}` }}>
+              <span>Details</span>
+              <span>Type</span>
+              <span>Date & Time</span>
+              <span>Transaction ID</span>
+              <span>Status</span>
+              <span className="text-right">Amount</span>
+            </div>
 
-        {filtered.length === 0 ? (
-          <p className="text-[13.5px] text-center py-6" style={{ color: T.muted }}>No transactions match.</p>
-        ) : (
-          paginated.map((p) => {
-            const type = p.linkedOrderId ? "Order" : "Consultation";
-            const typeTone = p.linkedOrderId ? "gold" as const : "muted" as const;
-            const href = p.linkedOrderId ? `/orders/${p.linkedOrderId}` : p.linkedAppointmentId ? `/consultations/${p.linkedAppointmentId}` : null;
-            const refId = p.linkedOrderId || (p.linkedAppointmentId ? p.linkedAppointmentId : "");
-            const itemName = getItemName(p);
-            const displayStatus = getDisplayStatus(p.status);
-            const dateStr = p.paidAt || p.createdAt;
+            {filtered.length === 0 ? (
+              <p className="text-[13.5px] text-center py-6" style={{ color: T.muted }}>No transactions match.</p>
+            ) : (
+              paginated.map((p) => {
+                const type = p.linkedOrderId ? "Order" : "Consultation";
+                const typeTone = p.linkedOrderId ? "gold" as const : "muted" as const;
+                const href = p.linkedOrderId ? `/orders/${p.linkedOrderId}` : p.linkedAppointmentId ? `/consultations/${p.linkedAppointmentId}` : null;
+                const refId = p.linkedOrderId || (p.linkedAppointmentId ? p.linkedAppointmentId : "");
+                const itemName = getItemName(p);
+                const displayStatus = getDisplayStatus(p.status);
+                const dateStr = p.paidAt || p.createdAt;
 
-            return (
-              <Link
-                key={p.id}
-                href={href || "#"}
-                className="group grid grid-cols-1 sm:grid-cols-[1fr_110px_140px_130px_90px_120px] gap-2 sm:gap-3 items-center px-3 py-3.5 transition-all duration-150 rounded-[8px] hover:bg-[rgba(160,125,56,0.07)]"
-                style={{ borderBottom: `1px solid ${T.borderSoft}` }}
-              >
-                {/* Details: ID first, then item name + customer */}
-                <div className="min-w-0">
-                  <div className="text-[13.5px] font-medium truncate" style={{ color: T.text }}>{itemName}</div>
-                  <div className="text-[12px] truncate mt-0.5" style={{ color: T.muted }}>
-                    <span className="group-hover:underline" style={{ color: T.accent }}>{refId}</span> · {p.customerName}
-                  </div>
-                </div>
+                return (
+                  <Link
+                    key={p.id}
+                    href={href || "#"}
+                    className="group grid grid-cols-1 sm:grid-cols-[1fr_110px_140px_130px_90px_120px] gap-2 sm:gap-3 items-center px-3 py-3.5 transition-all duration-150 rounded-[8px] hover:bg-[rgba(160,125,56,0.07)]"
+                    style={{ borderBottom: `1px solid ${T.borderSoft}` }}
+                  >
+                    {/* Details: ID first, then item name + customer */}
+                    <div className="min-w-0">
+                      <div className="text-[13.5px] font-medium truncate" style={{ color: T.text }}>{itemName}</div>
+                      <div className="text-[12px] truncate mt-0.5" style={{ color: T.muted }}>
+                        <span className="group-hover:underline" style={{ color: T.accent }}>{refId}</span> · {p.customerName}
+                      </div>
+                    </div>
 
-                {/* Type pill */}
-                <div className="flex items-center gap-2 min-w-0">
-                  <Chip tone={typeTone}>{type}</Chip>
-                </div>
+                    {/* Type pill */}
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Chip tone={typeTone}>{type}</Chip>
+                    </div>
 
-                {/* Date & Time */}
-                <div className="min-w-0">
-                  <div className="text-[12px]" style={{ color: T.text }}>{formatDate(dateStr)}</div>
-                  {p.paidAt && <div className="text-[11px]" style={{ color: T.faint }}>{formatTime(p.paidAt)}</div>}
-                </div>
+                    {/* Date & Time */}
+                    <div className="min-w-0">
+                      <div className="text-[12px]" style={{ color: T.text }}>{formatDate(dateStr)}</div>
+                      {p.paidAt && <div className="text-[11px]" style={{ color: T.faint }}>{formatTime(p.paidAt)}</div>}
+                    </div>
 
-                {/* Transaction ID */}
-                <div className="min-w-0 flex items-center gap-1.5">
-                  {p.transactionRef ? (
-                    <>
-                      <span className="text-[11px] font-mono" style={{ color: T.muted }}>{p.transactionRef}</span>
-                      <button
-                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigator.clipboard.writeText(p.transactionRef!); setToast("Transaction ID copied"); setTimeout(() => setToast(""), 3000); }}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity duration-150 shrink-0 cursor-pointer"
-                        title="Copy transaction ID"
-                      >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: T.muted }}>
-                          <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                        </svg>
-                      </button>
-                    </>
-                  ) : (
-                    <span className="text-[11px]" style={{ color: T.faint }}>—</span>
-                  )}
-                </div>
+                    {/* Transaction ID */}
+                    <div className="min-w-0 flex items-center gap-1.5">
+                      {p.transactionRef ? (
+                        <>
+                          <span className="text-[11px] font-mono" style={{ color: T.muted }}>{p.transactionRef}</span>
+                          <button
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigator.clipboard.writeText(p.transactionRef!); setToast("Transaction ID copied"); setTimeout(() => setToast(""), 3000); }}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity duration-150 shrink-0 cursor-pointer"
+                            title="Copy transaction ID"
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: T.muted }}>
+                              <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                            </svg>
+                          </button>
+                        </>
+                      ) : (
+                        <span className="text-[11px]" style={{ color: T.faint }}>—</span>
+                      )}
+                    </div>
 
-                {/* Status */}
-                <div>
-                  <Chip tone={getStatusTone(p.status)}>{displayStatus}</Chip>
-                </div>
+                    {/* Status */}
+                    <div>
+                      <Chip tone={getStatusTone(p.status)}>{displayStatus}</Chip>
+                    </div>
 
-                {/* Amount */}
-                <div className="text-right">
-                  <div className="text-[14px] font-semibold tabular-nums" style={{ color: T.text }}>{inr(p.amount)}</div>
-                </div>
-              </Link>
-            );
-          })
-        )}
-      </Card>
+                    {/* Amount */}
+                    <div className="text-right">
+                      <div className="text-[14px] font-semibold tabular-nums" style={{ color: T.text }}>{inr(p.amount)}</div>
+                    </div>
+                  </Link>
+                );
+              })
+            )}
+          </Card>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between mt-4">
-          <div className="text-[12px]" style={{ color: T.faint }}>
-            Showing {(currentPage - 1) * PER_PAGE + 1}–{Math.min(currentPage * PER_PAGE, filtered.length)} of {filtered.length}
-          </div>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setPage(1)}
-              disabled={currentPage === 1}
-              className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[12px] transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-              style={{ background: T.popover, border: `1px solid ${T.borderSoft}`, color: T.muted }}
-            >
-              «
-            </button>
-            <button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[12px] transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-              style={{ background: T.popover, border: `1px solid ${T.borderSoft}`, color: T.muted }}
-            >
-              ‹
-            </button>
-            {Array.from({ length: totalPages }).map((_, i) => {
-              const p = i + 1;
-              if (totalPages > 7 && Math.abs(p - currentPage) > 2 && p !== 1 && p !== totalPages) {
-                if (p === currentPage - 3 || p === currentPage + 3) return <span key={p} className="w-6 text-center text-[11px]" style={{ color: T.faint }}>…</span>;
-                return null;
-              }
-              return (
-                <button
-                  key={p}
-                  onClick={() => setPage(p)}
-                  className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[12px] font-medium transition-all cursor-pointer"
-                  style={{
-                    background: p === currentPage ? T.accent : T.panel,
-                    border: `1px solid ${p === currentPage ? T.accent : T.borderSoft}`,
-                    color: p === currentPage ? T.accentInk : T.text,
-                  }}
-                >
-                  {p}
-                </button>
-              );
-            })}
-            <button
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-              className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[12px] transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-              style={{ background: T.popover, border: `1px solid ${T.borderSoft}`, color: T.muted }}
-            >
-              ›
-            </button>
-            <button
-              onClick={() => setPage(totalPages)}
-              disabled={currentPage === totalPages}
-              className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[12px] transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-              style={{ background: T.popover, border: `1px solid ${T.borderSoft}`, color: T.muted }}
-            >
-              »
-            </button>
-          </div>
-        </div>
+          {/* Pagination */}
+          {filtered.length > PER_PAGE && (
+            <Pagination page={page} totalPages={totalPages} totalItems={filtered.length} perPage={PER_PAGE} onPageChange={setPage} />
+          )}
+        </>
       )}
 
       {toast && (

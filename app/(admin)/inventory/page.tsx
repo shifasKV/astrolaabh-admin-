@@ -2,7 +2,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { PageHeader, Card, SearchFilter, Select, Chip, Modal, Input, GoldBtn, GhostBtn, ShopifyIcon, ShopifyButton, SHOPIFY_GREEN_DARK, SHOPIFY_TINT, SHOPIFY_BORDER } from "@/components/ui";
+import { PageHeader, Card, SearchFilter, Select, Chip, Modal, Input, GoldBtn, GhostBtn, ShopifyIcon, ShopifyButton, SHOPIFY_GREEN_DARK, SHOPIFY_TINT, SHOPIFY_BORDER, Pagination, ExportButton, ConfirmDialog, TableSkeleton } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { STONES, DESIGNS, ENERGISATION, INTENTS, ZODIAC, inr as catalogInr } from "@/lib/catalog";
 import type { Stone, Design } from "@/lib/catalog";
@@ -74,6 +74,8 @@ const METAL_OPTIONS = [
   { value: "Panchdhatu", label: "Panchdhatu" },
 ];
 
+const PER_PAGE = 15;
+
 function ToggleSwitch({ enabled, onToggle }: { enabled: boolean; onToggle: () => void }) {
   return (
     <button
@@ -116,6 +118,7 @@ function ExternalLink({ href, label, shopify }: { href: string; label: string; s
 
 function ItemRowMenu({ shopifyUrl, websiteUrl, enabled, onToggle, outOfStock, onOutOfStock, sellingFast, onSellingFast }: { shopifyUrl: string; websiteUrl: string; enabled: boolean; onToggle: () => void; outOfStock?: boolean; onOutOfStock?: () => void; sellingFast?: boolean; onSellingFast?: () => void }) {
   const [open, setOpen] = useState(false);
+  const [confirmDisable, setConfirmDisable] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -172,7 +175,16 @@ function ItemRowMenu({ shopifyUrl, websiteUrl, enabled, onToggle, outOfStock, on
             </button>
           )}
           <button
-            onClick={(e) => { e.stopPropagation(); e.preventDefault(); onToggle(); setOpen(false); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              setOpen(false);
+              if (enabled) {
+                setConfirmDisable(true);
+              } else {
+                onToggle();
+              }
+            }}
             className={itemClass}
             style={{ color: enabled ? T.danger : T.good }}
           >
@@ -180,6 +192,15 @@ function ItemRowMenu({ shopifyUrl, websiteUrl, enabled, onToggle, outOfStock, on
           </button>
         </div>
       )}
+      <ConfirmDialog
+        open={confirmDisable}
+        onClose={() => setConfirmDisable(false)}
+        onConfirm={onToggle}
+        title="Disable listing?"
+        description="This item will be hidden from the website."
+        variant="danger"
+        confirmLabel="Disable"
+      />
     </div>
   );
 }
@@ -192,6 +213,10 @@ export default function InventoryPage() {
   useEffect(() => {
     setTab(tabParam);
   }, [tabParam]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => { const t = setTimeout(() => setLoading(false), 700); return () => clearTimeout(t); }, []);
+
   const [search, setSearch] = useState("");
   const [toast, setToast] = useState("");
   const [disabledStones, setDisabledStones] = useState<Set<string>>(new Set());
@@ -211,6 +236,8 @@ export default function InventoryPage() {
 
   const [stoneSort, setStoneSort] = useState("");
   const [designSort, setDesignSort] = useState("");
+  const [stonePage, setStonePage] = useState(0);
+  const [designPage, setDesignPage] = useState(0);
 
   const toggleStone = (sku: string) => {
     const wasDisabled = disabledStones.has(sku);
@@ -354,6 +381,27 @@ export default function InventoryPage() {
     });
   }, [search, form, metal, designSort]);
 
+  const pagedStones = filteredStones.slice(stonePage * PER_PAGE, (stonePage + 1) * PER_PAGE);
+  const pagedDesigns = filteredDesigns.slice(designPage * PER_PAGE, (designPage + 1) * PER_PAGE);
+
+  const stonesExportData = filteredStones.map((s) => ({
+    sku: s.sku,
+    gemName: s.gemName,
+    ratti: s.ratti,
+    intent: s.purpose?.[0] ?? "",
+    zodiac: s.planet,
+    colour: s.shade || s.colour || "",
+    price: s.price,
+  }));
+
+  const designsExportData = filteredDesigns.map((d) => ({
+    name: d.name,
+    slug: d.slug,
+    form: d.form,
+    metal: d.metal,
+    remaining: d.remaining,
+  }));
+
   const pageTitle = tab === "stones" ? "Stones" : tab === "designs" ? "Jewellery Designs" : "Energisation Packages";
   const pageSub = tab === "stones"
     ? "Gemstone inventory synced from Shopify"
@@ -373,7 +421,7 @@ export default function InventoryPage() {
 
       {tab !== "energisation" && (
         <div className="mb-4">
-          <SearchFilter search={search} onSearchChange={setSearch} placeholder={tab === "stones" ? "Search SKU, gemstone…" : "Search design name…"} />
+          <SearchFilter search={search} onSearchChange={(v) => { setSearch(v); setStonePage(0); setDesignPage(0); }} placeholder={tab === "stones" ? "Search SKU, gemstone…" : "Search design name…"} />
         </div>
       )}
 
@@ -381,21 +429,21 @@ export default function InventoryPage() {
       {tab === "stones" && (
         <div className="flex flex-wrap items-center gap-2.5 mb-4">
           <div className="w-[170px]">
-            <Select value={stoneType} onChange={setStoneType} options={STONE_TYPES} compact />
+            <Select value={stoneType} onChange={(v) => { setStoneType(v); setStonePage(0); }} options={STONE_TYPES} compact />
           </div>
           <div className="w-[150px]">
-            <Select value={color} onChange={setColor} options={COLOR_OPTIONS} compact searchable />
+            <Select value={color} onChange={(v) => { setColor(v); setStonePage(0); }} options={COLOR_OPTIONS} compact searchable />
           </div>
           <div className="w-[180px]">
-            <Select value={intent} onChange={setIntent} options={INTENT_OPTIONS} compact />
+            <Select value={intent} onChange={(v) => { setIntent(v); setStonePage(0); }} options={INTENT_OPTIONS} compact />
           </div>
           <div className="w-[150px]">
-            <Select value={zodiac} onChange={setZodiac} options={ZODIAC_OPTIONS} compact searchable />
+            <Select value={zodiac} onChange={(v) => { setZodiac(v); setStonePage(0); }} options={ZODIAC_OPTIONS} compact searchable />
           </div>
           <div className="w-[180px] ml-auto">
             <Select
               value={stoneSort}
-              onChange={setStoneSort}
+              onChange={(v) => { setStoneSort(v); setStonePage(0); }}
               compact
               prefix="Sort: "
               options={[
@@ -407,21 +455,22 @@ export default function InventoryPage() {
               ]}
             />
           </div>
+          <ExportButton data={stonesExportData} filename="inventory-stones" className="ml-2" />
         </div>
       )}
 
       {tab === "designs" && (
         <div className="flex flex-wrap items-center gap-2.5 mb-4">
           <div className="w-[150px]">
-            <Select value={form} onChange={setForm} options={FORM_OPTIONS} compact />
+            <Select value={form} onChange={(v) => { setForm(v); setDesignPage(0); }} options={FORM_OPTIONS} compact />
           </div>
           <div className="w-[150px]">
-            <Select value={metal} onChange={setMetal} options={METAL_OPTIONS} compact />
+            <Select value={metal} onChange={(v) => { setMetal(v); setDesignPage(0); }} options={METAL_OPTIONS} compact />
           </div>
           <div className="w-[190px] ml-auto">
             <Select
               value={designSort}
-              onChange={setDesignSort}
+              onChange={(v) => { setDesignSort(v); setDesignPage(0); }}
               compact
               prefix="Sort: "
               options={[
@@ -432,10 +481,14 @@ export default function InventoryPage() {
               ]}
             />
           </div>
+          <ExportButton data={designsExportData} filename="inventory-designs" className="ml-2" />
         </div>
       )}
 
       {tab === "stones" && (
+        loading ? (
+          <Card><TableSkeleton rows={8} cols={6} /></Card>
+        ) : (
         <Card>
           <div className="flex items-center justify-between mb-3">
             <div className="text-[11px] tracking-[0.08em] uppercase" style={{ color: T.faint }}>
@@ -455,11 +508,11 @@ export default function InventoryPage() {
             <span className="text-right">Total</span>
             <span />
           </div>
-          {filteredStones.slice(0, 30).map((s, i, arr) => (
+          {pagedStones.map((s, i, arr) => (
             <div
               key={s.sku}
               className="grid md:grid-cols-[minmax(220px,1.4fr)_130px_130px_100px_80px_120px_48px] grid-cols-1 gap-x-4 gap-y-1.5 items-center px-3 py-3 text-[13.5px]"
-              style={{ borderBottom: i < Math.min(arr.length, 30) - 1 ? `1px solid ${T.borderSoft}` : "none" }}
+              style={{ borderBottom: i < arr.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
             >
               <span className="flex items-center gap-3 min-w-0">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -499,16 +552,22 @@ export default function InventoryPage() {
               </span>
             </div>
           ))}
-          {filteredStones.length > 30 && (
-            <p className="text-[12px] mt-3 text-center" style={{ color: T.faint }}>Showing 30 of {filteredStones.length} stones</p>
+          {filteredStones.length > PER_PAGE && (
+            <div className="mt-4">
+              <Pagination page={stonePage} totalPages={Math.ceil(filteredStones.length / PER_PAGE)} totalItems={filteredStones.length} perPage={PER_PAGE} onPageChange={setStonePage} />
+            </div>
           )}
           {filteredStones.length === 0 && (
             <p className="text-[13.5px] py-6 text-center" style={{ color: T.muted }}>No stones match the current filters.</p>
           )}
         </Card>
+        )
       )}
 
       {tab === "designs" && (
+        loading ? (
+          <Card><TableSkeleton rows={8} cols={6} /></Card>
+        ) : (
         <Card>
           <div className="flex items-center justify-between mb-3">
             <div className="text-[11px] tracking-[0.08em] uppercase" style={{ color: T.faint }}>
@@ -525,7 +584,7 @@ export default function InventoryPage() {
             <span className="text-right">Remaining</span>
             <span />
           </div>
-          {filteredDesigns.map((d, i, arr) => (
+          {pagedDesigns.map((d, i, arr) => (
             <div
               key={d.slug}
               className="grid md:grid-cols-[minmax(200px,1.2fr)_120px_120px_120px_48px] grid-cols-1 gap-x-4 gap-y-1.5 items-center px-3 py-3 text-[13.5px]"
@@ -567,13 +626,22 @@ export default function InventoryPage() {
               </span>
             </div>
           ))}
+          {filteredDesigns.length > PER_PAGE && (
+            <div className="mt-4">
+              <Pagination page={designPage} totalPages={Math.ceil(filteredDesigns.length / PER_PAGE)} totalItems={filteredDesigns.length} perPage={PER_PAGE} onPageChange={setDesignPage} />
+            </div>
+          )}
           {filteredDesigns.length === 0 && (
             <p className="text-[13.5px] py-6 text-center" style={{ color: T.muted }}>No designs match the current filters.</p>
           )}
         </Card>
+        )
       )}
 
       {tab === "energisation" && (
+        loading ? (
+          <Card><TableSkeleton rows={8} cols={6} /></Card>
+        ) : (
         <>
           <div className="flex items-center justify-between mb-3">
             <div className="text-[11px] tracking-[0.08em] uppercase font-medium" style={{ color: T.faint }}>
@@ -668,6 +736,7 @@ export default function InventoryPage() {
             </div>
           </Modal>
         </>
+        )
       )}
 
       {toast && (

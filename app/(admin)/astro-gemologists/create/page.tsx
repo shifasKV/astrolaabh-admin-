@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { PageHeader, Card, GoldBtn, GhostBtn, Input, Select, Textarea, FileInput } from "@/components/ui";
 import { T } from "@/lib/theme";
+import { V, validate, hasErrors, type ValidationErrors } from "@/lib/validation";
 
 const GENDER_OPTIONS = [
   { value: "male", label: "Male" },
@@ -70,6 +71,26 @@ export default function CreateAstroGemologistPage() {
   const [ifsc, setIfsc] = useState("");
   const [upi, setUpi] = useState("");
 
+  const [errors, setErrors] = useState<ValidationErrors>({});
+  const [touched, setTouched] = useState<Set<string>>(new Set());
+  const [submitAttempted, setSubmitAttempted] = useState(false);
+
+  const markTouched = (field: string) => setTouched((prev) => new Set(prev).add(field));
+  const showError = (field: string) => (touched.has(field) || submitAttempted) ? errors[field] : undefined;
+
+  const validateForm = () => {
+    const errs = validate({
+      name: V.required(name),
+      email: V.email(email),
+      phone: V.phone(phone),
+      stoneRate: stoneRate.trim() ? V.percent(stoneRate) : "",
+      jewelleryRate: jewelleryRate.trim() ? V.percent(jewelleryRate) : "",
+      consultationRate: consultationRate.trim() ? V.percent(consultationRate) : "",
+    });
+    setErrors(errs);
+    return errs;
+  };
+
   const handlePhoto = (file: File) => {
     setPhoto(file);
     const reader = new FileReader();
@@ -81,10 +102,20 @@ export default function CreateAstroGemologistPage() {
     setter(arr.includes(val) ? arr.filter((v) => v !== val) : [...arr, val]);
   };
 
-  const canSubmit = name.trim() && email.trim() && phone.trim();
+  const canSubmit = !hasErrors(validate({
+    name: V.required(name),
+    email: V.email(email),
+    phone: V.phone(phone),
+    stoneRate: stoneRate.trim() ? V.percent(stoneRate) : "",
+    jewelleryRate: jewelleryRate.trim() ? V.percent(jewelleryRate) : "",
+    consultationRate: consultationRate.trim() ? V.percent(consultationRate) : "",
+  }));
 
   const handleCreate = () => {
-    if (!canSubmit) return;
+    setSubmitAttempted(true);
+    setTouched(new Set(["name", "email", "phone", "stoneRate", "jewelleryRate", "consultationRate"]));
+    const errs = validateForm();
+    if (hasErrors(errs)) return;
     setToast("Astro-Gemologist created — Calendly invitation sent");
     setTimeout(() => {
       router.push("/astro-gemologists");
@@ -105,11 +136,11 @@ export default function CreateAstroGemologistPage() {
           <div className="text-[11px] tracking-[0.08em] uppercase mb-4" style={{ color: T.accent }}>Astrologer details</div>
           <div className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Input value={name} onChange={setName} label="Full name" placeholder="e.g. Pt. Sandeep Kochaar" />
-              <Input value={email} onChange={setEmail} label="Email" type="email" placeholder="e.g. name@astrolaabh.house" />
+              <Input value={name} onChange={(v) => { markTouched("name"); setName(v); }} label="Full name" placeholder="e.g. Pt. Sandeep Kochaar" error={showError("name")} />
+              <Input value={email} onChange={(v) => { markTouched("email"); setEmail(v); }} label="Email" type="email" placeholder="e.g. name@astrolaabh.house" error={showError("email")} />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <Input value={phone} onChange={setPhone} label="Mobile number" placeholder="e.g. +91 98765 43210" />
+              <Input value={phone} onChange={(v) => { markTouched("phone"); setPhone(v); }} label="Mobile number" placeholder="e.g. +91 98765 43210" error={showError("phone")} />
               <Input value={age} onChange={setAge} label="Age" type="number" placeholder="e.g. 45" />
               <Select value={gender} onChange={setGender} label="Gender" options={GENDER_OPTIONS} placeholder="Select gender" />
             </div>
@@ -176,13 +207,14 @@ export default function CreateAstroGemologistPage() {
           <div className="text-[11px] tracking-[0.08em] uppercase mb-4" style={{ color: T.accent }}>Commission & payment details</div>
           <p className="text-[12px] mb-4" style={{ color: T.muted }}>Commission percentages and bank details for payouts. Can be updated later.</p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
-            {([["stone", stoneRate, setStoneRate], ["jewellery", jewelleryRate, setJewelleryRate], ["consultation", consultationRate, setConsultationRate]] as const).map(([cat, val, setter]) => (
+            {([["stone", stoneRate, setStoneRate, "stoneRate"], ["jewellery", jewelleryRate, setJewelleryRate, "jewelleryRate"], ["consultation", consultationRate, setConsultationRate, "consultationRate"]] as const).map(([cat, val, setter, fieldKey]) => (
               <div key={cat} className="rounded-[10px] p-4" style={{ background: T.panel, border: `1px solid ${T.borderSoft}` }}>
                 <div className="text-[11px] tracking-[0.06em] uppercase mb-2" style={{ color: T.faint }}>{cat}</div>
                 <div className="flex items-center gap-2">
-                  <input type="number" value={val} onChange={(e) => setter(e.target.value)} className="w-full h-9 px-3 rounded-[8px] text-[13px] outline-none" style={{ background: T.card, border: `1px solid ${T.border}`, color: T.text }} />
+                  <input type="number" value={val} onChange={(e) => { markTouched(fieldKey); setter(e.target.value); }} className="w-full h-9 px-3 rounded-[8px] text-[13px] outline-none" style={{ background: T.card, border: `1px solid ${showError(fieldKey) ? T.danger : T.border}`, color: T.text }} />
                   <span className="text-[13px] font-medium shrink-0" style={{ color: T.muted }}>%</span>
                 </div>
+                {showError(fieldKey) && <p className="text-[11px] mt-1" style={{ color: T.danger }}>{showError(fieldKey)}</p>}
               </div>
             ))}
           </div>

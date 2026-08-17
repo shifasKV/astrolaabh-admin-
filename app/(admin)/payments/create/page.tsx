@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { PageHeader, Card, GoldBtn, GhostBtn, Input, Select, Textarea } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_CUSTOMERS } from "@/lib/mock";
+import { V, validate, hasErrors, type ValidationErrors } from "@/lib/validation";
 
 export default function CreatePaymentPage() {
   const router = useRouter();
@@ -14,7 +15,21 @@ export default function CreatePaymentPage() {
   const [linkedRef, setLinkedRef] = useState("");
   const [notes, setNotes] = useState("");
 
+  const [errors, setErrors] = useState<ValidationErrors>({});
+  const [touched, setTouched] = useState<Set<string>>(new Set());
+  const [submitAttempted, setSubmitAttempted] = useState(false);
+
+  const markTouched = (field: string) => setTouched((prev) => new Set(prev).add(field));
+  const showError = (field: string) => (touched.has(field) || submitAttempted) ? errors[field] : undefined;
+
+  const canSubmit = customerId && purpose && !hasErrors(validate({ amount: V.positiveAmount(amount) }));
+
   const handleCreate = () => {
+    setSubmitAttempted(true);
+    setTouched(new Set(["amount"]));
+    const errs = validate({ amount: V.positiveAmount(amount) });
+    setErrors(errs);
+    if (hasErrors(errs)) return;
     router.push("/payments");
   };
 
@@ -49,10 +64,11 @@ export default function CreatePaymentPage() {
 
           <Input
             value={amount}
-            onChange={setAmount}
+            onChange={(v) => { markTouched("amount"); setAmount(v); }}
             label="Amount (₹)"
             type="number"
             placeholder="e.g. 250000"
+            error={showError("amount")}
           />
 
           <Select
@@ -84,7 +100,7 @@ export default function CreatePaymentPage() {
           />
 
           <div className="flex gap-2.5 pt-3">
-            <GoldBtn onClick={handleCreate} disabled={!customerId || !purpose || !amount}>Create & send link</GoldBtn>
+            <GoldBtn onClick={handleCreate} disabled={!canSubmit}>Create & send link</GoldBtn>
             <GhostBtn onClick={() => router.push("/payments")}>Cancel</GhostBtn>
           </div>
         </div>

@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { PageHeader, Card, GoldBtn, GhostBtn, Input, Select } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_AFFILIATES } from "@/lib/mock";
+import { V, validate, hasErrors, type ValidationErrors } from "@/lib/validation";
 
 export default function CreateAffiliatePage() {
   const router = useRouter();
@@ -28,8 +29,31 @@ export default function CreateAffiliatePage() {
 
   const [bankName, setBankName] = useState(isEdit ? "HDFC Bank" : "");
   const [accountNumber, setAccountNumber] = useState(isEdit ? "1234 5678 6789" : "");
+  const [confirmAccount, setConfirmAccount] = useState(isEdit ? "1234 5678 6789" : "");
   const [ifsc, setIfsc] = useState(isEdit ? "HDFC0001234" : "");
   const [upi, setUpi] = useState(isEdit ? `${existing?.name.split(" ").pop()?.toLowerCase()}@upi` : "");
+
+  const [errors, setErrors] = useState<ValidationErrors>({});
+  const [touched, setTouched] = useState<Set<string>>(new Set());
+  const [submitAttempted, setSubmitAttempted] = useState(false);
+
+  const markTouched = (field: string) => setTouched((prev) => new Set(prev).add(field));
+  const showError = (field: string) => (touched.has(field) || submitAttempted) ? errors[field] : undefined;
+
+  const validateForm = () => {
+    const errs = validate({
+      name: V.required(name),
+      email: V.email(email),
+      phone: V.phone(phone),
+      stoneRate: V.percent(stoneRate),
+      jewelleryRate: V.percent(jewelleryRate),
+      consultationRate: V.percent(consultationRate),
+      accountMatch: V.accountMatch(accountNumber, confirmAccount),
+      ifsc: ifsc.trim() ? V.ifsc(ifsc) : "",
+    });
+    setErrors(errs);
+    return errs;
+  };
 
   useEffect(() => {
     if (!scrollTo) return;
@@ -40,10 +64,22 @@ export default function CreateAffiliatePage() {
     return () => clearTimeout(timeout);
   }, [scrollTo]);
 
-  const canSubmit = name.trim() && email.trim() && phone.trim();
+  const canSubmit = name.trim() && email.trim() && phone.trim() && !hasErrors(validate({
+    name: V.required(name),
+    email: V.email(email),
+    phone: V.phone(phone),
+    stoneRate: V.percent(stoneRate),
+    jewelleryRate: V.percent(jewelleryRate),
+    consultationRate: V.percent(consultationRate),
+    accountMatch: V.accountMatch(accountNumber, confirmAccount),
+    ifsc: ifsc.trim() ? V.ifsc(ifsc) : "",
+  }));
 
   const handleSubmit = () => {
-    if (!canSubmit) return;
+    setSubmitAttempted(true);
+    setTouched(new Set(["name", "email", "phone", "stoneRate", "jewelleryRate", "consultationRate", "accountNumber", "confirmAccount", "ifsc"]));
+    const errs = validateForm();
+    if (hasErrors(errs)) return;
     setToast(isEdit ? "Affiliate updated" : "Affiliate created — invitation sent");
     setTimeout(() => {
       router.push(isEdit ? `/affiliates/${editId}` : "/affiliates");
@@ -63,11 +99,11 @@ export default function CreateAffiliatePage() {
           <div className="text-[11px] tracking-[0.08em] uppercase mb-4" style={{ color: T.accent }}>Personal information</div>
           <div className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Input value={name} onChange={setName} label="Full name" placeholder="e.g. Dr. Meenakshi Joshi" />
-              <Input value={email} onChange={setEmail} label="Email" type="email" placeholder="e.g. name@example.com" />
+              <Input value={name} onChange={(v) => { markTouched("name"); setName(v); }} label="Full name" placeholder="e.g. Dr. Meenakshi Joshi" error={showError("name")} />
+              <Input value={email} onChange={(v) => { markTouched("email"); setEmail(v); }} label="Email" type="email" placeholder="e.g. name@example.com" error={showError("email")} />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Input value={phone} onChange={setPhone} label="Phone number" placeholder="e.g. +91 98765 43210" />
+              <Input value={phone} onChange={(v) => { markTouched("phone"); setPhone(v); }} label="Phone number" placeholder="e.g. +91 98765 43210" error={showError("phone")} />
             </div>
           </div>
         </Card>
@@ -77,19 +113,20 @@ export default function CreateAffiliatePage() {
             <div className="text-[11px] tracking-[0.08em] uppercase mb-4" style={{ color: T.accent }}>Commission setup</div>
             <p className="text-[12px] mb-4" style={{ color: T.muted }}>Set the commission percentage for each category. Can be updated later.</p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {([["stone", stoneRate, setStoneRate], ["jewellery", jewelleryRate, setJewelleryRate], ["consultation", consultationRate, setConsultationRate]] as const).map(([cat, val, setter]) => (
+              {([["stone", stoneRate, setStoneRate, "stoneRate"], ["jewellery", jewelleryRate, setJewelleryRate, "jewelleryRate"], ["consultation", consultationRate, setConsultationRate, "consultationRate"]] as const).map(([cat, val, setter, fieldKey]) => (
                 <div key={cat} className="rounded-[10px] p-4" style={{ background: T.panel, border: `1px solid ${T.borderSoft}` }}>
                   <div className="text-[11px] tracking-[0.06em] uppercase mb-2" style={{ color: T.faint }}>{cat}</div>
                   <div className="flex items-center gap-2">
                     <input
                       type="number"
                       value={val}
-                      onChange={(e) => setter(e.target.value)}
+                      onChange={(e) => { markTouched(fieldKey); setter(e.target.value); }}
                       className="w-full h-9 px-3 rounded-[8px] text-[13px] outline-none"
-                      style={{ background: T.card, border: `1px solid ${T.border}`, color: T.text }}
+                      style={{ background: T.card, border: `1px solid ${showError(fieldKey) ? T.danger : T.border}`, color: T.text }}
                     />
                     <span className="text-[13px] font-medium shrink-0" style={{ color: T.muted }}>%</span>
                   </div>
+                  {showError(fieldKey) && <p className="text-[11px] mt-1" style={{ color: T.danger }}>{showError(fieldKey)}</p>}
                 </div>
               ))}
             </div>
@@ -103,10 +140,13 @@ export default function CreateAffiliatePage() {
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Input value={bankName} onChange={setBankName} label="Bank name" placeholder="e.g. HDFC Bank" />
-                <Input value={accountNumber} onChange={setAccountNumber} label="Account number" placeholder="e.g. 1234 5678 6789" />
+                <Input value={accountNumber} onChange={(v) => { markTouched("accountNumber"); setAccountNumber(v); }} label="Account number" placeholder="e.g. 1234 5678 6789" />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Input value={ifsc} onChange={setIfsc} label="IFSC code" placeholder="e.g. HDFC0001234" />
+                <Input value={confirmAccount} onChange={(v) => { markTouched("confirmAccount"); setConfirmAccount(v); }} label="Confirm account number" placeholder="Re-enter account number" error={showError("accountMatch")} />
+                <Input value={ifsc} onChange={(v) => { markTouched("ifsc"); setIfsc(v); }} label="IFSC code" placeholder="e.g. HDFC0001234" error={showError("ifsc")} />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Input value={upi} onChange={setUpi} label="UPI ID" placeholder="e.g. name@upi" />
               </div>
             </div>

@@ -1,7 +1,7 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, Tabs, SearchFilter, Select } from "@/components/ui";
+import { PageHeader, Card, Chip, Tabs, SearchFilter, Select, TableSkeleton } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_CONSULTATIONS } from "@/lib/mock";
 import { inr } from "@/lib/types";
@@ -81,6 +81,12 @@ export default function AppointmentsPage() {
   const [goToDateOpen, setGoToDateOpen] = useState(false);
   const [gtdYear, setGtdYear] = useState(new Date().getFullYear());
   const [gtdMonth, setGtdMonth] = useState(new Date().getMonth());
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const t = setTimeout(() => setLoading(false), 700);
+    return () => clearTimeout(t);
+  }, []);
 
   const todayISO = toISODate(new Date());
   const myConsultations = MOCK_CONSULTATIONS.filter((c) => c.expertId === EXPERT_ID);
@@ -190,6 +196,10 @@ export default function AppointmentsPage() {
         )}
       </div>
 
+      {loading ? (
+        <Card><TableSkeleton rows={6} cols={5} /></Card>
+      ) : (
+      <>
       {/* ============ List view ============ */}
       {viewMode === "list" && <>
 
@@ -458,6 +468,8 @@ export default function AppointmentsPage() {
             </div>
           </Card>
         </>
+      )}
+      </>
       )}
     </>
   );

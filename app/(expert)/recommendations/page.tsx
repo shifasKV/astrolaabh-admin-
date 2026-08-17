@@ -1,7 +1,7 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, SearchFilter, Select } from "@/components/ui";
+import { PageHeader, Card, Chip, SearchFilter, Select, TableSkeleton } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_STONE_RECOMMENDATIONS, MOCK_CONSULTATIONS, MOCK_ORDERS } from "@/lib/mock";
 
@@ -25,6 +25,12 @@ export default function RecommendationsPage() {
   const [filterStatus, setFilterStatus] = useState("");
   const [sort, setSort] = useState<SortKey>("newest");
   const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const t = setTimeout(() => setLoading(false), 700);
+    return () => clearTimeout(t);
+  }, []);
 
   const consultationMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -167,6 +173,10 @@ export default function RecommendationsPage() {
         </div>
       </div>
 
+      {loading ? (
+        <Card><TableSkeleton rows={5} cols={5} /></Card>
+      ) : (
+      <>
       {/* Table */}
       <Card>
         {/* Column headers */}
@@ -262,6 +272,8 @@ export default function RecommendationsPage() {
             <button onClick={() => setPage(totalPages)} disabled={currentPage === totalPages} className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[12px] transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed" style={{ background: T.popover, border: `1px solid ${T.borderSoft}`, color: T.muted }}>»</button>
           </div>
         </div>
+      )}
+      </>
       )}
     </>
   );

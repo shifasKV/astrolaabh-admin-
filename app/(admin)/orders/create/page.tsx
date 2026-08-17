@@ -5,6 +5,7 @@ import { PageHeader, Card, GoldBtn, GhostBtn, SearchFilter, Chip, Input, Select,
 import { T } from "@/lib/theme";
 import { MOCK_CUSTOMERS } from "@/lib/mock";
 import { STONES, DESIGNS, ENERGISATION, inr } from "@/lib/catalog";
+import { V, validate, hasErrors, type ValidationErrors } from "@/lib/validation";
 
 type Step = "customer" | "address" | "stone" | "design" | "energisation" | "review";
 const STEPS: { key: Step; label: string }[] = [
@@ -45,6 +46,23 @@ export default function CreateOrderPage() {
   const [selectedAddress, setSelectedAddress] = useState("");
   const [showNewAddress, setShowNewAddress] = useState(false);
   const [newAddress, setNewAddress] = useState({ line1: "", line2: "", city: "", state: "", pincode: "" });
+
+  const [errors, setErrors] = useState<ValidationErrors>({});
+  const [touched, setTouched] = useState<Set<string>>(new Set());
+  const [submitAttempted, setSubmitAttempted] = useState(false);
+
+  const markTouched = (field: string) => setTouched((prev) => new Set(prev).add(field));
+  const showError = (field: string) => (touched.has(field) || submitAttempted) ? errors[field] : undefined;
+
+  const validateNewCustomer = () => {
+    const errs = validate({
+      name: V.required(newCustomer.name),
+      phone: V.phone(newCustomer.phone),
+      email: newCustomer.email.trim() ? V.email(newCustomer.email) : "",
+    });
+    setErrors(errs);
+    return errs;
+  };
 
   const selectedCustomer = createdCustomer ?? MOCK_CUSTOMERS.find((c) => c.id === customerId);
   const selectedStone = STONES.find((s) => s.sku === stoneSku);
@@ -88,7 +106,10 @@ export default function CreateOrderPage() {
   };
 
   const handleCreateCustomer = () => {
-    if (!newCustomer.name || !newCustomer.phone) return;
+    setSubmitAttempted(true);
+    setTouched(new Set(["name", "phone", "email"]));
+    const errs = validateNewCustomer();
+    if (hasErrors(errs)) return;
     const id = `cust_new_${Date.now()}`;
     setCreatedCustomer({ id, ...newCustomer });
     setCustomerId(id);
@@ -96,6 +117,7 @@ export default function CreateOrderPage() {
     setSearch("");
     setSelectedAddress("");
     setShowNewAddress(false);
+    setSubmitAttempted(false);
     goTo("address");
   };
 
@@ -194,21 +216,24 @@ export default function CreateOrderPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <Input
                       value={newCustomer.name}
-                      onChange={(v) => setNewCustomer((p) => ({ ...p, name: v }))}
+                      onChange={(v) => { markTouched("name"); setNewCustomer((p) => ({ ...p, name: v })); }}
                       label="Name"
                       placeholder="e.g. Priya Sharma"
+                      error={showError("name")}
                     />
                     <Input
                       value={newCustomer.phone}
-                      onChange={(v) => setNewCustomer((p) => ({ ...p, phone: v }))}
+                      onChange={(v) => { markTouched("phone"); setNewCustomer((p) => ({ ...p, phone: v })); }}
                       label="Phone / WhatsApp"
                       placeholder="e.g. +91 98765 43210"
+                      error={showError("phone")}
                     />
                     <Input
                       value={newCustomer.email}
-                      onChange={(v) => setNewCustomer((p) => ({ ...p, email: v }))}
+                      onChange={(v) => { markTouched("email"); setNewCustomer((p) => ({ ...p, email: v })); }}
                       label="Email"
                       placeholder="e.g. priya@example.com"
+                      error={showError("email")}
                     />
                   </div>
                 </div>

@@ -2,7 +2,7 @@
 import { useCallback, useMemo, useState, useRef, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Card, Chip, StatCard, GhostBtn, GoldBtn, SectionLink, BackLink, Tabs, SearchFilter, Pagination, Select, Modal, Input } from "@/components/ui";
+import { Card, Chip, StatCard, GhostBtn, GoldBtn, SectionLink, BackLink, Tabs, SearchFilter, Pagination, Select, Modal, Input, ConfirmDialog, LoadingState } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { EXPERT_PROFILES, EXPERT_AVAILABILITY, MOCK_CONSULTATIONS, MOCK_STONE_RECOMMENDATIONS, MOCK_ORDERS, MOCK_PAYMENTS } from "@/lib/mock";
 import { inr } from "@/lib/types";
@@ -60,6 +60,13 @@ function getEstimatedPrice(rec: StoneRecommendation): number | null {
 
 export default function AstroGemologistDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const t = setTimeout(() => setLoading(false), 700);
+    return () => clearTimeout(t);
+  }, []);
+
   const expert = EXPERT_PROFILES.find((e) => e.id === id);
   const availability = EXPERT_AVAILABILITY.find((e) => e.expertId === id);
 
@@ -98,6 +105,7 @@ export default function AstroGemologistDetailPage() {
   const router = useRouter();
   const [isActive, setIsActive] = useState(expert.status === "active");
   const [showMenu, setShowMenu] = useState(false);
+  const [confirmDeactivate, setConfirmDeactivate] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const [toast, setToast] = useState("");
   const [commissionEditing, setCommissionEditing] = useState(false);
@@ -350,6 +358,10 @@ export default function AstroGemologistDetailPage() {
         <BackLink label="Astro-Gemologists" href="/astro-gemologists" />
       </div>
 
+      {loading ? (
+        <Card className="mb-6"><LoadingState lines={8} /></Card>
+      ) : (
+      <>
       {/* Profile + Commission + Account — combined card */}
       <div className="rounded-[14px] p-6 mb-6" style={{ background: `linear-gradient(135deg, ${T.card} 0%, ${T.panel} 100%)`, border: `1px solid ${T.border}` }}>
         {/* Expert info + 3-dot menu */}
@@ -392,7 +404,7 @@ export default function AstroGemologistDetailPage() {
                   Make payout
                 </button>
                 <div className="mx-2 my-1" style={{ borderTop: `1px solid ${T.borderSoft}` }} />
-                <button type="button" onClick={() => { setShowMenu(false); setIsActive((v) => !v); setToast(isActive ? "Gemologist deactivated" : "Gemologist activated"); setTimeout(() => setToast(""), 3000); }} className="w-full text-left px-4 py-2.5 text-[13px] flex items-center gap-2.5 transition-colors hover:bg-[rgba(160,125,56,0.08)] cursor-pointer" style={{ color: isActive ? T.danger : T.good }}>
+                <button type="button" onClick={() => { setShowMenu(false); if (isActive) { setConfirmDeactivate(true); } else { setIsActive(true); setToast("Gemologist activated"); setTimeout(() => setToast(""), 3000); } }} className="w-full text-left px-4 py-2.5 text-[13px] flex items-center gap-2.5 transition-colors hover:bg-[rgba(160,125,56,0.08)] cursor-pointer" style={{ color: isActive ? T.danger : T.good }}>
                   {isActive ? <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/></svg>Deactivate</> : <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M20 6L9 17l-5-5"/></svg>Activate</>}
                 </button>
               </div>
@@ -954,6 +966,8 @@ export default function AstroGemologistDetailPage() {
           </Card>
         </>
       )}
+      </>
+      )}
 
       {/* Make Payout Modal */}
       <Modal open={showPayoutModal} onClose={() => setShowPayoutModal(false)} title="Initiate payout">
@@ -978,6 +992,16 @@ export default function AstroGemologistDetailPage() {
           <p className="text-[11px] text-center" style={{ color: T.faint }}>You will be redirected to the payment gateway to complete the transfer.</p>
         </div>
       </Modal>
+
+      <ConfirmDialog
+        open={confirmDeactivate}
+        onClose={() => setConfirmDeactivate(false)}
+        onConfirm={() => { setIsActive(false); setToast("Gemologist deactivated"); setTimeout(() => setToast(""), 3000); }}
+        title="Deactivate expert?"
+        description="This expert will be removed from scheduling."
+        variant="danger"
+        confirmLabel="Deactivate"
+      />
 
       {toast && (
         <div

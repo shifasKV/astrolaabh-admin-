@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { PageHeader, Card, GoldBtn, GhostBtn, Input } from "@/components/ui";
 import { T } from "@/lib/theme";
-
+import { V, validate, hasErrors, type ValidationErrors } from "@/lib/validation";
 
 export default function CreateSalesMemberPage() {
   const router = useRouter();
@@ -13,10 +13,34 @@ export default function CreateSalesMemberPage() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
 
-  const canSubmit = name.trim() && email.trim() && phone.trim();
+  const [errors, setErrors] = useState<ValidationErrors>({});
+  const [touched, setTouched] = useState<Set<string>>(new Set());
+  const [submitAttempted, setSubmitAttempted] = useState(false);
+
+  const markTouched = (field: string) => setTouched((prev) => new Set(prev).add(field));
+  const showError = (field: string) => (touched.has(field) || submitAttempted) ? errors[field] : undefined;
+
+  const validateForm = () => {
+    const errs = validate({
+      name: V.required(name),
+      email: V.email(email),
+      phone: V.phone(phone),
+    });
+    setErrors(errs);
+    return errs;
+  };
+
+  const canSubmit = !hasErrors(validate({
+    name: V.required(name),
+    email: V.email(email),
+    phone: V.phone(phone),
+  }));
 
   const handleCreate = () => {
-    if (!canSubmit) return;
+    setSubmitAttempted(true);
+    setTouched(new Set(["name", "email", "phone"]));
+    const errs = validateForm();
+    if (hasErrors(errs)) return;
     setToast("Sales member added successfully");
     setTimeout(() => {
       router.push("/sales");
@@ -36,11 +60,11 @@ export default function CreateSalesMemberPage() {
           <div className="text-[11px] tracking-[0.08em] uppercase mb-4" style={{ color: T.accent }}>Personal information</div>
           <div className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Input value={name} onChange={setName} label="Full name" placeholder="e.g. Priya Sharma" />
-              <Input value={email} onChange={setEmail} label="Email" type="email" placeholder="e.g. name@astrolaabh.com" />
+              <Input value={name} onChange={(v) => { markTouched("name"); setName(v); }} label="Full name" placeholder="e.g. Priya Sharma" error={showError("name")} />
+              <Input value={email} onChange={(v) => { markTouched("email"); setEmail(v); }} label="Email" type="email" placeholder="e.g. name@astrolaabh.com" error={showError("email")} />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Input value={phone} onChange={setPhone} label="Mobile number" placeholder="e.g. +91 98765 43210" />
+              <Input value={phone} onChange={(v) => { markTouched("phone"); setPhone(v); }} label="Mobile number" placeholder="e.g. +91 98765 43210" error={showError("phone")} />
             </div>
           </div>
         </Card>

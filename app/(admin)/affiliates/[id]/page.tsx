@@ -2,7 +2,7 @@
 import { use, useState, useRef, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Card, StatCard, Chip, GoldBtn, GhostBtn, Modal, Input, Tabs, Pagination, BackLink, SearchFilter, Select } from "@/components/ui";
+import { Card, StatCard, Chip, GoldBtn, GhostBtn, Modal, Input, Tabs, Pagination, BackLink, SearchFilter, Select, ConfirmDialog, LoadingState } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_AFFILIATES, MOCK_REFERRAL_EVENTS, MOCK_PAYOUTS, MOCK_ORDERS, MOCK_CONSULTATIONS, MOCK_CUSTOMERS } from "@/lib/mock";
 import { inr } from "@/lib/types";
@@ -265,6 +265,7 @@ export default function AffiliateDetailPage({ params }: { params: Promise<{ id: 
   const [showPayoutModal, setShowPayoutModal] = useState(false);
   const [isActive, setIsActive] = useState(affiliate?.status === "active");
   const [showMenu, setShowMenu] = useState(false);
+  const [confirmDeactivate, setConfirmDeactivate] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const [toast, setToast] = useState("");
 
@@ -289,6 +290,12 @@ export default function AffiliateDetailPage({ params }: { params: Promise<{ id: 
   const [consultationsPage, setConsultationsPage] = useState(0);
   const [registrationsPage, setRegistrationsPage] = useState(0);
   const [payoutsPage, setPayoutsPage] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const t = setTimeout(() => setLoading(false), 700);
+    return () => clearTimeout(t);
+  }, []);
 
   useEffect(() => {
     if (!showMenu) return;
@@ -402,6 +409,10 @@ export default function AffiliateDetailPage({ params }: { params: Promise<{ id: 
         <BackLink label="Affiliates" href="/affiliates" />
       </div>
 
+      {loading ? (
+        <Card className="mb-6"><LoadingState lines={8} /></Card>
+      ) : (
+      <>
       {/* Profile + Commission + Account — combined card */}
       <div className="rounded-[14px] p-6 mb-6" style={{ background: `linear-gradient(135deg, ${T.card} 0%, ${T.panel} 100%)`, border: `1px solid ${T.border}` }}>
         {/* Affiliate info + 3-dot menu */}
@@ -432,7 +443,7 @@ export default function AffiliateDetailPage({ params }: { params: Promise<{ id: 
                   Make payout
                 </button>
                 <div className="mx-2 my-1" style={{ borderTop: `1px solid ${T.borderSoft}` }} />
-                <button type="button" onClick={() => { setShowMenu(false); setIsActive((v) => !v); flash(isActive ? "Affiliate deactivated" : "Affiliate activated"); }} className="w-full text-left px-4 py-2.5 text-[13px] flex items-center gap-2.5 transition-colors hover:bg-[rgba(160,125,56,0.08)] cursor-pointer" style={{ color: isActive ? T.danger : T.good }}>
+                <button type="button" onClick={() => { setShowMenu(false); if (isActive) { setConfirmDeactivate(true); } else { setIsActive(true); flash("Affiliate activated"); } }} className="w-full text-left px-4 py-2.5 text-[13px] flex items-center gap-2.5 transition-colors hover:bg-[rgba(160,125,56,0.08)] cursor-pointer" style={{ color: isActive ? T.danger : T.good }}>
                   {isActive ? <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/></svg>Deactivate</> : <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M20 6L9 17l-5-5"/></svg>Activate</>}
                 </button>
               </div>
@@ -632,6 +643,8 @@ export default function AffiliateDetailPage({ params }: { params: Promise<{ id: 
           {filteredPayouts.length > PER_PAGE && <div className="mt-4"><Pagination page={payoutsPage} totalPages={payoutsData.totalPages} onPageChange={setPayoutsPage} perPage={PER_PAGE} totalItems={payoutsData.total} /></div>}
         </Card>
       )}
+      </>
+      )}
 
       {/* Make Payout Modal */}
       <Modal open={showPayoutModal} onClose={() => setShowPayoutModal(false)} title="Initiate payout">
@@ -654,6 +667,16 @@ export default function AffiliateDetailPage({ params }: { params: Promise<{ id: 
           <p className="text-[11px] text-center" style={{ color: T.faint }}>You will be redirected to the payment gateway to complete the transfer.</p>
         </div>
       </Modal>
+
+      <ConfirmDialog
+        open={confirmDeactivate}
+        onClose={() => setConfirmDeactivate(false)}
+        onConfirm={() => { setIsActive(false); flash("Affiliate deactivated"); }}
+        title="Deactivate affiliate?"
+        description="This affiliate's referral links will stop tracking."
+        variant="danger"
+        confirmLabel="Deactivate"
+      />
 
       {toast && (
         <div className="fixed top-6 right-6 z-[100] flex items-center gap-2 px-4 py-3 rounded-[10px] shadow-lg text-[13.5px] font-medium animate-in" style={{ background: T.card, border: `1px solid ${T.border}`, color: T.good }}>

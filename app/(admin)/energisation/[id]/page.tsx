@@ -1,7 +1,7 @@
 "use client";
-import { use, useState } from "react";
+import { use, useState, useEffect } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, GoldBtn, GhostBtn, Input, Textarea, Modal, DateInput, TimeInput, Select, BackLink } from "@/components/ui";
+import { PageHeader, Card, Chip, GoldBtn, GhostBtn, Input, Textarea, Modal, DateInput, TimeInput, Select, BackLink, LoadingState, ConfirmDialog } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_ENERGISATION, MOCK_ORDERS, MOCK_CUSTOMERS } from "@/lib/mock";
 
@@ -28,9 +28,16 @@ export default function EnergisationDetailPage({ params }: { params: Promise<{ i
   const [formLiveLink, setFormLiveLink] = useState("");
   const [editingLinks, setEditingLinks] = useState(false);
   const [toast, setToast] = useState("");
+  const [confirmComplete, setConfirmComplete] = useState(false);
   const [editLiveLink, setEditLiveLink] = useState("");
   const [editProofUrl, setEditProofUrl] = useState("");
   const [editNotes, setEditNotes] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const t = setTimeout(() => setLoading(false), 700);
+    return () => clearTimeout(t);
+  }, []);
 
   if (!task) {
     return (
@@ -92,13 +99,17 @@ export default function EnergisationDetailPage({ params }: { params: Promise<{ i
               Undo completed
             </button>
           ) : (
-            <GoldBtn onClick={() => { setLocalStatus("completed"); setToast("Energisation marked as completed"); setTimeout(() => setToast(""), 3000); }}>
+            <GoldBtn onClick={() => setConfirmComplete(true)}>
               Mark as completed
             </GoldBtn>
           )
         }
       />
 
+      {loading ? (
+        <Card className="mb-4"><LoadingState lines={6} /></Card>
+      ) : (
+      <>
       {/* Energisation details card */}
       <Card className="mb-5">
         <div className="rounded-[9px] p-4 mb-4" style={{ background: T.bg, border: `1px solid ${T.borderSoft}` }}>
@@ -284,6 +295,8 @@ export default function EnergisationDetailPage({ params }: { params: Promise<{ i
           </Link>
         )}
       </div>
+      </>
+      )}
 
       {/* Schedule / Update modal */}
       <Modal open={action === "schedule"} onClose={() => setAction(null)} title={localStatus === "scheduled" ? "Reschedule energisation" : "Schedule energisation"}>
@@ -312,6 +325,16 @@ export default function EnergisationDetailPage({ params }: { params: Promise<{ i
           <GhostBtn onClick={() => setAction(null)}>Cancel</GhostBtn>
         </div>
       </Modal>
+
+      <ConfirmDialog
+        open={confirmComplete}
+        onClose={() => setConfirmComplete(false)}
+        onConfirm={() => { setLocalStatus("completed"); setToast("Energisation marked as completed"); setTimeout(() => setToast(""), 3000); }}
+        title="Mark energisation as completed?"
+        description="This will finalize the ritual and notify the customer."
+        variant="default"
+        confirmLabel="Mark as completed"
+      />
 
       {toast && (
         <div

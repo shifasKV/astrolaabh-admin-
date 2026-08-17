@@ -1,7 +1,7 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, Tabs, SearchFilter, GoldBtn, Select } from "@/components/ui";
+import { PageHeader, Card, Chip, Tabs, SearchFilter, GoldBtn, Select, TableSkeleton, Pagination, ExportButton } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_CONSULTATIONS, MOCK_INCOMPLETE_CONSULTATIONS } from "@/lib/mock";
 
@@ -67,11 +67,14 @@ export default function ConsultationsPage() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [dpYear, setDpYear] = useState(new Date().getFullYear());
   const [dpMonth, setDpMonth] = useState(new Date().getMonth());
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(0);
   const [calWeekBase, setCalWeekBase] = useState(() => new Date());
   const [goToDateOpen, setGoToDateOpen] = useState(false);
   const [gtdYear, setGtdYear] = useState(new Date().getFullYear());
   const [gtdMonth, setGtdMonth] = useState(new Date().getMonth());
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => { const t = setTimeout(() => setLoading(false), 700); return () => clearTimeout(t); }, []);
 
   const PER_PAGE = 9;
 
@@ -114,8 +117,16 @@ export default function ConsultationsPage() {
     });
 
   const totalPages = Math.ceil(filtered.length / PER_PAGE);
-  const currentPage = page > totalPages && totalPages > 0 ? totalPages : page;
-  const paginated = filtered.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE);
+  const paginated = filtered.slice(page * PER_PAGE, (page + 1) * PER_PAGE);
+
+  const exportData = filtered.map((c) => ({
+    id: c.id,
+    customer: c.customerName,
+    expert: c.expertName,
+    date: c.scheduledAt,
+    status: c.status,
+    fee: c.fee,
+  }));
 
   const hasActiveFilters = !!filterCustomer || !!filterExpert || !!filterStatus || !!filterDateFrom || !!filterDateTo;
 
@@ -177,7 +188,7 @@ export default function ConsultationsPage() {
             count: t.key === "incomplete" ? MOCK_INCOMPLETE_CONSULTATIONS.length : MOCK_CONSULTATIONS.filter((c) => filterByTab(c, t.key)).length,
           }))}
           active={tab}
-          onChange={(key) => { setTab(key); if (key !== "all") setViewMode("list"); }}
+          onChange={(key) => { setTab(key); setPage(0); if (key !== "all") setViewMode("list"); }}
         />
       </div>
 
@@ -187,7 +198,7 @@ export default function ConsultationsPage() {
         <div className="flex-1 min-w-0">
           {viewMode === "list" && (
             <div className="w-1/2">
-              <SearchFilter search={search} onSearchChange={setSearch} placeholder="Search customer, expert, consultation ID…" />
+              <SearchFilter search={search} onSearchChange={(v) => { setSearch(v); setPage(0); }} placeholder="Search customer, expert, consultation ID…" />
             </div>
           )}
         </div>
@@ -222,7 +233,7 @@ export default function ConsultationsPage() {
         <div className="w-[200px]">
           <Select
             value={filterCustomer}
-            onChange={(v) => { setFilterCustomer(v); setPage(1); }}
+            onChange={(v) => { setFilterCustomer(v); setPage(0); }}
             searchable
             compact
             placeholder="All customers"
@@ -236,7 +247,7 @@ export default function ConsultationsPage() {
         <div className="w-[180px]">
           <Select
             value={filterExpert}
-            onChange={(v) => { setFilterExpert(v); setPage(1); }}
+            onChange={(v) => { setFilterExpert(v); setPage(0); }}
             compact
             placeholder="All experts"
             options={[
@@ -249,7 +260,7 @@ export default function ConsultationsPage() {
         <div className="w-[180px]">
           <Select
             value={filterStatus}
-            onChange={(v) => { setFilterStatus(v); setPage(1); }}
+            onChange={(v) => { setFilterStatus(v); setPage(0); }}
             compact
             placeholder="All status"
             options={[
@@ -296,7 +307,7 @@ export default function ConsultationsPage() {
                   ].map((preset) => (
                     <button
                       key={preset.label}
-                      onClick={() => { setFilterDateFrom(preset.from); setFilterDateTo(preset.to); setShowDatePicker(false); setPage(1); }}
+                      onClick={() => { setFilterDateFrom(preset.from); setFilterDateTo(preset.to); setShowDatePicker(false); setPage(0); }}
                       className="w-full text-left px-2.5 py-2 rounded-[7px] text-[12px] transition-colors cursor-pointer hover:bg-[rgba(160,125,56,0.10)]"
                       style={{ color: T.text }}
                     >
@@ -305,7 +316,7 @@ export default function ConsultationsPage() {
                   ))}
                   {(filterDateFrom || filterDateTo) && (
                     <button
-                      onClick={() => { setFilterDateFrom(""); setFilterDateTo(""); setShowDatePicker(false); setPage(1); }}
+                      onClick={() => { setFilterDateFrom(""); setFilterDateTo(""); setShowDatePicker(false); setPage(0); }}
                       className="w-full text-left px-2.5 py-2 rounded-[7px] text-[11px] mt-1 transition-colors cursor-pointer hover:bg-[rgba(176,84,84,0.06)]"
                       style={{ color: T.danger }}
                     >
@@ -317,12 +328,12 @@ export default function ConsultationsPage() {
                   <div className="flex items-center gap-2 mb-3">
                     <div className="flex-1">
                       <div className="text-[9px] uppercase tracking-[0.06em] mb-1" style={{ color: T.faint }}>After</div>
-                      <input type="date" value={filterDateFrom} onChange={(e) => { setFilterDateFrom(e.target.value); setPage(1); }} className="w-full h-8 px-2 rounded-[7px] text-[11px] outline-none" style={{ background: T.bg, border: `1px solid ${T.borderSoft}`, color: T.text }} />
+                      <input type="date" value={filterDateFrom} onChange={(e) => { setFilterDateFrom(e.target.value); setPage(0); }} className="w-full h-8 px-2 rounded-[7px] text-[11px] outline-none" style={{ background: T.bg, border: `1px solid ${T.borderSoft}`, color: T.text }} />
                     </div>
                     <span className="text-[11px] mt-3" style={{ color: T.faint }}>—</span>
                     <div className="flex-1">
                       <div className="text-[9px] uppercase tracking-[0.06em] mb-1" style={{ color: T.faint }}>Before</div>
-                      <input type="date" value={filterDateTo} onChange={(e) => { setFilterDateTo(e.target.value); setPage(1); }} className="w-full h-8 px-2 rounded-[7px] text-[11px] outline-none" style={{ background: T.bg, border: `1px solid ${T.borderSoft}`, color: T.text }} />
+                      <input type="date" value={filterDateTo} onChange={(e) => { setFilterDateTo(e.target.value); setPage(0); }} className="w-full h-8 px-2 rounded-[7px] text-[11px] outline-none" style={{ background: T.bg, border: `1px solid ${T.borderSoft}`, color: T.text }} />
                     </div>
                   </div>
                   <div className="flex items-center justify-between mb-2">
@@ -342,7 +353,7 @@ export default function ConsultationsPage() {
                       const isTo = filterDateTo === iso;
                       const inRange = filterDateFrom && filterDateTo && iso >= filterDateFrom && iso <= filterDateTo;
                       return (
-                        <button key={day} type="button" onClick={() => { if (!filterDateFrom || (filterDateFrom && filterDateTo)) { setFilterDateFrom(iso); setFilterDateTo(""); } else { if (iso < filterDateFrom) { setFilterDateTo(filterDateFrom); setFilterDateFrom(iso); } else { setFilterDateTo(iso); } } setPage(1); }}
+                        <button key={day} type="button" onClick={() => { if (!filterDateFrom || (filterDateFrom && filterDateTo)) { setFilterDateFrom(iso); setFilterDateTo(""); } else { if (iso < filterDateFrom) { setFilterDateTo(filterDateFrom); setFilterDateFrom(iso); } else { setFilterDateTo(iso); } } setPage(0); }}
                           className="w-[34px] h-[34px] rounded-full flex items-center justify-center text-[11px] transition-colors cursor-pointer"
                           style={{ background: (isFrom || isTo) ? T.accent : inRange ? "rgba(160,125,56,0.16)" : "transparent", color: (isFrom || isTo) ? T.accentInk : T.text, fontWeight: (isFrom || isTo) ? 700 : 400 }}
                         >{day}</button>
@@ -358,7 +369,7 @@ export default function ConsultationsPage() {
         <div className="ml-auto flex items-center gap-2">
           {hasActiveFilters && (
             <button
-              onClick={() => { setFilterCustomer(""); setFilterExpert(""); setFilterStatus(""); setFilterDateFrom(""); setFilterDateTo(""); setPage(1); }}
+              onClick={() => { setFilterCustomer(""); setFilterExpert(""); setFilterStatus(""); setFilterDateFrom(""); setFilterDateTo(""); setPage(0); }}
               className="text-[11px] px-2.5 py-1.5 rounded-[7px] cursor-pointer transition-opacity hover:opacity-80"
               style={{ color: T.danger, background: "rgba(176,84,84,0.08)", border: "1px solid rgba(176,84,84,0.15)" }}
             >
@@ -368,7 +379,7 @@ export default function ConsultationsPage() {
           <div className="w-[180px]">
             <Select
               value={sort}
-              onChange={(val) => { setSort(val as SortKey); setPage(1); }}
+              onChange={(val) => { setSort(val as SortKey); setPage(0); }}
               compact
               prefix="Sort: "
               options={[
@@ -378,90 +389,80 @@ export default function ConsultationsPage() {
               ]}
             />
           </div>
+          <ExportButton data={exportData} filename="consultations" className="ml-2" />
         </div>
       </div>
 
-      <Card>
-        {/* Table header */}
-        <div className="hidden sm:grid grid-cols-[1fr_140px_140px_160px] gap-3 px-3 py-2 text-[11px] tracking-[0.06em] uppercase" style={{ color: T.faint, borderBottom: `1px solid ${T.borderSoft}` }}>
-          <span>Consultation details</span>
-          <span>Customer</span>
-          <span>Scheduled date</span>
-          <span>Status</span>
-        </div>
+      {loading ? (
+        <Card><TableSkeleton rows={6} cols={5} /></Card>
+      ) : (
+        <>
+          <Card>
+            {/* Table header */}
+            <div className="hidden sm:grid grid-cols-[1fr_140px_140px_160px] gap-3 px-3 py-2 text-[11px] tracking-[0.06em] uppercase" style={{ color: T.faint, borderBottom: `1px solid ${T.borderSoft}` }}>
+              <span>Consultation details</span>
+              <span>Customer</span>
+              <span>Scheduled date</span>
+              <span>Status</span>
+            </div>
 
-        {paginated.length === 0 ? (
-          <p className="text-[13.5px] text-center py-6" style={{ color: T.muted }}>No consultations match your filters.</p>
-        ) : (
-          paginated.map((c) => (
-            <Link
-              key={c.id}
-              href={`/consultations/${c.id}`}
-              className="group grid grid-cols-1 sm:grid-cols-[1fr_140px_140px_160px] gap-2 sm:gap-3 items-center px-3 py-3.5 transition-all duration-150 rounded-[8px] hover:bg-[rgba(160,125,56,0.07)]"
-              style={{ borderBottom: `1px solid ${T.borderSoft}` }}
-            >
-              {/* Consultation details */}
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] tracking-[0.06em] uppercase font-medium" style={{ color: T.accent }}>{c.id}</span>
-                  {c.status === "reschedule_requested" && <Chip tone="gold">Reschedule request</Chip>}
-                </div>
-                <div className="text-[14px] mt-0.5 truncate" style={{ color: T.text }}>
-                  {c.expertName}
-                </div>
-              </div>
+            {paginated.length === 0 ? (
+              <p className="text-[13.5px] text-center py-6" style={{ color: T.muted }}>No consultations match your filters.</p>
+            ) : (
+              paginated.map((c) => (
+                <Link
+                  key={c.id}
+                  href={`/consultations/${c.id}`}
+                  className="group grid grid-cols-1 sm:grid-cols-[1fr_140px_140px_160px] gap-2 sm:gap-3 items-center px-3 py-3.5 transition-all duration-150 rounded-[8px] hover:bg-[rgba(160,125,56,0.07)]"
+                  style={{ borderBottom: `1px solid ${T.borderSoft}` }}
+                >
+                  {/* Consultation details */}
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] tracking-[0.06em] uppercase font-medium" style={{ color: T.accent }}>{c.id}</span>
+                      {c.status === "reschedule_requested" && <Chip tone="gold">Reschedule request</Chip>}
+                    </div>
+                    <div className="text-[14px] mt-0.5 truncate" style={{ color: T.text }}>
+                      {c.expertName}
+                    </div>
+                  </div>
 
-              {/* Customer */}
-              <div className="min-w-0">
-                <span className="text-[12px] truncate block" style={{ color: T.text }}>{c.customerName}</span>
-              </div>
+                  {/* Customer */}
+                  <div className="min-w-0">
+                    <span className="text-[12px] truncate block" style={{ color: T.text }}>{c.customerName}</span>
+                  </div>
 
-              {/* Scheduled date */}
-              <div className="min-w-0">
-                <span className="text-[12px]" style={{ color: T.text }}>
-                  {new Date(c.scheduledAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }).replace(/ (\d{4})$/, ", $1")}
-                </span>
-              </div>
+                  {/* Scheduled date */}
+                  <div className="min-w-0">
+                    <span className="text-[12px]" style={{ color: T.text }}>
+                      {new Date(c.scheduledAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }).replace(/ (\d{4})$/, ", $1")}
+                    </span>
+                  </div>
 
-              {/* Status */}
-              <div>
-                <Chip tone={c.paymentStatus === "pending" ? "gold" : statusTone(c.status)}>
-                  {statusLabel(c)}
-                </Chip>
-              </div>
-            </Link>
-          ))
-        )}
-      </Card>
+                  {/* Status */}
+                  <div>
+                    <Chip tone={c.paymentStatus === "pending" ? "gold" : statusTone(c.status)}>
+                      {statusLabel(c)}
+                    </Chip>
+                  </div>
+                </Link>
+              ))
+            )}
+          </Card>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between mt-4">
-          <div className="text-[12px]" style={{ color: T.faint }}>
-            Showing {(currentPage - 1) * PER_PAGE + 1}–{Math.min(currentPage * PER_PAGE, filtered.length)} of {filtered.length}
-          </div>
-          <div className="flex items-center gap-1">
-            <button onClick={() => setPage(1)} disabled={currentPage === 1} className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[12px] transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed" style={{ background: T.popover, border: `1px solid ${T.borderSoft}`, color: T.muted }}>«</button>
-            <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1} className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[12px] transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed" style={{ background: T.popover, border: `1px solid ${T.borderSoft}`, color: T.muted }}>‹</button>
-            {Array.from({ length: totalPages }).map((_, i) => {
-              const p = i + 1;
-              if (totalPages > 7 && Math.abs(p - currentPage) > 2 && p !== 1 && p !== totalPages) {
-                if (p === currentPage - 3 || p === currentPage + 3) return <span key={p} className="w-6 text-center text-[11px]" style={{ color: T.faint }}>…</span>;
-                return null;
-              }
-              return (
-                <button key={p} onClick={() => setPage(p)} className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[12px] font-medium transition-all cursor-pointer" style={{ background: p === currentPage ? T.accent : T.panel, border: `1px solid ${p === currentPage ? T.accent : T.borderSoft}`, color: p === currentPage ? T.accentInk : T.text }}>{p}</button>
-              );
-            })}
-            <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[12px] transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed" style={{ background: T.popover, border: `1px solid ${T.borderSoft}`, color: T.muted }}>›</button>
-            <button onClick={() => setPage(totalPages)} disabled={currentPage === totalPages} className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[12px] transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed" style={{ background: T.popover, border: `1px solid ${T.borderSoft}`, color: T.muted }}>»</button>
-          </div>
-        </div>
+          {/* Pagination */}
+          {filtered.length > PER_PAGE && (
+            <Pagination page={page} totalPages={totalPages} totalItems={filtered.length} perPage={PER_PAGE} onPageChange={setPage} />
+          )}
+        </>
       )}
       </>}
 
       {/* ============ Calendar view ============ */}
       {viewMode === "calendar" && (
+        loading ? (
+          <Card><TableSkeleton rows={6} cols={5} /></Card>
+        ) : (
         <>
           {/* Week navigation + view toggle inline */}
           <div className="flex flex-wrap items-center gap-3 pb-3 mb-3" style={{ borderBottom: `1px solid ${T.border}` }}>
@@ -579,6 +580,7 @@ export default function ConsultationsPage() {
             </div>
           </Card>
         </>
+        )
       )}
       </>}
 
@@ -607,63 +609,67 @@ export default function ConsultationsPage() {
         return (
           <>
             <div className="mb-3">
-              <SearchFilter search={search} onSearchChange={setSearch} placeholder="Search customer, astrologer…" />
+              <SearchFilter search={search} onSearchChange={(v) => { setSearch(v); setPage(0); }} placeholder="Search customer, astrologer…" />
             </div>
             <div className="flex flex-wrap items-center gap-2.5 mb-4">
               <div className="w-[200px]">
-                <Select value={filterCustomer} onChange={(v) => { setFilterCustomer(v); setPage(1); }} searchable compact placeholder="All customers" options={[{ value: "", label: "All customers" }, ...incCustomers.map((n) => ({ value: n, label: n }))]} />
+                <Select value={filterCustomer} onChange={(v) => { setFilterCustomer(v); setPage(0); }} searchable compact placeholder="All customers" options={[{ value: "", label: "All customers" }, ...incCustomers.map((n) => ({ value: n, label: n }))]} />
               </div>
               <div className="w-[200px]">
-                <Select value={filterExpert} onChange={(v) => { setFilterExpert(v); setPage(1); }} searchable compact placeholder="All astrologers" options={[{ value: "", label: "All astrologers" }, ...incExperts.map((n) => ({ value: n, label: n }))]} />
+                <Select value={filterExpert} onChange={(v) => { setFilterExpert(v); setPage(0); }} searchable compact placeholder="All astrologers" options={[{ value: "", label: "All astrologers" }, ...incExperts.map((n) => ({ value: n, label: n }))]} />
               </div>
               <div className="w-[180px]">
-                <Select value={filterStatus} onChange={(v) => { setFilterStatus(v as string); setPage(1); }} compact placeholder="All reasons" options={[{ value: "", label: "All reasons" }, { value: "slot_check", label: "Slot check" }, { value: "payment_failed", label: "Payment failed" }, { value: "requested_call", label: "Requested call" }]} />
+                <Select value={filterStatus} onChange={(v) => { setFilterStatus(v as string); setPage(0); }} compact placeholder="All reasons" options={[{ value: "", label: "All reasons" }, { value: "slot_check", label: "Slot check" }, { value: "payment_failed", label: "Payment failed" }, { value: "requested_call", label: "Requested call" }]} />
               </div>
               {hasIncFilters && (
-                <button onClick={() => { setFilterCustomer(""); setFilterExpert(""); setFilterStatus(""); setFilterDateFrom(""); setFilterDateTo(""); setPage(1); }} className="text-[11px] font-medium px-2.5 py-1.5 rounded-[7px] cursor-pointer hover:opacity-80 transition-opacity" style={{ background: "rgba(160,125,56,0.12)", color: T.accent }}>Clear filters</button>
+                <button onClick={() => { setFilterCustomer(""); setFilterExpert(""); setFilterStatus(""); setFilterDateFrom(""); setFilterDateTo(""); setPage(0); }} className="text-[11px] font-medium px-2.5 py-1.5 rounded-[7px] cursor-pointer hover:opacity-80 transition-opacity" style={{ background: "rgba(160,125,56,0.12)", color: T.accent }}>Clear filters</button>
               )}
               <div className="flex-1" />
               <div className="w-[180px]">
-                <Select value={sort} onChange={(v) => { setSort(v as SortKey); setPage(1); }} compact prefix="Sort: " options={[{ value: "date_desc", label: "Newest first" }, { value: "date_asc", label: "Oldest first" }]} />
+                <Select value={sort} onChange={(v) => { setSort(v as SortKey); setPage(0); }} compact prefix="Sort: " options={[{ value: "date_desc", label: "Newest first" }, { value: "date_asc", label: "Oldest first" }]} />
               </div>
             </div>
-            <Card>
-              <div className="hidden sm:grid grid-cols-[1fr_1fr_100px_130px_100px] gap-3 px-3 py-2 text-[11px] tracking-[0.06em] uppercase" style={{ color: T.faint, borderBottom: `1px solid ${T.borderSoft}` }}>
-                <span>Customer</span>
-                <span>Astrologer</span>
-                <span>Date</span>
-                <span>Status</span>
-                <span>Assignee</span>
-              </div>
-              {incFiltered.length === 0 ? (
-                <p className="text-[13.5px] py-6 text-center" style={{ color: T.muted }}>No incomplete bookings found.</p>
-              ) : (
-                incFiltered.map((c) => (
-                  <Link
-                    key={c.id}
-                    href={`/consultations/incomplete/${c.id}`}
-                    className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_100px_130px_100px] gap-2 sm:gap-3 items-center px-3 py-3.5 transition-all duration-150 rounded-[8px] hover:bg-[rgba(160,125,56,0.07)]"
-                    style={{ borderBottom: `1px solid ${T.borderSoft}` }}
-                  >
-                    <div className="min-w-0">
-                      <span className="text-[14px] font-medium" style={{ color: T.text }}>{c.customerName}</span>
-                    </div>
-                    <div className="min-w-0">
-                      <span className="text-[13px]" style={{ color: T.accent }}>{c.expertName}</span>
-                    </div>
-                    <div className="min-w-0">
-                      <span className="text-[12px]" style={{ color: T.text }}>{new Date(c.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</span>
-                    </div>
-                    <div>
-                      <Chip tone={INC_REASON_TONE[c.reason] || "muted"}>{INC_REASON_LABEL[c.reason] || c.reason}</Chip>
-                    </div>
-                    <div className="min-w-0">
-                      <span className="text-[12px]" style={{ color: T.faint }}>—</span>
-                    </div>
-                  </Link>
-                ))
-              )}
-            </Card>
+            {loading ? (
+              <Card><TableSkeleton rows={6} cols={5} /></Card>
+            ) : (
+              <Card>
+                <div className="hidden sm:grid grid-cols-[1fr_1fr_100px_130px_100px] gap-3 px-3 py-2 text-[11px] tracking-[0.06em] uppercase" style={{ color: T.faint, borderBottom: `1px solid ${T.borderSoft}` }}>
+                  <span>Customer</span>
+                  <span>Astrologer</span>
+                  <span>Date</span>
+                  <span>Status</span>
+                  <span>Assignee</span>
+                </div>
+                {incFiltered.length === 0 ? (
+                  <p className="text-[13.5px] py-6 text-center" style={{ color: T.muted }}>No incomplete bookings found.</p>
+                ) : (
+                  incFiltered.map((c) => (
+                    <Link
+                      key={c.id}
+                      href={`/consultations/incomplete/${c.id}`}
+                      className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_100px_130px_100px] gap-2 sm:gap-3 items-center px-3 py-3.5 transition-all duration-150 rounded-[8px] hover:bg-[rgba(160,125,56,0.07)]"
+                      style={{ borderBottom: `1px solid ${T.borderSoft}` }}
+                    >
+                      <div className="min-w-0">
+                        <span className="text-[14px] font-medium" style={{ color: T.text }}>{c.customerName}</span>
+                      </div>
+                      <div className="min-w-0">
+                        <span className="text-[13px]" style={{ color: T.accent }}>{c.expertName}</span>
+                      </div>
+                      <div className="min-w-0">
+                        <span className="text-[12px]" style={{ color: T.text }}>{new Date(c.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</span>
+                      </div>
+                      <div>
+                        <Chip tone={INC_REASON_TONE[c.reason] || "muted"}>{INC_REASON_LABEL[c.reason] || c.reason}</Chip>
+                      </div>
+                      <div className="min-w-0">
+                        <span className="text-[12px]" style={{ color: T.faint }}>—</span>
+                      </div>
+                    </Link>
+                  ))
+                )}
+              </Card>
+            )}
           </>
         );
       })()}

@@ -1,7 +1,7 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, SearchFilter, Pagination, Select } from "@/components/ui";
+import { PageHeader, Card, Chip, SearchFilter, Pagination, Select, TableSkeleton } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { useAuth } from "@/lib/store/auth";
 import { MOCK_INCOMPLETE_CONSULTATIONS, MOCK_SALES_MEMBERS } from "@/lib/mock";
@@ -49,6 +49,12 @@ export default function ConsultationLeadsPage() {
   const [assigneeFilter, setAssigneeFilter] = useState("");
   const [sort, setSort] = useState("newest");
   const [page, setPage] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const t = setTimeout(() => setLoading(false), 700);
+    return () => clearTimeout(t);
+  }, []);
 
   const assigneeOptions = useMemo(() => [
     { value: "", label: "All assignees" },
@@ -100,6 +106,9 @@ export default function ConsultationLeadsPage() {
         <div className="w-[130px]"><Select value={sort} onChange={setSort} options={SORT_OPTIONS} placeholder="Sort" /></div>
       </div>
 
+      {loading ? (
+        <Card><TableSkeleton rows={5} cols={5} /></Card>
+      ) : (
       <Card>
         <div className={`hidden sm:grid ${isAdmin ? "grid-cols-[1fr_1fr_90px_120px_100px_100px]" : "grid-cols-[1fr_1fr_90px_120px_100px]"} gap-3 px-3 py-2 text-[11px] tracking-[0.06em] uppercase`} style={{ color: T.faint, borderBottom: `1px solid ${T.borderSoft}` }}>
           <span>Customer</span>
@@ -133,6 +142,7 @@ export default function ConsultationLeadsPage() {
 
         <Pagination page={page} totalPages={totalPages} onPageChange={setPage} perPage={PAGE_SIZE} totalItems={filtered.length} />
       </Card>
+      )}
     </>
   );
 }

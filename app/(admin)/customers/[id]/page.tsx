@@ -1,7 +1,7 @@
 "use client";
 import { use, useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { Card, Chip, GhostBtn, BackLink, Tabs, Pagination } from "@/components/ui";
+import { Card, Chip, GhostBtn, BackLink, Tabs, Pagination, ConfirmDialog, LoadingState } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_CUSTOMERS, MOCK_ORDERS, MOCK_CONSULTATIONS, MOCK_PAYMENTS, MOCK_INCOMPLETE_ORDERS, MOCK_INCOMPLETE_CONSULTATIONS } from "@/lib/mock";
 import { inr } from "@/lib/types";
@@ -28,6 +28,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
   const [toast, setToast] = useState("");
   const [activeTab, setActiveTab] = useState("consultations");
   const [showActionMenu, setShowActionMenu] = useState(false);
+  const [confirmDeactivate, setConfirmDeactivate] = useState(false);
   const actionMenuRef = useRef<HTMLDivElement>(null);
   const [consPage, setConsPage] = useState(1);
   const [ordersPage, setOrdersPage] = useState(1);
@@ -35,6 +36,12 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
   const [incConsPage, setIncConsPage] = useState(1);
   const PER_PAGE = 5;
   const customer = MOCK_CUSTOMERS.find((c) => c.id === id);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const t = setTimeout(() => setLoading(false), 700);
+    return () => clearTimeout(t);
+  }, []);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -71,6 +78,10 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
         <BackLink label="Customers" href="/customers" />
       </div>
 
+      {loading ? (
+        <Card className="mb-6"><LoadingState lines={6} /></Card>
+      ) : (
+      <>
       {/* Profile Card */}
       <div className="rounded-[14px] mb-6 overflow-hidden" style={{ background: T.card, border: `1px solid ${T.border}`, boxShadow: T.shadow }}>
         <div className="flex flex-wrap items-center gap-5 p-6 pb-5">
@@ -105,7 +116,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
             {showActionMenu && (
               <div className="absolute right-0 top-full mt-1 z-50 w-[180px] rounded-[10px] py-1.5 shadow-lg" style={{ background: T.popover, border: `1px solid ${T.border}` }}>
                 <button
-                  onClick={() => { setShowActionMenu(false); setToast("Customer deactivated"); setTimeout(() => setToast(""), 3000); }}
+                  onClick={() => { setShowActionMenu(false); setConfirmDeactivate(true); }}
                   className="w-full text-left px-3.5 py-2.5 text-[13px] transition-colors cursor-pointer hover:bg-[rgba(160,125,56,0.08)]"
                   style={{ color: T.danger }}
                 >
@@ -350,6 +361,18 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
           </Card>
         </div>
       </div>
+      </>
+      )}
+
+      <ConfirmDialog
+        open={confirmDeactivate}
+        onClose={() => setConfirmDeactivate(false)}
+        onConfirm={() => { setToast("Customer deactivated"); setTimeout(() => setToast(""), 3000); }}
+        title="Deactivate customer?"
+        description="This customer will no longer be able to log in or place orders."
+        variant="danger"
+        confirmLabel="Deactivate"
+      />
 
       {toast && (
         <div

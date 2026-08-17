@@ -1,7 +1,7 @@
 "use client";
 import { use, useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, GoldBtn, GhostBtn, Modal, Input, Textarea, BackLink } from "@/components/ui";
+import { PageHeader, Card, Chip, GoldBtn, GhostBtn, Modal, Input, Textarea, BackLink, LoadingState, ConfirmDialog } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_CONSULTATIONS, MOCK_CUSTOMERS, MOCK_STONE_RECOMMENDATIONS, MOCK_REMEDY_RECOMMENDATIONS, EXPERT_PROFILES, getExpertDates, getExpertSlots } from "@/lib/mock";
 import type { ExpertProfile, TimeSlot } from "@/lib/mock";
@@ -31,7 +31,15 @@ export default function ConsultationDetailPage({ params }: { params: Promise<{ i
   const [showActionMenu, setShowActionMenu] = useState(false);
   const [localStatus, setLocalStatus] = useState(consultation?.status ?? "scheduled");
   const [localNoShowBy, setLocalNoShowBy] = useState(consultation?.noShowBy ?? "");
+  const [confirmCustomerNoShow, setConfirmCustomerNoShow] = useState(false);
+  const [confirmExpertNoShow, setConfirmExpertNoShow] = useState(false);
   const actionMenuRef = useRef<HTMLDivElement>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const t = setTimeout(() => setLoading(false), 700);
+    return () => clearTimeout(t);
+  }, []);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -98,6 +106,10 @@ export default function ConsultationDetailPage({ params }: { params: Promise<{ i
         title=""
       />
 
+      {loading ? (
+        <Card className="mb-4"><LoadingState lines={8} /></Card>
+      ) : (
+      <>
       {/* Payment pending banner */}
       {consultation.paymentStatus === "pending" && (
         <div
@@ -161,14 +173,14 @@ export default function ConsultationDetailPage({ params }: { params: Promise<{ i
                   {(localStatus === "summary_pending" || consultation.status === "summary_pending") && (
                     <>
                       <button
-                        onClick={() => { setShowActionMenu(false); setLocalStatus("no_show"); setLocalNoShowBy("customer"); setToast("Marked as customer no show"); setTimeout(() => setToast(""), 3000); }}
+                        onClick={() => { setShowActionMenu(false); setConfirmCustomerNoShow(true); }}
                         className="w-full text-left px-3.5 py-2.5 text-[13px] transition-colors cursor-pointer hover:bg-[rgba(160,125,56,0.08)]"
                         style={{ color: T.text }}
                       >
                         Mark as customer no show
                       </button>
                       <button
-                        onClick={() => { setShowActionMenu(false); setLocalStatus("no_show"); setLocalNoShowBy("expert"); setToast("Marked as astrologer no show"); setTimeout(() => setToast(""), 3000); }}
+                        onClick={() => { setShowActionMenu(false); setConfirmExpertNoShow(true); }}
                         className="w-full text-left px-3.5 py-2.5 text-[13px] transition-colors cursor-pointer hover:bg-[rgba(160,125,56,0.08)]"
                         style={{ color: T.text }}
                       >
@@ -397,6 +409,8 @@ export default function ConsultationDetailPage({ params }: { params: Promise<{ i
           </div>
         </div>
       </div>
+      </>
+      )}
 
       {/* Send Payment Link Confirmation */}
       <Modal open={showSendLinkModal} onClose={() => setShowSendLinkModal(false)} title="Send payment link">
@@ -518,6 +532,25 @@ export default function ConsultationDetailPage({ params }: { params: Promise<{ i
           </div>
         )}
       </Modal>
+
+      <ConfirmDialog
+        open={confirmCustomerNoShow}
+        onClose={() => setConfirmCustomerNoShow(false)}
+        onConfirm={() => { setLocalStatus("no_show"); setLocalNoShowBy("customer"); setToast("Marked as customer no show"); setTimeout(() => setToast(""), 3000); }}
+        title="Mark as no show?"
+        description="This will record the customer as a no-show for this consultation."
+        variant="danger"
+        confirmLabel="Confirm"
+      />
+      <ConfirmDialog
+        open={confirmExpertNoShow}
+        onClose={() => setConfirmExpertNoShow(false)}
+        onConfirm={() => { setLocalStatus("no_show"); setLocalNoShowBy("expert"); setToast("Marked as astrologer no show"); setTimeout(() => setToast(""), 3000); }}
+        title="Mark as no show?"
+        description="This will record the astrologer as a no-show for this consultation."
+        variant="danger"
+        confirmLabel="Confirm"
+      />
 
       {toast && (
         <div
