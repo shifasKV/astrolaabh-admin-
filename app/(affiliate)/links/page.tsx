@@ -3,12 +3,14 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { PageHeader, Card, GoldBtn, GhostBtn } from "@/components/ui";
 import { T } from "@/lib/theme";
-import { MOCK_AFFILIATE_LINKS, MOCK_REFERRAL_EVENTS } from "@/lib/mock";
+import { MOCK_AFFILIATE_LINKS, MOCK_REFERRAL_EVENTS, MOCK_AFFILIATES } from "@/lib/mock";
 import { inr } from "@/lib/types";
 
 export default function LinksPage() {
   const router = useRouter();
-  const myLinks = MOCK_AFFILIATE_LINKS.filter((l) => l.affiliateCode === "SANDEEP108");
+  const affiliate = MOCK_AFFILIATES[0];
+  const [codeCopied, setCodeCopied] = useState(false);
+  const myLinks = MOCK_AFFILIATE_LINKS.filter((l) => l.affiliateCode === affiliate.code);
   const [activeState, setActiveState] = useState<Record<string, boolean>>(() => {
     const map: Record<string, boolean> = {};
     myLinks.forEach((l) => { map[l.id] = l.active; });
@@ -34,7 +36,24 @@ export default function LinksPage() {
     <>
       <PageHeader
         title="Affiliate links"
-        sub="Manage your trackable referral links"
+        sub={
+          <span className="flex flex-wrap items-center gap-3">
+            <span>Manage your trackable referral links</span>
+            <span className="inline-flex items-center gap-1.5 text-[12px] font-medium px-2.5 py-1 rounded-[6px]" style={{ background: `${T.accent}12`, border: `1px solid ${T.accent}30`, color: T.accent }}>
+              Referral code: {affiliate.code}
+              <button
+                className="cursor-pointer ml-0.5 transition-opacity hover:opacity-70"
+                onClick={() => { navigator.clipboard.writeText(affiliate.code); setCodeCopied(true); setTimeout(() => setCodeCopied(false), 2000); }}
+              >
+                {codeCopied ? (
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={T.good} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                ) : (
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                )}
+              </button>
+            </span>
+          </span>
+        }
         action={<GoldBtn onClick={() => router.push("/links/create")}>+ New link</GoldBtn>}
       />
 

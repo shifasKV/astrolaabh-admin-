@@ -4,7 +4,7 @@ import { BackLink } from "./BackLink";
 
 interface PageHeaderProps {
   title?: string;
-  sub?: string;
+  sub?: React.ReactNode;
   action?: React.ReactNode;
   back?: { label: string; onClick?: () => void; href?: string };
 }

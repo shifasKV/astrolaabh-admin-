@@ -114,7 +114,7 @@ function ExternalLink({ href, label, shopify }: { href: string; label: string; s
   );
 }
 
-function ItemRowMenu({ shopifyUrl, websiteUrl, enabled, onToggle, outOfStock, onOutOfStock }: { shopifyUrl: string; websiteUrl: string; enabled: boolean; onToggle: () => void; outOfStock?: boolean; onOutOfStock?: () => void }) {
+function ItemRowMenu({ shopifyUrl, websiteUrl, enabled, onToggle, outOfStock, onOutOfStock, sellingFast, onSellingFast }: { shopifyUrl: string; websiteUrl: string; enabled: boolean; onToggle: () => void; outOfStock?: boolean; onOutOfStock?: () => void; sellingFast?: boolean; onSellingFast?: () => void }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -162,6 +162,15 @@ function ItemRowMenu({ shopifyUrl, websiteUrl, enabled, onToggle, outOfStock, on
               {outOfStock ? "Mark as in stock" : "Mark as out of stock"}
             </button>
           )}
+          {onSellingFast && (
+            <button
+              onClick={(e) => { e.stopPropagation(); e.preventDefault(); onSellingFast(); setOpen(false); }}
+              className={itemClass}
+              style={{ color: sellingFast ? T.muted : "#c57b1a" }}
+            >
+              {sellingFast ? "Remove selling fast" : "Mark as selling fast"}
+            </button>
+          )}
           <button
             onClick={(e) => { e.stopPropagation(); e.preventDefault(); onToggle(); setOpen(false); }}
             className={itemClass}
@@ -187,8 +196,10 @@ export default function InventoryPage() {
   const [toast, setToast] = useState("");
   const [disabledStones, setDisabledStones] = useState<Set<string>>(new Set());
   const [outOfStockStones, setOutOfStockStones] = useState<Set<string>>(new Set());
+  const [sellingFastStones, setSellingFastStones] = useState<Set<string>>(new Set());
   const [disabledDesigns, setDisabledDesigns] = useState<Set<string>>(new Set());
   const [outOfStockDesigns, setOutOfStockDesigns] = useState<Set<string>>(new Set());
+  const [sellingFastDesigns, setSellingFastDesigns] = useState<Set<string>>(new Set());
 
   const [stoneType, setStoneType] = useState("");
   const [color, setColor] = useState("");
@@ -242,6 +253,28 @@ export default function InventoryPage() {
       return next;
     });
     setToast(wasOOS ? "Design marked as in stock" : "Design marked as out of stock");
+    setTimeout(() => setToast(""), 3000);
+  };
+
+  const toggleStoneSellingFast = (sku: string) => {
+    const was = sellingFastStones.has(sku);
+    setSellingFastStones((prev) => {
+      const next = new Set(prev);
+      if (next.has(sku)) next.delete(sku); else next.add(sku);
+      return next;
+    });
+    setToast(was ? "Selling fast removed" : "Marked as selling fast");
+    setTimeout(() => setToast(""), 3000);
+  };
+
+  const toggleDesignSellingFast = (slug: string) => {
+    const was = sellingFastDesigns.has(slug);
+    setSellingFastDesigns((prev) => {
+      const next = new Set(prev);
+      if (next.has(slug)) next.delete(slug); else next.add(slug);
+      return next;
+    });
+    setToast(was ? "Selling fast removed" : "Marked as selling fast");
     setTimeout(() => setToast(""), 3000);
   };
 
@@ -426,7 +459,7 @@ export default function InventoryPage() {
             <div
               key={s.sku}
               className="grid md:grid-cols-[minmax(220px,1.4fr)_130px_130px_100px_80px_120px_48px] grid-cols-1 gap-x-4 gap-y-1.5 items-center px-3 py-3 text-[13.5px]"
-              style={{ borderBottom: i < Math.min(arr.length, 30) - 1 ? `1px solid ${T.borderSoft}` : "none", opacity: disabledStones.has(s.sku) || outOfStockStones.has(s.sku) ? 0.5 : 1 }}
+              style={{ borderBottom: i < Math.min(arr.length, 30) - 1 ? `1px solid ${T.borderSoft}` : "none" }}
             >
               <span className="flex items-center gap-3 min-w-0">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -438,7 +471,12 @@ export default function InventoryPage() {
                   loading="lazy"
                 />
                 <span className="min-w-0">
-                  <span className="block font-medium truncate" style={{ color: T.text }}>{s.gemName}</span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="font-medium truncate" style={{ color: T.text }}>{s.gemName}</span>
+                    {disabledStones.has(s.sku) && <span className="shrink-0 text-[10px] font-semibold px-1.5 py-[1px] rounded-[4px]" style={{ background: "rgba(163,73,63,0.1)", color: T.danger }}>Disabled</span>}
+                    {outOfStockStones.has(s.sku) && <span className="shrink-0 text-[10px] font-semibold px-1.5 py-[1px] rounded-[4px]" style={{ background: "rgba(163,73,63,0.1)", color: T.danger }}>Out of Stock</span>}
+                    {sellingFastStones.has(s.sku) && !outOfStockStones.has(s.sku) && !disabledStones.has(s.sku) && <span className="shrink-0 text-[10px] font-semibold px-1.5 py-[1px] rounded-[4px]" style={{ background: "rgba(197,123,26,0.1)", color: "#c57b1a" }}>Selling Fast</span>}
+                  </span>
                   <span className="block text-[11px] tracking-[0.05em] uppercase tabular-nums" style={{ color: T.faint }}>{s.sku} · {s.ratti} r</span>
                 </span>
               </span>
@@ -455,6 +493,8 @@ export default function InventoryPage() {
                   onToggle={() => toggleStone(s.sku)}
                   outOfStock={outOfStockStones.has(s.sku)}
                   onOutOfStock={() => toggleStoneStock(s.sku)}
+                  sellingFast={sellingFastStones.has(s.sku)}
+                  onSellingFast={() => toggleStoneSellingFast(s.sku)}
                 />
               </span>
             </div>
@@ -489,7 +529,7 @@ export default function InventoryPage() {
             <div
               key={d.slug}
               className="grid md:grid-cols-[minmax(200px,1.2fr)_120px_120px_120px_48px] grid-cols-1 gap-x-4 gap-y-1.5 items-center px-3 py-3 text-[13.5px]"
-              style={{ borderBottom: i < arr.length - 1 ? `1px solid ${T.borderSoft}` : "none", opacity: disabledDesigns.has(d.slug) || outOfStockDesigns.has(d.slug) ? 0.5 : 1 }}
+              style={{ borderBottom: i < arr.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
             >
               <span className="flex items-center gap-3 min-w-0">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -501,7 +541,12 @@ export default function InventoryPage() {
                   loading="lazy"
                 />
                 <span className="min-w-0">
-                  <span className="block font-medium truncate" style={{ color: T.text }}>{d.name}</span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="font-medium truncate" style={{ color: T.text }}>{d.name}</span>
+                    {disabledDesigns.has(d.slug) && <span className="shrink-0 text-[10px] font-semibold px-1.5 py-[1px] rounded-[4px]" style={{ background: "rgba(163,73,63,0.1)", color: T.danger }}>Disabled</span>}
+                    {outOfStockDesigns.has(d.slug) && <span className="shrink-0 text-[10px] font-semibold px-1.5 py-[1px] rounded-[4px]" style={{ background: "rgba(163,73,63,0.1)", color: T.danger }}>Out of Stock</span>}
+                    {sellingFastDesigns.has(d.slug) && !outOfStockDesigns.has(d.slug) && !disabledDesigns.has(d.slug) && <span className="shrink-0 text-[10px] font-semibold px-1.5 py-[1px] rounded-[4px]" style={{ background: "rgba(197,123,26,0.1)", color: "#c57b1a" }}>Selling Fast</span>}
+                  </span>
                   <span className="block text-[11px] tracking-[0.05em] uppercase" style={{ color: T.faint }}>{d.slug}</span>
                 </span>
               </span>
@@ -516,6 +561,8 @@ export default function InventoryPage() {
                   onToggle={() => toggleDesign(d.slug)}
                   outOfStock={outOfStockDesigns.has(d.slug)}
                   onOutOfStock={() => toggleDesignStock(d.slug)}
+                  sellingFast={sellingFastDesigns.has(d.slug)}
+                  onSellingFast={() => toggleDesignSellingFast(d.slug)}
                 />
               </span>
             </div>

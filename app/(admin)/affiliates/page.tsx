@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { PageHeader, Card, StatCard, Chip, GoldBtn, SearchFilter } from "@/components/ui";
 import { T } from "@/lib/theme";
-import { MOCK_AFFILIATES, MOCK_REFERRAL_EVENTS, MOCK_CUSTOMERS, MOCK_ORDERS, MOCK_CONSULTATIONS } from "@/lib/mock";
+import { MOCK_AFFILIATES, MOCK_CUSTOMERS, MOCK_ORDERS, MOCK_CONSULTATIONS } from "@/lib/mock";
 import { inr } from "@/lib/types";
 
 function getAffiliateStats(affiliate: typeof MOCK_AFFILIATES[number]) {
@@ -28,12 +28,16 @@ function getAffiliateStats(affiliate: typeof MOCK_AFFILIATES[number]) {
 export default function AffiliatesPage() {
   const router = useRouter();
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "pending">("all");
 
-  const totalAccrued = MOCK_AFFILIATES.reduce((s, a) => s + a.totalAccrued, 0);
   const totalRegs = MOCK_AFFILIATES.reduce((s, a) => s + a.totalRegistrations, 0);
   const totalPurchases = MOCK_AFFILIATES.reduce((s, a) => s + a.totalPurchases, 0);
+  const activeCount = MOCK_AFFILIATES.filter((a) => a.status === "active").length;
+  const pendingCount = MOCK_AFFILIATES.filter((a) => a.status === "under_review").length;
 
   const filtered = MOCK_AFFILIATES.filter((a) => {
+    if (statusFilter === "active" && a.status !== "active") return false;
+    if (statusFilter === "pending" && a.status !== "under_review") return false;
     if (!search) return true;
     const q = search.toLowerCase();
     return a.name.toLowerCase().includes(q) || a.code.toLowerCase().includes(q) || a.email.toLowerCase().includes(q);
@@ -48,10 +52,32 @@ export default function AffiliatesPage() {
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-        <StatCard label="Active affiliates" value={MOCK_AFFILIATES.filter((a) => a.status === "active").length} />
+        <div
+          className="rounded-[12px] p-5 text-left transition-all duration-200 cursor-pointer"
+          style={{
+            background: statusFilter === "active" ? `${T.accent}14` : T.card,
+            border: `1.5px solid ${statusFilter === "active" ? T.accent : T.border}`,
+            boxShadow: statusFilter === "active" ? `0 0 0 1px ${T.accent}30` : T.shadow,
+          }}
+          onClick={() => setStatusFilter(statusFilter === "active" ? "all" : "active")}
+        >
+          <div className="text-[11px] tracking-[0.08em] uppercase font-semibold mb-1.5" style={{ color: T.faint }}>Active affiliates</div>
+          <div className="text-[22px] font-bold tabular-nums" style={{ color: T.text }}>{activeCount}</div>
+        </div>
+        <div
+          className="rounded-[12px] p-5 text-left transition-all duration-200 cursor-pointer"
+          style={{
+            background: statusFilter === "pending" ? `${T.accent}14` : T.card,
+            border: `1.5px solid ${statusFilter === "pending" ? T.accent : T.border}`,
+            boxShadow: statusFilter === "pending" ? `0 0 0 1px ${T.accent}30` : T.shadow,
+          }}
+          onClick={() => setStatusFilter(statusFilter === "pending" ? "all" : "pending")}
+        >
+          <div className="text-[11px] tracking-[0.08em] uppercase font-semibold mb-1.5" style={{ color: T.faint }}>Pending for approval</div>
+          <div className="text-[22px] font-bold tabular-nums" style={{ color: T.text }}>{pendingCount}</div>
+        </div>
         <StatCard label="Referred registrations" value={totalRegs} />
         <StatCard label="Referred purchases" value={totalPurchases} />
-        <StatCard label="Commission accrued" value={inr(totalAccrued)} />
       </div>
 
       <div className="mb-4">

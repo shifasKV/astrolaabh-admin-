@@ -7,6 +7,254 @@ import { T } from "@/lib/theme";
 import { MOCK_AFFILIATES, MOCK_REFERRAL_EVENTS, MOCK_PAYOUTS, MOCK_ORDERS, MOCK_CONSULTATIONS, MOCK_CUSTOMERS } from "@/lib/mock";
 import { inr } from "@/lib/types";
 
+/* ─── Review UI for pending affiliates ─── */
+function AffiliateReviewView({ affiliate }: { affiliate: typeof MOCK_AFFILIATES[number] }) {
+  const router = useRouter();
+  const [reviewTab, setReviewTab] = useState(0);
+  const [toast, setToast] = useState("");
+  const [approved, setApproved] = useState<Set<number>>(new Set());
+
+  const [stoneRate, setStoneRate] = useState("5");
+  const [jewelleryRate, setJewelleryRate] = useState("4");
+  const [consultationRate, setConsultationRate] = useState("10");
+  const [stoneDiscount, setStoneDiscount] = useState("3");
+  const [jewelleryDiscount, setJewelleryDiscount] = useState("2");
+  const [consultationDiscount, setConsultationDiscount] = useState("5");
+
+  const flash = (msg: string) => { setToast(msg); setTimeout(() => setToast(""), 3000); };
+
+  const approveTab = (idx: number) => {
+    setApproved((prev) => { const n = new Set(prev); n.add(idx); return n; });
+    flash(REVIEW_TABS[idx].label + " verified");
+    if (idx < REVIEW_TABS.length - 1) setReviewTab(idx + 1);
+  };
+
+  const rejectAffiliate = () => {
+    flash("Affiliate application rejected");
+    setTimeout(() => router.push("/affiliates"), 2000);
+  };
+
+  const approveAndCreate = () => {
+    flash("Affiliate approved and account created!");
+    setTimeout(() => router.push("/affiliates"), 2000);
+  };
+
+  const applicant = {
+    name: affiliate.name,
+    email: affiliate.email,
+    phone: "+91 98765 43210",
+    city: "New Delhi",
+    appliedAt: affiliate.joinedAt,
+    holderName: affiliate.name,
+    bankName: "HDFC Bank",
+    accountNumber: "50100123456789",
+    ifsc: "HDFC0001234",
+    upiId: `${affiliate.name.split(" ").pop()?.toLowerCase()}@upi`,
+    panFile: "PAN_Card_Sandeep.pdf",
+    panStatus: "uploaded",
+  };
+
+  const REVIEW_TABS = [
+    { label: "Personal Details", key: "personal" },
+    { label: "Bank Details", key: "bank" },
+    { label: "Documents", key: "documents" },
+    { label: "Configure & Approve", key: "configure" },
+  ];
+
+  const rowClass = "flex justify-between gap-2 py-2.5";
+  const labelClass = "text-[13px]";
+
+  return (
+    <>
+      <div className="mb-5"><BackLink label="Affiliates" href="/affiliates" /></div>
+
+      {/* Header */}
+      <div className="rounded-[14px] p-6 mb-6" style={{ background: `linear-gradient(135deg, ${T.card} 0%, ${T.panel} 100%)`, border: `1px solid ${T.border}` }}>
+        <div className="flex flex-wrap items-start gap-5">
+          <div className="w-14 h-14 rounded-full flex items-center justify-center text-[20px] font-bold shrink-0" style={{ background: `${T.accent}15`, border: `2px solid ${T.accent}40`, color: T.accent }}>
+            {affiliate.name[0]}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-3">
+              <span className="text-[17px] font-semibold" style={{ color: T.text }}>{affiliate.name}</span>
+              <Chip tone="gold">Pending review</Chip>
+            </div>
+            <div className="text-[13px] mt-1" style={{ color: T.muted }}>{affiliate.email}</div>
+            <div className="text-[12px] mt-1.5" style={{ color: T.faint }}>Applied {affiliate.joinedAt}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Tab navigation */}
+      <div className="flex items-center gap-1 mb-6 overflow-x-auto no-scrollbar">
+        {REVIEW_TABS.map((tab, i) => (
+          <button
+            key={tab.key}
+            onClick={() => setReviewTab(i)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-[8px] text-[13px] font-medium transition-colors whitespace-nowrap cursor-pointer"
+            style={{
+              background: reviewTab === i ? `${T.accent}15` : "transparent",
+              color: reviewTab === i ? T.accent : T.muted,
+              border: `1px solid ${reviewTab === i ? `${T.accent}40` : "transparent"}`,
+            }}
+          >
+            <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold" style={{
+              background: approved.has(i) ? T.good : reviewTab === i ? T.accent : T.border,
+              color: approved.has(i) || reviewTab === i ? "#fff" : T.muted,
+            }}>
+              {approved.has(i) ? (
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M20 6L9 17l-5-5"/></svg>
+              ) : (
+                i + 1
+              )}
+            </span>
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab: Personal Details */}
+      {reviewTab === 0 && (
+        <Card className="p-6">
+          <h3 className="text-[15px] font-semibold mb-4" style={{ color: T.text }}>Personal Details</h3>
+          <div className="divide-y" style={{ borderColor: T.borderSoft }}>
+            {([
+              ["Full name", applicant.name],
+              ["Email", applicant.email],
+              ["Phone", applicant.phone],
+              ["City", applicant.city],
+              ["Applied on", applicant.appliedAt],
+            ] as const).map(([k, v]) => (
+              <div key={k} className={rowClass}>
+                <span className={labelClass} style={{ color: T.muted }}>{k}</span>
+                <span className={`${labelClass} font-medium`} style={{ color: T.text }}>{v}</span>
+              </div>
+            ))}
+          </div>
+          <div className="mt-6 flex items-center justify-between pt-4" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+            <button onClick={rejectAffiliate} className="h-10 px-5 rounded-[9px] text-[13px] font-medium transition-all hover:opacity-80 active:scale-[0.97] cursor-pointer" style={{ border: `1px solid ${T.danger}30`, color: T.danger }}>Reject</button>
+            <GoldBtn onClick={() => approveTab(0)} disabled={approved.has(0)}>
+              {approved.has(0) ? "✓ Verified" : "Verified & continue →"}
+            </GoldBtn>
+          </div>
+        </Card>
+      )}
+
+      {/* Tab: Bank Details */}
+      {reviewTab === 1 && (
+        <Card className="p-6">
+          <h3 className="text-[15px] font-semibold mb-4" style={{ color: T.text }}>Bank Details</h3>
+          <div className="divide-y" style={{ borderColor: T.borderSoft }}>
+            {([
+              ["Account holder", applicant.holderName],
+              ["Bank name", applicant.bankName],
+              ["Account number", `••••${applicant.accountNumber.slice(-4)}`],
+              ["IFSC code", applicant.ifsc],
+              ["UPI ID", applicant.upiId],
+            ] as const).map(([k, v]) => (
+              <div key={k} className={rowClass}>
+                <span className={labelClass} style={{ color: T.muted }}>{k}</span>
+                <span className={`${labelClass} font-medium`} style={{ color: T.text }}>{v}</span>
+              </div>
+            ))}
+          </div>
+          <div className="mt-6 flex items-center justify-between pt-4" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+            <button onClick={rejectAffiliate} className="h-10 px-5 rounded-[9px] text-[13px] font-medium transition-all hover:opacity-80 active:scale-[0.97] cursor-pointer" style={{ border: `1px solid ${T.danger}30`, color: T.danger }}>Reject</button>
+            <GoldBtn onClick={() => approveTab(1)} disabled={approved.has(1)}>
+              {approved.has(1) ? "✓ Verified" : "Verified & continue →"}
+            </GoldBtn>
+          </div>
+        </Card>
+      )}
+
+      {/* Tab: Documents */}
+      {reviewTab === 2 && (
+        <Card className="p-6">
+          <h3 className="text-[15px] font-semibold mb-4" style={{ color: T.text }}>Uploaded Documents</h3>
+          <div className="rounded-[10px] p-5" style={{ background: T.panel, border: `1px solid ${T.borderSoft}` }}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-[8px] flex items-center justify-center" style={{ background: `${T.accent}12`, border: `1px solid ${T.accent}25` }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={T.accent} strokeWidth="1.5" strokeLinecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                </div>
+                <div>
+                  <div className="text-[14px] font-medium" style={{ color: T.text }}>{applicant.panFile}</div>
+                  <div className="text-[12px]" style={{ color: T.muted }}>PAN Card · Uploaded on {applicant.appliedAt}</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Chip tone="gold">Under review</Chip>
+                <GhostBtn className="!h-8 !px-3 !text-[12px]">View</GhostBtn>
+              </div>
+            </div>
+          </div>
+          <div className="mt-6 flex items-center justify-between pt-4" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+            <button onClick={rejectAffiliate} className="h-10 px-5 rounded-[9px] text-[13px] font-medium transition-all hover:opacity-80 active:scale-[0.97] cursor-pointer" style={{ border: `1px solid ${T.danger}30`, color: T.danger }}>Reject</button>
+            <GoldBtn onClick={() => approveTab(2)} disabled={approved.has(2)}>
+              {approved.has(2) ? "✓ Verified" : "Verified & continue →"}
+            </GoldBtn>
+          </div>
+        </Card>
+      )}
+
+      {/* Tab: Configure Commission & Discount */}
+      {reviewTab === 3 && (
+        <Card className="p-6">
+          <h3 className="text-[15px] font-semibold mb-1" style={{ color: T.text }}>Configure Commission & Discount</h3>
+          <p className="text-[13px] mb-5" style={{ color: T.muted }}>Set commission rates for this affiliate and customer discounts</p>
+
+          {/* Commission rates */}
+          <div className="mb-6">
+            <div className="text-[12px] tracking-[0.06em] uppercase font-medium mb-3" style={{ color: T.faint }}>Commission Rates</div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {([["Stone", stoneRate, setStoneRate], ["Jewellery", jewelleryRate, setJewelleryRate], ["Consultation", consultationRate, setConsultationRate]] as const).map(([label, val, setter]) => (
+                <div key={label}>
+                  <label className="block text-[11px] tracking-[0.12em] uppercase mb-1.5" style={{ color: T.faint }}>{label}</label>
+                  <div className="relative">
+                    <input type="text" value={val} onChange={(e) => (setter as (v: string) => void)(e.target.value)} placeholder="0" className="h-10 px-3.5 pr-8 rounded-[9px] text-[13.5px] outline-none w-full transition-shadow duration-200 focus:shadow-[0_0_0_3px_rgba(160,125,56,0.14)]" style={{ background: "#fffdf5", border: `1px solid ${T.border}`, color: T.text }} />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[13px] font-medium" style={{ color: T.faint }}>%</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Customer discount */}
+          <div className="mb-6 pt-5" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+            <div className="text-[12px] tracking-[0.06em] uppercase font-medium mb-3" style={{ color: T.faint }}>Customer Discount</div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {([["Stone", stoneDiscount, setStoneDiscount], ["Jewellery", jewelleryDiscount, setJewelleryDiscount], ["Consultation", consultationDiscount, setConsultationDiscount]] as const).map(([label, val, setter]) => (
+                <div key={label}>
+                  <label className="block text-[11px] tracking-[0.12em] uppercase mb-1.5" style={{ color: T.faint }}>{label}</label>
+                  <div className="relative">
+                    <input type="text" value={val} onChange={(e) => (setter as (v: string) => void)(e.target.value)} placeholder="0" className="h-10 px-3.5 pr-8 rounded-[9px] text-[13.5px] outline-none w-full transition-shadow duration-200 focus:shadow-[0_0_0_3px_rgba(160,125,56,0.14)]" style={{ background: "#fffdf5", border: `1px solid ${T.border}`, color: T.text }} />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[13px] font-medium" style={{ color: T.faint }}>%</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="text-[12px] mt-2" style={{ color: T.faint }}>Customers referred by this affiliate will get this discount on their first purchase</p>
+          </div>
+
+          <div className="flex items-center justify-between pt-4" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+            <button onClick={rejectAffiliate} className="h-10 px-5 rounded-[9px] text-[13px] font-medium transition-all hover:opacity-80 active:scale-[0.97] cursor-pointer" style={{ border: `1px solid ${T.danger}30`, color: T.danger }}>Reject</button>
+            <GoldBtn onClick={approveAndCreate}>
+              Approve & Create Account
+            </GoldBtn>
+          </div>
+        </Card>
+      )}
+
+      {toast && (
+        <div className="fixed top-6 right-6 z-[100] flex items-center gap-2 px-4 py-3 rounded-[10px] shadow-lg text-[13.5px] font-medium animate-in" style={{ background: T.card, border: `1px solid ${T.border}`, color: T.good }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6L9 17l-5-5"/></svg>
+          {toast}
+        </div>
+      )}
+    </>
+  );
+}
+
 const PER_PAGE = 5;
 
 export default function AffiliateDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -58,6 +306,10 @@ export default function AffiliateDetailPage({ params }: { params: Promise<{ id: 
         <div className="mt-3 flex justify-center"><BackLink label="Affiliates" href="/affiliates" /></div>
       </div>
     );
+  }
+
+  if (affiliate.status === "under_review") {
+    return <AffiliateReviewView affiliate={affiliate} />;
   }
 
   const referredCustomers = useMemo(() => MOCK_CUSTOMERS.filter((c) => c.affiliateCode === affiliate.code), [affiliate.code]);

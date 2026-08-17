@@ -80,9 +80,18 @@ export default function RoleSelectionPage() {
             </div>
           </div>
 
-          <p className="text-[11.5px] mt-6 tracking-[0.04em]" style={{ color: "rgba(60,56,40,0.65)" }}>
-            Internal console · access is logged and role-scoped
-          </p>
+          <div className="flex items-center justify-between mt-6">
+            <p className="text-[11.5px] tracking-[0.04em]" style={{ color: "rgba(60,56,40,0.65)" }}>
+              Internal console · access is logged and role-scoped
+            </p>
+            <button
+              onClick={() => { selectRole("affiliate"); router.push("/onboarding"); }}
+              className="text-[12px] font-medium cursor-pointer transition-opacity hover:opacity-80"
+              style={{ color: T.accent }}
+            >
+              New affiliate? Apply here →
+            </button>
+          </div>
         </div>
       </div>
     </main>

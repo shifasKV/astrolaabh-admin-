@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { PageHeader, Card, Chip, Input, GoldBtn, GhostBtn } from "@/components/ui";
+import { PageHeader, Card, Input, GoldBtn, GhostBtn } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_AFFILIATES } from "@/lib/mock";
 
@@ -21,6 +21,8 @@ export default function ProfilePage() {
   const [confirmAccount, setConfirmAccount] = useState("50100123456789");
   const [ifsc, setIfsc] = useState("HDFC0001234");
   const [upiId, setUpiId] = useState("sandeep@upi");
+
+  const [codeCopied, setCodeCopied] = useState(false);
 
   // Password
   const [editingPassword, setEditingPassword] = useState(false);
@@ -59,8 +61,6 @@ export default function ProfilePage() {
               ["Full name", name],
               ["Email", email],
               ["Phone", phone],
-              ["Affiliate code", affiliate.code],
-              ["Commission rate", `${affiliate.commissionRate}%`],
               ["Joined", affiliate.joinedAt],
             ].map(([k, v]) => (
               <div key={k} className="flex justify-between gap-2">
@@ -68,6 +68,21 @@ export default function ProfilePage() {
                 <span className="font-medium" style={{ color: T.text }}>{v}</span>
               </div>
             ))}
+            <div className="flex justify-between gap-2">
+              <span style={{ color: T.muted }}>Affiliate code</span>
+              <button
+                className="font-medium inline-flex items-center gap-1.5 cursor-pointer transition-colors hover:opacity-80"
+                style={{ color: T.text }}
+                onClick={() => { navigator.clipboard.writeText(affiliate.code); setCodeCopied(true); setTimeout(() => setCodeCopied(false), 2000); }}
+              >
+                {affiliate.code}
+                {codeCopied ? (
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={T.good} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                ) : (
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.45 }}><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                )}
+              </button>
+            </div>
           </div>
         )}
       </Card>
@@ -75,7 +90,7 @@ export default function ProfilePage() {
       {/* Payout method */}
       <Card className="mb-4">
         <div className="flex items-center justify-between mb-4">
-          <div className="text-[11px] tracking-[0.08em] uppercase" style={{ color: T.faint }}>Payout method</div>
+          <div className="text-[11px] tracking-[0.08em] uppercase" style={{ color: T.faint }}>Payment details</div>
           {!editingPayout && (
             <GhostBtn className="!h-8 !px-3 !text-[11px]" onClick={() => setEditingPayout(true)}>Edit</GhostBtn>
           )}
@@ -143,22 +158,6 @@ export default function ProfilePage() {
         )}
       </Card>
 
-      {/* Compliance */}
-      <Card>
-        <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.faint }}>Compliance documents</div>
-        <div className="space-y-2.5">
-          {[
-            ["PAN card", "Verified", "good"],
-            ["Address proof", "Verified", "good"],
-            ["Agreement", "Signed", "good"],
-          ].map(([doc, status, tone]) => (
-            <div key={doc} className="flex items-center justify-between py-2" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
-              <span className="text-[13.5px]" style={{ color: T.text }}>{doc}</span>
-              <Chip tone={tone as "good"}>{status}</Chip>
-            </div>
-          ))}
-        </div>
-      </Card>
     </>
   );
 }
