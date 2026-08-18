@@ -1,23 +1,43 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth, DEMO_ACCOUNTS, DEMO_PASSWORD, ROLE_ROUTES, INVITE_ACCOUNTS } from "@/lib/store/auth";
+import { OtpVerifyForm, applyOtpInput } from "@/components/ui";
 import { T } from "@/lib/theme";
+
+const OTP_RESEND_SECONDS = 30;
 
 export default function LoginPage() {
   const router = useRouter();
   const { login } = useAuth();
 
+  const [step, setStep] = useState<"credentials" | "otp">("credentials");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [showDemo, setShowDemo] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
+  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const [resendIn, setResendIn] = useState(0);
+  const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const canSubmit = Boolean(email.trim() && password);
   const inputCls = "w-full h-11 px-3.5 rounded-[10px] text-[14px] outline-none transition-shadow duration-200 focus:shadow-[0_0_0_3px_rgba(119,123,98,0.16)]";
   const inputStyle = { background: "#fbf8f1", border: `1px solid ${T.border}`, color: T.text, boxShadow: "inset 0 1px 2px rgba(43,42,34,0.03)" };
+
+  useEffect(() => {
+    if (resendIn <= 0) return;
+    const t = setTimeout(() => setResendIn((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [resendIn]);
+
+  const startOtp = () => {
+    setOtp(["", "", "", "", "", ""]);
+    setError("");
+    setResendIn(OTP_RESEND_SECONDS);
+    setStep("otp");
+  };
 
   const handleSubmit = (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -30,8 +50,44 @@ export default function LoginPage() {
       setError("We couldn't sign you in with those details. Check the email and password.");
       return;
     }
+    startOtp();
+  };
+
+  const handleOtpChange = (index: number, value: string) => {
+    const { next, focusIndex } = applyOtpInput(otp, index, value);
+    setOtp(next);
+    setError("");
+    otpRefs.current[focusIndex]?.focus();
+  };
+
+  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent) => {
+    if (e.key === "Backspace" && !otp[index] && index > 0) {
+      otpRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handleVerifyOtp = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (otp.join("").length < 6) {
+      setError("Enter the 6-digit code sent to your email.");
+      return;
+    }
+    const user = login(email, password);
+    if (!user) {
+      setError("Session expired. Sign in again.");
+      setStep("credentials");
+      return;
+    }
     setError("");
     router.push(ROLE_ROUTES[user.role]);
+  };
+
+  const handleResend = () => {
+    if (resendIn > 0) return;
+    setOtp(["", "", "", "", "", ""]);
+    setError("");
+    setResendIn(OTP_RESEND_SECONDS);
+    otpRefs.current[0]?.focus();
   };
 
   return (
@@ -65,6 +121,22 @@ export default function LoginPage() {
             </div>
             <div className="hairline mb-6" />
 
+            {step === "otp" ? (
+              <OtpVerifyForm
+                email={email}
+                otp={otp}
+                otpRefs={otpRefs}
+                error={error}
+                resendIn={resendIn}
+                submitLabel="Verify & sign in"
+                backLabel="Back to sign in"
+                onOtpChange={handleOtpChange}
+                onOtpKeyDown={handleOtpKeyDown}
+                onSubmit={handleVerifyOtp}
+                onResend={handleResend}
+                onBack={() => { setStep("credentials"); setOtp(["", "", "", "", "", ""]); setError(""); setResendIn(0); }}
+              />
+            ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-[11px] font-medium tracking-[0.08em] uppercase mb-1.5" style={{ color: T.faint }}>
@@ -155,8 +227,9 @@ export default function LoginPage() {
                 Continue with Google
               </button>
             </form>
+            )}
 
-            {/* Demo helper — click an account to fill the form */}
+            {step === "credentials" && (
             <div className="mt-5 rounded-[12px] px-3.5 py-3" style={{ background: "rgba(89,82,54,0.045)", border: `1px solid ${T.borderSoft}` }}>
               <button
                 onClick={() => setShowDemo((v) => !v)}
@@ -183,8 +256,10 @@ export default function LoginPage() {
                 </div>
               )}
             </div>
+            )}
           </div>
 
+          {step === "credentials" && (
           <button
             onClick={() => router.push("/affiliate-program")}
             className="group mt-5 w-full flex items-center justify-center gap-2 h-11 rounded-[10px] text-[13px] font-medium cursor-pointer transition-all duration-200 hover:bg-[rgba(119,123,98,0.06)]"
@@ -194,6 +269,7 @@ export default function LoginPage() {
             <span className="font-semibold" style={{ color: T.accent }}>Apply to partner</span>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-0.5" style={{ color: T.accent }}><path d="M5 12h14M13 6l6 6-6 6" /></svg>
           </button>
+          )}
         </div>
       </div>
 

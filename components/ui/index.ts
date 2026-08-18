@@ -24,6 +24,7 @@ export { StepIndicator } from "./StepIndicator";
 export { ShopifyIcon, ShopifyButton, SHOPIFY_GREEN, SHOPIFY_GREEN_DARK, SHOPIFY_TINT, SHOPIFY_BORDER } from "./ShopifyIcon";
 export { BackLink } from "./BackLink";
 export { downloadCSV, downloadXLS, downloadPDF, Tooltip, fmtChipDate, ExportBtn, ToolbarSearch, FiltersPopover, FilterField, FilterChip, DateRangeFields, ColumnStatusFilter } from "./TableToolbar";
+export { OtpVerifyForm, applyOtpInput } from "./OtpVerify";
 export { SidebarProvider, useSidebar } from "./SidebarState";
 export { Breadcrumb } from "./Breadcrumb";
 export { CommandPalette } from "./CommandPalette";

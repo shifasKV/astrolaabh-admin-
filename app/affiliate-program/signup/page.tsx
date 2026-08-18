@@ -1,11 +1,13 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/store/auth";
+import { OtpVerifyForm, applyOtpInput } from "@/components/ui";
 import { T } from "@/lib/theme";
 
 type Step = "email" | "otp";
+const OTP_RESEND_SECONDS = 30;
 
 export default function AffiliateSignupPage() {
   const router = useRouter();
@@ -16,9 +18,24 @@ export default function AffiliateSignupPage() {
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [error, setError] = useState("");
   const [sending, setSending] = useState(false);
+  const [resendIn, setResendIn] = useState(0);
+  const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const inputCls = "w-full h-11 px-3.5 rounded-[10px] text-[14px] outline-none transition-shadow duration-200 focus:shadow-[0_0_0_3px_rgba(119,123,98,0.16)]";
   const inputStyle = { background: "#fbf8f1", border: `1px solid ${T.border}`, color: T.text, boxShadow: "inset 0 1px 2px rgba(43,42,34,0.03)" };
+
+  useEffect(() => {
+    if (resendIn <= 0) return;
+    const t = setTimeout(() => setResendIn((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [resendIn]);
+
+  const goToOtp = () => {
+    setOtp(["", "", "", "", "", ""]);
+    setError("");
+    setResendIn(OTP_RESEND_SECONDS);
+    setStep("otp");
+  };
 
   const handleSendOtp = (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -30,40 +47,40 @@ export default function AffiliateSignupPage() {
     setSending(true);
     setTimeout(() => {
       setSending(false);
-      setStep("otp");
-    }, 800);
+      goToOtp();
+    }, 500);
   };
 
   const handleOtpChange = (index: number, value: string) => {
-    if (value.length > 1) value = value.slice(-1);
-    if (value && !/^\d$/.test(value)) return;
-    const next = [...otp];
-    next[index] = value;
+    const { next, focusIndex } = applyOtpInput(otp, index, value);
     setOtp(next);
     setError("");
-    if (value && index < 5) {
-      const nextInput = document.getElementById(`otp-${index + 1}`);
-      nextInput?.focus();
-    }
+    otpRefs.current[focusIndex]?.focus();
   };
 
   const handleOtpKeyDown = (index: number, e: React.KeyboardEvent) => {
     if (e.key === "Backspace" && !otp[index] && index > 0) {
-      const prev = document.getElementById(`otp-${index - 1}`);
-      prev?.focus();
+      otpRefs.current[index - 1]?.focus();
     }
   };
 
   const handleVerify = (e?: React.FormEvent) => {
     e?.preventDefault();
-    const code = otp.join("");
-    if (code.length < 6) {
-      setError("Please enter the full 6-digit code.");
+    if (otp.join("").length < 6) {
+      setError("Enter the 6-digit code sent to your email.");
       return;
     }
     setError("");
     selectRole("affiliate");
     router.push("/onboarding");
+  };
+
+  const handleResend = () => {
+    if (resendIn > 0) return;
+    setOtp(["", "", "", "", "", ""]);
+    setError("");
+    setResendIn(OTP_RESEND_SECONDS);
+    otpRefs.current[0]?.focus();
   };
 
   const handleGoogle = () => {
@@ -80,16 +97,18 @@ export default function AffiliateSignupPage() {
 
       <div className="relative z-10 min-h-dvh flex items-center justify-center px-6 py-10">
         <div className="w-full max-w-[440px]">
-          <div className="mb-5">
-            <Link
-              href="/affiliate-program"
-              className="group inline-flex items-center gap-1.5 text-[12.5px] font-medium h-8 pl-2 pr-3 rounded-full transition-all duration-200 hover:-translate-x-0.5"
-              style={{ color: T.muted, background: T.card, border: `1px solid ${T.borderSoft}`, boxShadow: T.shadow }}
-            >
-              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" className="w-4 h-4 transition-transform duration-200 group-hover:-translate-x-0.5"><path d="M10 3.5 5.5 8 10 12.5" /></svg>
-              Back
-            </Link>
-          </div>
+          {step === "email" && (
+            <div className="mb-5">
+              <Link
+                href="/affiliate-program"
+                className="group inline-flex items-center gap-1.5 text-[12.5px] font-medium h-8 pl-2 pr-3 rounded-full transition-all duration-200 hover:-translate-x-0.5"
+                style={{ color: T.muted, background: T.card, border: `1px solid ${T.borderSoft}`, boxShadow: T.shadow }}
+              >
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" className="w-4 h-4 transition-transform duration-200 group-hover:-translate-x-0.5"><path d="M10 3.5 5.5 8 10 12.5" /></svg>
+                Back
+              </Link>
+            </div>
+          )}
 
           <div
             className="rounded-[22px] p-8 backdrop-blur-[8px]"
@@ -109,7 +128,7 @@ export default function AffiliateSignupPage() {
             </div>
             <div className="h-px mb-6" style={{ background: T.border }} />
 
-            {step === "email" && (
+            {step === "email" ? (
               <form onSubmit={handleSendOtp} className="space-y-4">
                 <div>
                   <label className="block text-[11px] font-medium tracking-[0.08em] uppercase mb-1.5" style={{ color: T.faint }}>
@@ -164,86 +183,30 @@ export default function AffiliateSignupPage() {
                   Continue with Google
                 </button>
               </form>
-            )}
-
-            {step === "otp" && (
-              <form onSubmit={handleVerify} className="space-y-5">
-                <div className="text-center">
-                  <div className="w-12 h-12 rounded-full mx-auto mb-3 flex items-center justify-center" style={{ background: "rgba(119,123,98,0.10)" }}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" style={{ color: T.accent }}><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-                  </div>
-                  <h2 className="text-[16px] font-semibold mb-1" style={{ color: T.text }}>Verify your email</h2>
-                  <p className="text-[13px]" style={{ color: T.muted }}>
-                    We sent a 6-digit code to <span className="font-medium" style={{ color: T.text }}>{email}</span>
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-medium tracking-[0.08em] uppercase mb-2 text-center" style={{ color: T.faint }}>
-                    Enter code
-                  </label>
-                  <div className="flex items-center justify-center gap-2">
-                    {otp.map((digit, i) => (
-                      <input
-                        key={i}
-                        id={`otp-${i}`}
-                        type="text"
-                        inputMode="numeric"
-                        maxLength={1}
-                        value={digit}
-                        onChange={(e) => handleOtpChange(i, e.target.value)}
-                        onKeyDown={(e) => handleOtpKeyDown(i, e)}
-                        className="w-11 h-12 rounded-[10px] text-center text-[18px] font-semibold outline-none transition-shadow duration-200 focus:shadow-[0_0_0_3px_rgba(119,123,98,0.16)]"
-                        style={inputStyle}
-                        autoFocus={i === 0}
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                {error && (
-                  <div className="flex items-start gap-2 text-[12.5px] px-3 py-2.5 rounded-[9px]" style={{ background: "rgba(163,73,63,0.08)", border: "1px solid rgba(163,73,63,0.22)", color: T.danger }}>
-                    <span className="mt-[5px] w-1.5 h-1.5 rounded-full shrink-0" style={{ background: T.danger }} />
-                    {error}
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={otp.join("").length < 6}
-                  className="w-full h-11 rounded-[10px] text-[14px] font-semibold transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed hover:brightness-110 hover:-translate-y-px active:scale-[0.99] cursor-pointer"
-                  style={{ background: T.primary, color: T.primaryInk, boxShadow: "inset 0 1px 0 rgba(244,241,229,0.12), 0 1px 2px rgba(43,42,34,0.1)" }}
-                >
-                  Verify & continue
-                </button>
-
-                <div className="text-center">
-                  <button
-                    type="button"
-                    onClick={() => { setOtp(["", "", "", "", "", ""]); setError(""); handleSendOtp(); }}
-                    className="text-[12.5px] font-medium cursor-pointer transition-opacity hover:opacity-80"
-                    style={{ color: T.accent }}
-                  >
-                    Resend code
-                  </button>
-                  <span className="mx-2 text-[11px]" style={{ color: T.faint }}>·</span>
-                  <button
-                    type="button"
-                    onClick={() => { setStep("email"); setOtp(["", "", "", "", "", ""]); setError(""); }}
-                    className="text-[12.5px] font-medium cursor-pointer transition-opacity hover:opacity-80"
-                    style={{ color: T.muted }}
-                  >
-                    Change email
-                  </button>
-                </div>
-              </form>
+            ) : (
+              <OtpVerifyForm
+                email={email}
+                otp={otp}
+                otpRefs={otpRefs}
+                error={error}
+                resendIn={resendIn}
+                submitLabel="Verify & continue"
+                backLabel="Use a different email"
+                onOtpChange={handleOtpChange}
+                onOtpKeyDown={handleOtpKeyDown}
+                onSubmit={handleVerify}
+                onResend={handleResend}
+                onBack={() => { setStep("email"); setOtp(["", "", "", "", "", ""]); setError(""); setResendIn(0); }}
+              />
             )}
           </div>
 
-          <p className="text-center text-[12px] mt-5" style={{ color: T.faint }}>
-            Already have an account?{" "}
-            <Link href="/" className="font-medium" style={{ color: T.accent }}>Sign in</Link>
-          </p>
+          {step === "email" && (
+            <p className="text-center text-[12px] mt-5" style={{ color: T.faint }}>
+              Already have an account?{" "}
+              <Link href="/" className="font-medium" style={{ color: T.accent }}>Sign in</Link>
+            </p>
+          )}
         </div>
       </div>
     </main>
