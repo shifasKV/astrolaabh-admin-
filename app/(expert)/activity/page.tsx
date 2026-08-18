@@ -36,7 +36,7 @@ export default function ActivityPage() {
 
   return (
     <>
-      <PageHeader title="Activity" sub="Recent actions and events across your consultations" />
+      <PageHeader title="Activity" />
       <Card>
         <Timeline events={events} />
       </Card>

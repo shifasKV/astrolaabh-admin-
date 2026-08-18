@@ -1,9 +1,10 @@
 "use client";
-import { useState, useMemo, useEffect, useRef } from "react";
+import { Suspense, useState, useMemo, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { PageHeader, Card, SearchFilter, Select, Chip, Modal, Input, GoldBtn, GhostBtn, ShopifyIcon, ShopifyButton, SHOPIFY_GREEN_DARK, SHOPIFY_TINT, SHOPIFY_BORDER, Pagination, ExportButton, ConfirmDialog, TableSkeleton } from "@/components/ui";
+import { PageHeader, Card, Select, Chip, Modal, Input, GoldBtn, GhostBtn, ShopifyIcon, ShopifyButton, SHOPIFY_GREEN_DARK, SHOPIFY_TINT, SHOPIFY_BORDER, Pagination, ToolbarSearch, FiltersPopover, FilterField, FilterChip, EmptyState, TableSkeleton, Toast } from "@/components/ui";
 import { T } from "@/lib/theme";
+import { useSimulatedLoad } from "@/lib/useSimulatedLoad";
 import { STONES, DESIGNS, ENERGISATION, INTENTS, ZODIAC, inr as catalogInr } from "@/lib/catalog";
 import type { Stone, Design } from "@/lib/catalog";
 
@@ -74,8 +75,6 @@ const METAL_OPTIONS = [
   { value: "Panchdhatu", label: "Panchdhatu" },
 ];
 
-const PER_PAGE = 15;
-
 function ToggleSwitch({ enabled, onToggle }: { enabled: boolean; onToggle: () => void }) {
   return (
     <button
@@ -118,7 +117,6 @@ function ExternalLink({ href, label, shopify }: { href: string; label: string; s
 
 function ItemRowMenu({ shopifyUrl, websiteUrl, enabled, onToggle, outOfStock, onOutOfStock, sellingFast, onSellingFast }: { shopifyUrl: string; websiteUrl: string; enabled: boolean; onToggle: () => void; outOfStock?: boolean; onOutOfStock?: () => void; sellingFast?: boolean; onSellingFast?: () => void }) {
   const [open, setOpen] = useState(false);
-  const [confirmDisable, setConfirmDisable] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -130,38 +128,63 @@ function ItemRowMenu({ shopifyUrl, websiteUrl, enabled, onToggle, outOfStock, on
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
-  const itemClass = "w-full text-left px-3.5 py-2 text-[12px] transition-colors cursor-pointer hover:bg-[rgba(160,125,56,0.08)] flex items-center gap-2";
+  const itemClass = "w-full text-left px-2.5 py-2 rounded-[8px] text-[12.5px] font-medium transition-colors cursor-pointer hover:bg-[rgba(119,123,98,0.10)] flex items-center gap-2.5";
+  const extArrow = (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3 ml-auto shrink-0" style={{ color: T.faint }}>
+      <path d="M7 17L17 7M17 7H9M17 7v8" />
+    </svg>
+  );
+  const iconSlot = "w-4 flex items-center justify-center shrink-0";
 
   return (
     <div className="relative" ref={ref}>
       <button
         type="button"
         onClick={(e) => { e.stopPropagation(); e.preventDefault(); setOpen((v) => !v); }}
+        aria-label="Row actions"
         className="w-8 h-8 rounded-[8px] flex items-center justify-center transition-colors hover:bg-[rgba(89,82,54,0.08)] cursor-pointer"
-        style={{ border: `1px solid ${T.borderSoft}`, color: T.muted }}
+        style={{ border: `1px solid ${open ? T.accentBorder : T.borderSoft}`, color: T.muted, background: open ? T.accentFaint : "transparent" }}
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
       </button>
       {open && (
-        <div className="absolute right-0 top-full mt-1 z-50 w-[180px] rounded-[10px] py-1.5 shadow-lg" style={{ background: T.popover, border: `1px solid ${T.border}` }}>
-          <a href={shopifyUrl} target="_blank" rel="noopener" onClick={(e) => e.stopPropagation()} className={itemClass} style={{ color: SHOPIFY_GREEN_DARK }}>
-            <ShopifyIcon size={12} /> Shopify <span className="text-[10px] ml-auto opacity-60">↗</span>
+        <div
+          className="absolute right-0 top-full mt-1.5 z-50 w-[210px] rounded-[12px] p-1.5"
+          style={{ background: T.popover, border: `1px solid ${T.border}`, boxShadow: T.shadowLift, animation: "fadeIn 0.12s ease both" }}
+        >
+          <a href={shopifyUrl} target="_blank" rel="noopener" onClick={(e) => e.stopPropagation()} className={itemClass} style={{ color: T.text }}>
+            <span className={iconSlot}><ShopifyIcon size={13} /></span>
+            Open in Shopify
+            {extArrow}
           </a>
           <a href={websiteUrl} target="_blank" rel="noopener" onClick={(e) => e.stopPropagation()} className={itemClass} style={{ color: T.text }}>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-            Website <span className="text-[10px] ml-auto opacity-60">↗</span>
+            <span className={iconSlot}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" style={{ color: T.muted }}><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            </span>
+            View on website
+            {extArrow}
           </a>
           <Link href="/orders/create" onClick={(e) => e.stopPropagation()} className={itemClass} style={{ color: T.text }}>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            <span className={iconSlot}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ color: T.muted }}><path d="M12 5v14M5 12h14"/></svg>
+            </span>
             Create order
           </Link>
-          <div className="mx-2 my-1.5" style={{ borderTop: `1px solid ${T.borderSoft}` }} />
+
+          <div className="mx-1 my-1.5" style={{ borderTop: `1px solid ${T.borderSoft}` }} />
+          <div className="px-2.5 pt-1 pb-1.5 text-[10.5px] font-medium tracking-[0.08em] uppercase" style={{ color: T.faint }}>Listing</div>
+
           {onOutOfStock && (
             <button
               onClick={(e) => { e.stopPropagation(); e.preventDefault(); onOutOfStock(); setOpen(false); }}
               className={itemClass}
-              style={{ color: outOfStock ? T.good : T.danger }}
+              style={{ color: T.text }}
             >
+              <span className={iconSlot}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ color: outOfStock ? T.good : T.muted }}>
+                  <path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4" />
+                </svg>
+              </span>
               {outOfStock ? "Mark as in stock" : "Mark as out of stock"}
             </button>
           )}
@@ -169,43 +192,42 @@ function ItemRowMenu({ shopifyUrl, websiteUrl, enabled, onToggle, outOfStock, on
             <button
               onClick={(e) => { e.stopPropagation(); e.preventDefault(); onSellingFast(); setOpen(false); }}
               className={itemClass}
-              style={{ color: sellingFast ? T.muted : "#c57b1a" }}
+              style={{ color: T.text }}
             >
+              <span className={iconSlot}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ color: sellingFast ? "#c57b1a" : T.muted }}>
+                  <path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z" />
+                </svg>
+              </span>
               {sellingFast ? "Remove selling fast" : "Mark as selling fast"}
             </button>
           )}
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              e.preventDefault();
-              setOpen(false);
-              if (enabled) {
-                setConfirmDisable(true);
-              } else {
-                onToggle();
-              }
-            }}
-            className={itemClass}
+            onClick={(e) => { e.stopPropagation(); e.preventDefault(); onToggle(); setOpen(false); }}
+            className={`${itemClass} hover:!bg-[rgba(163,73,63,0.08)]`}
             style={{ color: enabled ? T.danger : T.good }}
           >
+            <span className={iconSlot}>
+              {enabled ? (
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19M1 1l22 22" />
+                </svg>
+              ) : (
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" />
+                </svg>
+              )}
+            </span>
             {enabled ? "Disable listing" : "Enable listing"}
           </button>
         </div>
       )}
-      <ConfirmDialog
-        open={confirmDisable}
-        onClose={() => setConfirmDisable(false)}
-        onConfirm={onToggle}
-        title="Disable listing?"
-        description="This item will be hidden from the website."
-        variant="danger"
-        confirmLabel="Disable"
-      />
     </div>
   );
 }
 
-export default function InventoryPage() {
+function InventoryPageInner() {
+  const loading = useSimulatedLoad();
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab") || "stones";
   const [tab, setTab] = useState(tabParam);
@@ -213,11 +235,7 @@ export default function InventoryPage() {
   useEffect(() => {
     setTab(tabParam);
   }, [tabParam]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => { const t = setTimeout(() => setLoading(false), 700); return () => clearTimeout(t); }, []);
-
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(searchParams.get("q") || "");
   const [toast, setToast] = useState("");
   const [disabledStones, setDisabledStones] = useState<Set<string>>(new Set());
   const [outOfStockStones, setOutOfStockStones] = useState<Set<string>>(new Set());
@@ -236,8 +254,11 @@ export default function InventoryPage() {
 
   const [stoneSort, setStoneSort] = useState("");
   const [designSort, setDesignSort] = useState("");
-  const [stonePage, setStonePage] = useState(0);
-  const [designPage, setDesignPage] = useState(0);
+  const [stonePage, setStonePage] = useState(1);
+  const [designPage, setDesignPage] = useState(1);
+  const [showStoneFilters, setShowStoneFilters] = useState(false);
+  const [energTab, setEnergTab] = useState<"packages" | "gurujis">("packages");
+  const [showDesignFilters, setShowDesignFilters] = useState(false);
 
   const toggleStone = (sku: string) => {
     const wasDisabled = disabledStones.has(sku);
@@ -381,26 +402,19 @@ export default function InventoryPage() {
     });
   }, [search, form, metal, designSort]);
 
-  const pagedStones = filteredStones.slice(stonePage * PER_PAGE, (stonePage + 1) * PER_PAGE);
-  const pagedDesigns = filteredDesigns.slice(designPage * PER_PAGE, (designPage + 1) * PER_PAGE);
+  const PER_PAGE = 10;
+  const stoneTotalPages = Math.ceil(filteredStones.length / PER_PAGE);
+  const stoneCurrentPage = stonePage > stoneTotalPages && stoneTotalPages > 0 ? stoneTotalPages : stonePage;
+  const stonePaginated = filteredStones.slice((stoneCurrentPage - 1) * PER_PAGE, stoneCurrentPage * PER_PAGE);
+  const designTotalPages = Math.ceil(filteredDesigns.length / PER_PAGE);
+  const designCurrentPage = designPage > designTotalPages && designTotalPages > 0 ? designTotalPages : designPage;
+  const designPaginated = filteredDesigns.slice((designCurrentPage - 1) * PER_PAGE, designCurrentPage * PER_PAGE);
 
-  const stonesExportData = filteredStones.map((s) => ({
-    sku: s.sku,
-    gemName: s.gemName,
-    ratti: s.ratti,
-    intent: s.purpose?.[0] ?? "",
-    zodiac: s.planet,
-    colour: s.shade || s.colour || "",
-    price: s.price,
-  }));
-
-  const designsExportData = filteredDesigns.map((d) => ({
-    name: d.name,
-    slug: d.slug,
-    form: d.form,
-    metal: d.metal,
-    remaining: d.remaining,
-  }));
+  const stoneFilterCount = [stoneType, color, intent, zodiac].filter(Boolean).length;
+  const designFilterCount = [form, metal].filter(Boolean).length;
+  const hasStoneFilters = stoneFilterCount > 0;
+  const hasDesignFilters = designFilterCount > 0;
+  const optLabel = (opts: { value: string; label: string }[], v: string) => opts.find((o) => o.value === v)?.label ?? v;
 
   const pageTitle = tab === "stones" ? "Stones" : tab === "designs" ? "Jewellery Designs" : "Energisation Packages";
   const pageSub = tab === "stones"
@@ -411,94 +425,134 @@ export default function InventoryPage() {
 
   return (
     <>
+      <div className={tab !== "energisation" ? "md:h-[calc(100dvh-78px)] md:flex md:flex-col md:min-h-0" : ""}>
       <PageHeader
         title={pageTitle}
-        sub={pageSub}
         action={
           <ShopifyButton href="https://admin.shopify.com/products">Open Shopify Products</ShopifyButton>
         }
       />
 
+
+
+      {/* Pinned controls — search + filters stay visible while the table scrolls */}
       {tab !== "energisation" && (
-        <div className="mb-4">
-          <SearchFilter search={search} onSearchChange={(v) => { setSearch(v); setStonePage(0); setDesignPage(0); }} placeholder={tab === "stones" ? "Search SKU, gemstone…" : "Search design name…"} />
-        </div>
-      )}
-
-      {/* Filters */}
-      {tab === "stones" && (
-        <div className="flex flex-wrap items-center gap-2.5 mb-4">
-          <div className="w-[170px]">
-            <Select value={stoneType} onChange={(v) => { setStoneType(v); setStonePage(0); }} options={STONE_TYPES} compact />
-          </div>
-          <div className="w-[150px]">
-            <Select value={color} onChange={(v) => { setColor(v); setStonePage(0); }} options={COLOR_OPTIONS} compact searchable />
-          </div>
-          <div className="w-[180px]">
-            <Select value={intent} onChange={(v) => { setIntent(v); setStonePage(0); }} options={INTENT_OPTIONS} compact />
-          </div>
-          <div className="w-[150px]">
-            <Select value={zodiac} onChange={(v) => { setZodiac(v); setStonePage(0); }} options={ZODIAC_OPTIONS} compact searchable />
-          </div>
-          <div className="w-[180px] ml-auto">
-            <Select
-              value={stoneSort}
-              onChange={(v) => { setStoneSort(v); setStonePage(0); }}
-              compact
-              prefix="Sort: "
-              options={[
-                { value: "", label: "Featured" },
-                { value: "price_asc", label: "Price low to high" },
-                { value: "price_desc", label: "Price high to low" },
-                { value: "ratti_asc", label: "Weight low to high" },
-                { value: "ratti_desc", label: "Weight high to low" },
-              ]}
+        <div
+          className="sticky top-0 z-30 -mx-5 md:-mx-10 px-5 md:px-10 pt-1 pb-3 mb-4"
+          style={{ background: T.bg, boxShadow: `0 1px 0 ${T.borderSoft}` }}
+        >
+          <div className="flex flex-wrap items-center gap-2">
+            <ToolbarSearch
+              value={search}
+              onChange={(v) => { setSearch(v); setStonePage(1); setDesignPage(1); }}
+              placeholder={tab === "stones" ? "Search SKU, gemstone…" : "Search design name…"}
             />
-          </div>
-          <ExportButton data={stonesExportData} filename="inventory-stones" className="ml-2" />
-        </div>
-      )}
-
-      {tab === "designs" && (
-        <div className="flex flex-wrap items-center gap-2.5 mb-4">
-          <div className="w-[150px]">
-            <Select value={form} onChange={(v) => { setForm(v); setDesignPage(0); }} options={FORM_OPTIONS} compact />
-          </div>
-          <div className="w-[150px]">
-            <Select value={metal} onChange={(v) => { setMetal(v); setDesignPage(0); }} options={METAL_OPTIONS} compact />
-          </div>
-          <div className="w-[190px] ml-auto">
-            <Select
-              value={designSort}
-              onChange={(v) => { setDesignSort(v); setDesignPage(0); }}
-              compact
-              prefix="Sort: "
-              options={[
-                { value: "", label: "Featured" },
-                { value: "name_asc", label: "Name A to Z" },
-                { value: "stock_asc", label: "Stock low to high" },
-                { value: "stock_desc", label: "Stock high to low" },
-              ]}
-            />
-          </div>
-          <ExportButton data={designsExportData} filename="inventory-designs" className="ml-2" />
-        </div>
-      )}
-
-      {tab === "stones" && (
-        loading ? (
-          <Card><TableSkeleton rows={8} cols={6} /></Card>
-        ) : (
-        <Card>
-          <div className="flex items-center justify-between mb-3">
-            <div className="text-[11px] tracking-[0.08em] uppercase" style={{ color: T.faint }}>
-              {filteredStones.length} stones
+            <div className="ml-auto flex items-center gap-2">
+              {tab === "stones" ? (
+                <>
+                  <FiltersPopover count={stoneFilterCount} open={showStoneFilters} onToggle={() => setShowStoneFilters(!showStoneFilters)}>
+                    <FilterField label="Stone type">
+                      <Select value={stoneType} onChange={(v) => { setStoneType(v); setStonePage(1); }} options={STONE_TYPES} compact />
+                    </FilterField>
+                    <FilterField label="Colour">
+                      <Select value={color} onChange={(v) => { setColor(v); setStonePage(1); }} options={COLOR_OPTIONS} compact searchable />
+                    </FilterField>
+                    <FilterField label="Intent">
+                      <Select value={intent} onChange={(v) => { setIntent(v); setStonePage(1); }} options={INTENT_OPTIONS} compact />
+                    </FilterField>
+                    <FilterField label="Zodiac">
+                      <Select value={zodiac} onChange={(v) => { setZodiac(v); setStonePage(1); }} options={ZODIAC_OPTIONS} compact searchable />
+                    </FilterField>
+                  </FiltersPopover>
+                  <div className="w-[190px]">
+                    <Select
+                      value={stoneSort}
+                      onChange={(v) => { setStoneSort(v); setStonePage(1); }}
+                      compact
+                      prefix="Sort: "
+                      options={[
+                        { value: "", label: "Featured" },
+                        { value: "price_asc", label: "Price low to high" },
+                        { value: "price_desc", label: "Price high to low" },
+                        { value: "ratti_asc", label: "Weight low to high" },
+                        { value: "ratti_desc", label: "Weight high to low" },
+                      ]}
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <FiltersPopover count={designFilterCount} open={showDesignFilters} onToggle={() => setShowDesignFilters(!showDesignFilters)}>
+                    <FilterField label="Design type">
+                      <Select value={form} onChange={(v) => { setForm(v); setDesignPage(1); }} options={FORM_OPTIONS} compact />
+                    </FilterField>
+                    <FilterField label="Metal">
+                      <Select value={metal} onChange={(v) => { setMetal(v); setDesignPage(1); }} options={METAL_OPTIONS} compact />
+                    </FilterField>
+                  </FiltersPopover>
+                  <div className="w-[190px]">
+                    <Select
+                      value={designSort}
+                      onChange={(v) => { setDesignSort(v); setDesignPage(1); }}
+                      compact
+                      prefix="Sort: "
+                      options={[
+                        { value: "", label: "Featured" },
+                        { value: "name_asc", label: "Name A to Z" },
+                        { value: "stock_asc", label: "Stock low to high" },
+                        { value: "stock_desc", label: "Stock high to low" },
+                      ]}
+                    />
+                  </div>
+                </>
+              )}
             </div>
+          </div>
+
+          {tab === "stones" && hasStoneFilters && (
+            <div className="flex flex-wrap items-center gap-1.5 mt-3">
+              {stoneType && <FilterChip label={`Type: ${optLabel(STONE_TYPES, stoneType)}`} onClear={() => { setStoneType(""); setStonePage(1); }} />}
+              {color && <FilterChip label={`Colour: ${color}`} onClear={() => { setColor(""); setStonePage(1); }} />}
+              {intent && <FilterChip label={`Intent: ${intent}`} onClear={() => { setIntent(""); setStonePage(1); }} />}
+              {zodiac && <FilterChip label={`Zodiac: ${optLabel(ZODIAC_OPTIONS, zodiac)}`} onClear={() => { setZodiac(""); setStonePage(1); }} />}
+              <button
+                onClick={() => { setStoneType(""); setColor(""); setIntent(""); setZodiac(""); setStonePage(1); }}
+                className="text-[12px] px-1.5 cursor-pointer hover:underline underline-offset-4"
+                style={{ color: T.danger }}
+              >
+                Clear all
+              </button>
+            </div>
+          )}
+          {tab === "designs" && hasDesignFilters && (
+            <div className="flex flex-wrap items-center gap-1.5 mt-3">
+              {form && <FilterChip label={`Type: ${form}`} onClear={() => { setForm(""); setDesignPage(1); }} />}
+              {metal && <FilterChip label={`Metal: ${optLabel(METAL_OPTIONS, metal)}`} onClear={() => { setMetal(""); setDesignPage(1); }} />}
+              <button
+                onClick={() => { setForm(""); setMetal(""); setDesignPage(1); }}
+                className="text-[12px] px-1.5 cursor-pointer hover:underline underline-offset-4"
+                style={{ color: T.danger }}
+              >
+                Clear all
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab === "stones" && (
+        <>
+        <Card className="!p-0 md:flex md:flex-col md:min-h-0">
+          <div className="flex items-center justify-between px-4 h-11 rounded-t-[15px]" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
+            <h2 className="text-[13.5px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>
+              {filteredStones.length} stones
+            </h2>
             <span className="inline-flex items-center gap-1.5 text-[11px] tracking-[0.06em] font-medium px-2 py-[3px] rounded-[6px] whitespace-nowrap" style={{ color: SHOPIFY_GREEN_DARK, background: SHOPIFY_TINT }}><ShopifyIcon size={11} /> Synced · Shopify</span>
           </div>
+          {loading ? <TableSkeleton cols={7} rows={8} /> : <>
           <div
-            className="hidden md:grid grid-cols-[minmax(220px,1.4fr)_130px_130px_100px_80px_120px_48px] gap-x-4 px-3 py-2.5 rounded-[8px] text-[11px] tracking-[0.07em] uppercase font-semibold"
-            style={{ color: T.muted, background: "rgba(89,82,54,0.035)" }}
+            className="hidden md:grid grid-cols-[minmax(220px,1.4fr)_130px_130px_100px_80px_120px_48px] gap-x-4 items-center px-4 h-10 text-[11px] tracking-[0.06em] uppercase font-medium"
+            style={{ color: T.faint, borderBottom: `1px solid ${T.border}` }}
           >
             <span>Stone</span>
             <span>Intent</span>
@@ -508,10 +562,11 @@ export default function InventoryPage() {
             <span className="text-right">Total</span>
             <span />
           </div>
-          {pagedStones.map((s, i, arr) => (
+          <div className="md:flex-1 md:min-h-0 overflow-y-auto max-h-[560px] md:max-h-none">
+          {stonePaginated.map((s, i, arr) => (
             <div
               key={s.sku}
-              className="grid md:grid-cols-[minmax(220px,1.4fr)_130px_130px_100px_80px_120px_48px] grid-cols-1 gap-x-4 gap-y-1.5 items-center px-3 py-3 text-[13.5px]"
+              className="grid md:grid-cols-[minmax(220px,1.4fr)_130px_130px_100px_80px_120px_48px] grid-cols-1 gap-x-4 gap-y-1.5 items-center px-4 py-2.5 text-[13px] even:bg-[rgba(89,82,54,0.025)] last:rounded-b-[15px]"
               style={{ borderBottom: i < arr.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
             >
               <span className="flex items-center gap-3 min-w-0">
@@ -552,31 +607,29 @@ export default function InventoryPage() {
               </span>
             </div>
           ))}
-          {filteredStones.length > PER_PAGE && (
-            <div className="mt-4">
-              <Pagination page={stonePage} totalPages={Math.ceil(filteredStones.length / PER_PAGE)} totalItems={filteredStones.length} perPage={PER_PAGE} onPageChange={setStonePage} />
-            </div>
-          )}
           {filteredStones.length === 0 && (
-            <p className="text-[13.5px] py-6 text-center" style={{ color: T.muted }}>No stones match the current filters.</p>
+            <EmptyState inline icon="gem" title="No stones" description="No stones match these filters." />
           )}
+          </div>
+          </>}
         </Card>
-        )
+        <Pagination page={stoneCurrentPage - 1} totalPages={stoneTotalPages} totalItems={filteredStones.length} perPage={PER_PAGE} onPageChange={(p) => setStonePage(p + 1)} />
+        </>
       )}
 
       {tab === "designs" && (
-        loading ? (
-          <Card><TableSkeleton rows={8} cols={6} /></Card>
-        ) : (
-        <Card>
-          <div className="flex items-center justify-between mb-3">
-            <div className="text-[11px] tracking-[0.08em] uppercase" style={{ color: T.faint }}>
+        <>
+        <Card className="!p-0 md:flex md:flex-col md:min-h-0">
+          <div className="flex items-center justify-between px-4 h-11 rounded-t-[15px]" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
+            <h2 className="text-[13.5px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>
               {filteredDesigns.length} designs
-            </div>
+            </h2>
+            <span className="inline-flex items-center gap-1.5 text-[11px] tracking-[0.06em] font-medium px-2 py-[3px] rounded-[6px] whitespace-nowrap" style={{ color: SHOPIFY_GREEN_DARK, background: SHOPIFY_TINT }}><ShopifyIcon size={11} /> Synced · Shopify</span>
           </div>
+          {loading ? <TableSkeleton cols={5} rows={8} /> : <>
           <div
-            className="hidden md:grid grid-cols-[minmax(200px,1.2fr)_120px_120px_120px_48px] gap-x-4 px-3 py-2.5 rounded-[8px] text-[11px] tracking-[0.07em] uppercase font-semibold"
-            style={{ color: T.muted, background: "rgba(89,82,54,0.035)" }}
+            className="hidden md:grid grid-cols-[minmax(200px,1.2fr)_120px_120px_120px_48px] gap-x-4 items-center px-4 h-10 text-[11px] tracking-[0.06em] uppercase font-medium"
+            style={{ color: T.faint, borderBottom: `1px solid ${T.border}` }}
           >
             <span>Design</span>
             <span>Design type</span>
@@ -584,10 +637,11 @@ export default function InventoryPage() {
             <span className="text-right">Remaining</span>
             <span />
           </div>
-          {pagedDesigns.map((d, i, arr) => (
+          <div className="md:flex-1 md:min-h-0 overflow-y-auto max-h-[560px] md:max-h-none">
+          {designPaginated.map((d, i, arr) => (
             <div
               key={d.slug}
-              className="grid md:grid-cols-[minmax(200px,1.2fr)_120px_120px_120px_48px] grid-cols-1 gap-x-4 gap-y-1.5 items-center px-3 py-3 text-[13.5px]"
+              className="grid md:grid-cols-[minmax(200px,1.2fr)_120px_120px_120px_48px] grid-cols-1 gap-x-4 gap-y-1.5 items-center px-4 py-2.5 text-[13px] even:bg-[rgba(89,82,54,0.025)] last:rounded-b-[15px]"
               style={{ borderBottom: i < arr.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
             >
               <span className="flex items-center gap-3 min-w-0">
@@ -626,50 +680,100 @@ export default function InventoryPage() {
               </span>
             </div>
           ))}
-          {filteredDesigns.length > PER_PAGE && (
-            <div className="mt-4">
-              <Pagination page={designPage} totalPages={Math.ceil(filteredDesigns.length / PER_PAGE)} totalItems={filteredDesigns.length} perPage={PER_PAGE} onPageChange={setDesignPage} />
-            </div>
-          )}
           {filteredDesigns.length === 0 && (
-            <p className="text-[13.5px] py-6 text-center" style={{ color: T.muted }}>No designs match the current filters.</p>
+            <EmptyState inline icon="gem" title="No designs" description="No jewellery designs match these filters." />
           )}
+          </div>
+          </>}
         </Card>
-        )
+        <Pagination page={designCurrentPage - 1} totalPages={designTotalPages} totalItems={filteredDesigns.length} perPage={PER_PAGE} onPageChange={(p) => setDesignPage(p + 1)} />
+        </>
       )}
 
       {tab === "energisation" && (
-        loading ? (
-          <Card><TableSkeleton rows={8} cols={6} /></Card>
-        ) : (
         <>
-          <div className="flex items-center justify-between mb-3">
-            <div className="text-[11px] tracking-[0.08em] uppercase font-medium" style={{ color: T.faint }}>
-              {ENERGISATION.length} packages
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+            <div
+              className="inline-flex items-center gap-1 p-1 rounded-full"
+              style={{ background: "rgba(89,82,54,0.07)", border: `1px solid ${T.borderSoft}` }}
+            >
+              {([["packages", `Packages`, ENERGISATION.length], ["gurujis", "Gurujis / Pandits", GURUJIS.length]] as const).map(([key, label, count]) => {
+                const active = energTab === key;
+                return (
+                  <button
+                    key={key}
+                    onClick={() => setEnergTab(key)}
+                    className="h-8 px-3.5 rounded-full text-[13px] whitespace-nowrap inline-flex items-center gap-1.5 shrink-0 transition-all duration-200 cursor-pointer"
+                    style={
+                      active
+                        ? { background: T.card, color: T.text, fontWeight: 600, border: `1px solid ${T.border}`, boxShadow: "0 1px 3px rgba(43,42,34,0.10)" }
+                        : { color: T.muted, border: "1px solid transparent" }
+                    }
+                  >
+                    {label}
+                    <span
+                      className="text-[11px] font-semibold tabular-nums min-w-[18px] px-1.5 py-px rounded-full text-center"
+                      style={active ? { color: T.accentInk, background: T.accent } : { color: T.faint, background: "rgba(89,82,54,0.08)" }}
+                    >
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
             <span className="inline-flex items-center gap-1.5 text-[11px] tracking-[0.06em] font-medium px-2 py-[3px] rounded-[6px] whitespace-nowrap" style={{ color: SHOPIFY_GREEN_DARK, background: SHOPIFY_TINT }}><ShopifyIcon size={11} /> Synced · Shopify</span>
           </div>
-          <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
-            {ENERGISATION.map((tier) => {
+
+          {energTab === "packages" && (
+          <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
+            {ENERGISATION.map((tier, ti) => {
               const enabled = !disabledEnergisation.has(tier.key);
               return (
                 <div
                   key={tier.key}
-                  className="rounded-[12px] p-5 flex flex-col transition-opacity duration-200"
-                  style={{ background: T.card, border: `1px solid ${T.border}`, boxShadow: T.shadow, opacity: enabled ? 1 : 0.55 }}
+                  className="rounded-[18px] p-5 flex flex-col transition-opacity duration-200"
+                  style={{ background: T.card, border: `1px solid ${T.borderSoft}`, boxShadow: T.shadow, opacity: enabled ? 1 : 0.55 }}
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <div className="text-[14px] font-semibold" style={{ color: T.text }}>{tier.name}</div>
-                      <div className="font-devanagari text-[12px] mt-0.5" style={{ color: T.faint }}>{tier.sanskrit}</div>
-                    </div>
+                  {/* Tier rung + free marker */}
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10.5px] font-semibold tracking-[0.14em] uppercase" style={{ color: T.gold }}>
+                      Tier {ti + 1}
+                    </span>
                     {tier.fee === 0 && <Chip tone="good">Free</Chip>}
                   </div>
-                  <div className="font-title text-[22px] font-semibold tracking-[-0.01em] tabular-nums mt-4" style={{ color: T.text }}>
+
+                  <div className="flex items-baseline gap-2 mt-2">
+                    <span className="text-[16px] font-semibold" style={{ color: T.text }}>{tier.name}</span>
+                    <span className="font-devanagari text-[12px]" style={{ color: T.faint }}>{tier.sanskrit}</span>
+                  </div>
+
+                  <div className="font-title text-[24px] font-semibold tracking-[-0.01em] tabular-nums mt-3" style={{ color: T.text }}>
                     {tier.fee === 0 ? "Included" : catalogInr(tier.fee)}
                   </div>
-                  <div className="text-[12.5px] mt-1 mb-5" style={{ color: T.muted }}>{tier.duration}</div>
-                  <div className="mt-auto flex items-center justify-between pt-3" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+                  <div className="text-[12px] mt-0.5" style={{ color: T.muted }}>{tier.duration}</div>
+
+                  {/* What the tier includes */}
+                  <div className="mt-4 pt-4 space-y-2" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+                    {tier.includes.slice(0, 3).map((inc) => (
+                      <div key={inc} className="flex items-start gap-2 text-[12px] leading-snug" style={{ color: T.muted }}>
+                        <span
+                          className="w-[15px] h-[15px] rounded-full flex items-center justify-center shrink-0 mt-px"
+                          style={{ background: T.accentMuted }}
+                        >
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-[8px] h-[8px]" style={{ color: T.accent }}>
+                            <path d="M20 6L9 17l-5-5" />
+                          </svg>
+                        </span>
+                        <span className="min-w-0">{inc}</span>
+                      </div>
+                    ))}
+                    {tier.includes.length > 3 && (
+                      <div className="text-[11px] pl-[23px]" style={{ color: T.faint }}>+{tier.includes.length - 3} more</div>
+                    )}
+                  </div>
+
+                  {/* Listing state + actions */}
+                  <div className="mt-auto flex items-center justify-between pt-4" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
                     <ExternalLink href={`https://admin.shopify.com/products/energisation-${tier.key}`} label="Shopify" shopify />
                     <ToggleSwitch enabled={enabled} onToggle={() => toggleEnergisation(tier.key)} />
                   </div>
@@ -677,43 +781,53 @@ export default function InventoryPage() {
               );
             })}
           </div>
+          )}
 
-          <Card>
-            <div className="flex items-center justify-between mb-3">
-              <div className="text-[11px] tracking-[0.08em] uppercase font-medium" style={{ color: T.faint }}>
+          {energTab === "gurujis" && (
+          <Card className="!p-0 md:flex md:flex-col md:min-h-0">
+            <div className="flex items-center justify-between px-4 h-12 rounded-t-[15px]" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
+              <h2 className="text-[13.5px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>
                 Gurujis / Pandits
-              </div>
+              </h2>
               <button
                 onClick={() => setShowAddGuruji(true)}
-                className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[9px] text-[12px] font-medium cursor-pointer hover:opacity-90 transition-opacity"
-                style={{ background: T.primary, color: T.primaryInk }}
+                className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[9px] text-[12px] font-medium cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.08)]"
+                style={{ background: T.popover, border: `1px solid ${T.border}`, color: T.text }}
               >
                 + Add Guruji
               </button>
+            </div>
+            <div
+              className="hidden md:grid grid-cols-[minmax(220px,1.3fr)_1fr_130px_150px_130px] gap-x-4 items-center px-4 h-10 text-[11px] tracking-[0.06em] uppercase font-medium"
+              style={{ color: T.faint, borderBottom: `1px solid ${T.border}` }}
+            >
+              <span>Guruji</span>
+              <span>Speciality</span>
+              <span>Location</span>
+              <span>Phone</span>
+              <span className="text-right">Status</span>
             </div>
             {GURUJIS.map((g, i) => {
               const enabled = !disabledGurujis.has(g.id);
               return (
                 <div
                   key={g.id}
-                  className="grid md:grid-cols-[minmax(220px,1.4fr)_1fr_150px_auto] items-center gap-x-4 gap-y-1 py-3.5 transition-opacity"
+                  className="grid md:grid-cols-[minmax(220px,1.3fr)_1fr_130px_150px_130px] grid-cols-1 gap-x-4 gap-y-1 items-center px-4 py-2.5 transition-opacity even:bg-[rgba(89,82,54,0.025)] last:rounded-b-[15px]"
                   style={{ borderBottom: i < GURUJIS.length - 1 ? `1px solid ${T.borderSoft}` : "none", opacity: enabled ? 1 : 0.55 }}
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <span
-                      className="w-9 h-9 rounded-full flex items-center justify-center text-[13px] font-semibold shrink-0"
-                      style={{ background: `${T.accent}15`, border: `1px solid ${T.accent}35`, color: T.accent }}
+                      className="w-8 h-8 rounded-[10px] flex items-center justify-center text-[11.5px] font-semibold shrink-0"
+                      style={{ background: T.accentFaint, border: `1px solid ${T.borderSoft}`, color: T.accent }}
                     >
-                      {g.name.split(" ").slice(-1)[0][0]}
+                      {g.name.split(" ").map((w) => w[0]).slice(-2).join("")}
                     </span>
-                    <div className="min-w-0">
-                      <div className="text-[13.5px] font-medium truncate" style={{ color: T.text }}>{g.name}</div>
-                      <div className="text-[12px] truncate" style={{ color: T.muted }}>{g.speciality}</div>
-                    </div>
+                    <span className="text-[13px] font-semibold truncate" style={{ color: T.text }}>{g.name}</span>
                   </div>
-                  <div className="text-[12.5px] md:pl-0 pl-12" style={{ color: T.muted }}>{g.location}</div>
-                  <div className="text-[12.5px] tabular-nums md:pl-0 pl-12" style={{ color: T.muted }}>{g.phone}</div>
-                  <div className="flex items-center gap-2.5 justify-end md:pl-0 pl-12">
+                  <span className="text-[12px] truncate md:pl-0 pl-11" style={{ color: T.muted }}>{g.speciality}</span>
+                  <span className="text-[12px] truncate md:pl-0 pl-11" style={{ color: T.muted }}>{g.location}</span>
+                  <span className="text-[12px] tabular-nums md:pl-0 pl-11" style={{ color: T.muted }}>{g.phone}</span>
+                  <div className="flex items-center gap-2.5 justify-end md:pl-0 pl-11">
                     <span className="text-[11px] font-medium uppercase tracking-[0.06em]" style={{ color: enabled ? T.good : T.faint }}>
                       {enabled ? "Active" : "Inactive"}
                     </span>
@@ -723,6 +837,7 @@ export default function InventoryPage() {
               );
             })}
           </Card>
+          )}
 
           <Modal open={showAddGuruji} onClose={() => setShowAddGuruji(false)} title="Add Guruji">
             <div className="space-y-3">
@@ -736,18 +851,18 @@ export default function InventoryPage() {
             </div>
           </Modal>
         </>
-        )
       )}
 
-      {toast && (
-        <div
-          className="fixed top-6 right-6 z-[100] flex items-center gap-2 px-4 py-3 rounded-[10px] shadow-lg text-[13.5px] font-medium animate-in"
-          style={{ background: T.card, border: `1px solid ${T.border}`, color: T.good }}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6L9 17l-5-5"/></svg>
-          {toast}
-        </div>
-      )}
+      {toast && <Toast message={toast} />}
+      </div>
     </>
+  );
+}
+
+export default function InventoryPage() {
+  return (
+    <Suspense fallback={null}>
+      <InventoryPageInner />
+    </Suspense>
   );
 }

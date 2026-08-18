@@ -1,8 +1,10 @@
 "use client";
-import Link from "next/link";
+import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { T } from "@/lib/theme";
 import { Select } from "./Input";
+import { Modal } from "./Modal";
+import { GhostBtn } from "./Button";
 import type { NavItem } from "./Sidebar";
 
 interface TopBarProps {
@@ -14,6 +16,7 @@ interface TopBarProps {
 export function TopBar({ items, userLabel, onUserClick }: TopBarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const [signOutOpen, setSignOutOpen] = useState(false);
   const currentItem = items.find((i) => pathname === i.href || pathname.startsWith(i.href + "/"));
 
   return (
@@ -31,12 +34,28 @@ export function TopBar({ items, userLabel, onUserClick }: TopBarProps) {
         className="flex-1"
       />
       <button
-        onClick={onUserClick}
-        className="text-[11px] px-2 py-1.5 rounded-[9px] transition-all duration-200 hover:bg-[rgba(160,125,56,0.10)] cursor-pointer"
+        onClick={() => setSignOutOpen(true)}
+        className="text-[11px] px-2 py-1.5 rounded-[9px] transition-all duration-200 hover:bg-[rgba(119,123,98,0.10)] cursor-pointer"
         style={{ color: T.muted }}
       >
         {userLabel} ↺
       </button>
+
+      <Modal open={signOutOpen} onClose={() => setSignOutOpen(false)} title="Sign out?">
+        <p className="text-[13.5px] leading-relaxed" style={{ color: T.muted }}>
+          You’ll be returned to the sign-in screen and will need to log in again to continue.
+        </p>
+        <div className="flex items-center justify-end gap-2.5 mt-6">
+          <GhostBtn onClick={() => setSignOutOpen(false)}>Cancel</GhostBtn>
+          <button
+            onClick={() => { setSignOutOpen(false); onUserClick?.(); }}
+            className="h-10 px-5 rounded-[9px] text-[13px] font-semibold cursor-pointer transition-all duration-200 hover:brightness-110"
+            style={{ background: T.danger, color: "#fdf6ea" }}
+          >
+            Sign out
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 }

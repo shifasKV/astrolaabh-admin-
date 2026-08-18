@@ -1,20 +1,24 @@
 "use client";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, Tabs, Select, SearchFilter, TableSkeleton, Pagination, ExportButton } from "@/components/ui";
+import {
+  PageHeader, Card, Chip, Select, Pagination,
+  fmtChipDate, Tooltip, ToolbarSearch, FiltersPopover, FilterField, FilterChip, DateRangeFields, ColumnStatusFilter, EmptyState, TableSkeleton } from "@/components/ui";
 import { T } from "@/lib/theme";
+import { useSimulatedLoad } from "@/lib/useSimulatedLoad";
 import { MOCK_ENERGISATION } from "@/lib/mock";
-
-const TABS = [
-  { key: "all", label: "All" },
-  { key: "not_scheduled", label: "Not scheduled" },
-  { key: "link_pending", label: "Link pending" },
-];
 
 type SortKey = "newest" | "oldest" | "upcoming" | "order_desc" | "order_asc";
 type ViewMode = "list" | "calendar";
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
+
+const STATUS_FILTER_LABEL: Record<string, string> = {
+  not_scheduled: "Not scheduled",
+  link_pending: "Link pending",
+  scheduled: "Scheduled",
+  completed: "Done",
+};
 
 function toISODate(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -40,46 +44,46 @@ function formatHour(h: number): string {
 
 export default function EnergisationPage() {
   const [viewMode, setViewMode] = useState<ViewMode>("list");
-  const [tab, setTab] = useState("all");
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<SortKey>("newest");
   const [filterStatus, setFilterStatus] = useState("");
+  const [showStatusFilter, setShowStatusFilter] = useState(false);
   const [filterCustomer, setFilterCustomer] = useState("");
   const [filterDateFrom, setFilterDateFrom] = useState("");
   const [filterDateTo, setFilterDateTo] = useState("");
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [dpYear, setDpYear] = useState(new Date().getFullYear());
-  const [dpMonth, setDpMonth] = useState(new Date().getMonth());
-  const [page, setPage] = useState(0);
+  const [showFilters, setShowFilters] = useState(false);
+  const [page, setPage] = useState(1);
   const [calWeekBase, setCalWeekBase] = useState(() => new Date());
-  const [goToDateOpen, setGoToDateOpen] = useState(false);
+  const [calScope, setCalScope] = useState<"day" | "week">("week");
+  const hoursRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    /* open on the working morning, not midnight */
+    if (viewMode === "calendar" && hoursRef.current) hoursRef.current.scrollTop = 5 * 40;
+  }, [viewMode, calScope]);
+  const [selectedEvent, setSelectedEvent] = useState<(typeof MOCK_ENERGISATION)[number] | null>(null);
   const [gtdYear, setGtdYear] = useState(new Date().getFullYear());
   const [gtdMonth, setGtdMonth] = useState(new Date().getMonth());
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => { const t = setTimeout(() => setLoading(false), 700); return () => clearTimeout(t); }, []);
+  const PER_PAGE = 10;
+  const loading = useSimulatedLoad();
 
-  const PER_PAGE = 9;
+  const matchesStatus = (e: (typeof MOCK_ENERGISATION)[number], status: string) => {
+    if (!status) return true;
+    if (status === "not_scheduled") return e.status === "pending";
+    if (status === "link_pending") return e.status === "scheduled" && !e.liveLink;
+    if (status === "scheduled") return e.status === "scheduled";
+    if (status === "completed") return e.status === "completed";
+    return true;
+  };
 
-  const filtered = MOCK_ENERGISATION.filter((e) => {
-    if (tab === "upcoming") return e.status === "scheduled" && e.scheduledAt;
-    if (tab === "not_scheduled") return e.status === "pending";
-    if (tab === "link_pending") return e.status === "scheduled" && !e.liveLink;
-    return e.status !== "not_required";
-  }).filter((e) => {
+  const filtered = MOCK_ENERGISATION.filter((e) => e.status !== "not_required").filter((e) => {
     if (!search) return true;
     const q = search.toLowerCase();
     return e.customerName.toLowerCase().includes(q) || e.orderNumber.toLowerCase().includes(q) || e.stoneDescription.toLowerCase().includes(q);
   }).filter((e) => {
     if (filterCustomer && e.customerName !== filterCustomer) return false;
     return true;
-  }).filter((e) => {
-    if (!filterStatus) return true;
-    if (filterStatus === "pending") return e.status === "pending";
-    if (filterStatus === "scheduled") return e.status === "scheduled";
-    if (filterStatus === "completed") return e.status === "completed";
-    return true;
-  }).filter((e) => {
+  }).filter((e) => matchesStatus(e, filterStatus)).filter((e) => {
     if (!filterDateFrom && !filterDateTo) return true;
     if (!e.scheduledAt) return false;
     const d = e.scheduledAt.slice(0, 10);
@@ -102,20 +106,21 @@ export default function EnergisationPage() {
   });
 
   const totalPages = Math.ceil(filtered.length / PER_PAGE);
-  const paginated = filtered.slice(page * PER_PAGE, (page + 1) * PER_PAGE);
+  const currentPage = page > totalPages && totalPages > 0 ? totalPages : page;
+  const paginated = filtered.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE);
 
-  const exportData = filtered.map((e) => ({
-    id: e.id,
-    customer: e.customerName,
-    orderNumber: e.orderNumber,
-    stone: e.stoneDescription,
-    status: e.status,
-    scheduledAt: e.scheduledAt ?? "",
-    method: e.method ?? "",
-  }));
-
-  const uniqueCustomers = [...new Set(MOCK_ENERGISATION.filter((e) => e.status !== "not_required").map((e) => e.customerName))].sort();
+  const allActive = MOCK_ENERGISATION.filter((e) => e.status !== "not_required");
+  const uniqueCustomers = [...new Set(allActive.map((e) => e.customerName))].sort();
   const hasActiveFilters = !!filterCustomer || !!filterStatus || !!filterDateFrom || !!filterDateTo;
+  const activeFilterCount = [filterCustomer, filterDateFrom || filterDateTo].filter(Boolean).length;
+  const statusOptions = [
+    { value: "", label: "All statuses", count: allActive.length },
+    ...Object.entries(STATUS_FILTER_LABEL).map(([value, label]) => ({
+      value,
+      label,
+      count: allActive.filter((e) => matchesStatus(e, value)).length,
+    })),
+  ];
 
   const weekDays = useMemo(() => getWeekDays(calWeekBase), [calWeekBase]);
   const todayISO = toISODate(new Date());
@@ -132,466 +137,492 @@ export default function EnergisationPage() {
     return map;
   }, []);
 
-  const prevWeek = () => {
-    const d = new Date(calWeekBase);
-    d.setDate(d.getDate() - 7);
-    setCalWeekBase(d);
+  const visibleDays = calScope === "day" ? [calWeekBase] : weekDays;
+
+  /* Today lands on today's day view — the day's actual schedule, not just the week */
+  const goToToday = () => {
+    setCalWeekBase(new Date());
+    setCalScope("day");
   };
-  const nextWeek = () => {
-    const d = new Date(calWeekBase);
-    d.setDate(d.getDate() + 7);
-    setCalWeekBase(d);
-  };
-  const goToToday = () => setCalWeekBase(new Date());
 
   return (
     <>
-      <PageHeader
-        title="Energisation management"
-        sub="Track preparation and completion of gemstone energisation rituals"
-      />
+      <div className="md:h-[calc(100dvh-78px)] md:flex md:flex-col md:min-h-0">
+      <PageHeader title="Energisation management" />
 
-      <div className="mb-4">
-        <Tabs
-          tabs={TABS.map((t) => ({
-            ...t,
-            count: MOCK_ENERGISATION.filter((e) =>
-              t.key === "all" ? (e.status !== "not_required") :
-              t.key === "upcoming" ? (e.status === "scheduled" && !!e.scheduledAt) :
-              t.key === "not_scheduled" ? (e.status === "pending") :
-              (e.status === "scheduled" && !e.liveLink)
-            ).length,
-          }))}
-          active={tab}
-          onChange={(key) => { setTab(key); setPage(0); if (key !== "all") setViewMode("list"); }}
-        />
-      </div>
-
-      {/* Search / Info + View toggle — fixed height row */}
-      <div className="flex items-center gap-3 mb-3 h-10">
-        <div className="flex-1 min-w-0">
-          {viewMode === "list" ? (
-            <div className="w-1/2">
-              <SearchFilter search={search} onSearchChange={setSearch} placeholder="Search customer, order, stone…" />
-            </div>
-          ) : (
-            <div className="flex items-center gap-2">
+      {/* Pinned controls — search, view toggle, filters stay visible while the table scrolls */}
+      <div
+        className="sticky top-0 z-30 -mx-5 md:-mx-10 px-5 md:px-10 pt-1 pb-3 mb-4"
+        style={{ background: T.bg, boxShadow: `0 1px 0 ${T.borderSoft}` }}
+      >
+        <div className="flex flex-wrap items-center gap-2">
+          {/* View switch — segmented pills, icons only */}
+          <div
+            className="inline-flex items-center gap-1 p-1 rounded-full shrink-0"
+            style={{ background: "rgba(89,82,54,0.07)", border: `1px solid ${T.borderSoft}` }}
+          >
+            {(["list", "calendar"] as const).map((mode) => (
+              <Tooltip key={mode} label={mode === "list" ? "List view" : "Calendar view"}>
+              <button
+                onClick={() => setViewMode(mode)}
+                aria-label={mode === "list" ? "List view" : "Calendar view"}
+                className="h-8 w-11 rounded-full inline-flex items-center justify-center shrink-0 transition-all duration-200 cursor-pointer"
+                style={
+                  viewMode === mode
+                    ? { background: T.card, color: T.text, border: `1px solid ${T.border}`, boxShadow: "0 1px 3px rgba(43,42,34,0.10)" }
+                    : { color: T.muted, border: "1px solid transparent" }
+                }
+              >
+                {mode === "list" ? (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                ) : (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 9h18"/></svg>
+                )}
+              </button>
+              </Tooltip>
+            ))}
+          </div>
+          {viewMode === "calendar" && (
+            <div className="flex items-center gap-2 ml-1">
               <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: T.accent }} />
               <span className="text-[12px]" style={{ color: T.muted }}>Showing scheduled energisation rituals only</span>
             </div>
           )}
+          <div className="ml-auto flex items-center gap-2">
+            {viewMode === "list" && (
+              <>
+                <ToolbarSearch value={search} onChange={setSearch} placeholder="Search customer, order, stone…" />
+                <span className="hidden lg:block w-px h-5 mx-0.5" style={{ background: T.border }} />
+                <FiltersPopover count={activeFilterCount} open={showFilters} onToggle={() => setShowFilters(!showFilters)}>
+                  <FilterField label="Customer">
+                    <Select
+                      value={filterCustomer}
+                      onChange={(v) => { setFilterCustomer(v); setPage(1); }}
+                      searchable
+                      compact
+                      placeholder="All customers"
+                      options={[{ value: "", label: "All customers" }, ...uniqueCustomers.map((name) => ({ value: name, label: name }))]}
+                    />
+                  </FilterField>
+                  <FilterField label="Scheduled between">
+                    <DateRangeFields
+                      from={filterDateFrom}
+                      to={filterDateTo}
+                      onChange={(f, t) => { setFilterDateFrom(f); setFilterDateTo(t); setPage(1); }}
+                    />
+                  </FilterField>
+                </FiltersPopover>
+                <div className="w-[190px]">
+                  <Select
+                    value={sort}
+                    onChange={(val) => { setSort(val as SortKey); setPage(1); }}
+                    compact
+                    prefix="Sort: "
+                    options={[
+                      { value: "newest", label: "Newest" },
+                      { value: "oldest", label: "Oldest" },
+                      { value: "upcoming", label: "Upcoming" },
+                      { value: "order_desc", label: "Order date: Newest" },
+                      { value: "order_asc", label: "Order date: Oldest" },
+                    ]}
+                  />
+                </div>
+              </>
+            )}
+          </div>
         </div>
-        {tab === "all" && (
-          <div className="inline-flex rounded-[9px] overflow-hidden shrink-0" style={{ border: `1px solid ${T.border}` }}>
-            {(["list", "calendar"] as const).map((mode) => (
-              <button
-                key={mode}
-                onClick={() => setViewMode(mode)}
-                className="flex items-center gap-1.5 px-3 py-[6px] text-[12px] font-medium transition-all cursor-pointer"
-                style={{
-                  background: viewMode === mode ? T.accent : "transparent",
-                  color: viewMode === mode ? T.accentInk : T.muted,
-                }}
-              >
-                {mode === "list" ? (
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-                ) : (
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 9h18"/></svg>
-                )}
-                {mode === "list" ? "List" : "Calendar"}
-              </button>
-            ))}
+
+        {viewMode === "list" && hasActiveFilters && (
+          <div className="flex flex-wrap items-center gap-1.5 mt-3">
+            {filterCustomer && <FilterChip label={`Customer: ${filterCustomer}`} onClear={() => { setFilterCustomer(""); setPage(1); }} />}
+            {filterStatus && <FilterChip label={`Status: ${STATUS_FILTER_LABEL[filterStatus]}`} onClear={() => { setFilterStatus(""); setPage(1); }} />}
+            {(filterDateFrom || filterDateTo) && (
+              <FilterChip label={`Date: ${fmtChipDate(filterDateFrom)} – ${fmtChipDate(filterDateTo)}`} onClear={() => { setFilterDateFrom(""); setFilterDateTo(""); setPage(1); }} />
+            )}
+            <button
+              onClick={() => { setFilterCustomer(""); setFilterStatus(""); setFilterDateFrom(""); setFilterDateTo(""); setPage(1); }}
+              className="text-[12px] px-1.5 cursor-pointer hover:underline underline-offset-4"
+              style={{ color: T.danger }}
+            >
+              Clear all
+            </button>
           </div>
         )}
       </div>
 
       {viewMode === "list" && <>
-
-      {/* Filters & Sort */}
-      <div className="flex flex-wrap items-center gap-2.5 mb-4">
-        <div className="w-[200px]">
-          <Select
-            value={filterCustomer}
-            onChange={(v) => { setFilterCustomer(v); setPage(0); }}
-            searchable
-            compact
-            placeholder="All customers"
-            options={[
-              { value: "", label: "All customers" },
-              ...uniqueCustomers.map((name) => ({ value: name, label: name })),
-            ]}
-          />
-        </div>
-
-        <div className="w-[180px]">
-          <Select
+      <Card className="!p-0 md:flex md:flex-col md:min-h-0">
+        {loading ? (
+          <TableSkeleton cols={4} rows={8} />
+        ) : (
+          <>
+        <div
+          className="hidden sm:grid grid-cols-[64px_1fr_130px_150px] gap-3 items-center px-4 h-10 text-[11px] font-medium tracking-[0.06em] uppercase rounded-t-[15px]"
+          style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.border}` }}
+        >
+          <span>Order</span>
+          <span>Energisation</span>
+          <span>Scheduled</span>
+          <ColumnStatusFilter
             value={filterStatus}
-            onChange={(v) => { setFilterStatus(v); setPage(0); }}
-            compact
-            placeholder="All status"
-            options={[
-              { value: "", label: "All status" },
-              { value: "pending", label: "Not scheduled" },
-              { value: "scheduled", label: "Scheduled" },
-              { value: "completed", label: "Completed" },
-            ]}
+            options={statusOptions}
+            open={showStatusFilter}
+            onToggle={() => setShowStatusFilter(!showStatusFilter)}
+            onSelect={(v) => { setFilterStatus(v); setShowStatusFilter(false); setPage(1); }}
           />
         </div>
-
-        {/* Date range picker */}
-        <div className="relative">
-          <button
-            onClick={() => setShowDatePicker(!showDatePicker)}
-            className="h-9 px-3.5 rounded-[9px] text-[13.5px] flex items-center gap-2 cursor-pointer transition-all"
-            style={{ background: T.popover, border: `1px solid ${(filterDateFrom || filterDateTo) ? T.accentBorder : T.border}`, color: T.text }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-              <rect x="3" y="4" width="18" height="17" rx="2" /><path d="M8 2v4M16 2v4M3 9h18" />
-            </svg>
-            {(filterDateFrom || filterDateTo)
-              ? `${filterDateFrom ? new Date(filterDateFrom + "T00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "Start"} — ${filterDateTo ? new Date(filterDateTo + "T00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "End"}`
-              : "All dates"
-            }
-          </button>
-
-          {showDatePicker && (
-            <>
-              <div className="fixed inset-0 z-40" onClick={() => setShowDatePicker(false)} />
-              <div className="absolute top-full left-0 mt-1 z-50 flex rounded-[9px] shadow-lg overflow-hidden" style={{ background: T.popover, border: `1px solid ${T.border}` }}>
-                <div className="w-[130px] py-2 px-1.5 shrink-0" style={{ borderRight: `1px solid ${T.borderSoft}` }}>
-                  <div className="text-[9px] tracking-[0.06em] uppercase px-2 mb-1.5" style={{ color: T.faint }}>Quick select</div>
-                  {[
-                    { label: "Today", from: new Date().toISOString().slice(0, 10), to: new Date().toISOString().slice(0, 10) },
-                    { label: "Yesterday", from: new Date(Date.now() - 86400000).toISOString().slice(0, 10), to: new Date(Date.now() - 86400000).toISOString().slice(0, 10) },
-                    { label: "Last 7 days", from: new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10), to: new Date().toISOString().slice(0, 10) },
-                    { label: "Last 30 days", from: new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10), to: new Date().toISOString().slice(0, 10) },
-                  ].map((preset) => (
-                    <button key={preset.label} onClick={() => { setFilterDateFrom(preset.from); setFilterDateTo(preset.to); setShowDatePicker(false); setPage(0); }} className="w-full text-left px-2.5 py-2 rounded-[7px] text-[12px] transition-colors cursor-pointer hover:bg-[rgba(160,125,56,0.10)]" style={{ color: T.text }}>{preset.label}</button>
-                  ))}
-                  {(filterDateFrom || filterDateTo) && (
-                    <button onClick={() => { setFilterDateFrom(""); setFilterDateTo(""); setShowDatePicker(false); setPage(0); }} className="w-full text-left px-2.5 py-2 rounded-[7px] text-[11px] mt-1 transition-colors cursor-pointer hover:bg-[rgba(176,84,84,0.06)]" style={{ color: T.danger }}>Clear dates</button>
-                  )}
-                </div>
-                <div className="p-4 w-[280px]">
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="flex-1">
-                      <div className="text-[9px] uppercase tracking-[0.06em] mb-1" style={{ color: T.faint }}>After</div>
-                      <input type="date" value={filterDateFrom} onChange={(e) => { setFilterDateFrom(e.target.value); setPage(0); }} className="w-full h-8 px-2 rounded-[7px] text-[11px] outline-none" style={{ background: T.bg, border: `1px solid ${T.borderSoft}`, color: T.text }} />
-                    </div>
-                    <span className="text-[11px] mt-3" style={{ color: T.faint }}>—</span>
-                    <div className="flex-1">
-                      <div className="text-[9px] uppercase tracking-[0.06em] mb-1" style={{ color: T.faint }}>Before</div>
-                      <input type="date" value={filterDateTo} onChange={(e) => { setFilterDateTo(e.target.value); setPage(0); }} className="w-full h-8 px-2 rounded-[7px] text-[11px] outline-none" style={{ background: T.bg, border: `1px solid ${T.borderSoft}`, color: T.text }} />
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between mb-2">
-                    <button type="button" onClick={() => { if (dpMonth === 0) { setDpMonth(11); setDpYear((y) => y - 1); } else setDpMonth((m) => m - 1); }} className="w-6 h-6 rounded-full flex items-center justify-center cursor-pointer hover:bg-[rgba(160,125,56,0.15)]" style={{ color: T.muted }}>‹</button>
-                    <span className="text-[11px] font-medium" style={{ color: T.text }}>{["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][dpMonth]} {dpYear}</span>
-                    <button type="button" onClick={() => { if (dpMonth === 11) { setDpMonth(0); setDpYear((y) => y + 1); } else setDpMonth((m) => m + 1); }} className="w-6 h-6 rounded-full flex items-center justify-center cursor-pointer hover:bg-[rgba(160,125,56,0.15)]" style={{ color: T.muted }}>›</button>
-                  </div>
-                  <div className="grid grid-cols-7 gap-0.5 mb-1">
-                    {["Mo","Tu","We","Th","Fr","Sa","Su"].map((d) => <div key={d} className="text-center text-[9px] py-0.5" style={{ color: T.faint }}>{d}</div>)}
-                  </div>
-                  <div className="grid grid-cols-7 gap-0.5">
-                    {Array.from({ length: (() => { const fd = new Date(dpYear, dpMonth, 1).getDay(); return fd === 0 ? 6 : fd - 1; })() }).map((_, i) => <div key={`e${i}`} />)}
-                    {Array.from({ length: new Date(dpYear, dpMonth + 1, 0).getDate() }).map((_, i) => {
-                      const day = i + 1;
-                      const iso = `${dpYear}-${String(dpMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-                      const isFrom = filterDateFrom === iso;
-                      const isTo = filterDateTo === iso;
-                      const inRange = filterDateFrom && filterDateTo && iso >= filterDateFrom && iso <= filterDateTo;
-                      return (
-                        <button key={day} type="button" onClick={() => { if (!filterDateFrom || (filterDateFrom && filterDateTo)) { setFilterDateFrom(iso); setFilterDateTo(""); } else { if (iso < filterDateFrom) { setFilterDateTo(filterDateFrom); setFilterDateFrom(iso); } else { setFilterDateTo(iso); } } setPage(0); }}
-                          className="w-[34px] h-[34px] rounded-full flex items-center justify-center text-[11px] transition-colors cursor-pointer"
-                          style={{ background: (isFrom || isTo) ? T.accent : inRange ? "rgba(160,125,56,0.16)" : "transparent", color: (isFrom || isTo) ? T.accentInk : T.text, fontWeight: (isFrom || isTo) ? 700 : 400 }}
-                        >{day}</button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-
-        <div className="ml-auto flex items-center gap-2">
-          {hasActiveFilters && (
-            <button
-              onClick={() => { setFilterCustomer(""); setFilterStatus(""); setFilterDateFrom(""); setFilterDateTo(""); setPage(0); }}
-              className="text-[11px] px-2.5 py-1.5 rounded-[7px] cursor-pointer transition-opacity hover:opacity-80"
-              style={{ color: T.danger, background: "rgba(176,84,84,0.08)", border: "1px solid rgba(176,84,84,0.15)" }}
-            >
-              Clear filters
-            </button>
-          )}
-          <div className="w-[180px]">
-            <Select
-              value={sort}
-              onChange={(val) => { setSort(val as SortKey); setPage(0); }}
-              compact
-              prefix="Sort: "
-              options={[
-                { value: "newest", label: "Newest" },
-                { value: "oldest", label: "Oldest" },
-                { value: "upcoming", label: "Upcoming" },
-                { value: "order_desc", label: "Order date: Newest" },
-                { value: "order_asc", label: "Order date: Oldest" },
-              ]}
-            />
-          </div>
-          <ExportButton data={exportData} filename="energisation" className="ml-2" />
-        </div>
-      </div>
-
-      {loading ? (
-        <Card><TableSkeleton rows={6} cols={5} /></Card>
-      ) : (
-        <>
-          {/* List view */}
-          <Card>
-        {/* Table header */}
-        <div className="hidden sm:grid grid-cols-[1fr_140px_120px] gap-3 px-3 py-2 text-[11px] tracking-[0.06em] uppercase" style={{ color: T.faint, borderBottom: `1px solid ${T.borderSoft}` }}>
-          <span>Energisation details</span>
-          <span>Scheduled date</span>
-          <span>Status</span>
-        </div>
+        <div className="md:flex-1 md:min-h-0 overflow-y-auto max-h-[560px] md:max-h-none">
 
         {paginated.length === 0 ? (
-          <p className="text-[13.5px] text-center py-6" style={{ color: T.muted }}>No energisation tasks match your filters.</p>
+          <EmptyState inline icon="search" title="No energisation tasks" description="Nothing matches these filters right now." />
         ) : (
-          paginated.map((e) => (
-            <Link
-              key={e.id}
-              href={`/energisation/${e.id}`}
-              className="group grid grid-cols-1 sm:grid-cols-[1fr_140px_120px] gap-2 sm:gap-3 items-center px-3 py-3.5 transition-all duration-150 rounded-[8px] hover:bg-[rgba(160,125,56,0.07)]"
-              style={{ borderBottom: `1px solid ${T.borderSoft}` }}
-            >
-              {/* Energisation details */}
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-[14px] font-medium" style={{ color: T.text }}>{e.customerName}</span>
-                  {!e.liveLink && e.status === "scheduled" && <Chip tone="danger">Link pending</Chip>}
-                </div>
-                <div className="flex items-baseline gap-3 mt-0.5 min-w-0">
-                  <span className="text-[13px] truncate" style={{ color: T.muted }}>
+          paginated.map((e, idx) => {
+            /* One status per row, most urgent wins — not scheduled > link pending > scheduled > done */
+            const st =
+              e.status === "pending"
+                ? { tone: "danger" as const, label: "Not scheduled" }
+                : e.status === "scheduled" && !e.liveLink
+                  ? { tone: "danger" as const, label: "Link pending" }
+                  : e.status === "scheduled"
+                    ? { tone: "gold" as const, label: "Scheduled" }
+                    : { tone: "good" as const, label: "Done" };
+            return (
+              <Link
+                key={e.id}
+                href={`/energisation/${e.id}`}
+                className="group grid grid-cols-1 sm:grid-cols-[64px_1fr_130px_150px] gap-2 sm:gap-3 items-center px-4 py-2.5 transition-colors duration-150 last:rounded-b-[15px] even:bg-[rgba(89,82,54,0.025)] hover:!bg-[rgba(119,123,98,0.08)]"
+                style={{ borderBottom: idx < paginated.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
+              >
+                <span className="text-[11.5px] tabular-nums" style={{ color: T.faint }}>#{e.orderNumber.replace("AL-ORD-", "")}</span>
+                <div className="min-w-0">
+                  <div className="text-[13px] font-semibold truncate" style={{ color: T.text }}>{e.customerName}</div>
+                  <div className="text-[12px] truncate mt-px" style={{ color: T.muted }}>
                     {e.method || "Method not assigned"}
                     {e.assignedTo && <span style={{ color: T.faint }}> — {e.assignedTo}</span>}
-                  </span>
-                  <span className="text-[11px] tracking-[0.05em] uppercase tabular-nums shrink-0" style={{ color: T.faint }}>{e.orderNumber}</span>
+                  </div>
                 </div>
-              </div>
-
-              {/* Scheduled date */}
-              <div className="min-w-0">
-                <span className="text-[12px]" style={{ color: T.text }}>
+                <span className="text-[12px] tabular-nums" style={{ color: T.muted }}>
                   {e.scheduledAt
-                    ? new Date(e.scheduledAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }).replace(/ (\d{4})$/, ", $1")
+                    ? new Date(e.scheduledAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
                     : "—"}
                 </span>
-              </div>
-
-              {/* Status */}
-              <div>
-                <Chip tone={e.status === "completed" ? "good" : e.status === "pending" ? "danger" : "gold"}>
-                  {e.status === "completed" ? "Done" : e.status === "pending" ? "Not scheduled" : "Scheduled"}
-                </Chip>
-              </div>
-            </Link>
-          ))
+                <div><Chip tone={st.tone}>{st.label}</Chip></div>
+              </Link>
+            );
+          })
+        )}
+        </div>
+          </>
         )}
       </Card>
 
-      {/* Pagination */}
-      {filtered.length > PER_PAGE && (
-        <Pagination page={page} totalPages={totalPages} totalItems={filtered.length} perPage={PER_PAGE} onPageChange={setPage} />
-      )}
-        </>
-      )}
+      <Pagination page={currentPage - 1} totalPages={totalPages} totalItems={filtered.length} perPage={PER_PAGE} onPageChange={(p) => setPage(p + 1)} />
       </>}
 
       {/* ============ Calendar view ============ */}
-      {viewMode === "calendar" && (
-        loading ? (
-          <Card><TableSkeleton rows={6} cols={5} /></Card>
-        ) : (
-        <>
-          {/* Week navigation */}
-          <div className="flex flex-wrap items-center gap-3 pb-3 mb-3" style={{ borderBottom: `1px solid ${T.border}` }}>
-            <button
-              onClick={prevWeek}
-              className="w-9 h-9 rounded-[9px] flex items-center justify-center text-[14px] transition-colors hover:bg-[rgba(160,125,56,0.1)] cursor-pointer"
-              style={{ color: T.muted, background: T.popover, border: `1px solid ${T.border}` }}
-            >
-              ‹
-            </button>
-            <button
-              onClick={nextWeek}
-              className="w-9 h-9 rounded-[9px] flex items-center justify-center text-[14px] transition-colors hover:bg-[rgba(160,125,56,0.1)] cursor-pointer"
-              style={{ color: T.muted, background: T.popover, border: `1px solid ${T.border}` }}
-            >
-              ›
-            </button>
-            <button
-              onClick={goToToday}
-              className="h-9 px-3.5 rounded-[9px] text-[13.5px] font-medium transition-colors hover:bg-[rgba(160,125,56,0.1)] cursor-pointer"
-              style={{ color: T.accent, border: `1px solid ${T.accentBorder}` }}
-            >
-              Today
-            </button>
-
-            <div className="relative ml-1">
-              <button
-                onClick={() => { setGoToDateOpen((o) => !o); setGtdYear(calWeekBase.getFullYear()); setGtdMonth(calWeekBase.getMonth()); }}
-                className="text-[14px] font-semibold flex items-center gap-2 cursor-pointer hover:opacity-75 transition-opacity"
-                style={{ color: T.text }}
-              >
-                {weekDays[0].toLocaleDateString("en-IN", { day: "numeric", month: "short" })} — {weekDays[6].toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 9l6 6 6-6" /></svg>
-              </button>
-              {goToDateOpen && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setGoToDateOpen(false)} />
-                  <div className="absolute left-0 top-full mt-1 z-50 rounded-[10px] p-4 shadow-lg w-[280px]" style={{ background: T.popover, border: `1px solid ${T.border}` }}>
-                    <div className="flex items-center justify-between mb-2">
-                      <button type="button" onClick={() => { if (gtdMonth === 0) { setGtdMonth(11); setGtdYear((y) => y - 1); } else setGtdMonth((m) => m - 1); }} className="w-6 h-6 rounded-full flex items-center justify-center cursor-pointer hover:bg-[rgba(160,125,56,0.15)]" style={{ color: T.muted }}>‹</button>
-                      <span className="text-[11px] font-medium" style={{ color: T.text }}>{["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][gtdMonth]} {gtdYear}</span>
-                      <button type="button" onClick={() => { if (gtdMonth === 11) { setGtdMonth(0); setGtdYear((y) => y + 1); } else setGtdMonth((m) => m + 1); }} className="w-6 h-6 rounded-full flex items-center justify-center cursor-pointer hover:bg-[rgba(160,125,56,0.15)]" style={{ color: T.muted }}>›</button>
-                    </div>
-                    <div className="grid grid-cols-7 gap-0.5 mb-1">
-                      {["Mo","Tu","We","Th","Fr","Sa","Su"].map((d) => <div key={d} className="text-center text-[9px] py-0.5" style={{ color: T.faint }}>{d}</div>)}
-                    </div>
-                    <div className="grid grid-cols-7 gap-0.5">
-                      {Array.from({ length: (() => { const fd = new Date(gtdYear, gtdMonth, 1).getDay(); return fd === 0 ? 6 : fd - 1; })() }).map((_, i) => <div key={`e${i}`} />)}
-                      {Array.from({ length: new Date(gtdYear, gtdMonth + 1, 0).getDate() }).map((_, i) => {
-                        const day = i + 1;
-                        const iso = `${gtdYear}-${String(gtdMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-                        const isToday2 = iso === todayISO;
-                        return (
-                          <button
-                            key={day}
-                            type="button"
-                            onClick={() => {
-                              setCalWeekBase(new Date(iso + "T00:00:00"));
-                              setGoToDateOpen(false);
-                            }}
-                            className="w-[34px] h-[34px] rounded-full flex items-center justify-center text-[11px] transition-colors cursor-pointer hover:bg-[rgba(160,125,56,0.16)]"
-                            style={{
-                              background: isToday2 ? T.accent : "transparent",
-                              color: isToday2 ? T.accentInk : T.text,
-                              fontWeight: isToday2 ? 700 : 400,
-                            }}
-                          >
-                            {day}
-                          </button>
-                        );
-                      })}
-                    </div>
+      {viewMode === "calendar" && (() => {
+        const now = new Date();
+        const nowHour = now.getHours();
+        const nowPct = (now.getMinutes() / 60) * 100;
+        const nowTimeStr = now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: false });
+        const todayVisible = visibleDays.some((d) => toISODate(d) === todayISO);
+        const mmLead = (new Date(gtdYear, gtdMonth, 1).getDay() + 6) % 7;
+        const mmDays = new Date(gtdYear, gtdMonth + 1, 0).getDate();
+        const selISO = toISODate(calWeekBase);
+        return (
+          <div className="flex items-start gap-4 md:flex-1 md:min-h-0">
+            {/* ——— Main timeline ——— */}
+            <div className="flex-1 min-w-0 h-full flex flex-col">
+              {/* Big date title + scope pills */}
+              <div className="flex flex-wrap items-end justify-between gap-3 mb-3">
+                <div>
+                  <h2 className="font-title text-[26px] leading-tight tracking-[-0.02em]">
+                    <span className="font-bold" style={{ color: T.text }}>
+                      {calScope === "day"
+                        ? calWeekBase.toLocaleDateString("en-IN", { day: "numeric", month: "long" })
+                        : `${weekDays[0].toLocaleDateString("en-IN", { day: "numeric", month: "short" })} — ${weekDays[6].toLocaleDateString("en-IN", { day: "numeric", month: "short" })}`}
+                    </span>
+                    <span className="font-normal" style={{ color: T.muted }}> {calScope === "day" ? calWeekBase.getFullYear() : weekDays[6].getFullYear()}</span>
+                  </h2>
+                  <div className="text-[13.5px] mt-0.5" style={{ color: T.muted }}>
+                    {calScope === "day" ? calWeekBase.toLocaleDateString("en-IN", { weekday: "long" }) : "Week view"}
                   </div>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Calendar grid */}
-          <Card className="overflow-hidden p-0">
-            <div className="overflow-x-auto">
-              <div style={{ minWidth: 800 }}>
-                {/* Day headers */}
-                <div className="grid sticky top-0 z-10" style={{ gridTemplateColumns: "60px repeat(7, 1fr)", background: T.card, borderBottom: `1px solid ${T.border}` }}>
-                  <div className="py-1.5" />
-                  {weekDays.map((day) => {
-                    const iso = toISODate(day);
-                    const isToday = iso === todayISO;
-                    return (
-                      <div
-                        key={iso}
-                        className="text-center py-2 px-1"
-                        style={{ borderLeft: `1px solid ${T.borderSoft}` }}
-                      >
-                        <div className="text-[10px] tracking-[0.06em] uppercase" style={{ color: T.faint }}>
-                          {day.toLocaleDateString("en-IN", { weekday: "short" })}
-                        </div>
-                        <div
-                          className="text-[15px] font-semibold mx-auto"
-                          style={{
-                            color: isToday ? T.accentInk : T.text,
-                            background: isToday ? T.accent : "transparent",
-                            borderRadius: isToday ? "50%" : undefined,
-                            width: isToday ? 28 : undefined,
-                            height: isToday ? 28 : undefined,
-                            lineHeight: isToday ? "28px" : undefined,
-                          }}
-                        >
-                          {day.getDate()}
-                        </div>
-                      </div>
-                    );
-                  })}
                 </div>
-
-                {/* Hour rows */}
-                <div className="max-h-[600px] overflow-y-auto">
-                  {HOURS.map((hour) => (
-                    <div
-                      key={hour}
-                      className="grid"
-                      style={{ gridTemplateColumns: "60px repeat(7, 1fr)", minHeight: 40 }}
-                    >
-                      <div
-                        className="text-[10px] tabular-nums text-right pr-2 pt-0.5"
-                        style={{ color: T.faint, borderTop: `1px solid ${T.borderSoft}` }}
+                <div className="flex items-center gap-3">
+                  <div className="hidden xl:flex items-center gap-4">
+                    {[
+                      { color: "#6d8ea0", label: "Scheduled" },
+                      { color: T.accent, label: "In progress" },
+                      { color: T.good, label: "Completed" },
+                    ].map((l) => (
+                      <span key={l.label} className="inline-flex items-center gap-1.5 text-[11.5px]" style={{ color: T.muted }}>
+                        <span className="w-2 h-2 rounded-full" style={{ background: l.color }} />
+                        {l.label}
+                      </span>
+                    ))}
+                  </div>
+                  <div
+                    className="inline-flex items-center gap-1 p-1 rounded-full shrink-0"
+                    style={{ background: "rgba(89,82,54,0.07)", border: `1px solid ${T.borderSoft}` }}
+                  >
+                    {(["day", "week"] as const).map((scope) => (
+                      <button
+                        key={scope}
+                        onClick={() => setCalScope(scope)}
+                        className="h-7 px-3.5 rounded-full text-[12.5px] capitalize shrink-0 transition-all duration-200 cursor-pointer"
+                        style={
+                          calScope === scope
+                            ? { background: T.card, color: T.text, fontWeight: 600, border: `1px solid ${T.border}`, boxShadow: "0 1px 3px rgba(43,42,34,0.10)" }
+                            : { color: T.muted, border: "1px solid transparent" }
+                        }
                       >
-                        {formatHour(hour)}
-                      </div>
-                      {weekDays.map((day) => {
+                        {scope}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Timeline grid */}
+              <Card className="overflow-hidden !p-0 flex-1 min-h-0 flex flex-col w-full">
+                <div className="overflow-x-auto flex-1 min-h-0 flex flex-col">
+                  <div className="h-full flex flex-col" style={{ minWidth: calScope === "day" ? 0 : 800 }}>
+                    {/* Day headers */}
+                    <div className="grid sticky top-0 z-10" style={{ gridTemplateColumns: `60px repeat(${visibleDays.length}, 1fr)`, background: T.card, borderBottom: `1px solid ${T.border}` }}>
+                      <div className="py-1.5" />
+                      {visibleDays.map((day) => {
                         const iso = toISODate(day);
-                        const events = (calEvents.get(iso) ?? []).filter((e) => {
-                          const h = new Date(e.scheduledAt!).getHours();
-                          return h === hour;
-                        });
+                        const isToday = iso === todayISO;
                         return (
-                          <div
-                            key={iso}
-                            className="relative px-0.5 pt-0.5"
-                            style={{ borderTop: `1px solid ${T.borderSoft}`, borderLeft: `1px solid ${T.borderSoft}` }}
-                          >
-                            {events.map((ev) => {
-                              const dt = new Date(ev.scheduledAt!);
-                              const timeStr = dt.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true });
-                              const toneColor =
-                                ev.status === "completed" ? T.good :
-                                ev.status === "in_progress" ? T.accent :
-                                ev.status === "scheduled" ? "#6d8ea0" :
-                                T.muted;
-                              return (
-                                <Link
-                                  key={ev.id}
-                                  href={`/energisation/${ev.id}`}
-                                  className="block rounded-[6px] px-1.5 py-1 mb-0.5 text-[10px] leading-tight truncate transition-all hover:brightness-110"
-                                  style={{
-                                    background: `${toneColor}18`,
-                                    borderLeft: `3px solid ${toneColor}`,
-                                    color: toneColor,
-                                  }}
-                                  title={`${ev.customerName} — ${ev.stoneDescription}`}
-                                >
-                                  <div className="font-medium truncate">{ev.customerName}</div>
-                                  <div className="truncate opacity-75">{timeStr} · {ev.stoneDescription.split("·")[0].trim()}</div>
-                                </Link>
-                              );
-                            })}
+                          <div key={iso} className="text-center py-2 px-1" style={{ borderLeft: `1px solid ${T.borderSoft}` }}>
+                            <div className="text-[10px] tracking-[0.06em] uppercase" style={{ color: T.faint }}>
+                              {day.toLocaleDateString("en-IN", { weekday: "short" })}
+                            </div>
+                            <div
+                              className="text-[15px] font-semibold mx-auto"
+                              style={{
+                                color: isToday ? T.accentInk : T.text,
+                                background: isToday ? T.accent : "transparent",
+                                borderRadius: isToday ? "50%" : undefined,
+                                width: isToday ? 28 : undefined,
+                                height: isToday ? 28 : undefined,
+                                lineHeight: isToday ? "28px" : undefined,
+                              }}
+                            >
+                              {day.getDate()}
+                            </div>
                           </div>
                         );
                       })}
                     </div>
+
+                    {/* Hour rows — fills the viewport, page itself never scrolls */}
+                    <div ref={hoursRef} className="flex-1 min-h-0 overflow-y-auto max-h-[560px] lg:max-h-none">
+                      {HOURS.map((hour) => (
+                        <div key={hour} className="grid relative" style={{ gridTemplateColumns: `60px repeat(${visibleDays.length}, 1fr)`, minHeight: 40 }}>
+                          <div className="text-[10px] tabular-nums text-right pr-2 pt-0.5" style={{ color: T.faint, borderTop: `1px solid ${T.borderSoft}` }}>
+                            {formatHour(hour)}
+                          </div>
+                          {visibleDays.map((day) => {
+                            const iso = toISODate(day);
+                            const events = (calEvents.get(iso) ?? []).filter((e) => {
+                              const h = new Date(e.scheduledAt!).getHours();
+                              return h === hour;
+                            });
+                            return (
+                              <div key={iso} className="relative px-0.5 pt-0.5" style={{ borderTop: `1px solid ${T.borderSoft}`, borderLeft: `1px solid ${T.borderSoft}` }}>
+                                {events.map((ev) => {
+                                  const dt = new Date(ev.scheduledAt!);
+                                  const timeStr = dt.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true });
+                                  const toneColor =
+                                    ev.status === "completed" ? T.good :
+                                    ev.status === "in_progress" ? T.accent :
+                                    ev.status === "scheduled" ? "#6d8ea0" :
+                                    T.muted;
+                                  return (
+                                    <button
+                                      key={ev.id}
+                                      onClick={() => setSelectedEvent(selectedEvent?.id === ev.id ? null : ev)}
+                                      className="block w-full text-left rounded-[6px] px-1.5 py-1 mb-0.5 text-[10px] leading-tight truncate transition-all hover:brightness-110 cursor-pointer"
+                                      style={{
+                                        background: `${toneColor}${selectedEvent?.id === ev.id ? "30" : "18"}`,
+                                        color: toneColor,
+                                        boxShadow: selectedEvent?.id === ev.id ? `inset 0 0 0 1.5px ${toneColor}` : "none",
+                                      }}
+                                    >
+                                      <div className="font-medium truncate">{ev.customerName}</div>
+                                      <div className="truncate opacity-75">{timeStr} · {ev.stoneDescription.split("·")[0].trim()}</div>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            );
+                          })}
+                          {/* Current time — red line with time bubble */}
+                          {todayVisible && hour === nowHour && (
+                            <div className="absolute left-0 right-0 z-10 pointer-events-none" style={{ top: `${nowPct}%` }}>
+                              <div className="relative h-[2px]" style={{ background: T.danger }}>
+                                <span
+                                  className="absolute left-0.5 top-1/2 -translate-y-1/2 text-[9px] font-bold px-1.5 py-px rounded-full tabular-nums"
+                                  style={{ background: T.danger, color: "#fdf6ea" }}
+                                >
+                                  {nowTimeStr}
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            </div>
+
+            {/* ——— Right rail: mini month + event details ——— */}
+            <aside className="w-[300px] shrink-0 hidden lg:block space-y-3 lg:max-h-full lg:overflow-y-auto no-scrollbar">
+              {/* Mini month */}
+              <div className="rounded-[16px] p-4" style={{ background: T.card, border: `1px solid ${T.borderSoft}`, boxShadow: T.shadow }}>
+                <div className="flex items-center justify-between mb-2.5">
+                  <span className="text-[13px] font-semibold" style={{ color: T.text }}>
+                    {["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][gtdMonth]} {gtdYear}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => { if (gtdMonth === 0) { setGtdMonth(11); setGtdYear((y) => y - 1); } else setGtdMonth((m) => m - 1); }}
+                      aria-label="Previous month"
+                      className="w-7 h-7 rounded-[8px] flex items-center justify-center cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.12)]"
+                      style={{ color: T.muted }}
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3"><path d="m15 18-6-6 6-6" /></svg>
+                    </button>
+                    <button
+                      onClick={goToToday}
+                      className="h-7 px-2.5 rounded-[8px] text-[12px] font-medium cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.12)]"
+                      style={{ color: T.text, border: `1px solid ${T.border}` }}
+                    >
+                      Today
+                    </button>
+                    <button
+                      onClick={() => { if (gtdMonth === 11) { setGtdMonth(0); setGtdYear((y) => y + 1); } else setGtdMonth((m) => m + 1); }}
+                      aria-label="Next month"
+                      className="w-7 h-7 rounded-[8px] flex items-center justify-center cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.12)]"
+                      style={{ color: T.muted }}
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3"><path d="m9 18 6-6-6-6" /></svg>
+                    </button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-7 gap-0.5 mb-1">
+                  {["M","T","W","T","F","S","S"].map((d, i) => (
+                    <div key={i} className="text-center text-[10px] font-medium py-0.5" style={{ color: T.faint }}>{d}</div>
                   ))}
                 </div>
+                <div className="grid grid-cols-7 gap-0.5">
+                  {Array.from({ length: mmLead }).map((_, i) => <div key={`e${i}`} />)}
+                  {Array.from({ length: mmDays }).map((_, i) => {
+                    const day = i + 1;
+                    const iso = `${gtdYear}-${String(gtdMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+                    const isToday = iso === todayISO;
+                    const isSelected = iso === selISO;
+                    const hasEvents = calEvents.has(iso);
+                    return (
+                      <button
+                        key={day}
+                        onClick={() => { setCalWeekBase(new Date(iso + "T00:00:00")); setCalScope("day"); }}
+                        className="relative h-8 rounded-full flex items-center justify-center text-[11.5px] tabular-nums transition-colors cursor-pointer hover:bg-[rgba(119,123,98,0.14)]"
+                        style={{
+                          background: isToday ? T.danger : isSelected ? T.accent : "transparent",
+                          color: isToday || isSelected ? "#fdf6ea" : T.text,
+                          fontWeight: isToday || isSelected ? 700 : 400,
+                        }}
+                      >
+                        {day}
+                        {hasEvents && !isToday && !isSelected && (
+                          <span className="absolute bottom-0.5 w-1 h-1 rounded-full" style={{ background: T.accent }} />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          </Card>
-        </>
-        )
-      )}
+
+              {/* Event details */}
+              {selectedEvent ? (() => {
+                const ev = selectedEvent;
+                const dt = ev.scheduledAt ? new Date(ev.scheduledAt) : null;
+                const st =
+                  ev.status === "completed"
+                    ? { tone: "good" as const, label: "Done" }
+                    : ev.status === "in_progress"
+                      ? { tone: "gold" as const, label: "In progress" }
+                      : ev.status === "scheduled" && !ev.liveLink
+                        ? { tone: "danger" as const, label: "Link pending" }
+                        : { tone: "info" as const, label: "Scheduled" };
+                return (
+                  <div
+                    className="rounded-[16px] p-5"
+                    style={{ background: T.card, border: `1px solid ${T.borderSoft}`, boxShadow: T.shadow, animation: "fadeIn 0.15s ease both" }}
+                  >
+                    <div className="flex items-center justify-between gap-3 mb-2">
+                      <Chip tone={st.tone}>{st.label}</Chip>
+                      <button
+                        onClick={() => setSelectedEvent(null)}
+                        aria-label="Close details"
+                        className="w-7 h-7 rounded-full flex items-center justify-center cursor-pointer transition-colors hover:bg-[rgba(89,82,54,0.10)]"
+                        style={{ color: T.muted }}
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="w-3.5 h-3.5"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                      </button>
+                    </div>
+                    <div className="text-[15px] font-semibold" style={{ color: T.text }}>{ev.customerName}</div>
+                    <div className="text-[12.5px] mt-0.5" style={{ color: T.muted }}>{ev.stoneDescription}</div>
+
+                    <div className="mt-4 pt-4 space-y-2.5" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+                      {[
+                        { label: "When", value: dt ? `${dt.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short", year: "numeric" })} · ${dt.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true })}` : "Not scheduled" },
+                        { label: "Ritual", value: ev.method || "Method not assigned" },
+                        { label: "Assigned", value: ev.assignedTo || "—" },
+                        { label: "Order", value: ev.orderNumber },
+                        { label: "Live link", value: ev.liveLink ? "Ready" : "Pending" },
+                      ].map((row) => (
+                        <div key={row.label} className="flex gap-3 text-[12.5px]">
+                          <span className="w-[76px] shrink-0" style={{ color: T.faint }}>{row.label}</span>
+                          <span className="min-w-0" style={{ color: T.text }}>{row.value}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {ev.notes && (
+                      <div className="mt-3 pt-3 text-[12px] leading-relaxed" style={{ borderTop: `1px solid ${T.borderSoft}`, color: T.muted }}>
+                        {ev.notes}
+                      </div>
+                    )}
+
+                    <Link
+                      href={`/energisation/${ev.id}`}
+                      className="mt-4 h-9 w-full rounded-[9px] text-[13px] font-semibold inline-flex items-center justify-center transition-all duration-200 hover:brightness-110"
+                      style={{ background: T.primary, color: T.primaryInk }}
+                    >
+                      Open details
+                    </Link>
+                  </div>
+                );
+              })() : (
+                <div
+                  className="rounded-[16px] p-5 text-center"
+                  style={{ background: T.card, border: `1px dashed ${T.border}` }}
+                >
+                  <div className="text-[12.5px]" style={{ color: T.faint }}>
+                    Select a ritual on the calendar to see its details here.
+                  </div>
+                </div>
+              )}
+            </aside>
+          </div>
+        );
+      })()}
+      </div>
     </>
   );
 }

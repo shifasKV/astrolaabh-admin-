@@ -1,17 +1,25 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, Tabs, SearchFilter, Select, TableSkeleton, Pagination, ExportButton } from "@/components/ui";
+import { PageHeader, Card, Chip, Select, Pagination, GoldBtn, fmtChipDate, ToolbarSearch, FiltersPopover, FilterField, FilterChip, DateRangeFields, ColumnStatusFilter, EmptyState, TableSkeleton, Toast } from "@/components/ui";
 import { T } from "@/lib/theme";
+import { useSimulatedLoad } from "@/lib/useSimulatedLoad";
 import { MOCK_PAYMENTS } from "@/lib/mock";
 import { inr } from "@/lib/types";
 
-const TABS = [
-  { key: "all", label: "All" },
-  { key: "paid", label: "Paid" },
-  { key: "pending", label: "Pending" },
-  { key: "expired", label: "Expired" },
-];
+const STATUS_FILTER_LABEL: Record<string, string> = {
+  paid: "Paid",
+  pending: "Pending",
+  expired: "Expired",
+};
+
+function matchesStatus(p: (typeof MOCK_PAYMENTS)[number], status: string) {
+  if (!status) return true;
+  if (status === "paid") return p.status === "paid";
+  if (status === "pending") return p.status === "sent" || p.status === "opened" || p.status === "draft";
+  if (status === "expired") return p.status === "expired" || p.status === "cancelled" || p.status === "failed";
+  return true;
+}
 
 function getDisplayStatus(status: string) {
   if (status === "paid") return "Paid";
@@ -39,31 +47,23 @@ function getItemName(p: typeof MOCK_PAYMENTS[0]) {
 }
 
 export default function PaymentsPage() {
-  const [tab, setTab] = useState("all");
+  const loading = useSimulatedLoad();
   const [search, setSearch] = useState("");
   const [toast, setToast] = useState("");
 
   // Filters
   const [filterCustomer, setFilterCustomer] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
+  const [showStatusFilter, setShowStatusFilter] = useState(false);
   const [filterDateFrom, setFilterDateFrom] = useState("");
   const [filterDateTo, setFilterDateTo] = useState("");
   const [filterType, setFilterType] = useState<"" | "order" | "consultation">("");
   const [sortBy, setSortBy] = useState<"newest" | "oldest" | "amount_high" | "amount_low">("newest");
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [dpYear, setDpYear] = useState(new Date().getFullYear());
-  const [dpMonth, setDpMonth] = useState(new Date().getMonth());
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => { const t = setTimeout(() => setLoading(false), 700); return () => clearTimeout(t); }, []);
+  const [showFilters, setShowFilters] = useState(false);
 
   const uniqueCustomers = Array.from(new Set(MOCK_PAYMENTS.map((p) => p.customerName))).sort();
 
-  const filtered = MOCK_PAYMENTS.filter((p) => {
-    if (tab === "pending") return p.status === "sent" || p.status === "opened" || p.status === "draft";
-    if (tab === "paid") return p.status === "paid";
-    if (tab === "expired") return p.status === "expired" || p.status === "cancelled" || p.status === "failed";
-    return true;
-  }).filter((p) => {
+  const filtered = MOCK_PAYMENTS.filter((p) => matchesStatus(p, filterStatus)).filter((p) => {
     if (!search) return true;
     const q = search.toLowerCase();
     return p.customerName.toLowerCase().includes(q) || p.purpose.toLowerCase().includes(q) || p.id.toLowerCase().includes(q) || (p.transactionRef?.toLowerCase().includes(q));
@@ -94,7 +94,16 @@ export default function PaymentsPage() {
     return 0;
   });
 
-  const hasActiveFilters = !!filterCustomer || !!filterDateFrom || !!filterDateTo || !!filterType;
+  const hasActiveFilters = !!filterCustomer || !!filterDateFrom || !!filterDateTo || !!filterType || !!filterStatus;
+  const activeFilterCount = [filterCustomer, filterType, filterStatus, filterDateFrom || filterDateTo].filter(Boolean).length;
+  const statusOptions = [
+    { value: "", label: "All statuses", count: MOCK_PAYMENTS.length },
+    ...Object.entries(STATUS_FILTER_LABEL).map(([value, label]) => ({
+      value,
+      label,
+      count: MOCK_PAYMENTS.filter((p) => matchesStatus(p, value)).length,
+    })),
+  ];
 
   const formatDate = (dateStr: string | undefined) => {
     if (!dateStr) return "—";
@@ -111,28 +120,18 @@ export default function PaymentsPage() {
   const paidTotal = MOCK_PAYMENTS.filter((p) => p.status === "paid").reduce((sum, p) => sum + p.amount, 0);
   const pendingTotal = MOCK_PAYMENTS.filter((p) => p.status === "sent" || p.status === "opened" || p.status === "draft").reduce((sum, p) => sum + p.amount, 0);
 
-  const PER_PAGE = 8;
-  const [page, setPage] = useState(0);
+  const PER_PAGE = 10;
+  const [page, setPage] = useState(1);
   const totalPages = Math.ceil(filtered.length / PER_PAGE);
-  const paginated = filtered.slice(page * PER_PAGE, (page + 1) * PER_PAGE);
-
-  const exportData = filtered.map((p) => ({
-    id: p.id,
-    customer: p.customerName,
-    purpose: p.purpose,
-    amount: p.amount,
-    status: p.status,
-    type: p.linkedOrderId ? "Order" : "Consultation",
-    date: p.paidAt || p.createdAt,
-    transactionRef: p.transactionRef ?? "",
-  }));
+  const currentPage = page > totalPages && totalPages > 0 ? totalPages : page;
+  const paginated = filtered.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE);
 
   return (
     <>
+      <div className="md:h-[calc(100dvh-78px)] md:flex md:flex-col md:min-h-0">
       <PageHeader
         title="Payments"
-        sub="Track all payment transactions across orders and consultations"
-        action={undefined}
+        action={<Link href="/payments/create"><GoldBtn>+ New payment link</GoldBtn></Link>}
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
@@ -144,222 +143,64 @@ export default function PaymentsPage() {
         ].map((s) => (
           <div
             key={s.label}
-            className="rounded-[12px] p-4"
-            style={{ background: T.card, border: `1px solid ${T.border}` }}
+            className="rounded-[16px] p-4"
+            style={
+              s.label === "Total collected"
+                ? { background: "linear-gradient(160deg, #faf0d8 0%, #efdfb8 100%)", border: "1px solid rgba(160,125,56,0.35)", boxShadow: T.shadow }
+                : { background: T.card, border: `1px solid ${T.borderSoft}`, boxShadow: T.shadow }
+            }
           >
-            <div className="text-[11px] tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>{s.label}</div>
-            <div className="text-[18px] font-semibold tabular-nums" style={{ color: s.color }}>{s.value}</div>
+            <div className="text-[11px] tracking-[0.08em] uppercase mb-1" style={{ color: s.label === "Total collected" ? "#8a6a2f" : T.faint }}>{s.label}</div>
+            <div className="text-[18px] font-semibold tabular-nums" style={{ color: s.label === "Total collected" ? T.text : s.color }}>{s.value}</div>
           </div>
         ))}
       </div>
 
-      <div className="mb-4">
-        <Tabs
-          tabs={TABS.map((t) => {
-            const count = MOCK_PAYMENTS.filter((p) => {
-              if (t.key === "pending") return p.status === "sent" || p.status === "opened" || p.status === "draft";
-              if (t.key === "paid") return p.status === "paid";
-              if (t.key === "expired") return p.status === "expired" || p.status === "cancelled" || p.status === "failed";
-              return true;
-            }).length;
-            return { ...t, count };
-          })}
-          active={tab}
-          onChange={(k) => { setTab(k); setPage(0); }}
-        />
-      </div>
-
-      <div className="mb-4">
-        <SearchFilter search={search} onSearchChange={(v) => { setSearch(v); setPage(0); }} placeholder="Search customer, purpose, transaction ref…" />
-      </div>
-
-      {/* Filters & Sort */}
-      <div className="flex flex-wrap items-center gap-2.5 mb-4">
-        <div className="w-[200px]">
-          <Select
-            value={filterCustomer}
-            onChange={(v) => { setFilterCustomer(v); setPage(0); }}
-            compact
-            searchable
-            placeholder="All customers"
-            options={[
-              { value: "", label: "All customers" },
-              ...uniqueCustomers.map((name) => ({ value: name, label: name })),
-            ]}
-          />
-        </div>
-
-        <div className="w-[150px]">
-          <Select
-            value={filterType}
-            onChange={(v) => { setFilterType(v as typeof filterType); setPage(0); }}
-            compact
-            placeholder="All types"
-            options={[
-              { value: "", label: "All types" },
-              { value: "order", label: "Orders" },
-              { value: "consultation", label: "Consultations" },
-            ]}
-          />
-        </div>
-
-        {/* Date range picker */}
-        <div className="relative">
-          <button
-            onClick={() => setShowDatePicker(!showDatePicker)}
-            className="h-9 px-3.5 rounded-[9px] text-[13.5px] flex items-center gap-2 cursor-pointer transition-all"
-            style={{ background: T.popover, border: `1px solid ${(filterDateFrom || filterDateTo) ? T.accentBorder : T.border}`, color: T.text }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-              <rect x="3" y="4" width="18" height="17" rx="2" /><path d="M8 2v4M16 2v4M3 9h18" />
-            </svg>
-            {(filterDateFrom || filterDateTo)
-              ? `${filterDateFrom ? new Date(filterDateFrom + "T00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "Start"} — ${filterDateTo ? new Date(filterDateTo + "T00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "End"}`
-              : "All dates"
-            }
-          </button>
-
-          {showDatePicker && (
-            <>
-              <div className="fixed inset-0 z-40" onClick={() => setShowDatePicker(false)} />
-              <div
-                className="absolute top-full left-0 mt-1 z-50 flex rounded-[9px] shadow-lg overflow-hidden"
-                style={{ background: T.popover, border: `1px solid ${T.border}` }}
-              >
-                {/* Quick selects */}
-                <div className="w-[130px] py-2 px-1.5 shrink-0" style={{ borderRight: `1px solid ${T.borderSoft}` }}>
-                  <div className="text-[9px] tracking-[0.06em] uppercase px-2 mb-1.5" style={{ color: T.faint }}>Quick select</div>
-                  {[
-                    { label: "Today", from: new Date().toISOString().slice(0, 10), to: new Date().toISOString().slice(0, 10) },
-                    { label: "Yesterday", from: new Date(Date.now() - 86400000).toISOString().slice(0, 10), to: new Date(Date.now() - 86400000).toISOString().slice(0, 10) },
-                    { label: "Last 7 days", from: new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10), to: new Date().toISOString().slice(0, 10) },
-                    { label: "Last 30 days", from: new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10), to: new Date().toISOString().slice(0, 10) },
-                  ].map((preset) => (
-                    <button
-                      key={preset.label}
-                      onClick={() => { setFilterDateFrom(preset.from); setFilterDateTo(preset.to); setShowDatePicker(false); setPage(0); }}
-                      className="w-full text-left px-2.5 py-2 rounded-[7px] text-[12px] transition-colors cursor-pointer hover:bg-[rgba(160,125,56,0.10)]"
-                      style={{ color: T.text }}
-                    >
-                      {preset.label}
-                    </button>
-                  ))}
-                  {(filterDateFrom || filterDateTo) && (
-                    <button
-                      onClick={() => { setFilterDateFrom(""); setFilterDateTo(""); setShowDatePicker(false); setPage(0); }}
-                      className="w-full text-left px-2.5 py-2 rounded-[7px] text-[11px] mt-1 transition-colors cursor-pointer hover:bg-[rgba(176,84,84,0.06)]"
-                      style={{ color: T.danger }}
-                    >
-                      Clear dates
-                    </button>
-                  )}
-                </div>
-
-                {/* Calendar + inputs */}
-                <div className="p-4 w-[280px]">
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="flex-1">
-                      <div className="text-[9px] uppercase tracking-[0.06em] mb-1" style={{ color: T.faint }}>After</div>
-                      <input
-                        type="date"
-                        value={filterDateFrom}
-                        onChange={(e) => { setFilterDateFrom(e.target.value); setPage(0); }}
-                        className="w-full h-8 px-2 rounded-[7px] text-[11px] outline-none"
-                        style={{ background: T.bg, border: `1px solid ${T.borderSoft}`, color: T.text }}
-                      />
-                    </div>
-                    <span className="text-[11px] mt-3" style={{ color: T.faint }}>—</span>
-                    <div className="flex-1">
-                      <div className="text-[9px] uppercase tracking-[0.06em] mb-1" style={{ color: T.faint }}>Before</div>
-                      <input
-                        type="date"
-                        value={filterDateTo}
-                        onChange={(e) => { setFilterDateTo(e.target.value); setPage(0); }}
-                        className="w-full h-8 px-2 rounded-[7px] text-[11px] outline-none"
-                        style={{ background: T.bg, border: `1px solid ${T.borderSoft}`, color: T.text }}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between mb-2">
-                    <button
-                      type="button"
-                      onClick={() => { if (dpMonth === 0) { setDpMonth(11); setDpYear((y) => y - 1); } else setDpMonth((m) => m - 1); }}
-                      className="w-6 h-6 rounded-full flex items-center justify-center cursor-pointer hover:bg-[rgba(160,125,56,0.15)]"
-                      style={{ color: T.muted }}
-                    >‹</button>
-                    <span className="text-[11px] font-medium" style={{ color: T.text }}>
-                      {["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][dpMonth]} {dpYear}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => { if (dpMonth === 11) { setDpMonth(0); setDpYear((y) => y + 1); } else setDpMonth((m) => m + 1); }}
-                      className="w-6 h-6 rounded-full flex items-center justify-center cursor-pointer hover:bg-[rgba(160,125,56,0.15)]"
-                      style={{ color: T.muted }}
-                    >›</button>
-                  </div>
-                  <div className="grid grid-cols-7 gap-0.5 mb-1">
-                    {["Mo","Tu","We","Th","Fr","Sa","Su"].map((d) => (
-                      <div key={d} className="text-center text-[9px] py-0.5" style={{ color: T.faint }}>{d}</div>
-                    ))}
-                  </div>
-                  <div className="grid grid-cols-7 gap-0.5">
-                    {Array.from({ length: (() => { const fd = new Date(dpYear, dpMonth, 1).getDay(); return fd === 0 ? 6 : fd - 1; })() }).map((_, i) => <div key={`e${i}`} />)}
-                    {Array.from({ length: new Date(dpYear, dpMonth + 1, 0).getDate() }).map((_, i) => {
-                      const day = i + 1;
-                      const iso = `${dpYear}-${String(dpMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-                      const isFrom = filterDateFrom === iso;
-                      const isTo = filterDateTo === iso;
-                      const inRange = filterDateFrom && filterDateTo && iso >= filterDateFrom && iso <= filterDateTo;
-                      return (
-                        <button
-                          key={day}
-                          type="button"
-                          onClick={() => {
-                            if (!filterDateFrom || (filterDateFrom && filterDateTo)) {
-                              setFilterDateFrom(iso);
-                              setFilterDateTo("");
-                            } else {
-                              if (iso < filterDateFrom) {
-                                setFilterDateTo(filterDateFrom);
-                                setFilterDateFrom(iso);
-                              } else {
-                                setFilterDateTo(iso);
-                              }
-                            }
-                          }}
-                          className="w-[34px] h-[34px] rounded-full flex items-center justify-center text-[11px] transition-colors cursor-pointer"
-                          style={{
-                            background: (isFrom || isTo) ? T.accent : inRange ? "rgba(160,125,56,0.16)" : "transparent",
-                            color: (isFrom || isTo) ? T.accentInk : inRange ? T.text : T.text,
-                            fontWeight: (isFrom || isTo) ? 700 : 400,
-                          }}
-                        >
-                          {day}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-
+      {/* Pinned controls — search, filters, sort */}
+      <div className="flex flex-wrap items-center gap-2 mb-3">
+        <ToolbarSearch value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search customer, purpose, transaction ref…" />
         <div className="ml-auto flex items-center gap-2">
-          {hasActiveFilters && (
-            <button
-              onClick={() => { setFilterCustomer(""); setFilterDateFrom(""); setFilterDateTo(""); setFilterType(""); setPage(0); }}
-              className="text-[11px] px-2.5 py-1.5 rounded-[7px] cursor-pointer transition-opacity hover:opacity-80"
-              style={{ color: T.danger, background: "rgba(176,84,84,0.08)", border: "1px solid rgba(176,84,84,0.15)" }}
-            >
-              Clear filters
-            </button>
-          )}
+          <FiltersPopover count={activeFilterCount} open={showFilters} onToggle={() => setShowFilters(!showFilters)}>
+            <FilterField label="Customer">
+              <Select
+                value={filterCustomer}
+                onChange={(v) => { setFilterCustomer(v); setPage(1); }}
+                compact
+                searchable
+                placeholder="All customers"
+                options={[{ value: "", label: "All customers" }, ...uniqueCustomers.map((name) => ({ value: name, label: name }))]}
+              />
+            </FilterField>
+            <FilterField label="Type">
+              <Select
+                value={filterType}
+                onChange={(v) => { setFilterType(v as typeof filterType); setPage(1); }}
+                compact
+                placeholder="All types"
+                options={[
+                  { value: "", label: "All types" },
+                  { value: "order", label: "Orders" },
+                  { value: "consultation", label: "Consultations" },
+                ]}
+              />
+            </FilterField>
+            <FilterField label="Status">
+              <Select
+                value={filterStatus}
+                onChange={(v) => { setFilterStatus(v); setPage(1); }}
+                compact
+                placeholder="All statuses"
+                options={[{ value: "", label: "All statuses" }, ...Object.entries(STATUS_FILTER_LABEL).map(([k, v]) => ({ value: k, label: v }))]}
+              />
+            </FilterField>
+            <FilterField label="Date between">
+              <DateRangeFields from={filterDateFrom} to={filterDateTo} onChange={(f, t) => { setFilterDateFrom(f); setFilterDateTo(t); setPage(1); }} />
+            </FilterField>
+          </FiltersPopover>
           <div className="w-[170px]">
             <Select
               value={sortBy}
-              onChange={(v) => { setSortBy(v as typeof sortBy); setPage(0); }}
+              onChange={(v) => { setSortBy(v as typeof sortBy); setPage(1); }}
               compact
               prefix="Sort: "
               options={[
@@ -370,115 +211,129 @@ export default function PaymentsPage() {
               ]}
             />
           </div>
-          <ExportButton data={exportData} filename="payments" className="ml-2" />
         </div>
       </div>
 
-      {loading ? (
-        <Card><TableSkeleton rows={6} cols={5} /></Card>
-      ) : (
-        <>
-          <Card>
-            {/* Table header */}
-            <div className="hidden sm:grid grid-cols-[1fr_110px_140px_130px_90px_120px] gap-3 px-3 py-2 text-[11px] tracking-[0.06em] uppercase" style={{ color: T.faint, borderBottom: `1px solid ${T.borderSoft}` }}>
-              <span>Details</span>
-              <span>Type</span>
-              <span>Date & Time</span>
-              <span>Transaction ID</span>
-              <span>Status</span>
-              <span className="text-right">Amount</span>
-            </div>
-
-            {filtered.length === 0 ? (
-              <p className="text-[13.5px] text-center py-6" style={{ color: T.muted }}>No transactions match.</p>
-            ) : (
-              paginated.map((p) => {
-                const type = p.linkedOrderId ? "Order" : "Consultation";
-                const typeTone = p.linkedOrderId ? "gold" as const : "muted" as const;
-                const href = p.linkedOrderId ? `/orders/${p.linkedOrderId}` : p.linkedAppointmentId ? `/consultations/${p.linkedAppointmentId}` : null;
-                const refId = p.linkedOrderId || (p.linkedAppointmentId ? p.linkedAppointmentId : "");
-                const itemName = getItemName(p);
-                const displayStatus = getDisplayStatus(p.status);
-                const dateStr = p.paidAt || p.createdAt;
-
-                return (
-                  <Link
-                    key={p.id}
-                    href={href || "#"}
-                    className="group grid grid-cols-1 sm:grid-cols-[1fr_110px_140px_130px_90px_120px] gap-2 sm:gap-3 items-center px-3 py-3.5 transition-all duration-150 rounded-[8px] hover:bg-[rgba(160,125,56,0.07)]"
-                    style={{ borderBottom: `1px solid ${T.borderSoft}` }}
-                  >
-                    {/* Details: ID first, then item name + customer */}
-                    <div className="min-w-0">
-                      <div className="text-[13.5px] font-medium truncate" style={{ color: T.text }}>{itemName}</div>
-                      <div className="text-[12px] truncate mt-0.5" style={{ color: T.muted }}>
-                        <span className="group-hover:underline" style={{ color: T.accent }}>{refId}</span> · {p.customerName}
-                      </div>
-                    </div>
-
-                    {/* Type pill */}
-                    <div className="flex items-center gap-2 min-w-0">
-                      <Chip tone={typeTone}>{type}</Chip>
-                    </div>
-
-                    {/* Date & Time */}
-                    <div className="min-w-0">
-                      <div className="text-[12px]" style={{ color: T.text }}>{formatDate(dateStr)}</div>
-                      {p.paidAt && <div className="text-[11px]" style={{ color: T.faint }}>{formatTime(p.paidAt)}</div>}
-                    </div>
-
-                    {/* Transaction ID */}
-                    <div className="min-w-0 flex items-center gap-1.5">
-                      {p.transactionRef ? (
-                        <>
-                          <span className="text-[11px] font-mono" style={{ color: T.muted }}>{p.transactionRef}</span>
-                          <button
-                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigator.clipboard.writeText(p.transactionRef!); setToast("Transaction ID copied"); setTimeout(() => setToast(""), 3000); }}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity duration-150 shrink-0 cursor-pointer"
-                            title="Copy transaction ID"
-                          >
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: T.muted }}>
-                              <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                            </svg>
-                          </button>
-                        </>
-                      ) : (
-                        <span className="text-[11px]" style={{ color: T.faint }}>—</span>
-                      )}
-                    </div>
-
-                    {/* Status */}
-                    <div>
-                      <Chip tone={getStatusTone(p.status)}>{displayStatus}</Chip>
-                    </div>
-
-                    {/* Amount */}
-                    <div className="text-right">
-                      <div className="text-[14px] font-semibold tabular-nums" style={{ color: T.text }}>{inr(p.amount)}</div>
-                    </div>
-                  </Link>
-                );
-              })
-            )}
-          </Card>
-
-          {/* Pagination */}
-          {filtered.length > PER_PAGE && (
-            <Pagination page={page} totalPages={totalPages} totalItems={filtered.length} perPage={PER_PAGE} onPageChange={setPage} />
+      {/* Active filters — removable chips */}
+      {hasActiveFilters && (
+        <div className="flex flex-wrap items-center gap-1.5 mb-3">
+          {filterCustomer && <FilterChip label={`Customer: ${filterCustomer}`} onClear={() => { setFilterCustomer(""); setPage(1); }} />}
+          {filterType && <FilterChip label={`Type: ${filterType === "order" ? "Orders" : "Consultations"}`} onClear={() => { setFilterType(""); setPage(1); }} />}
+          {filterStatus && <FilterChip label={`Status: ${STATUS_FILTER_LABEL[filterStatus]}`} onClear={() => { setFilterStatus(""); setPage(1); }} />}
+          {(filterDateFrom || filterDateTo) && (
+            <FilterChip label={`Date: ${fmtChipDate(filterDateFrom)} – ${fmtChipDate(filterDateTo)}`} onClear={() => { setFilterDateFrom(""); setFilterDateTo(""); setPage(1); }} />
           )}
-        </>
-      )}
-
-      {toast && (
-        <div
-          className="fixed top-6 right-6 z-[100] flex items-center gap-2 px-4 py-3 rounded-[10px] shadow-lg text-[13.5px] font-medium animate-in"
-          style={{ background: T.card, border: `1px solid ${T.border}`, color: T.good }}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6L9 17l-5-5"/></svg>
-          {toast}
+          <button
+            onClick={() => { setFilterCustomer(""); setFilterType(""); setFilterStatus(""); setFilterDateFrom(""); setFilterDateTo(""); setPage(1); }}
+            className="text-[12px] px-1.5 cursor-pointer hover:underline underline-offset-4"
+            style={{ color: T.danger }}
+          >
+            Clear all
+          </button>
         </div>
       )}
+
+      <Card className="!p-0 md:flex md:flex-col md:min-h-0">
+        {loading ? <TableSkeleton cols={6} rows={8} /> : <>
+        <div
+          className="hidden sm:grid grid-cols-[1fr_110px_140px_140px_130px_120px] gap-3 items-center px-4 h-10 text-[11px] tracking-[0.06em] uppercase font-medium rounded-t-[15px]"
+          style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.border}` }}
+        >
+          <span>Details</span>
+          <span>Type</span>
+          <span>Date & time</span>
+          <span>Transaction ID</span>
+          <ColumnStatusFilter
+            value={filterStatus}
+            options={statusOptions}
+            open={showStatusFilter}
+            onToggle={() => setShowStatusFilter(!showStatusFilter)}
+            onSelect={(v) => { setFilterStatus(v); setShowStatusFilter(false); setPage(1); }}
+          />
+          <span className="text-right">Amount</span>
+        </div>
+        <div className="md:min-h-0 overflow-y-auto max-h-[560px] md:max-h-none">
+        {filtered.length === 0 ? (
+          <EmptyState inline icon="search" title="No transactions" description="Try clearing filters or widening the date range." />
+        ) : (
+          paginated.map((p, idx) => {
+            const type = p.linkedOrderId ? "Order" : "Consultation";
+            const typeTone = p.linkedOrderId ? "gold" as const : "muted" as const;
+            const href = p.linkedOrderId ? `/orders/${p.linkedOrderId}` : p.linkedAppointmentId ? `/consultations/${p.linkedAppointmentId}` : null;
+            const refId = p.linkedOrderId || (p.linkedAppointmentId ? p.linkedAppointmentId : "");
+            const itemName = getItemName(p);
+            const displayStatus = getDisplayStatus(p.status);
+            const dateStr = p.paidAt || p.createdAt;
+
+            return (
+              <Link
+                key={p.id}
+                href={href || "#"}
+                className="group grid grid-cols-1 sm:grid-cols-[1fr_110px_140px_140px_130px_120px] gap-2 sm:gap-3 items-center px-4 py-2.5 transition-colors duration-150 last:rounded-b-[15px] even:bg-[rgba(89,82,54,0.025)] hover:!bg-[rgba(119,123,98,0.08)]"
+                style={{ borderBottom: idx < paginated.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
+              >
+                {/* Details: ID first, then item name + customer */}
+                <div className="min-w-0">
+                  <div className="text-[13.5px] font-medium truncate" style={{ color: T.text }}>{itemName}</div>
+                  <div className="text-[12px] truncate mt-0.5" style={{ color: T.muted }}>
+                    <span className="group-hover:underline" style={{ color: T.accent }}>{refId}</span> · {p.customerName}
+                  </div>
+                </div>
+
+                {/* Type pill */}
+                <div className="flex items-center gap-2 min-w-0">
+                  <Chip tone={typeTone}>{type}</Chip>
+                </div>
+
+                {/* Date & Time */}
+                <div className="min-w-0">
+                  <div className="text-[12px]" style={{ color: T.text }}>{formatDate(dateStr)}</div>
+                  {p.paidAt && <div className="text-[11px]" style={{ color: T.faint }}>{formatTime(p.paidAt)}</div>}
+                </div>
+
+                {/* Transaction ID */}
+                <div className="min-w-0 flex items-center gap-1.5">
+                  {p.transactionRef ? (
+                    <>
+                      <span className="text-[11px] font-mono" style={{ color: T.muted }}>{p.transactionRef}</span>
+                      <button
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigator.clipboard.writeText(p.transactionRef!); setToast("Transaction ID copied"); setTimeout(() => setToast(""), 3000); }}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity duration-150 shrink-0 cursor-pointer"
+                        title="Copy transaction ID"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: T.muted }}>
+                          <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                        </svg>
+                      </button>
+                    </>
+                  ) : (
+                    <span className="text-[11px]" style={{ color: T.faint }}>—</span>
+                  )}
+                </div>
+
+                {/* Status */}
+                <div>
+                  <Chip tone={getStatusTone(p.status)}>{displayStatus}</Chip>
+                </div>
+
+                {/* Amount */}
+                <div className="text-right">
+                  <div className="text-[14px] font-semibold tabular-nums" style={{ color: T.text }}>{inr(p.amount)}</div>
+                </div>
+              </Link>
+            );
+          })
+        )}
+        </div>
+        </>}
+      </Card>
+
+      {/* Pagination */}
+      <Pagination page={currentPage - 1} totalPages={totalPages} totalItems={filtered.length} perPage={PER_PAGE} onPageChange={(p) => setPage(p + 1)} />
+      </div>
+
+      {toast && <Toast message={toast} />}
     </>
   );
 }

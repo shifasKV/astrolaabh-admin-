@@ -1,8 +1,9 @@
 "use client";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, SearchFilter, Pagination, Select, TableSkeleton } from "@/components/ui";
+import { PageHeader, Card, Chip, SearchFilter, Pagination, Select, EmptyState, TableSkeleton } from "@/components/ui";
 import { T } from "@/lib/theme";
+import { useSimulatedLoad } from "@/lib/useSimulatedLoad";
 import { useAuth } from "@/lib/store/auth";
 import { MOCK_INCOMPLETE_ORDERS, MOCK_SALES_MEMBERS } from "@/lib/mock";
 import { inr } from "@/lib/types";
@@ -56,6 +57,7 @@ const SORT_OPTIONS = [
 ];
 
 export default function StoneLeadsPage() {
+  const loading = useSimulatedLoad();
   const { user } = useAuth();
   const isAdmin = user?.role === "sales_admin";
   const myId = user?.id;
@@ -66,12 +68,6 @@ export default function StoneLeadsPage() {
   const [assigneeFilter, setAssigneeFilter] = useState("");
   const [sort, setSort] = useState("newest");
   const [page, setPage] = useState(0);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const t = setTimeout(() => setLoading(false), 700);
-    return () => clearTimeout(t);
-  }, []);
 
   const assigneeOptions = useMemo(() => [
     { value: "", label: "All assignees" },
@@ -113,7 +109,8 @@ export default function StoneLeadsPage() {
 
   return (
     <>
-      <PageHeader title="Stone Leads" sub={isAdmin ? "All incomplete stone orders across the team" : "Your assigned stone order leads"} />
+      <div className="md:h-[calc(100dvh-78px)] md:flex md:flex-col md:min-h-0">
+      <PageHeader title="Stone Leads" />
 
       <div className="flex flex-wrap items-center gap-3 mb-4">
         <div className="flex-1 min-w-[200px]">
@@ -125,42 +122,46 @@ export default function StoneLeadsPage() {
         <div className="w-[150px]"><Select value={sort} onChange={setSort} options={SORT_OPTIONS} placeholder="Sort" /></div>
       </div>
 
-      {loading ? (
-        <Card><TableSkeleton rows={5} cols={5} /></Card>
-      ) : (
-      <Card>
-        <div className={`hidden sm:grid ${isAdmin ? "grid-cols-[1fr_1fr_90px_120px_100px_100px_100px]" : "grid-cols-[1fr_1fr_90px_120px_100px_100px]"} gap-3 px-3 py-2 text-[11px] tracking-[0.06em] uppercase`} style={{ color: T.faint, borderBottom: `1px solid ${T.borderSoft}` }}>
-          <span>Customer</span>
-          <span>Item</span>
-          <span>Date</span>
-          <span>Reason</span>
-          <span>Status</span>
-          {isAdmin && <span>Assignee</span>}
-          <span className="text-right">Amount</span>
+      <Card className="!p-0 md:flex md:flex-col md:min-h-0">
+        <div className="md:min-h-0 overflow-y-auto max-h-[560px] md:max-h-none flex-1">
+          {loading ? <TableSkeleton cols={isAdmin ? 7 : 6} rows={8} /> : <>
+          {/* Column header */}
+          <div className={`hidden sm:grid ${isAdmin ? "grid-cols-[1fr_1fr_90px_120px_100px_100px_100px]" : "grid-cols-[1fr_1fr_90px_120px_100px_100px]"} gap-3 px-4 h-10 items-center text-[11px] tracking-[0.06em] uppercase font-medium rounded-t-[15px]`} style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.border}` }}>
+            <span>Customer</span>
+            <span>Item</span>
+            <span>Date</span>
+            <span>Reason</span>
+            <span>Status</span>
+            {isAdmin && <span>Assignee</span>}
+            <span className="text-right">Amount</span>
+          </div>
+
+          {paged.length === 0 ? (
+            <EmptyState inline icon="search" title="No stone leads" description="Try a different search or clear the filters." />
+          ) : (
+            paged.map((o, i, arr) => (
+              <Link key={o.id} href={`/stone-leads/${o.id}`}
+                className={`grid grid-cols-1 ${isAdmin ? "sm:grid-cols-[1fr_1fr_90px_120px_100px_100px_100px]" : "sm:grid-cols-[1fr_1fr_90px_120px_100px_100px]"} gap-3 items-center px-4 py-2.5 transition-colors even:bg-[rgba(89,82,54,0.025)] hover:!bg-[rgba(119,123,98,0.08)] ${i === arr.length - 1 ? "rounded-b-[15px]" : ""}`}
+                style={{ borderBottom: i < arr.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
+              >
+                <div className="min-w-0">
+                  <div className="text-[13px] font-medium truncate" style={{ color: T.text }}>{o.customerName}</div>
+                  <div className="text-[11px] truncate" style={{ color: T.faint }}>{o.customerPhone}</div>
+                </div>
+                <div className="min-w-0"><div className="text-[13px] truncate" style={{ color: T.text }}>{o.itemName}</div></div>
+                <div className="text-[12px]" style={{ color: T.muted }}>{fmtDate(o.failedAt)}</div>
+                <div><Chip tone={REASON_TONE[o.reason] || "muted"}>{REASON_LABEL[o.reason]}</Chip></div>
+                <div><Chip tone={STATUS_TONE[o.leadStatus] || "muted"}>{STATUS_LABEL[o.leadStatus]}</Chip></div>
+                {isAdmin && <div className="text-[12px]" style={{ color: T.muted }}>{getAssigneeName(o.assignedTo)}</div>}
+                <div className="text-[13px] text-right font-medium tabular-nums" style={{ color: T.text }}>{inr(o.amount)}</div>
+              </Link>
+            ))
+          )}
+          </>}
         </div>
-
-        {paged.length === 0 && <div className="text-center py-10 text-[13px]" style={{ color: T.muted }}>No stone leads found.</div>}
-        {paged.map((o) => (
-          <Link key={o.id} href={`/stone-leads/${o.id}`}
-            className={`grid grid-cols-1 ${isAdmin ? "sm:grid-cols-[1fr_1fr_90px_120px_100px_100px_100px]" : "sm:grid-cols-[1fr_1fr_90px_120px_100px_100px]"} gap-3 items-center px-3 py-3 transition-all duration-150 rounded-[8px] hover:bg-[rgba(160,125,56,0.07)]`}
-            style={{ borderBottom: `1px solid ${T.borderSoft}` }}
-          >
-            <div className="min-w-0">
-              <div className="text-[13px] font-medium truncate" style={{ color: T.text }}>{o.customerName}</div>
-              <div className="text-[11px] truncate" style={{ color: T.faint }}>{o.customerPhone}</div>
-            </div>
-            <div className="min-w-0"><div className="text-[13px] truncate" style={{ color: T.text }}>{o.itemName}</div></div>
-            <div className="text-[12px]" style={{ color: T.muted }}>{fmtDate(o.failedAt)}</div>
-            <div><Chip tone={REASON_TONE[o.reason] || "muted"}>{REASON_LABEL[o.reason]}</Chip></div>
-            <div><Chip tone={STATUS_TONE[o.leadStatus] || "muted"}>{STATUS_LABEL[o.leadStatus]}</Chip></div>
-            {isAdmin && <div className="text-[12px]" style={{ color: T.muted }}>{getAssigneeName(o.assignedTo)}</div>}
-            <div className="text-[13px] text-right font-medium tabular-nums" style={{ color: T.text }}>{inr(o.amount)}</div>
-          </Link>
-        ))}
-
-        <Pagination page={page} totalPages={totalPages} onPageChange={setPage} perPage={PAGE_SIZE} totalItems={filtered.length} />
       </Card>
-      )}
+      <Pagination page={page} totalPages={totalPages} onPageChange={setPage} perPage={PAGE_SIZE} totalItems={filtered.length} />
+      </div>
     </>
   );
 }

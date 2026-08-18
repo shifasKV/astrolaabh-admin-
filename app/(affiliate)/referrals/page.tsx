@@ -1,7 +1,8 @@
 "use client";
-import { useState, useMemo, useEffect } from "react";
-import { PageHeader, Card, Chip, Tabs, SearchFilter, Select, Pagination, TableSkeleton, ExportButton } from "@/components/ui";
+import { useState, useMemo } from "react";
+import { PageHeader, Card, Chip, Tabs, SearchFilter, Select, Pagination, TableSkeleton } from "@/components/ui";
 import { T } from "@/lib/theme";
+import { useSimulatedLoad } from "@/lib/useSimulatedLoad";
 import { MOCK_REFERRAL_EVENTS } from "@/lib/mock";
 import { inr } from "@/lib/types";
 
@@ -19,17 +20,12 @@ function fmtDate(d: string) {
 }
 
 export default function ReferralsPage() {
+  const loading = useSimulatedLoad();
   const [tab, setTab] = useState("orders");
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<SortKey>("date_desc");
   const [statusFilter, setStatusFilter] = useState("");
   const [page, setPage] = useState(0);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const t = setTimeout(() => setLoading(false), 700);
-    return () => clearTimeout(t);
-  }, []);
 
   const myReferrals = MOCK_REFERRAL_EVENTS.filter((r) => r.affiliateId === "aff_001");
   const orders = myReferrals.filter((r) => r.eventType === "order");
@@ -71,17 +67,6 @@ export default function ReferralsPage() {
   const totalPages = Math.max(1, Math.ceil(activeItems.length / PER_PAGE));
   const paged = activeItems.slice(page * PER_PAGE, (page + 1) * PER_PAGE);
 
-  const exportData = activeItems.map((r) => ({
-    id: r.id,
-    type: r.eventType,
-    customer: r.maskedCustomer ?? "",
-    campaign: r.campaign ?? "",
-    date: r.eventDate,
-    amount: r.orderValue ?? "",
-    commission: r.commissionAmount ?? "",
-    status: r.commissionStatus ?? "",
-  }));
-
   const orderSortOptions = [
     { value: "date_desc", label: "Newest" },
     { value: "date_asc", label: "Oldest" },
@@ -96,7 +81,8 @@ export default function ReferralsPage() {
 
   return (
     <>
-      <PageHeader title="Referrals & conversions" sub="Track how your links perform — orders and consultation bookings" />
+      <div className="md:h-[calc(100dvh-78px)] md:flex md:flex-col md:min-h-0">
+      <PageHeader title="Referrals & conversions" />
 
       <div className="mb-4">
         <Tabs
@@ -116,17 +102,13 @@ export default function ReferralsPage() {
         <div className="ml-auto w-[170px]">
           <Select value={sort} onChange={(v) => { setSort(v as SortKey); setPage(0); }} compact prefix="Sort: " options={orderSortOptions} />
         </div>
-        <ExportButton data={exportData} filename="referrals" className="ml-2" />
       </div>
 
-      {loading ? (
-        <Card><TableSkeleton rows={5} cols={5} /></Card>
-      ) : (
-      <>
       {/* ===== ORDERS TAB ===== */}
       {tab === "orders" && (
-        <Card>
-          <div className="hidden sm:grid grid-cols-[minmax(120px,1fr)_110px_120px_120px_100px_100px] gap-3 px-3 py-2 text-[11px] tracking-[0.06em] uppercase" style={{ color: T.faint, borderBottom: `1px solid ${T.borderSoft}` }}>
+        <Card className="!p-0 md:min-h-0 md:overflow-y-auto">
+          {loading ? <TableSkeleton cols={6} rows={8} /> : <>
+          <div className="hidden sm:grid grid-cols-[minmax(120px,1fr)_110px_120px_120px_100px_100px] gap-3 items-center px-4 h-10 text-[11px] tracking-[0.06em] uppercase font-medium" style={{ color: T.faint, borderBottom: `1px solid ${T.border}` }}>
             <span>Order details</span>
             <span>Date</span>
             <span>Customer</span>
@@ -138,7 +120,7 @@ export default function ReferralsPage() {
           {paged.map((r) => (
             <div
               key={r.id}
-              className="grid grid-cols-1 sm:grid-cols-[minmax(120px,1fr)_110px_120px_120px_100px_100px] gap-2 sm:gap-3 items-center px-3 py-3 transition-all duration-150 rounded-[8px] hover:bg-[rgba(160,125,56,0.07)]"
+              className="grid grid-cols-1 sm:grid-cols-[minmax(120px,1fr)_110px_120px_120px_100px_100px] gap-2 sm:gap-3 items-center px-3 py-3 transition-all duration-150 rounded-[8px] hover:bg-[rgba(119,123,98,0.07)]"
               style={{ borderBottom: `1px solid ${T.borderSoft}` }}
             >
               <div className="min-w-0">
@@ -156,14 +138,16 @@ export default function ReferralsPage() {
               </div>
             </div>
           ))}
+          </>}
           <Pagination page={page} totalPages={totalPages} onPageChange={setPage} perPage={PER_PAGE} totalItems={activeItems.length} />
         </Card>
       )}
 
       {/* ===== BOOKINGS TAB ===== */}
       {tab === "bookings" && (
-        <Card>
-          <div className="hidden sm:grid grid-cols-[minmax(120px,1fr)_110px_120px_120px_100px_100px] gap-3 px-3 py-2 text-[11px] tracking-[0.06em] uppercase" style={{ color: T.faint, borderBottom: `1px solid ${T.borderSoft}` }}>
+        <Card className="!p-0 md:min-h-0 md:overflow-y-auto">
+          {loading ? <TableSkeleton cols={6} rows={8} /> : <>
+          <div className="hidden sm:grid grid-cols-[minmax(120px,1fr)_110px_120px_120px_100px_100px] gap-3 items-center px-4 h-10 text-[11px] tracking-[0.06em] uppercase font-medium" style={{ color: T.faint, borderBottom: `1px solid ${T.border}` }}>
             <span>Booking details</span>
             <span>Date</span>
             <span>Customer</span>
@@ -175,7 +159,7 @@ export default function ReferralsPage() {
           {paged.map((r) => (
             <div
               key={r.id}
-              className="grid grid-cols-1 sm:grid-cols-[minmax(120px,1fr)_110px_120px_120px_100px_100px] gap-2 sm:gap-3 items-center px-3 py-3 transition-all duration-150 rounded-[8px] hover:bg-[rgba(160,125,56,0.07)]"
+              className="grid grid-cols-1 sm:grid-cols-[minmax(120px,1fr)_110px_120px_120px_100px_100px] gap-2 sm:gap-3 items-center px-3 py-3 transition-all duration-150 rounded-[8px] hover:bg-[rgba(119,123,98,0.07)]"
               style={{ borderBottom: `1px solid ${T.borderSoft}` }}
             >
               <div className="min-w-0">
@@ -193,11 +177,11 @@ export default function ReferralsPage() {
               </div>
             </div>
           ))}
+          </>}
           <Pagination page={page} totalPages={totalPages} onPageChange={setPage} perPage={PER_PAGE} totalItems={activeItems.length} />
         </Card>
       )}
-      </>
-      )}
+      </div>
     </>
   );
 }

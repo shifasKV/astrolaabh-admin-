@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { PageHeader, Card, Chip, SearchFilter, Pagination, Select, DateInput } from "@/components/ui";
+import { PageHeader, Card, Chip, SearchFilter, Pagination, Select, DateInput, EmptyState } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { EXPERT_PROFILES, MOCK_CONSULTATIONS } from "@/lib/mock";
 
@@ -71,7 +71,6 @@ export default function ExpertConsultationsPage() {
     <>
       <PageHeader
         title={`Consultations`}
-        sub={`All consultations for ${expert?.name ?? "this expert"} (${allConsultations.length} total)`}
         back={{ label: expert?.name ?? "Profile", href: `/astro-gemologists/${id}` }}
       />
 
@@ -150,7 +149,7 @@ export default function ExpertConsultationsPage() {
         </div>
 
         {paginated.length === 0 ? (
-          <p className="text-[13.5px] py-8 text-center" style={{ color: T.muted }}>No consultations found.</p>
+          <EmptyState inline icon="inbox" title="No consultations" description="No consultations to show." />
         ) : (
           paginated.map((c) => (
             <Link

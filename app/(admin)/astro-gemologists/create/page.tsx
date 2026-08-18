@@ -1,9 +1,9 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { PageHeader, Card, GoldBtn, GhostBtn, Input, Select, Textarea, FileInput } from "@/components/ui";
+import { PageHeader, Card, GoldBtn, GhostBtn, Input, Select, Textarea } from "@/components/ui";
 import { T } from "@/lib/theme";
-import { V, validate, hasErrors, type ValidationErrors } from "@/lib/validation";
+import * as V from "@/lib/validators";
 
 const GENDER_OPTIONS = [
   { value: "male", label: "Male" },
@@ -47,6 +47,36 @@ const EXPERIENCE_OPTIONS = [
   { value: "25+", label: "25+ years" },
 ];
 
+function Section({ title, sub, children, first }: { title: string; sub?: string; children: React.ReactNode; first?: boolean }) {
+  return (
+    <div className="p-6" style={first ? undefined : { borderTop: `1px solid ${T.borderSoft}` }}>
+      <h2 className="text-[15px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>{title}</h2>
+      {sub && <p className="text-[12.5px] mt-1" style={{ color: T.muted }}>{sub}</p>}
+      <div className="mt-5 space-y-5">{children}</div>
+    </div>
+  );
+}
+
+function FieldLabel({ children }: { children: React.ReactNode }) {
+  return <label className="block text-[11px] font-medium tracking-[0.1em] uppercase mb-2" style={{ color: T.faint }}>{children}</label>;
+}
+
+function ChipToggle({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[9px] text-[12.5px] font-medium transition-all duration-150 cursor-pointer"
+      style={active
+        ? { background: T.accentFaint, border: `1px solid ${T.accentBorder}`, color: T.accent }
+        : { background: "transparent", border: `1px solid ${T.borderSoft}`, color: T.muted }}
+    >
+      {active && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3"><path d="M20 6 9 17l-5-5" /></svg>}
+      {label}
+    </button>
+  );
+}
+
 export default function CreateAstroGemologistPage() {
   const router = useRouter();
   const [toast, setToast] = useState("");
@@ -71,26 +101,6 @@ export default function CreateAstroGemologistPage() {
   const [ifsc, setIfsc] = useState("");
   const [upi, setUpi] = useState("");
 
-  const [errors, setErrors] = useState<ValidationErrors>({});
-  const [touched, setTouched] = useState<Set<string>>(new Set());
-  const [submitAttempted, setSubmitAttempted] = useState(false);
-
-  const markTouched = (field: string) => setTouched((prev) => new Set(prev).add(field));
-  const showError = (field: string) => (touched.has(field) || submitAttempted) ? errors[field] : undefined;
-
-  const validateForm = () => {
-    const errs = validate({
-      name: V.required(name),
-      email: V.email(email),
-      phone: V.phone(phone),
-      stoneRate: stoneRate.trim() ? V.percent(stoneRate) : "",
-      jewelleryRate: jewelleryRate.trim() ? V.percent(jewelleryRate) : "",
-      consultationRate: consultationRate.trim() ? V.percent(consultationRate) : "",
-    });
-    setErrors(errs);
-    return errs;
-  };
-
   const handlePhoto = (file: File) => {
     setPhoto(file);
     const reader = new FileReader();
@@ -102,146 +112,167 @@ export default function CreateAstroGemologistPage() {
     setter(arr.includes(val) ? arr.filter((v) => v !== val) : [...arr, val]);
   };
 
-  const canSubmit = !hasErrors(validate({
-    name: V.required(name),
-    email: V.email(email),
-    phone: V.phone(phone),
-    stoneRate: stoneRate.trim() ? V.percent(stoneRate) : "",
-    jewelleryRate: jewelleryRate.trim() ? V.percent(jewelleryRate) : "",
-    consultationRate: consultationRate.trim() ? V.percent(consultationRate) : "",
-  }));
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const clearErr = (k: string) => setErrors((p) => (p[k] ? { ...p, [k]: "" } : p));
+  const validate = () => {
+    const e: Record<string, string> = {
+      name: V.required(name, "Full name"),
+      email: V.email(email),
+      phone: V.phone(phone),
+      age: V.optionalNumber(age, "Age"),
+      fee: V.positiveNumber(fee, "Session rate"),
+      ifsc: V.ifsc(ifsc),
+    };
+    setErrors(e);
+    return V.isClean(e);
+  };
 
   const handleCreate = () => {
-    setSubmitAttempted(true);
-    setTouched(new Set(["name", "email", "phone", "stoneRate", "jewelleryRate", "consultationRate"]));
-    const errs = validateForm();
-    if (hasErrors(errs)) return;
-    setToast("Astro-Gemologist created — Calendly invitation sent");
-    setTimeout(() => {
-      router.push("/astro-gemologists");
-    }, 1500);
+    if (!validate()) return;
+    setToast("Astro-Gemologist created — invite link sent");
+    setTimeout(() => router.push("/astro-gemologists"), 1500);
   };
 
   return (
     <>
       <PageHeader
         title="Add Astro-Gemologist"
-        sub="Create a new expert profile and send a Calendly invitation"
         back={{ label: "Astro-Gemologists", href: "/astro-gemologists" }}
       />
 
-      <div className="space-y-6 max-w-[720px]">
-        {/* Astrologer details */}
-        <Card>
-          <div className="text-[11px] tracking-[0.08em] uppercase mb-4" style={{ color: T.accent }}>Astrologer details</div>
-          <div className="space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-5 items-start pb-24">
+        {/* Live preview rail */}
+        <aside className="lg:sticky lg:top-4">
+          <Card className="!p-5">
+            <div className="flex flex-col items-center text-center pb-4 mb-4" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
+              <div className="relative">
+                {photoPreview ? (
+                  <>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={photoPreview} alt="Preview" className="w-[72px] h-[72px] rounded-[20px] object-cover" style={{ border: `1px solid ${T.accentBorder}` }} />
+                    <button type="button" onClick={() => { setPhoto(null); setPhotoPreview(""); }} aria-label="Remove photo" className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full flex items-center justify-center cursor-pointer" style={{ background: T.danger, color: "#fff" }}>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="w-2.5 h-2.5"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                    </button>
+                  </>
+                ) : (
+                  <div className="w-[72px] h-[72px] rounded-[20px] flex items-center justify-center text-[24px] font-semibold" style={{ background: T.accentFaint, border: `1px solid ${T.accentBorder}`, color: T.accent }}>{(name || "N")[0]}</div>
+                )}
+              </div>
+              <div className="text-[15px] font-semibold mt-3 leading-tight" style={{ color: T.text }}>{name || "New astro-gemologist"}</div>
+              <div className="text-[12px] mt-0.5 truncate max-w-full" style={{ color: T.muted }}>{email || "—"}</div>
+              <input id="photo-upload" type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handlePhoto(f); }} />
+              <label htmlFor="photo-upload" className="inline-flex items-center gap-1.5 h-8 px-3 mt-3.5 rounded-[9px] text-[12px] font-medium cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.1)]" style={{ color: T.text, border: `1px solid ${T.border}` }}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M17 8l-5-5-5 5" /><path d="M12 3v12" /></svg>
+                {photo ? "Change photo" : "Upload photo"}
+              </label>
+            </div>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-[12.5px]">
+                <span style={{ color: T.faint }}>Session rate</span>
+                <span className="font-semibold tabular-nums" style={{ color: T.text }}>{fee ? `₹${Number(fee).toLocaleString("en-IN")}` : "—"}</span>
+              </div>
+              <div className="flex items-center justify-between text-[12.5px]">
+                <span style={{ color: T.faint }}>Experience</span>
+                <span className="font-medium" style={{ color: T.text }}>{EXPERIENCE_OPTIONS.find((o) => o.value === experience)?.label ?? "—"}</span>
+              </div>
+              {(languages.length > 0 || skills.length > 0) && (
+                <div className="pt-3" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+                  {languages.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mb-2">
+                      {languages.map((l) => (
+                        <span key={l} className="text-[11px] px-2 py-0.5 rounded-full" style={{ background: T.accentFaint, color: T.accent, border: `1px solid ${T.borderSoft}` }}>{l}</span>
+                      ))}
+                    </div>
+                  )}
+                  {skills.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {skills.map((k) => (
+                        <span key={k} className="text-[11px] px-2 py-0.5 rounded-full" style={{ background: "rgba(89,82,54,0.06)", color: T.muted }}>{SKILL_OPTIONS.find((s) => s.value === k)?.label ?? k}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </Card>
+        </aside>
+
+        {/* Seamless form */}
+        <Card className="!p-0 overflow-hidden">
+          <Section title="Identity & contact" sub="Name and how the customer reaches this expert." first>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Input value={name} onChange={(v) => { markTouched("name"); setName(v); }} label="Full name" placeholder="e.g. Pt. Sandeep Kochaar" error={showError("name")} />
-              <Input value={email} onChange={(v) => { markTouched("email"); setEmail(v); }} label="Email" type="email" placeholder="e.g. name@astrolaabh.house" error={showError("email")} />
+              <Input value={name} onChange={(v) => { setName(v); clearErr("name"); }} onBlur={() => setErrors((p) => ({ ...p, name: V.required(name, "Full name") }))} error={errors.name} label="Full name" placeholder="e.g. Pt. Sandeep Kochaar" />
+              <Input value={email} onChange={(v) => { setEmail(v); clearErr("email"); }} onBlur={() => setErrors((p) => ({ ...p, email: V.email(email) }))} error={errors.email} label="Email" type="email" placeholder="e.g. name@astrolaabh.house" />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <Input value={phone} onChange={(v) => { markTouched("phone"); setPhone(v); }} label="Mobile number" placeholder="e.g. +91 98765 43210" error={showError("phone")} />
-              <Input value={age} onChange={setAge} label="Age" type="number" placeholder="e.g. 45" />
+              <Input value={phone} onChange={(v) => { setPhone(v); clearErr("phone"); }} onBlur={() => setErrors((p) => ({ ...p, phone: V.phone(phone) }))} error={errors.phone} label="Mobile number" type="tel" placeholder="e.g. +91 98765 43210" />
+              <Input value={age} onChange={(v) => { setAge(v); clearErr("age"); }} error={errors.age} label="Age" type="number" placeholder="e.g. 45" />
               <Select value={gender} onChange={setGender} label="Gender" options={GENDER_OPTIONS} placeholder="Select gender" />
             </div>
+          </Section>
 
-            {/* Photo */}
+          <Section title="Expertise" sub="Languages, specializations, experience and session rate.">
             <div>
-              <label className="block text-[11px] tracking-[0.12em] uppercase mb-1.5" style={{ color: T.faint }}>Photo</label>
-              <div className="flex items-center gap-4">
-                {photoPreview ? (
-                  <div className="relative">
-                    <img src={photoPreview} alt="Preview" className="w-16 h-16 rounded-full object-cover" style={{ border: `2px solid ${T.accent}40` }} />
-                    <button type="button" onClick={() => { setPhoto(null); setPhotoPreview(""); }} className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-[10px] cursor-pointer" style={{ background: T.danger, color: "#fff" }}>✕</button>
-                  </div>
-                ) : (
-                  <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ background: `${T.accent}10`, border: `2px dashed ${T.accent}30` }}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ color: T.faint }}><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4-4v2" /><circle cx="12" cy="7" r="4" /></svg>
-                  </div>
-                )}
-                <FileInput onSelect={handlePhoto} accept="image/*" className="flex-1" />
-              </div>
-            </div>
-
-            {/* Languages */}
-            <div>
-              <label className="block text-[11px] tracking-[0.12em] uppercase mb-2" style={{ color: T.faint }}>Languages spoken</label>
+              <FieldLabel>Languages spoken</FieldLabel>
               <div className="flex flex-wrap gap-2">
-                {LANGUAGE_OPTIONS.map((lang) => {
-                  const selected = languages.includes(lang.value);
-                  return (
-                    <button key={lang.value} type="button" onClick={() => toggleMulti(languages, lang.value, setLanguages)} className="h-8 px-3 rounded-[8px] text-[12px] font-medium transition-all cursor-pointer" style={{ background: selected ? `${T.accent}18` : "transparent", border: `1px solid ${selected ? T.accent : T.borderSoft}`, color: selected ? T.accent : T.muted }}>
-                      {selected && <span className="mr-1">✓</span>}{lang.label}
-                    </button>
-                  );
-                })}
+                {LANGUAGE_OPTIONS.map((lang) => (
+                  <ChipToggle key={lang.value} label={lang.label} active={languages.includes(lang.value)} onClick={() => toggleMulti(languages, lang.value, setLanguages)} />
+                ))}
               </div>
             </div>
-
-            {/* Skills */}
             <div>
-              <label className="block text-[11px] tracking-[0.12em] uppercase mb-2" style={{ color: T.faint }}>Skills & specializations</label>
+              <FieldLabel>Skills &amp; specializations</FieldLabel>
               <div className="flex flex-wrap gap-2">
-                {SKILL_OPTIONS.map((skill) => {
-                  const selected = skills.includes(skill.value);
-                  return (
-                    <button key={skill.value} type="button" onClick={() => toggleMulti(skills, skill.value, setSkills)} className="h-8 px-3 rounded-[8px] text-[12px] font-medium transition-all cursor-pointer" style={{ background: selected ? `${T.accent}18` : "transparent", border: `1px solid ${selected ? T.accent : T.borderSoft}`, color: selected ? T.accent : T.muted }}>
-                      {selected && <span className="mr-1">✓</span>}{skill.label}
-                    </button>
-                  );
-                })}
+                {SKILL_OPTIONS.map((skill) => (
+                  <ChipToggle key={skill.value} label={skill.label} active={skills.includes(skill.value)} onClick={() => toggleMulti(skills, skill.value, setSkills)} />
+                ))}
               </div>
             </div>
-
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Select value={experience} onChange={setExperience} label="Experience" options={EXPERIENCE_OPTIONS} placeholder="Select experience" />
-              <Input value={fee} onChange={setFee} label="Per session rate (₹)" type="number" placeholder="e.g. 5000" />
+              <Input value={fee} onChange={(v) => { setFee(v); clearErr("fee"); }} onBlur={() => setErrors((p) => ({ ...p, fee: V.positiveNumber(fee, "Session rate") }))} error={errors.fee} label="Per session rate (₹)" type="number" placeholder="e.g. 5000" />
             </div>
-
             <Textarea value={bio} onChange={setBio} label="Bio / About" placeholder="Brief description about the expert's background and expertise…" rows={3} />
-          </div>
-        </Card>
+          </Section>
 
-        {/* Commission setup & Account details */}
-        <Card>
-          <div className="text-[11px] tracking-[0.08em] uppercase mb-4" style={{ color: T.accent }}>Commission & payment details</div>
-          <p className="text-[12px] mb-4" style={{ color: T.muted }}>Commission percentages and bank details for payouts. Can be updated later.</p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
-            {([["stone", stoneRate, setStoneRate, "stoneRate"], ["jewellery", jewelleryRate, setJewelleryRate, "jewelleryRate"], ["consultation", consultationRate, setConsultationRate, "consultationRate"]] as const).map(([cat, val, setter, fieldKey]) => (
-              <div key={cat} className="rounded-[10px] p-4" style={{ background: T.panel, border: `1px solid ${T.borderSoft}` }}>
-                <div className="text-[11px] tracking-[0.06em] uppercase mb-2" style={{ color: T.faint }}>{cat}</div>
-                <div className="flex items-center gap-2">
-                  <input type="number" value={val} onChange={(e) => { markTouched(fieldKey); setter(e.target.value); }} className="w-full h-9 px-3 rounded-[8px] text-[13px] outline-none" style={{ background: T.card, border: `1px solid ${showError(fieldKey) ? T.danger : T.border}`, color: T.text }} />
-                  <span className="text-[13px] font-medium shrink-0" style={{ color: T.muted }}>%</span>
-                </div>
-                {showError(fieldKey) && <p className="text-[11px] mt-1" style={{ color: T.danger }}>{showError(fieldKey)}</p>}
-              </div>
-            ))}
-          </div>
-          <div className="pt-4" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
-            <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.faint }}>Account details</div>
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Input value={bankName} onChange={setBankName} label="Bank name" placeholder="e.g. HDFC Bank" />
-                <Input value={accountNumber} onChange={setAccountNumber} label="Account number" placeholder="e.g. 1234 5678 6789" />
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Input value={ifsc} onChange={setIfsc} label="IFSC code" placeholder="e.g. HDFC0001234" />
-                <Input value={upi} onChange={setUpi} label="UPI ID" placeholder="e.g. name@upi" />
+          <Section title="Commission & payout" sub="Commission percentages and the bank account for payouts. Can be updated later.">
+            <div>
+              <FieldLabel>Commission rates</FieldLabel>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {([["Stone", stoneRate, setStoneRate], ["Jewellery", jewelleryRate, setJewelleryRate], ["Consultation", consultationRate, setConsultationRate]] as const).map(([cat, val, setter]) => (
+                  <div key={cat} className="rounded-[12px] p-3.5" style={{ background: T.accentFaint, border: `1px solid ${T.borderSoft}` }}>
+                    <div className="text-[10px] font-medium tracking-[0.08em] uppercase mb-2" style={{ color: T.faint }}>{cat}</div>
+                    <div className="flex items-center gap-1.5">
+                      <input type="number" value={val} onChange={(e) => setter(e.target.value)} className="w-full h-9 px-3 rounded-[8px] text-[13px] font-semibold tabular-nums outline-none" style={{ background: T.card, border: `1px solid ${T.border}`, color: T.text }} />
+                      <span className="text-[13px] font-medium shrink-0" style={{ color: T.muted }}>%</span>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
-          </div>
+            <div className="pt-5" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+              <FieldLabel>Account details</FieldLabel>
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Input value={bankName} onChange={setBankName} label="Bank name" placeholder="e.g. HDFC Bank" />
+                  <Input value={accountNumber} onChange={setAccountNumber} label="Account number" placeholder="e.g. 1234 5678 6789" />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Input value={ifsc} onChange={(v) => { setIfsc(v); clearErr("ifsc"); }} error={errors.ifsc} label="IFSC code" placeholder="e.g. HDFC0001234" />
+                  <Input value={upi} onChange={setUpi} label="UPI ID" placeholder="e.g. name@upi" />
+                </div>
+              </div>
+            </div>
+          </Section>
         </Card>
+      </div>
 
-        {/* Actions */}
-        <div className="flex items-center gap-3 pb-8">
-          <GoldBtn onClick={handleCreate} disabled={!canSubmit}>
-            Create Astro-Gemologist
-          </GoldBtn>
+      {/* Sticky action bar */}
+      <div className="sticky bottom-0 -mx-5 md:-mx-10 px-5 md:px-10 py-3.5 flex items-center justify-between gap-2.5" style={{ background: "rgba(248,245,238,0.9)", backdropFilter: "blur(6px)", borderTop: `1px solid ${T.borderSoft}` }}>
+        <span className="text-[12px] hidden sm:block" style={{ color: T.faint }}>An invite link will be emailed so they can set their password.</span>
+        <div className="flex items-center gap-2.5 ml-auto">
           <GhostBtn onClick={() => router.push("/astro-gemologists")}>Cancel</GhostBtn>
-          <span className="text-[12px] ml-2" style={{ color: T.faint }}>
-            A Calendly invitation will be sent automatically
-          </span>
+          <GoldBtn onClick={handleCreate}>Create &amp; send invite</GoldBtn>
         </div>
       </div>
 

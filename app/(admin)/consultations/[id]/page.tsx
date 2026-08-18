@@ -1,7 +1,7 @@
 "use client";
 import { use, useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, GoldBtn, GhostBtn, Modal, Input, Textarea, BackLink, LoadingState, ConfirmDialog } from "@/components/ui";
+import { PageHeader, Card, Chip, GoldBtn, GhostBtn, Modal, Input, Textarea, BackLink, Toast, ConfirmDialog } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_CONSULTATIONS, MOCK_CUSTOMERS, MOCK_STONE_RECOMMENDATIONS, MOCK_REMEDY_RECOMMENDATIONS, EXPERT_PROFILES, getExpertDates, getExpertSlots } from "@/lib/mock";
 import type { ExpertProfile, TimeSlot } from "@/lib/mock";
@@ -31,15 +31,9 @@ export default function ConsultationDetailPage({ params }: { params: Promise<{ i
   const [showActionMenu, setShowActionMenu] = useState(false);
   const [localStatus, setLocalStatus] = useState(consultation?.status ?? "scheduled");
   const [localNoShowBy, setLocalNoShowBy] = useState(consultation?.noShowBy ?? "");
-  const [confirmCustomerNoShow, setConfirmCustomerNoShow] = useState(false);
-  const [confirmExpertNoShow, setConfirmExpertNoShow] = useState(false);
+  const [confirmNoShow, setConfirmNoShow] = useState<"customer" | "expert" | null>(null);
+  const [confirmMarkPaid, setConfirmMarkPaid] = useState(false);
   const actionMenuRef = useRef<HTMLDivElement>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const t = setTimeout(() => setLoading(false), 700);
-    return () => clearTimeout(t);
-  }, []);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -99,318 +93,239 @@ export default function ConsultationDetailPage({ params }: { params: Promise<{ i
     setTimeout(() => setToast(""), 3000);
   };
 
+  const dt = new Date(consultation.scheduledAt);
+  const statusChip =
+    consultation.paymentStatus === "pending" ? { tone: "gold" as const, label: "Payment pending" } :
+    localStatus === "summary_pending" ? { tone: "danger" as const, label: "Recommendation due" } :
+    localStatus === "no_show" ? { tone: "danger" as const, label: (localNoShowBy || consultation.noShowBy) === "expert" ? "Expert no-show" : "Customer no-show" } :
+    consultation.status === "reschedule_requested" ? { tone: "gold" as const, label: "Reschedule requested" } :
+    (localStatus === "closed" || localStatus === "completed") ? { tone: "good" as const, label: "Completed" } :
+    { tone: "info" as const, label: "Scheduled" };
+
   return (
     <>
-      <PageHeader
-        back={{ label: "Consultations", href: "/consultations" }}
-        title=""
-      />
+      <div className="mb-4"><BackLink label="Consultations" href="/consultations" /></div>
 
-      {loading ? (
-        <Card className="mb-4"><LoadingState lines={8} /></Card>
-      ) : (
-      <>
-      {/* Payment pending banner */}
-      {consultation.paymentStatus === "pending" && (
-        <div
-          className="flex items-center gap-3 rounded-[10px] px-4 py-3 mb-4"
-          style={{ background: "rgba(195,160,88,0.12)", border: "1px solid rgba(195,160,88,0.3)" }}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-          <div className="flex-1">
-            <span className="text-[13.5px] font-medium" style={{ color: T.text }}>Payment pending</span>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <button onClick={() => { setToast("Payment marked as received"); setTimeout(() => setToast(""), 3000); }} className="text-[12px] font-medium px-3 py-1.5 rounded-[8px] cursor-pointer hover:brightness-110 transition-all" style={{ background: T.primary, color: T.primaryInk }}>Mark as paid</button>
-            <button onClick={() => { setToast("Payment link sent to customer"); setTimeout(() => setToast(""), 3000); }} className="text-[12px] font-medium px-3 py-1.5 rounded-[8px] cursor-pointer hover:opacity-90 transition-opacity" style={{ background: T.accent, color: T.accentInk }}>Resend link</button>
-          </div>
-        </div>
-      )}
-
-      {/* Reschedule Request Section */}
-      {consultation.status === "reschedule_requested" && consultation.rescheduleReason && (
-        <div
-          className="rounded-[12px] p-5 mb-5"
-          style={{ background: "rgba(176,84,84,0.06)", border: `1px solid rgba(176,84,84,0.25)` }}
-        >
-          <div className="text-[11px] tracking-[0.08em] uppercase mb-2 font-medium" style={{ color: T.danger }}>Reschedule requested</div>
-          <p className="text-[13.5px]" style={{ color: T.text }}>{consultation.rescheduleReason}</p>
-        </div>
-      )}
-
-      {/* Consultation details card */}
-      <Card className="mb-5">
-        <div className="mb-4">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <h2 className="text-[18px] font-semibold" style={{ color: T.text }}>
-                {consultation.customerName} with {consultation.expertName}
-              </h2>
-              {consultation.status === "reschedule_requested" && <Chip tone="gold">Scheduled</Chip>}
-              {localStatus === "summary_pending" && <Chip tone="danger">Recommendation due</Chip>}
-              {localStatus === "no_show" && (
-                <Chip tone="danger">{(localNoShowBy || consultation.noShowBy) === "expert" ? "Expert no show" : "Customer no show"}</Chip>
-              )}
-            </div>
-            <div className="relative shrink-0" ref={actionMenuRef}>
-              <button
-                type="button"
-                onClick={() => setShowActionMenu((v) => !v)}
-                className="w-9 h-9 rounded-[9px] flex items-center justify-center transition-colors hover:bg-[rgba(89,82,54,0.08)] cursor-pointer"
-                style={{ border: `1px solid ${T.border}`, color: T.muted }}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
-              </button>
-              {showActionMenu && (
-                <div className="absolute right-0 top-full mt-1 z-50 w-[220px] rounded-[10px] py-1.5 shadow-lg" style={{ background: T.popover, border: `1px solid ${T.border}` }}>
-                  <button
-                    onClick={() => { setShowActionMenu(false); openRescheduleModal(); }}
-                    className="w-full text-left px-3.5 py-2.5 text-[13px] transition-colors cursor-pointer hover:bg-[rgba(160,125,56,0.08)]"
-                    style={{ color: T.text }}
-                  >
-                    Reschedule
-                  </button>
-                  {(localStatus === "summary_pending" || consultation.status === "summary_pending") && (
-                    <>
-                      <button
-                        onClick={() => { setShowActionMenu(false); setConfirmCustomerNoShow(true); }}
-                        className="w-full text-left px-3.5 py-2.5 text-[13px] transition-colors cursor-pointer hover:bg-[rgba(160,125,56,0.08)]"
-                        style={{ color: T.text }}
-                      >
-                        Mark as customer no show
-                      </button>
-                      <button
-                        onClick={() => { setShowActionMenu(false); setConfirmExpertNoShow(true); }}
-                        className="w-full text-left px-3.5 py-2.5 text-[13px] transition-colors cursor-pointer hover:bg-[rgba(160,125,56,0.08)]"
-                        style={{ color: T.text }}
-                      >
-                        Mark as astrologer no show
-                      </button>
-                    </>
-                  )}
-                </div>
-              )}
+      {/* Identity header */}
+      <Card className="!p-6 mb-4">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="flex items-start gap-3.5 min-w-0">
+            <span className="w-11 h-11 rounded-[14px] flex items-center justify-center text-[15px] font-semibold shrink-0" style={{ background: T.accentFaint, border: `1px solid ${T.accentBorder}`, color: T.accent }}>
+              {consultation.customerName.split(" ").map((w) => w[0]).slice(0, 2).join("")}
+            </span>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2.5">
+                <h1 className="text-[18px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>{consultation.customerName}</h1>
+                <Chip tone={statusChip.tone}>{statusChip.label}</Chip>
+              </div>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-[12.5px]" style={{ color: T.muted }}>
+                <span className="uppercase tracking-[0.05em] text-[11px] tabular-nums" style={{ color: T.faint }}>{consultation.id}</span>
+                <span style={{ color: T.faint }}>·</span>
+                <span>with <Link href={`/astro-gemologists/${consultation.expertId}`} className="font-medium hover:underline" style={{ color: T.accent }}>{consultation.expertName}</Link></span>
+                <span style={{ color: T.faint }}>·</span>
+                <span className="tabular-nums">{dt.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })} · {dt.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true })}</span>
+              </div>
             </div>
           </div>
-          <div className="text-[12px] mt-1" style={{ color: T.muted }}>{consultation.id}</div>
-        </div>
-
-        <div className="flex items-center gap-4">
-          <div className="grid grid-cols-3 gap-4 text-[13px] flex-1">
-            <div>
-              <div className="text-[11px] tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>Expert</div>
-              <Link href={`/astro-gemologists/${consultation.expertId}`} className="hover:underline" style={{ color: T.accent }}>{consultation.expertName}</Link>
-            </div>
-            <div>
-              <div className="text-[11px] tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>Date</div>
-              <div style={{ color: T.text }}>{new Date(consultation.scheduledAt).toLocaleDateString("en-IN", { dateStyle: "medium" })}</div>
-            </div>
-            <div>
-              <div className="text-[11px] tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>Time</div>
-              <div style={{ color: T.text }}>{new Date(consultation.scheduledAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })}</div>
-            </div>
-          </div>
-        </div>
-      </Card>
-
-      {/* Recommendation */}
-      {(consultation.summary || recommendation || remedy) && (
-        <Card className="mb-4">
-          <div className="text-[11px] tracking-[0.08em] uppercase mb-4" style={{ color: T.faint }}>Recommendation</div>
-          <div className="grid md:grid-cols-2 gap-4">
-            {/* Consultation Summary */}
-            <div className="rounded-[9px] p-4" style={{ background: T.bg, border: `1px solid ${T.borderSoft}` }}>
-              <div className="text-[11px] tracking-[0.08em] uppercase mb-2" style={{ color: T.faint }}>Consultation summary</div>
-              {consultation.summary ? (
-                <>
-                  <p className="text-[13.5px] leading-relaxed" style={{ color: T.text }}>{consultation.summary}</p>
-                  {consultation.summarySubmittedAt && (
-                    <p className="text-[11px] mt-3" style={{ color: T.faint }}>Submitted {new Date(consultation.summarySubmittedAt).toLocaleDateString("en-IN", { dateStyle: "medium" })}</p>
-                  )}
-                </>
-              ) : (
-                <p className="text-[13px]" style={{ color: T.faint }}>Summary not submitted yet.</p>
-              )}
-            </div>
-
-            {/* Recommended stone */}
-            {recommendation && recommendation.status === "converted_to_order" && recommendation.orderId ? (
-              <Link href={`/orders/${recommendation.orderId}`} className="block rounded-[9px] p-4 transition-all hover:brightness-[0.97] hover:shadow-md cursor-pointer" style={{ background: T.bg, border: `1px solid ${T.borderSoft}` }}>
-                <div className="text-[11px] tracking-[0.08em] uppercase mb-2" style={{ color: T.faint }}>Recommended stone</div>
-                <div>
-                  <div className="text-[14px] font-semibold mb-2" style={{ color: T.accent }}>{recommendation.gemstone}</div>
-                  <div className="space-y-1.5 text-[12px]">
-                    {[
-                      ["Weight", recommendation.weightRange],
-                      ["Purpose", recommendation.purpose ?? "—"],
-                    ].map(([k, v]) => (
-                      <div key={k} className="flex justify-between gap-2">
-                        <span style={{ color: T.muted }}>{k}</span>
-                        <span className="text-right" style={{ color: T.text }}>{v}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </Link>
-            ) : (
-              <div className="rounded-[9px] p-4" style={{ background: T.bg, border: `1px solid ${T.borderSoft}` }}>
-                <div className="text-[11px] tracking-[0.08em] uppercase mb-2" style={{ color: T.faint }}>Recommended stone</div>
-                {recommendation ? (
-                  <div>
-                    <div className="text-[14px] font-semibold mb-2" style={{ color: T.accent }}>{recommendation.gemstone}</div>
-                    <div className="space-y-1.5 text-[12px] mb-3">
-                      {[
-                        ["Weight", recommendation.weightRange],
-                        ["Purpose", recommendation.purpose ?? "—"],
-                      ].map(([k, v]) => (
-                        <div key={k} className="flex justify-between gap-2">
-                          <span style={{ color: T.muted }}>{k}</span>
-                          <span className="text-right" style={{ color: T.text }}>{v}</span>
-                        </div>
-                      ))}
-                    </div>
-                    <GoldBtn onClick={() => setShowSendLinkModal(true)}>Resend payment link to customer</GoldBtn>
-                  </div>
-                ) : (
-                  <p className="text-[13px]" style={{ color: T.faint }}>No stone recommended yet.</p>
+          <div className="relative shrink-0" ref={actionMenuRef}>
+            <button type="button" onClick={() => setShowActionMenu((v) => !v)} className="w-9 h-9 rounded-[9px] flex items-center justify-center transition-colors hover:bg-[rgba(89,82,54,0.08)] cursor-pointer" style={{ border: `1px solid ${showActionMenu ? T.accentBorder : T.border}`, color: T.muted, background: showActionMenu ? T.accentFaint : "transparent" }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
+            </button>
+            {showActionMenu && (
+              <div className="absolute right-0 top-full mt-1 z-50 w-[230px] rounded-[12px] p-1.5" style={{ background: T.popover, border: `1px solid ${T.border}`, boxShadow: T.shadowLift }}>
+                <button onClick={() => { setShowActionMenu(false); openRescheduleModal(); }} className="w-full text-left px-2.5 py-2 rounded-[8px] text-[12.5px] font-medium transition-colors cursor-pointer hover:bg-[rgba(119,123,98,0.10)]" style={{ color: T.text }}>Reschedule</button>
+                {(localStatus === "summary_pending" || consultation.status === "summary_pending") && (
+                  <>
+                    <button onClick={() => { setShowActionMenu(false); setConfirmNoShow("customer"); }} className="w-full text-left px-2.5 py-2 rounded-[8px] text-[12.5px] font-medium transition-colors cursor-pointer hover:bg-[rgba(119,123,98,0.10)]" style={{ color: T.text }}>Mark as customer no-show</button>
+                    <button onClick={() => { setShowActionMenu(false); setConfirmNoShow("expert"); }} className="w-full text-left px-2.5 py-2 rounded-[8px] text-[12.5px] font-medium transition-colors cursor-pointer hover:bg-[rgba(119,123,98,0.10)]" style={{ color: T.text }}>Mark as astrologer no-show</button>
+                  </>
                 )}
               </div>
             )}
           </div>
+        </div>
+      </Card>
 
-          {/* Other Remedy */}
-          {remedy && (
-            <div className="rounded-[9px] p-4 mt-4" style={{ background: T.bg, border: `1px solid ${T.borderSoft}` }}>
-              <div className="text-[11px] tracking-[0.08em] uppercase mb-2" style={{ color: T.faint }}>Other remedy</div>
-              <p className="text-[13.5px] leading-relaxed" style={{ color: T.text }}>
-                <span className="font-medium capitalize">{remedy.type}</span> — {remedy.instructions}
-                {remedy.frequency && ` (${remedy.frequency})`}
-                {remedy.duration && `. Duration: ${remedy.duration}`}
-              </p>
-            </div>
-          )}
-        </Card>
-      )}
-
-      {/* Meeting link section — like energisation session */}
-      {editingMeetLink ? (
-        <Card className="mb-5">
-          <div className="flex items-center justify-between mb-3">
-            <div className="text-[11px] tracking-[0.08em] uppercase" style={{ color: T.faint }}>Meeting</div>
-            <span className="text-[11px] px-2 py-0.5 rounded" style={{ background: "rgba(160,125,56,0.15)", color: T.accent }}>Editing</span>
-          </div>
-          <div className="space-y-3">
-            <Input value={meetingLinkInput} onChange={setMeetingLinkInput} label="Meeting link" type="url" placeholder="https://meet.google.com/..." />
-          </div>
-          <div className="flex gap-2.5 mt-4">
-            <GoldBtn onClick={() => { if (meetingLinkInput) setLocalMeetingLink(meetingLinkInput); setEditingMeetLink(false); }}>Save</GoldBtn>
-            <GhostBtn onClick={() => setEditingMeetLink(false)}>Cancel</GhostBtn>
-          </div>
-        </Card>
-      ) : (
-        <Card className="mb-5">
-          <div className="flex items-center justify-between mb-3">
-            <div className="text-[11px] tracking-[0.08em] uppercase" style={{ color: T.faint }}>Meeting</div>
-            {localMeetingLink ? (
-              consultation.status !== "closed" && consultation.status !== "completed" ? (
-                <span
-                  onClick={() => { setMeetingLinkInput(localMeetingLink); setEditingMeetLink(true); }}
-                  className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-[9px] text-[11px] font-medium cursor-pointer hover:opacity-90 transition-opacity"
-                  style={{ border: `1px solid ${T.border}`, color: T.muted }}
-                >
-                  Edit link
-                </span>
-              ) : null
-            ) : null}
-          </div>
-          {localMeetingLink ? (
-            <div className="flex items-center gap-2">
-              <a
-                href={localMeetingLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-3 rounded-[9px] p-3 transition-all duration-200 hover:brightness-[0.97] flex-1 min-w-0"
-                style={{ background: "rgba(95,112,64,0.08)", border: `1px solid rgba(95,112,64,0.18)` }}
-              >
-                <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: "rgba(95,112,64,0.18)" }}>
-                  <span className="text-[14px]">▶</span>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-[12px] font-medium truncate" style={{ color: T.good }}>{localMeetingLink}</div>
-                  <div className="text-[11px] mt-0.5" style={{ color: T.muted }}>Google Meet link</div>
-                </div>
-              </a>
-              <button
-                onClick={() => { navigator.clipboard.writeText(localMeetingLink); setToast("Link copied to clipboard"); setTimeout(() => setToast(""), 3000); }}
-                className="shrink-0 w-9 h-9 rounded-[9px] flex items-center justify-center transition-all duration-150 cursor-pointer hover:brightness-[0.97]"
-                style={{ background: "rgba(95,112,64,0.08)", border: `1px solid rgba(95,112,64,0.18)` }}
-                title="Copy link"
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: T.good }}>
-                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                </svg>
-              </button>
-            </div>
-          ) : null}
-        </Card>
-      )}
-
-      <div className="grid md:grid-cols-2 gap-4 mb-4">
-        {/* Customer context — clickable to customer page */}
-        {customer ? (
-          <Link href={`/customers/${customer.id}`} className="block group">
-            <div
-              className="card-interactive rounded-[12px] p-5 h-full cursor-pointer"
-              style={{ background: T.card, border: `1px solid ${T.border}` }}
-            >
-              <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.faint }}>Customer context</div>
-              <div className="space-y-2 text-[13px]">
-                {[
-                  ["Name", customer.name],
-                  ["Birth", `${customer.birthDate} · ${customer.birthTime} · ${customer.birthPlace}`],
-                  ["Rashi", customer.rashi || "—"],
-                  ["Nakshatra", customer.nakshatra || "—"],
-                  ["Chart ref", customer.chartRef || "—"],
-                ].map(([k, v]) => (
-                  <div key={k} className="flex justify-between gap-2">
-                    <span style={{ color: T.muted }}>{k}</span>
-                    <span className="text-right" style={{ color: T.text }}>{v}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </Link>
-        ) : (
-          <Card>
-            <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.faint }}>Customer context</div>
-            <p className="text-[13px]" style={{ color: T.muted }}>Customer record not found.</p>
-          </Card>
-        )}
-
-        {/* Payment details */}
-        <div
-          className="card-interactive rounded-[12px] p-5 h-full cursor-pointer"
-          style={{ background: T.card, border: `1px solid ${T.border}` }}
-        >
-          <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.faint }}>Payment details</div>
-          <div className="space-y-2 text-[13px]">
-            {[
-              ["Scheduled", new Date(consultation.scheduledAt).toLocaleString("en-IN")],
-              ["Fee", consultation.fee ? `₹${consultation.fee.toLocaleString("en-IN")}` : "—"],
-              ["Payment", consultation.paymentStatus === "paid" ? "Paid" : "Pending"],
-              ["Problem", consultation.problemStatement || "—"],
-            ].map(([k, v]) => (
-              <div key={k} className="flex justify-between gap-2">
-                <span style={{ color: T.muted }}>{k}</span>
-                <span className="text-right max-w-[60%]" style={{ color: k === "Payment" && v === "Pending" ? T.accent : T.text }}>{v}</span>
-              </div>
-            ))}
+      {/* Payment pending banner */}
+      {consultation.paymentStatus === "pending" && (
+        <div className="flex flex-wrap items-center gap-3 rounded-[12px] px-4 py-3 mb-4" style={{ background: "rgba(160,125,56,0.08)", border: "1px solid rgba(160,125,56,0.28)" }}>
+          <span className="w-2 h-2 rounded-full shrink-0" style={{ background: T.gold }} />
+          <div className="flex-1 min-w-0 text-[13px]"><span className="font-semibold" style={{ color: T.text }}>Payment pending</span><span style={{ color: T.muted }}> — the customer hasn't paid the consultation fee yet.</span></div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button onClick={() => { setToast("Payment link sent to customer"); setTimeout(() => setToast(""), 3000); }} className="text-[12.5px] font-medium h-8 px-3 rounded-[8px] cursor-pointer transition-colors hover:bg-[rgba(160,125,56,0.12)]" style={{ color: T.gold }}>Resend link</button>
+            <button onClick={() => setConfirmMarkPaid(true)} className="text-[12.5px] font-semibold h-8 px-3.5 rounded-[8px] cursor-pointer hover:brightness-110 transition-all" style={{ background: T.primary, color: T.primaryInk }}>Mark as paid</button>
           </div>
         </div>
-      </div>
-      </>
       )}
+
+      {/* Reschedule request note */}
+      {consultation.status === "reschedule_requested" && consultation.rescheduleReason && (
+        <div className="rounded-[12px] p-4 mb-4" style={{ background: "rgba(176,84,84,0.06)", border: "1px solid rgba(176,84,84,0.22)" }}>
+          <div className="text-[12px] font-semibold mb-1" style={{ color: T.danger }}>Reschedule requested</div>
+          <p className="text-[13px]" style={{ color: T.text }}>{consultation.rescheduleReason}</p>
+        </div>
+      )}
+
+      {/* Two-column body */}
+      <div className="flex flex-col xl:flex-row items-start gap-4">
+        <div className="flex-1 min-w-0 w-full space-y-4">
+          {/* Recommendation */}
+          <Card className="!p-6">
+            <h2 className="text-[15px] font-semibold tracking-[-0.01em] mb-4" style={{ color: T.text }}>Recommendation</h2>
+
+            <div className="mb-4">
+              <div className="text-[11px] font-medium tracking-[0.06em] uppercase mb-1.5" style={{ color: T.faint }}>Consultation summary</div>
+              {consultation.summary ? (
+                <>
+                  <p className="text-[13.5px] leading-relaxed" style={{ color: T.text }}>{consultation.summary}</p>
+                  {consultation.summarySubmittedAt && <p className="text-[11.5px] mt-2" style={{ color: T.faint }}>Submitted {new Date(consultation.summarySubmittedAt).toLocaleDateString("en-IN", { dateStyle: "medium" })}</p>}
+                </>
+              ) : (
+                <p className="text-[13px]" style={{ color: T.faint }}>Not submitted yet — waiting on the astrologer.</p>
+              )}
+            </div>
+
+            {/* Recommended stone */}
+            {recommendation ? (
+              <div className="rounded-[12px] p-4 mt-4" style={{ background: T.accentFaint, border: `1px solid ${T.accentBorder}` }}>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-[11px] font-medium tracking-[0.06em] uppercase" style={{ color: "#8a6a2f" }}>Recommended stone</div>
+                    <div className="text-[16px] font-semibold mt-1" style={{ color: T.text }}>{recommendation.gemstone}</div>
+                    <div className="flex flex-wrap gap-x-5 gap-y-1 mt-2 text-[12.5px]">
+                      <span style={{ color: T.muted }}>Weight <span className="font-medium" style={{ color: T.text }}>{recommendation.weightRange}</span></span>
+                      <span style={{ color: T.muted }}>Purpose <span className="font-medium" style={{ color: T.text }}>{recommendation.purpose ?? "—"}</span></span>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-3.5 pt-3.5" style={{ borderTop: "1px solid rgba(160,125,56,0.22)" }}>
+                  {recommendation.status === "converted_to_order" && recommendation.orderId ? (
+                    <Link href={`/orders/${recommendation.orderId}`} className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold hover:underline underline-offset-4" style={{ color: T.accent }}>
+                      View order {recommendation.orderId}
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M7 17 17 7M17 7H9M17 7v8" /></svg>
+                    </Link>
+                  ) : (
+                    <GoldBtn onClick={() => setShowSendLinkModal(true)} className="!h-9 !px-4 !text-[12.5px]">Resend payment link to customer</GoldBtn>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-[12px] p-4 mt-4 text-[13px]" style={{ background: "rgba(89,82,54,0.03)", border: `1px dashed ${T.border}`, color: T.faint }}>No stone recommended yet.</div>
+            )}
+
+            {/* Other remedy */}
+            {remedy && (
+              <div className="mt-4 pt-4" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+                <div className="text-[11px] font-medium tracking-[0.06em] uppercase mb-1.5" style={{ color: T.faint }}>Other remedy</div>
+                <p className="text-[13.5px] leading-relaxed" style={{ color: T.text }}>
+                  <span className="font-medium capitalize">{remedy.type}</span> — {remedy.instructions}
+                  {remedy.frequency && ` (${remedy.frequency})`}{remedy.duration && `. Duration: ${remedy.duration}`}
+                </p>
+              </div>
+            )}
+          </Card>
+
+          {/* Meeting */}
+          <Card className="!p-6">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-[15px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>Meeting</h2>
+              {localMeetingLink && !editingMeetLink && consultation.status !== "closed" && consultation.status !== "completed" && (
+                <button onClick={() => { setMeetingLinkInput(localMeetingLink); setEditingMeetLink(true); }} className="text-[12px] font-medium cursor-pointer hover:underline underline-offset-4" style={{ color: T.accent }}>Edit link</button>
+              )}
+            </div>
+            {editingMeetLink ? (
+              <div className="space-y-3">
+                <Input value={meetingLinkInput} onChange={setMeetingLinkInput} label="Meeting link" type="url" placeholder="https://meet.google.com/..." />
+                <div className="flex gap-2.5">
+                  <GoldBtn onClick={() => { if (meetingLinkInput) setLocalMeetingLink(meetingLinkInput); setEditingMeetLink(false); }}>Save</GoldBtn>
+                  <GhostBtn onClick={() => setEditingMeetLink(false)}>Cancel</GhostBtn>
+                </div>
+              </div>
+            ) : localMeetingLink ? (
+              <div className="flex items-center gap-2">
+                <a href={localMeetingLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 rounded-[10px] p-3 transition-all duration-200 hover:brightness-[0.98] flex-1 min-w-0" style={{ background: "rgba(95,112,64,0.08)", border: "1px solid rgba(95,112,64,0.2)" }}>
+                  <span className="w-8 h-8 rounded-[10px] flex items-center justify-center shrink-0" style={{ background: "rgba(95,112,64,0.16)", color: T.good }}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="m23 7-7 5 7 5V7z" /><rect x="1" y="5" width="15" height="14" rx="2" /></svg>
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[12.5px] font-medium truncate" style={{ color: T.good }}>{localMeetingLink}</span>
+                    <span className="block text-[11px] mt-0.5" style={{ color: T.muted }}>Google Meet</span>
+                  </span>
+                </a>
+                <button onClick={() => { navigator.clipboard.writeText(localMeetingLink); setToast("Link copied to clipboard"); setTimeout(() => setToast(""), 3000); }} className="shrink-0 w-9 h-9 rounded-[9px] flex items-center justify-center transition-all cursor-pointer hover:brightness-[0.97]" style={{ background: "rgba(95,112,64,0.08)", border: "1px solid rgba(95,112,64,0.2)", color: T.good }} title="Copy link">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
+                </button>
+              </div>
+            ) : (
+              <p className="text-[13px]" style={{ color: T.faint }}>No meeting link set.</p>
+            )}
+          </Card>
+        </div>
+
+        {/* Context rail */}
+        <aside className="w-full xl:w-[320px] shrink-0 space-y-4 xl:sticky xl:top-4">
+          {customer ? (
+            <Link href={`/customers/${customer.id}`} className="block group">
+              <Card className="!p-5 card-interactive cursor-pointer">
+                {/* Identity header */}
+                <div className="flex items-center gap-3 pb-4 mb-4" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
+                  <span className="w-10 h-10 rounded-[12px] flex items-center justify-center text-[13.5px] font-semibold shrink-0" style={{ background: T.accentFaint, border: `1px solid ${T.accentBorder}`, color: T.accent }}>
+                    {customer.name.split(" ").map((w) => w[0]).slice(0, 2).join("")}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[10px] font-medium tracking-[0.08em] uppercase" style={{ color: T.faint }}>Customer</div>
+                    <div className="text-[14.5px] font-semibold truncate" style={{ color: T.text }}>{customer.name}</div>
+                  </div>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" style={{ color: T.faint }}><path d="m9 18 6-6-6-6" /></svg>
+                </div>
+                {/* Birth — full width */}
+                <div className="mb-3.5">
+                  <div className="text-[10px] font-medium tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>Birth</div>
+                  <div className="text-[13px] font-medium tabular-nums" style={{ color: T.text }}>{customer.birthDate} · {customer.birthTime}</div>
+                  <div className="text-[12.5px] mt-0.5" style={{ color: T.muted }}>{customer.birthPlace}</div>
+                </div>
+                {/* Chart facts — 2-col grid, no dividers */}
+                <div className="grid grid-cols-2 gap-y-3 gap-x-4">
+                  {[["Rashi", customer.rashi || "—"], ["Nakshatra", customer.nakshatra || "—"], ["Chart ref", customer.chartRef || "—"]].map(([k, v]) => (
+                    <div key={k}>
+                      <div className="text-[10px] font-medium tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>{k}</div>
+                      <div className="text-[13px] font-medium" style={{ color: T.text }}>{v}</div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            </Link>
+          ) : (
+            <Card className="!p-5"><h2 className="text-[15px] font-semibold mb-1" style={{ color: T.text }}>Customer</h2><p className="text-[13px]" style={{ color: T.muted }}>Record not found.</p></Card>
+          )}
+
+          <Card className="!p-5">
+            <div className="flex items-center justify-between mb-3.5">
+              <h2 className="text-[15px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>Payment</h2>
+              <Chip tone={consultation.paymentStatus === "paid" ? "good" : "gold"}>{consultation.paymentStatus === "paid" ? "Paid" : "Pending"}</Chip>
+            </div>
+            {/* Fee hero */}
+            <div className="pb-3.5 mb-3.5" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
+              <div className="text-[10px] font-medium tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>Fee</div>
+              <div className="font-title text-[24px] leading-none font-semibold tabular-nums" style={{ color: T.text }}>
+                {consultation.fee ? `₹${consultation.fee.toLocaleString("en-IN")}` : "—"}
+              </div>
+            </div>
+            <div>
+              <div className="text-[10px] font-medium tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>Scheduled</div>
+              <div className="text-[13px] font-medium tabular-nums" style={{ color: T.text }}>
+                {dt.toLocaleDateString("en-IN", { day: "numeric", month: "short" })} · {dt.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true })}
+              </div>
+            </div>
+            {consultation.problemStatement && (
+              <div className="mt-3.5 pt-3.5" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+                <div className="text-[10px] font-medium tracking-[0.08em] uppercase mb-1.5" style={{ color: T.faint }}>Problem</div>
+                <p className="text-[12.5px] leading-relaxed" style={{ color: T.text }}>{consultation.problemStatement}</p>
+              </div>
+            )}
+          </Card>
+        </aside>
+      </div>
 
       {/* Send Payment Link Confirmation */}
       <Modal open={showSendLinkModal} onClose={() => setShowSendLinkModal(false)} title="Send payment link">
@@ -443,7 +358,7 @@ export default function ConsultationDetailPage({ params }: { params: Promise<{ i
                   onClick={() => { setRsExpert(ep); setRsDate(""); setRsSlot(""); setRescheduleStep(2); }}
                   className="w-full text-left rounded-[9px] p-3.5 transition-all"
                   style={{
-                    background: rsExpert?.id === ep.id ? "rgba(160,125,56,0.13)" : T.panel,
+                    background: rsExpert?.id === ep.id ? "rgba(119,123,98,0.13)" : T.panel,
                     border: `1px solid ${rsExpert?.id === ep.id ? T.accent : T.border}`,
                   }}
                 >
@@ -482,7 +397,7 @@ export default function ConsultationDetailPage({ params }: { params: Promise<{ i
                     disabled={!avail}
                     className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] disabled:cursor-not-allowed"
                     style={{
-                      background: sel ? T.accent : avail ? "rgba(160,125,56,0.10)" : "transparent",
+                      background: sel ? T.accent : avail ? "rgba(119,123,98,0.10)" : "transparent",
                       color: sel ? T.accentInk : avail ? T.text : T.faint,
                       opacity: avail ? 1 : 0.35,
                       fontWeight: sel ? 700 : 400,
@@ -533,34 +448,37 @@ export default function ConsultationDetailPage({ params }: { params: Promise<{ i
         )}
       </Modal>
 
+      {/* No-show confirmation */}
       <ConfirmDialog
-        open={confirmCustomerNoShow}
-        onClose={() => setConfirmCustomerNoShow(false)}
-        onConfirm={() => { setLocalStatus("no_show"); setLocalNoShowBy("customer"); setToast("Marked as customer no show"); setTimeout(() => setToast(""), 3000); }}
-        title="Mark as no show?"
-        description="This will record the customer as a no-show for this consultation."
-        variant="danger"
-        confirmLabel="Confirm"
-      />
-      <ConfirmDialog
-        open={confirmExpertNoShow}
-        onClose={() => setConfirmExpertNoShow(false)}
-        onConfirm={() => { setLocalStatus("no_show"); setLocalNoShowBy("expert"); setToast("Marked as astrologer no show"); setTimeout(() => setToast(""), 3000); }}
-        title="Mark as no show?"
-        description="This will record the astrologer as a no-show for this consultation."
-        variant="danger"
-        confirmLabel="Confirm"
+        open={!!confirmNoShow}
+        onClose={() => setConfirmNoShow(null)}
+        onConfirm={() => {
+          const by = confirmNoShow === "expert" ? "expert" : "customer";
+          setLocalStatus("no_show");
+          setLocalNoShowBy(by);
+          setToast(by === "expert" ? "Marked as astrologer no show" : "Marked as customer no show");
+          setTimeout(() => setToast(""), 3000);
+        }}
+        title={confirmNoShow === "expert" ? "Mark astrologer no-show?" : "Mark customer no-show?"}
+        message={confirmNoShow === "expert"
+          ? "This records that the astrologer did not attend the consultation."
+          : "This records that the customer did not attend the consultation."}
+        confirmLabel="Mark no-show"
+        tone="danger"
       />
 
-      {toast && (
-        <div
-          className="fixed top-6 right-6 z-[100] flex items-center gap-2 px-4 py-3 rounded-[10px] shadow-lg text-[13.5px] font-medium animate-in"
-          style={{ background: T.card, border: `1px solid ${T.border}`, color: T.good }}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6L9 17l-5-5"/></svg>
-          {toast}
-        </div>
-      )}
+      {/* Mark payment as received */}
+      <ConfirmDialog
+        open={confirmMarkPaid}
+        onClose={() => setConfirmMarkPaid(false)}
+        onConfirm={() => { setToast("Payment marked as received"); setTimeout(() => setToast(""), 3000); }}
+        title="Mark payment as received?"
+        message="Confirm that the consultation fee has been received from the customer."
+        confirmLabel="Mark as paid"
+        tone="default"
+      />
+
+      {toast && <Toast message={toast} />}
     </>
   );
 }

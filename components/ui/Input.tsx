@@ -8,15 +8,26 @@ interface InputProps {
   value: string;
   onChange: (val: string) => void;
   placeholder?: string;
-  type?: "text" | "email" | "password" | "number" | "url" | "search";
+  type?: "text" | "email" | "password" | "number" | "url" | "search" | "tel";
   label?: string;
   className?: string;
   disabled?: boolean;
-  onKeyDown?: (e: React.KeyboardEvent) => void;
   error?: string;
+  onKeyDown?: (e: React.KeyboardEvent) => void;
+  onBlur?: () => void;
 }
 
-export function Input({ value, onChange, placeholder, type = "text", label, className = "", disabled, onKeyDown, error }: InputProps) {
+export function FieldError({ message }: { message?: string }) {
+  if (!message) return null;
+  return (
+    <p className="flex items-center gap-1 text-[11.5px] mt-1.5" style={{ color: T.danger }}>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3 shrink-0"><circle cx="12" cy="12" r="10" /><path d="M12 8v4M12 16h.01" /></svg>
+      {message}
+    </p>
+  );
+}
+
+export function Input({ value, onChange, placeholder, type = "text", label, className = "", disabled, error, onKeyDown, onBlur }: InputProps) {
   return (
     <div className={className}>
       {label && (
@@ -29,12 +40,14 @@ export function Input({ value, onChange, placeholder, type = "text", label, clas
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={onKeyDown}
+        onBlur={onBlur}
         placeholder={placeholder}
         disabled={disabled}
+        aria-invalid={!!error}
         className={`${INPUT_CLASS} disabled:opacity-50`}
-        style={{ ...INPUT_STYLE, ...(error ? { borderColor: T.danger } : {}) }}
+        style={error ? { ...INPUT_STYLE, borderColor: T.danger, boxShadow: "0 0 0 3px rgba(163,73,63,0.1)" } : INPUT_STYLE}
       />
-      {error && <p className="text-[11px] mt-1" style={{ color: T.danger }}>{error}</p>}
+      <FieldError message={error} />
     </div>
   );
 }
@@ -53,11 +66,12 @@ interface SelectProps {
   /** Prepended to the selected option label in the trigger (e.g. "Status: " → "Status: Scheduled"). */
   prefix?: string;
   compact?: boolean;
+  error?: string;
 }
 
 const SEARCH_THRESHOLD = 5;
 
-export function Select({ value, onChange, options, label, className = "", disabled, searchable, placeholder, prefix, compact }: SelectProps) {
+export function Select({ value, onChange, options, label, className = "", disabled, searchable, placeholder, prefix, compact, error }: SelectProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [highlightIdx, setHighlightIdx] = useState(-1);
@@ -136,13 +150,14 @@ export function Select({ value, onChange, options, label, className = "", disabl
         onKeyDown={handleKeyDown}
         disabled={disabled}
         className={`${height} px-3.5 rounded-[9px] text-[13.5px] w-full text-left flex items-center justify-between gap-2 outline-none disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors`}
-        style={{ ...INPUT_STYLE, color: selected ? T.text : T.faint }}
+        style={{ ...INPUT_STYLE, ...(error ? { borderColor: T.danger, boxShadow: "0 0 0 3px rgba(163,73,63,0.1)" } : {}), color: selected ? T.text : T.faint }}
       >
         <span className="truncate">{triggerLabel}</span>
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className={`shrink-0 transition-transform ${open ? "rotate-180" : ""}`}>
           <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </button>
+      {error && <FieldError message={error} />}
 
       {open && (
         <div
@@ -175,7 +190,7 @@ export function Select({ value, onChange, options, label, className = "", disabl
                   onClick={() => { onChange(opt.value); setOpen(false); }}
                   className="w-full text-left px-3.5 py-2 text-[13px] transition-colors flex items-center justify-between"
                   style={{
-                    background: idx === highlightIdx ? "rgba(160,125,56,0.13)" : opt.value === value ? "rgba(160,125,56,0.09)" : "transparent",
+                    background: idx === highlightIdx ? "rgba(119,123,98,0.13)" : opt.value === value ? "rgba(119,123,98,0.09)" : "transparent",
                     color: opt.value === value ? T.accent : T.text,
                   }}
                   onMouseEnter={() => setHighlightIdx(idx)}
@@ -290,11 +305,11 @@ export function DateInput({ value, onChange, label, className = "", placeholder 
           style={{ background: T.popover, border: `1px solid ${T.border}`, animation: "fadeIn 120ms ease-out" }}
         >
           <div className="flex items-center justify-between mb-3">
-            <button type="button" onClick={prevMonth} className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-[rgba(160,125,56,0.15)]" style={{ color: T.muted }}>
+            <button type="button" onClick={prevMonth} className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-[rgba(119,123,98,0.15)]" style={{ color: T.muted }}>
               ‹
             </button>
             <span className="text-[13px] font-medium" style={{ color: T.text }}>{MONTHS[viewMonth]} {viewYear}</span>
-            <button type="button" onClick={nextMonth} className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-[rgba(160,125,56,0.15)]" style={{ color: T.muted }}>
+            <button type="button" onClick={nextMonth} className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-[rgba(119,123,98,0.15)]" style={{ color: T.muted }}>
               ›
             </button>
           </div>
@@ -413,7 +428,7 @@ export function TimeInput({ value, onChange, label, className = "", placeholder 
                 onClick={() => { onChange(slot); setOpen(false); }}
                 className="w-full text-left px-3.5 py-2 text-[13px] transition-colors tabular-nums"
                 style={{
-                  background: slot === value ? "rgba(160,125,56,0.13)" : "transparent",
+                  background: slot === value ? "rgba(119,123,98,0.13)" : "transparent",
                   color: slot === value ? T.accent : T.text,
                 }}
               >
@@ -437,9 +452,11 @@ interface TextareaProps {
   label?: string;
   rows?: number;
   className?: string;
+  error?: string;
+  onBlur?: () => void;
 }
 
-export function Textarea({ value, onChange, placeholder, label, rows = 4, className = "" }: TextareaProps) {
+export function Textarea({ value, onChange, placeholder, label, rows = 4, className = "", error, onBlur }: TextareaProps) {
   return (
     <div className={className}>
       {label && (
@@ -450,11 +467,14 @@ export function Textarea({ value, onChange, placeholder, label, rows = 4, classN
       <textarea
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onBlur={onBlur}
         placeholder={placeholder}
         rows={rows}
+        aria-invalid={!!error}
         className="w-full px-3.5 py-2.5 rounded-[9px] text-[13.5px] outline-none resize-y"
-        style={INPUT_STYLE}
+        style={error ? { ...INPUT_STYLE, borderColor: T.danger, boxShadow: "0 0 0 3px rgba(163,73,63,0.1)" } : INPUT_STYLE}
       />
+      <FieldError message={error} />
     </div>
   );
 }

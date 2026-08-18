@@ -15,8 +15,8 @@ export function GoldBtn({ children, onClick, disabled, type = "button", classNam
       type={type}
       onClick={onClick}
       disabled={disabled}
-      className={`inline-flex items-center justify-center gap-2 h-10 px-5 rounded-[9px] text-[13px] font-semibold transition-all duration-200 disabled:opacity-40 hover:-translate-y-px hover:brightness-110 hover:shadow-[0_1px_2px_rgba(43,42,34,0.06),0_10px_26px_-12px_rgba(83,88,67,0.55)] active:scale-[0.97] active:translate-y-0 cursor-pointer disabled:cursor-not-allowed ${className}`}
-      style={{ background: T.primary, color: T.primaryInk, boxShadow: "0 1px 2px rgba(43,42,34,0.08)" }}
+      className={`inline-flex items-center justify-center gap-2 h-10 px-5 rounded-[10px] text-[13px] font-semibold transition-all duration-200 disabled:opacity-40 hover:-translate-y-px hover:brightness-[1.08] hover:shadow-[0_2px_4px_rgba(43,42,34,0.08),0_14px_30px_-14px_rgba(101,105,79,0.6)] active:scale-[0.98] active:translate-y-0 cursor-pointer disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none ${className}`}
+      style={{ background: T.accent, color: T.accentInk, boxShadow: "inset 0 1px 0 rgba(244,241,229,0.14), 0 1px 2px rgba(43,42,34,0.1)" }}
     >
       {children}
     </button>
@@ -29,8 +29,8 @@ export function GhostBtn({ children, onClick, disabled, type = "button", classNa
       type={type}
       onClick={onClick}
       disabled={disabled}
-      className={`inline-flex items-center justify-center gap-2 h-10 px-5 rounded-[9px] text-[13px] transition-all duration-200 disabled:opacity-40 hover:bg-[rgba(89,82,54,0.05)] active:scale-[0.97] cursor-pointer disabled:cursor-not-allowed ${className}`}
-      style={{ border: `1px solid ${T.border}`, color: T.muted }}
+      className={`inline-flex items-center justify-center gap-2 h-10 px-5 rounded-[10px] text-[13px] font-medium transition-all duration-200 disabled:opacity-40 hover:bg-[rgba(119,123,98,0.08)] active:scale-[0.98] cursor-pointer disabled:cursor-not-allowed ${className}`}
+      style={{ border: `1px solid ${T.border}`, color: T.text }}
     >
       {children}
     </button>

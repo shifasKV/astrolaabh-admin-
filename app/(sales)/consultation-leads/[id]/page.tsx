@@ -141,7 +141,7 @@ export default function ConsultationLeadDetailPage() {
         {/* Left */}
         <div className="space-y-5">
           <Card>
-            <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.faint }}>Log activity</div>
+            <div className="text-[15px] font-semibold tracking-[-0.01em] mb-3" style={{ color: T.text }}>Log activity</div>
             <Textarea value={activityNote} onChange={setActivityNote} placeholder="What happened? — e.g. 'Spoke to customer, wants to book next week'" rows={3} />
             <div className="flex justify-end mt-3">
               <GoldBtn onClick={handleLogActivity}>Log activity</GoldBtn>
@@ -152,7 +152,7 @@ export default function ConsultationLeadDetailPage() {
         {/* Right — Activity timeline */}
         <div className="space-y-5">
           <Card>
-            <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.faint }}>Activity timeline</div>
+            <div className="text-[15px] font-semibold tracking-[-0.01em] mb-3" style={{ color: T.text }}>Activity timeline</div>
             {activityLog.length === 0 ? (
               <p className="text-[13px] py-4 text-center" style={{ color: T.faint }}>No activity yet — log a call to get started</p>
             ) : (

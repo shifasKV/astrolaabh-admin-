@@ -148,7 +148,7 @@ export default function StoneLeadDetailPage() {
         {/* Left */}
         <div className="space-y-5">
           <Card>
-            <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.faint }}>Log activity</div>
+            <div className="text-[15px] font-semibold tracking-[-0.01em] mb-3" style={{ color: T.text }}>Log activity</div>
             <Textarea value={activityNote} onChange={setActivityNote} placeholder="What happened? — e.g. 'Spoke to customer, will retry payment tomorrow'" rows={3} />
             <div className="flex justify-end mt-3">
               <GoldBtn onClick={handleLogActivity}>Log activity</GoldBtn>
@@ -156,7 +156,7 @@ export default function StoneLeadDetailPage() {
           </Card>
 
           <Card>
-            <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.faint }}>Product details</div>
+            <div className="text-[15px] font-semibold tracking-[-0.01em] mb-3" style={{ color: T.text }}>Product details</div>
             <div className="rounded-[9px] p-3.5" style={{ background: T.bg, border: `1px solid ${T.borderSoft}` }}>
               <div className="text-[14px] font-semibold mb-0.5" style={{ color: T.text }}>{order.itemName}</div>
               <div className="text-[12px] mb-3" style={{ color: T.faint }}>{order.itemSku}</div>
@@ -170,7 +170,7 @@ export default function StoneLeadDetailPage() {
         {/* Right — Activity timeline */}
         <div className="space-y-5">
           <Card>
-            <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.faint }}>Activity timeline</div>
+            <div className="text-[15px] font-semibold tracking-[-0.01em] mb-3" style={{ color: T.text }}>Activity timeline</div>
             {activityLog.length === 0 ? (
               <p className="text-[13px] py-4 text-center" style={{ color: T.faint }}>No activity yet — log a call to get started</p>
             ) : (

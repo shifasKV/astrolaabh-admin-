@@ -53,7 +53,7 @@ export function Table<R extends Record<string, unknown>>({
             <tr
               key={String(row[keyField])}
               onClick={() => onRowClick?.(row)}
-              className={`${onRowClick ? "cursor-pointer hover:bg-[rgba(160,125,56,0.06)]" : ""} transition-colors`}
+              className={`${onRowClick ? "cursor-pointer hover:bg-[rgba(119,123,98,0.06)]" : ""} transition-colors`}
               style={{ borderBottom: `1px solid ${T.borderSoft}` }}
             >
               {columns.map((col) => (

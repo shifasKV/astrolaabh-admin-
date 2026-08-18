@@ -2,13 +2,14 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/store/auth";
-import { Sidebar, TopBar } from "@/components/ui";
+import { Sidebar, TopBar, useSidebar, CommandPalette } from "@/components/ui";
 import { SALES_NAV } from "@/lib/nav";
 import { T } from "@/lib/theme";
 
 export default function SalesLayout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
   const router = useRouter();
+  const { collapsed } = useSidebar();
 
   useEffect(() => {
     if (!user || (user.role !== "sales_admin" && user.role !== "sales_exec")) {
@@ -24,7 +25,7 @@ export default function SalesLayout({ children }: { children: React.ReactNode })
   const portalLabel = user.role === "sales_admin" ? "Sales Admin" : "Sales Executive";
 
   return (
-    <div className="min-h-screen" style={{ background: T.bg, color: T.text }}>
+    <div className="min-h-dvh md:h-dvh md:overflow-hidden md:py-2.5 md:pr-2.5" style={{ background: T.sidebar, color: T.text }}>
       <Sidebar
         groups={SALES_NAV}
         orgName="AstroLaabh"
@@ -38,11 +39,15 @@ export default function SalesLayout({ children }: { children: React.ReactNode })
         userLabel={user.name}
         onUserClick={() => { logout(); router.push("/"); }}
       />
-      <div className="md:ml-[280px] min-w-0">
+      <main
+        className={`min-w-0 min-h-dvh md:min-h-0 md:h-full md:overflow-y-auto md:rounded-[20px] transition-[margin-left] duration-300 ${collapsed ? "md:ml-[76px]" : "md:ml-[280px]"}`}
+        style={{ background: T.bg, boxShadow: "0 0 0 1px rgba(244,241,229,0.07), 0 24px 60px -30px rgba(0,0,0,0.5)" }}
+      >
         <div className="px-5 md:px-10 py-7 max-w-[1400px] mx-auto">
           {children}
         </div>
-      </div>
+      </main>
+      <CommandPalette groups={SALES_NAV} indexRecords={false} />
     </div>
   );
 }

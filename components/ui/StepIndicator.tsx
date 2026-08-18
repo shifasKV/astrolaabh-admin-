@@ -28,7 +28,7 @@ export function StepIndicator({ steps, currentIndex, onNavigate, canNavigateTo }
               className="flex items-center gap-2 text-[12px] px-3 py-1.5 rounded-full whitespace-nowrap transition-all duration-200"
               style={{
                 background: isActive ? T.accentMuted : isCompleted ? "rgba(95,112,64,0.10)" : "transparent",
-                border: `1px solid ${isActive ? T.accentBorder : navigable ? "rgba(160,125,56,0.25)" : T.borderSoft}`,
+                border: `1px solid ${isActive ? T.accentBorder : navigable ? "rgba(119,123,98,0.25)" : T.borderSoft}`,
                 color: isActive ? T.accent : isCompleted ? T.good : T.faint,
                 fontWeight: isActive ? 600 : 400,
                 cursor: navigable ? "pointer" : "default",

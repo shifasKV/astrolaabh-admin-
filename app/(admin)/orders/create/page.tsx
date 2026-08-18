@@ -1,886 +1,505 @@
 "use client";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { PageHeader, Card, GoldBtn, GhostBtn, SearchFilter, Chip, Input, Select, StepIndicator, Modal } from "@/components/ui";
+import { PageHeader, Card, GoldBtn, Chip, Input } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_CUSTOMERS } from "@/lib/mock";
-import { STONES, DESIGNS, ENERGISATION, inr } from "@/lib/catalog";
-import { V, validate, hasErrors, type ValidationErrors } from "@/lib/validation";
+import { STONES, ENERGISATION, inr } from "@/lib/catalog";
 
-type Step = "customer" | "address" | "stone" | "design" | "energisation" | "review";
-const STEPS: { key: Step; label: string }[] = [
-  { key: "customer", label: "Customer" },
-  { key: "address", label: "Address" },
-  { key: "stone", label: "Stone" },
-  { key: "design", label: "Design" },
-  { key: "energisation", label: "Energisation" },
-  { key: "review", label: "Review" },
-];
+/*
+ * Create order — one page, no wizard.
+ * Type to find the customer and stone; everything else is optional.
+ * A live summary on the right shows exactly what will be created.
+ */
+
+const SETTING_TYPES = ["Ring", "Pendant", "Bracelet", "Loose stone"] as const;
+const METALS = ["22K Gold", "18K Gold", "Silver", "Panchdhatu"] as const;
+
+function SectionTitle({ n, title, hint }: { n: number; title: string; hint?: string }) {
+  return (
+    <div className="flex items-baseline gap-2.5 mb-3">
+      <span
+        className="w-6 h-6 rounded-full inline-flex items-center justify-center text-[12px] font-semibold shrink-0 translate-y-0.5"
+        style={{ background: T.accentMuted, color: T.accent }}
+      >
+        {n}
+      </span>
+      <h2 className="text-[15px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>{title}</h2>
+      {hint && <span className="text-[12px]" style={{ color: T.faint }}>{hint}</span>}
+    </div>
+  );
+}
 
 export default function CreateOrderPage() {
   const router = useRouter();
-  const [step, setStep] = useState<Step>("customer");
-  const [search, setSearch] = useState("");
-  const [animating, setAnimating] = useState(false);
-  const [toast, setToast] = useState("");
-  const [editStonePrice, setEditStonePrice] = useState("");
-  const [editDesignPrice, setEditDesignPrice] = useState("");
-  const [discount, setDiscount] = useState("");
 
+  // Customer
+  const [customerQuery, setCustomerQuery] = useState("");
+  const [customerOpen, setCustomerOpen] = useState(false);
   const [customerId, setCustomerId] = useState("");
+  const [newCustomer, setNewCustomer] = useState<{ name: string; phone: string; email: string } | null>(null);
+  const [showBirth, setShowBirth] = useState(false);
+  const [birth, setBirth] = useState({ date: "", time: "", place: "" });
+  const [address, setAddress] = useState("");
+
+  // Stone
+  const [stoneQuery, setStoneQuery] = useState("");
+  const [stoneOpen, setStoneOpen] = useState(false);
   const [stoneSku, setStoneSku] = useState("");
-  const [designSlug, setDesignSlug] = useState("");
+  const [stonePrice, setStonePrice] = useState("");
+
+  // Setting (optional)
+  const [settingType, setSettingType] = useState("");
+  const [metal, setMetal] = useState("");
+  const [size, setSize] = useState("");
+  const [settingPrice, setSettingPrice] = useState("");
+
+  // Energisation + pricing
   const [energisationKey, setEnergisationKey] = useState("shuddhi");
-  const [showCustomDesign, setShowCustomDesign] = useState(false);
-  const [customDesign, setCustomDesign] = useState({ name: "", type: "", size: "", metal: "", price: "" });
-  const [designForm, setDesignForm] = useState<"" | "Ring" | "Pendant" | "Bracelet" | "Loose" | "Custom">("Ring");
-  const [designMetal, setDesignMetal] = useState("22K Gold");
-  const [designSize, setDesignSize] = useState("");
+  const [discount, setDiscount] = useState("");
+  const [toast, setToast] = useState("");
 
-  // New customer form
-  const [showNewCustomer, setShowNewCustomer] = useState(false);
-  const [newCustomer, setNewCustomer] = useState({ name: "", email: "", phone: "", birthDate: "", birthTime: "", birthPlace: "" });
-  const [createdCustomer, setCreatedCustomer] = useState<{ id: string; name: string; email: string; phone: string } | null>(null);
-
-  // Address step
-  const [selectedAddress, setSelectedAddress] = useState("");
-  const [showNewAddress, setShowNewAddress] = useState(false);
-  const [newAddress, setNewAddress] = useState({ line1: "", line2: "", city: "", state: "", pincode: "" });
-
-  const [errors, setErrors] = useState<ValidationErrors>({});
-  const [touched, setTouched] = useState<Set<string>>(new Set());
-  const [submitAttempted, setSubmitAttempted] = useState(false);
-
-  const markTouched = (field: string) => setTouched((prev) => new Set(prev).add(field));
-  const showError = (field: string) => (touched.has(field) || submitAttempted) ? errors[field] : undefined;
-
-  const validateNewCustomer = () => {
-    const errs = validate({
-      name: V.required(newCustomer.name),
-      phone: V.phone(newCustomer.phone),
-      email: newCustomer.email.trim() ? V.email(newCustomer.email) : "",
-    });
-    setErrors(errs);
-    return errs;
-  };
-
-  const selectedCustomer = createdCustomer ?? MOCK_CUSTOMERS.find((c) => c.id === customerId);
+  const selectedCustomer = MOCK_CUSTOMERS.find((c) => c.id === customerId);
+  const customer = newCustomer ?? selectedCustomer;
   const selectedStone = STONES.find((s) => s.sku === stoneSku);
-  const selectedDesign = DESIGNS.find((d) => d.slug === designSlug);
-  const selectedEnergisation = ENERGISATION.find((e) => e.key === energisationKey);
-  const hasCustomDesign = designSlug === "__custom" && !!customDesign.name;
+  const energisation = ENERGISATION.find((e) => e.key === energisationKey);
 
-  const existingAddress = !createdCustomer
-    ? MOCK_CUSTOMERS.find((c) => c.id === customerId)?.shippingAddress
-    : undefined;
+  const customerMatches = useMemo(() => {
+    const q = customerQuery.trim().toLowerCase();
+    if (!q) return MOCK_CUSTOMERS.slice(0, 6);
+    return MOCK_CUSTOMERS.filter(
+      (c) => c.name.toLowerCase().includes(q) || c.email.toLowerCase().includes(q) || c.phone.replace(/\s/g, "").includes(q.replace(/\s/g, "")),
+    ).slice(0, 6);
+  }, [customerQuery]);
 
-  const stepIndex = STEPS.findIndex((s) => s.key === step);
+  const stoneMatches = useMemo(() => {
+    const q = stoneQuery.trim().toLowerCase();
+    if (!q) return STONES.slice(0, 6);
+    return STONES.filter(
+      (s) =>
+        s.gemName.toLowerCase().includes(q) ||
+        s.english.toLowerCase().includes(q) ||
+        s.sku.toLowerCase().includes(q) ||
+        s.origin.toLowerCase().includes(q),
+    ).slice(0, 6);
+  }, [stoneQuery]);
 
-  const canNavigateTo = (targetIndex: number) => {
-    if (targetIndex === 0) return true;
-    if (targetIndex === 1) return !!customerId || !!createdCustomer;
-    if (targetIndex === 2) return (!!customerId || !!createdCustomer) && !!selectedAddress;
-    if (targetIndex === 3) return (!!customerId || !!createdCustomer) && !!selectedAddress && !!stoneSku;
-    if (targetIndex === 4) return (!!customerId || !!createdCustomer) && !!selectedAddress && !!stoneSku;
-    if (targetIndex === 5) return (!!customerId || !!createdCustomer) && !!selectedAddress && !!stoneSku;
-    return false;
+  const pickCustomer = (id: string) => {
+    const c = MOCK_CUSTOMERS.find((x) => x.id === id);
+    if (!c) return;
+    setCustomerId(id);
+    setNewCustomer(null);
+    setAddress(c.shippingAddress ?? "");
+    setCustomerQuery("");
+    setCustomerOpen(false);
   };
 
-  const goTo = (target: Step) => {
-    setAnimating(true);
-    setTimeout(() => { setStep(target); setAnimating(false); }, 180);
+  const startNewCustomer = () => {
+    setNewCustomer({ name: customerQuery.trim(), phone: "", email: "" });
+    setCustomerId("");
+    setAddress("");
+    setCustomerOpen(false);
+    setCustomerQuery("");
   };
+
+  const clearCustomer = () => {
+    setCustomerId("");
+    setNewCustomer(null);
+    setAddress("");
+    setShowBirth(false);
+  };
+
+  const pickStone = (sku: string) => {
+    const s = STONES.find((x) => x.sku === sku);
+    if (!s) return;
+    setStoneSku(sku);
+    setStonePrice(String(s.price));
+    setStoneQuery("");
+    setStoneOpen(false);
+  };
+
+  const stoneAmount = selectedStone ? Number(stonePrice) || selectedStone.price : 0;
+  const settingAmount = Number(settingPrice) || 0;
+  const energisationAmount = energisation?.fee ?? 0;
+  const discountAmount = Number(discount) || 0;
+  const total = Math.max(0, stoneAmount + settingAmount + energisationAmount - discountAmount);
+
+  const customerReady = newCustomer ? !!(newCustomer.name && newCustomer.phone) : !!selectedCustomer;
+  const canCreate = customerReady && !!selectedStone;
 
   const handleCreate = () => {
+    if (!canCreate) return;
     setToast("Order created successfully");
-    setTimeout(() => setToast(""), 3000);
-    router.push("/orders");
+    setTimeout(() => router.push("/orders"), 700);
   };
 
-  const selectCustomer = (id: string) => {
-    setCustomerId(id);
-    setCreatedCustomer(null);
-    setSearch("");
-    setSelectedAddress("");
-    setShowNewAddress(false);
-  };
-
-  const handleCreateCustomer = () => {
-    setSubmitAttempted(true);
-    setTouched(new Set(["name", "phone", "email"]));
-    const errs = validateNewCustomer();
-    if (hasErrors(errs)) return;
-    const id = `cust_new_${Date.now()}`;
-    setCreatedCustomer({ id, ...newCustomer });
-    setCustomerId(id);
-    setShowNewCustomer(false);
-    setSearch("");
-    setSelectedAddress("");
-    setShowNewAddress(false);
-    setSubmitAttempted(false);
-    goTo("address");
-  };
-
-  const selectAddress = (addr: string) => {
-    setSelectedAddress(addr);
-  };
-
-  const handleSaveNewAddress = () => {
-    if (!newAddress.line1 || !newAddress.city || !newAddress.pincode) return;
-    const formatted = `${newAddress.line1}${newAddress.line2 ? ", " + newAddress.line2 : ""}, ${newAddress.city}, ${newAddress.state} ${newAddress.pincode}`;
-    setSelectedAddress(formatted);
-    setShowNewAddress(false);
-  };
-
-  const selectStone = (sku: string) => {
-    setStoneSku(sku);
-    setSearch("");
-  };
-
-  const selectDesign = (slug: string) => {
-    setDesignSlug(slug);
-  };
-
-  const skipDesign = () => {
-    setDesignSlug("");
-    setShowCustomDesign(false);
-    setDesignForm("");
-    setDesignMetal("");
-    goTo("energisation");
-  };
-
-  const confirmCustomDesign = () => {
-    if (!customDesign.name) return;
-    setDesignSlug("__custom");
-    setShowCustomDesign(false);
-    goTo("energisation");
-  };
-
-  const confirmEnergisation = () => {
-    goTo("review");
-  };
+  const suggestionRow =
+    "w-full flex items-center gap-3 px-3 py-2.5 text-left rounded-[9px] cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.10)]";
 
   return (
     <>
-      <PageHeader
-        title="Create order"
-        sub="Select stone, design, and energisation — order will be pending until payment"
-        back={{ label: "Orders", onClick: () => router.push("/orders") }}
-      />
+      <PageHeader title="Create order" back={{ label: "Orders", onClick: () => router.push("/orders") }} />
 
-      <StepIndicator
-        steps={STEPS}
-        currentIndex={stepIndex}
-        onNavigate={(i) => goTo(STEPS[i].key)}
-        canNavigateTo={canNavigateTo}
-      />
-
-      {/* Animated content wrapper */}
-      <div
-        className="transition-all duration-200"
-        style={{
-          opacity: animating ? 0 : 1,
-          transform: animating ? "translateY(8px)" : "translateY(0)",
-        }}
-      >
-        {/* STEP: Customer */}
-        {step === "customer" && (
-          <Card>
-            <div className="flex items-center justify-between mb-3">
-              <div className="text-[11px] tracking-[0.08em] uppercase" style={{ color: T.faint }}>
-                {showNewCustomer ? "Add customer" : "Select customer"}
-              </div>
-              <button
-                onClick={() => setShowNewCustomer((v) => !v)}
-                className="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-[8px] text-[12px] font-medium cursor-pointer transition-all hover:brightness-110 active:scale-[0.97]"
-                style={{
-                  background: showNewCustomer ? "rgba(160,125,56,0.12)" : `${T.accent}`,
-                  border: `1px solid ${showNewCustomer ? T.accentBorder : T.accent}`,
-                  color: showNewCustomer ? T.accent : T.accentInk,
-                }}
-              >
-                {showNewCustomer ? (
+      <div className="flex flex-col lg:flex-row items-start gap-4">
+        {/* ——— Form ——— */}
+        <div className="flex-1 min-w-0 space-y-4 w-full">
+          {/* 1 · Customer */}
+          <Card className="!p-6">
+            <SectionTitle n={1} title="Customer" />
+            {!customer ? (
+              <div className="relative">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: T.faint }}>
+                  <circle cx="11" cy="11" r="7" strokeWidth="1.5" />
+                  <path d="m16 16 4 4" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+                <input
+                  value={customerQuery}
+                  onChange={(e) => { setCustomerQuery(e.target.value); setCustomerOpen(true); }}
+                  onFocus={() => setCustomerOpen(true)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") setCustomerOpen(false);
+                    if (e.key === "Enter" && customerMatches[0]) pickCustomer(customerMatches[0].id);
+                  }}
+                  placeholder="Type a name, phone, or email…"
+                  className="w-full h-11 pl-9 pr-3 rounded-[10px] text-[14px] outline-none transition-shadow duration-200 focus:shadow-[0_0_0_3px_rgba(119,123,98,0.16)]"
+                  style={{ background: T.popover, border: `1px solid ${T.border}`, color: T.text }}
+                />
+                {customerOpen && (
                   <>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-                    Select from existing
+                    <div className="fixed inset-0 z-30" onClick={() => setCustomerOpen(false)} />
+                    <div
+                      className="absolute left-0 right-0 top-full mt-1.5 z-40 rounded-[12px] p-1.5 max-h-[320px] overflow-y-auto"
+                      style={{ background: T.popover, border: `1px solid ${T.border}`, boxShadow: T.shadowLift }}
+                    >
+                      {customerMatches.map((c) => (
+                        <button key={c.id} onClick={() => pickCustomer(c.id)} className={suggestionRow}>
+                          <span
+                            className="w-8 h-8 rounded-[9px] flex items-center justify-center text-[12px] font-semibold shrink-0"
+                            style={{ background: T.accentFaint, border: `1px solid ${T.borderSoft}`, color: T.accent }}
+                          >
+                            {c.name.split(" ").map((w) => w[0]).slice(0, 2).join("")}
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-[13.5px] font-medium truncate" style={{ color: T.text }}>{c.name}</span>
+                            <span className="block text-[11.5px] truncate" style={{ color: T.muted }}>{c.phone} · {c.email}</span>
+                          </span>
+                        </button>
+                      ))}
+                      {customerMatches.length === 0 && (
+                        <div className="px-3 py-2 text-[12.5px]" style={{ color: T.faint }}>No customers match “{customerQuery}”.</div>
+                      )}
+                      <button onClick={startNewCustomer} className={suggestionRow} style={{ color: T.accent }}>
+                        <span className="w-8 h-8 rounded-[9px] flex items-center justify-center shrink-0" style={{ border: `1px dashed ${T.accentBorder}` }}>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="w-3.5 h-3.5"><path d="M12 5v14M5 12h14" /></svg>
+                        </span>
+                        <span className="text-[13px] font-medium">
+                          New customer{customerQuery.trim() ? ` “${customerQuery.trim()}”` : ""}
+                        </span>
+                      </button>
+                    </div>
                   </>
-                ) : "+ New customer"}
-              </button>
-            </div>
-
-            {showNewCustomer ? (
-              <div className="space-y-5">
-                {/* Contact */}
-                <div>
-                  <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.accent }}>Contact</div>
+                )}
+              </div>
+            ) : newCustomer ? (
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <Input value={newCustomer.name} onChange={(v) => setNewCustomer((p) => p && { ...p, name: v })} label="Name" placeholder="e.g. Priya Sharma" />
+                  <Input value={newCustomer.phone} onChange={(v) => setNewCustomer((p) => p && { ...p, phone: v })} label="Phone / WhatsApp" placeholder="+91 98765 43210" />
+                  <Input value={newCustomer.email} onChange={(v) => setNewCustomer((p) => p && { ...p, email: v })} label="Email (optional)" placeholder="priya@example.com" />
+                </div>
+                <button onClick={() => setShowBirth((v) => !v)} className="text-[12.5px] font-medium cursor-pointer hover:underline underline-offset-4" style={{ color: T.accent }}>
+                  {showBirth ? "Hide birth details" : "+ Add birth details (for the chart)"}
+                </button>
+                {showBirth && (
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <Input
-                      value={newCustomer.name}
-                      onChange={(v) => { markTouched("name"); setNewCustomer((p) => ({ ...p, name: v })); }}
-                      label="Name"
-                      placeholder="e.g. Priya Sharma"
-                      error={showError("name")}
-                    />
-                    <Input
-                      value={newCustomer.phone}
-                      onChange={(v) => { markTouched("phone"); setNewCustomer((p) => ({ ...p, phone: v })); }}
-                      label="Phone / WhatsApp"
-                      placeholder="e.g. +91 98765 43210"
-                      error={showError("phone")}
-                    />
-                    <Input
-                      value={newCustomer.email}
-                      onChange={(v) => { markTouched("email"); setNewCustomer((p) => ({ ...p, email: v })); }}
-                      label="Email"
-                      placeholder="e.g. priya@example.com"
-                      error={showError("email")}
-                    />
+                    <Input value={birth.date} onChange={(v) => setBirth((p) => ({ ...p, date: v }))} label="Birth date" placeholder="15 Mar 1992" />
+                    <Input value={birth.time} onChange={(v) => setBirth((p) => ({ ...p, time: v }))} label="Birth time" placeholder="10:30 AM" />
+                    <Input value={birth.place} onChange={(v) => setBirth((p) => ({ ...p, place: v }))} label="Birth place" placeholder="Kochi, Kerala" />
                   </div>
-                </div>
-
-                {/* Birth details */}
-                <div>
-                  <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.accent }}>Birth details — the chart on file</div>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <Input
-                      value={newCustomer.birthDate}
-                      onChange={(v) => setNewCustomer((p) => ({ ...p, birthDate: v }))}
-                      label="Birth date"
-                      placeholder="e.g. 15 Mar 1992"
-                    />
-                    <Input
-                      value={newCustomer.birthTime}
-                      onChange={(v) => setNewCustomer((p) => ({ ...p, birthTime: v }))}
-                      label="Birth time"
-                      placeholder="e.g. 10:30 AM"
-                    />
-                    <Input
-                      value={newCustomer.birthPlace}
-                      onChange={(v) => setNewCustomer((p) => ({ ...p, birthPlace: v }))}
-                      label="Birth place"
-                      placeholder="e.g. Kochi, Kerala"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex gap-2.5 pt-2">
-                  <GoldBtn onClick={handleCreateCustomer}>Create & continue</GoldBtn>
-                </div>
+                )}
+                <button onClick={clearCustomer} className="text-[12.5px] cursor-pointer hover:underline underline-offset-4" style={{ color: T.muted }}>
+                  ← Back to search
+                </button>
               </div>
             ) : (
-              <>
-                <div className="mb-3">
-                  <SearchFilter search={search} onSearchChange={setSearch} placeholder="Search name, email…" />
+              <div
+                className="flex items-center gap-3 rounded-[12px] px-3.5 py-3"
+                style={{ background: T.accentFaint, border: `1px solid ${T.accentBorder}` }}
+              >
+                <span
+                  className="w-9 h-9 rounded-[10px] flex items-center justify-center text-[13px] font-semibold shrink-0"
+                  style={{ background: T.card, border: `1px solid ${T.borderSoft}`, color: T.accent }}
+                >
+                  {selectedCustomer!.name.split(" ").map((w) => w[0]).slice(0, 2).join("")}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[13.5px] font-semibold truncate" style={{ color: T.text }}>{selectedCustomer!.name}</div>
+                  <div className="text-[12px] truncate" style={{ color: T.muted }}>{selectedCustomer!.phone} · {selectedCustomer!.email}</div>
                 </div>
-                <div className="max-h-[400px] overflow-y-auto space-y-0.5 pr-1">
-                  {MOCK_CUSTOMERS.filter((c) => !search || c.name.toLowerCase().includes(search.toLowerCase()) || c.email.toLowerCase().includes(search.toLowerCase())).map((c) => (
-                    <button
-                      key={c.id}
-                      onClick={() => selectCustomer(c.id)}
-                      className={`w-full flex items-center gap-3 py-2.5 px-3 text-left rounded-[10px] transition-colors duration-150 cursor-pointer ${customerId === c.id ? "" : "hover:bg-[rgba(89,82,54,0.05)]"}`}
-                      style={{
-                        background: customerId === c.id ? "rgba(160,125,56,0.13)" : undefined,
-                        border: `1px solid ${customerId === c.id ? T.accentBorder : "transparent"}`,
-                      }}
+                <button
+                  onClick={clearCustomer}
+                  className="text-[12px] font-medium shrink-0 cursor-pointer hover:underline underline-offset-4"
+                  style={{ color: T.accent }}
+                >
+                  Change
+                </button>
+              </div>
+            )}
+
+            {/* Delivery address — auto-filled, editable */}
+            {customer && (
+              <div className="mt-4">
+                <div className="text-[11px] font-medium tracking-[0.06em] uppercase mb-1.5" style={{ color: T.faint }}>
+                  Deliver to {selectedCustomer?.shippingAddress && address === selectedCustomer.shippingAddress ? "· address on file" : ""}
+                </div>
+                <textarea
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  rows={2}
+                  placeholder="House / street, city, state, PIN"
+                  className="w-full px-3.5 py-2.5 rounded-[10px] text-[13.5px] outline-none resize-none transition-shadow duration-200 focus:shadow-[0_0_0_3px_rgba(119,123,98,0.16)]"
+                  style={{ background: T.popover, border: `1px solid ${T.border}`, color: T.text }}
+                />
+              </div>
+            )}
+          </Card>
+
+          {/* 2 · Stone */}
+          <Card className="!p-6">
+            <SectionTitle n={2} title="Stone" />
+            {!selectedStone ? (
+              <div className="relative">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: T.faint }}>
+                  <circle cx="11" cy="11" r="7" strokeWidth="1.5" />
+                  <path d="m16 16 4 4" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+                <input
+                  value={stoneQuery}
+                  onChange={(e) => { setStoneQuery(e.target.value); setStoneOpen(true); }}
+                  onFocus={() => setStoneOpen(true)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") setStoneOpen(false);
+                    if (e.key === "Enter" && stoneMatches[0]) pickStone(stoneMatches[0].sku);
+                  }}
+                  placeholder="Type a gem, SKU, or origin — e.g. Pukhraj, Ceylon…"
+                  className="w-full h-11 pl-9 pr-3 rounded-[10px] text-[14px] outline-none transition-shadow duration-200 focus:shadow-[0_0_0_3px_rgba(119,123,98,0.16)]"
+                  style={{ background: T.popover, border: `1px solid ${T.border}`, color: T.text }}
+                />
+                {stoneOpen && (
+                  <>
+                    <div className="fixed inset-0 z-30" onClick={() => setStoneOpen(false)} />
+                    <div
+                      className="absolute left-0 right-0 top-full mt-1.5 z-40 rounded-[12px] p-1.5 max-h-[320px] overflow-y-auto"
+                      style={{ background: T.popover, border: `1px solid ${T.border}`, boxShadow: T.shadowLift }}
                     >
-                      <span
-                        className="w-9 h-9 rounded-full flex items-center justify-center text-[13px] font-semibold shrink-0"
-                        style={{ background: `${T.accent}15`, border: `1px solid ${T.accent}30`, color: T.accent }}
-                      >
-                        {c.name[0]}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <div className="text-[13.5px] font-medium truncate" style={{ color: T.text }}>{c.name}</div>
-                        <div className="text-[12px] truncate" style={{ color: T.muted }}>{c.email}</div>
-                      </div>
-                      <span className="hidden sm:block text-[12.5px] tabular-nums shrink-0" style={{ color: T.muted }}>{c.phone}</span>
-                      <span
-                        className="w-[18px] h-[18px] rounded-full shrink-0 flex items-center justify-center"
-                        style={{ border: `1.5px solid ${customerId === c.id ? T.accent : "rgba(89,82,54,0.25)"}` }}
-                      >
-                        {customerId === c.id && <span className="w-[9px] h-[9px] rounded-full" style={{ background: T.accent }} />}
-                      </span>
+                      {stoneMatches.map((s) => (
+                        <button key={s.sku} onClick={() => pickStone(s.sku)} className={suggestionRow}>
+                          <span className="w-8 h-8 rounded-[9px] shrink-0" style={{ background: s.shadeHex, border: `1px solid ${T.borderSoft}` }} />
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-[13.5px] font-medium truncate" style={{ color: T.text }}>
+                              {s.gemName} · {s.english}
+                            </span>
+                            <span className="block text-[11.5px] truncate" style={{ color: T.muted }}>
+                              {s.ratti}r · {s.origin} · {s.sku}
+                            </span>
+                          </span>
+                          <span className="text-[13px] font-semibold tabular-nums shrink-0" style={{ color: T.text }}>{inr(s.price)}</span>
+                        </button>
+                      ))}
+                      {stoneMatches.length === 0 && (
+                        <div className="px-3 py-2 text-[12.5px]" style={{ color: T.faint }}>No stones match “{stoneQuery}”.</div>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            ) : (
+              <div
+                className="flex flex-wrap items-center gap-3 rounded-[12px] px-3.5 py-3"
+                style={{ background: T.accentFaint, border: `1px solid ${T.accentBorder}` }}
+              >
+                <span className="w-9 h-9 rounded-[10px] shrink-0" style={{ background: selectedStone.shadeHex, border: `1px solid ${T.borderSoft}` }} />
+                <div className="min-w-0 flex-1">
+                  <div className="text-[13.5px] font-semibold truncate" style={{ color: T.text }}>
+                    {selectedStone.gemName} · {selectedStone.english}
+                  </div>
+                  <div className="text-[12px] truncate" style={{ color: T.muted }}>
+                    {selectedStone.ratti}r · {selectedStone.origin} · {selectedStone.sku}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-[12px]" style={{ color: T.faint }}>₹</span>
+                  <input
+                    value={stonePrice}
+                    onChange={(e) => setStonePrice(e.target.value.replace(/[^0-9]/g, ""))}
+                    className="w-[110px] h-8 px-2.5 rounded-[8px] text-[13px] font-semibold tabular-nums text-right outline-none"
+                    style={{ background: T.card, border: `1px solid ${T.border}`, color: T.text }}
+                    aria-label="Stone price"
+                  />
+                  <button
+                    onClick={() => { setStoneSku(""); setStonePrice(""); }}
+                    className="text-[12px] font-medium cursor-pointer hover:underline underline-offset-4"
+                    style={{ color: T.accent }}
+                  >
+                    Change
+                  </button>
+                </div>
+              </div>
+            )}
+          </Card>
+
+          {/* 3 · Setting */}
+          <Card className="!p-6">
+            <SectionTitle n={3} title="Setting" hint="optional — skip for a loose stone" />
+            <div className="flex flex-wrap gap-1.5 mb-3">
+              {SETTING_TYPES.map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setSettingType(settingType === t ? "" : t)}
+                  className="h-8 px-3.5 rounded-full text-[13px] cursor-pointer transition-colors duration-150"
+                  style={
+                    settingType === t
+                      ? { background: T.accent, color: T.accentInk, fontWeight: 600 }
+                      : { background: "rgba(89,82,54,0.06)", color: T.muted }
+                  }
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+            {settingType && settingType !== "Loose stone" && (
+              <div className="space-y-3">
+                <div className="flex flex-wrap gap-1.5">
+                  {METALS.map((m) => (
+                    <button
+                      key={m}
+                      onClick={() => setMetal(metal === m ? "" : m)}
+                      className="h-8 px-3.5 rounded-full text-[12.5px] cursor-pointer transition-colors duration-150"
+                      style={
+                        metal === m
+                          ? { background: T.gold, color: T.accentInk, fontWeight: 600 }
+                          : { background: "rgba(89,82,54,0.06)", color: T.muted }
+                      }
+                    >
+                      {m}
                     </button>
                   ))}
                 </div>
-              </>
-            )}
-            {customerId && (
-              <div className="mt-4 pt-3 flex justify-end" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
-                <GoldBtn onClick={() => goTo("address")}>Next →</GoldBtn>
+                <div className="grid grid-cols-2 gap-3 max-w-[380px]">
+                  <Input value={size} onChange={setSize} label={settingType === "Ring" ? "Ring size" : "Size / length"} placeholder={settingType === "Ring" ? "e.g. 18" : "e.g. 20 in"} />
+                  <Input value={settingPrice} onChange={(v) => setSettingPrice(v.replace(/[^0-9]/g, ""))} label="Making charge (₹)" placeholder="e.g. 18500" />
+                </div>
               </div>
             )}
           </Card>
-        )}
 
-        {/* STEP: Address */}
-        {step === "address" && (
-          <Card>
-            <div className="flex items-center justify-between mb-3">
-              <div className="text-[11px] tracking-[0.08em] uppercase" style={{ color: T.faint }}>Select shipping address</div>
-              {!showNewAddress && (
-                <button
-                  onClick={() => setShowNewAddress(true)}
-                  className="text-[12px] font-medium cursor-pointer transition-opacity hover:opacity-80"
-                  style={{ color: T.accent }}
-                >
-                  + New address
-                </button>
-              )}
-            </div>
-
-            {selectedCustomer && (
-              <div className="text-[12px] mb-4 px-3 py-2 rounded-[8px]" style={{ background: "rgba(160,125,56,0.10)", color: T.muted }}>
-                Shipping for <span style={{ color: T.text }}>{selectedCustomer.name}</span>
-              </div>
-            )}
-
-            {showNewAddress ? (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[12px] font-medium" style={{ color: T.accent }}>Add new address</span>
-                  <button onClick={() => setShowNewAddress(false)} className="text-[11px] cursor-pointer" style={{ color: T.muted }}>← Back</button>
-                </div>
-                <Input
-                  value={newAddress.line1}
-                  onChange={(v) => setNewAddress((p) => ({ ...p, line1: v }))}
-                  label="Address line 1"
-                  placeholder="House/flat no., building, street"
-                />
-                <Input
-                  value={newAddress.line2}
-                  onChange={(v) => setNewAddress((p) => ({ ...p, line2: v }))}
-                  label="Address line 2 (optional)"
-                  placeholder="Landmark, area"
-                />
-                <div className="grid grid-cols-2 gap-3">
-                  <Input
-                    value={newAddress.city}
-                    onChange={(v) => setNewAddress((p) => ({ ...p, city: v }))}
-                    label="City"
-                    placeholder="e.g. Mumbai"
-                  />
-                  <Input
-                    value={newAddress.state}
-                    onChange={(v) => setNewAddress((p) => ({ ...p, state: v }))}
-                    label="State"
-                    placeholder="e.g. Maharashtra"
-                  />
-                </div>
-                <Input
-                  value={newAddress.pincode}
-                  onChange={(v) => setNewAddress((p) => ({ ...p, pincode: v }))}
-                  label="Pincode"
-                  placeholder="e.g. 400001"
-                />
-                <div className="flex gap-2.5 pt-2">
-                  <GoldBtn onClick={handleSaveNewAddress}>Use this address</GoldBtn>
-                  <GhostBtn onClick={() => setShowNewAddress(false)}>Cancel</GhostBtn>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {existingAddress && (
+          {/* 4 · Energisation */}
+          <Card className="!p-6">
+            <SectionTitle n={4} title="Energisation" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {ENERGISATION.map((e) => {
+                const active = energisationKey === e.key;
+                return (
                   <button
-                    onClick={() => selectAddress(existingAddress)}
-                    className="w-full flex items-start justify-between py-3.5 px-4 text-left rounded-[10px] transition-all duration-150 cursor-pointer"
+                    key={e.key}
+                    onClick={() => setEnergisationKey(e.key)}
+                    className="text-left rounded-[12px] px-4 py-3 cursor-pointer transition-all duration-150"
                     style={{
-                      background: selectedAddress === existingAddress ? "rgba(160,125,56,0.13)" : T.bg,
-                      border: `1px solid ${selectedAddress === existingAddress ? "rgba(160,125,56,0.45)" : T.borderSoft}`,
+                      background: active ? T.accentFaint : T.popover,
+                      border: `1px solid ${active ? T.accentBorder : T.borderSoft}`,
+                      boxShadow: active ? `inset 0 0 0 1px ${T.accentBorder}` : "none",
                     }}
                   >
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-[11px] font-medium uppercase tracking-[0.05em]" style={{ color: T.faint }}>Saved address</span>
-                        <Chip tone="gold">Default</Chip>
-                      </div>
-                      <div className="text-[13.5px]" style={{ color: T.text }}>{existingAddress}</div>
-                    </div>
-                    {selectedAddress === existingAddress && <span className="mt-1" style={{ color: T.accent }}>✓</span>}
-                  </button>
-                )}
-
-                {!existingAddress && !createdCustomer && (
-                  <div className="text-center py-8">
-                    <p className="text-[13.5px] mb-3" style={{ color: T.muted }}>No saved address for this customer</p>
-                    <GoldBtn onClick={() => setShowNewAddress(true)}>Add shipping address</GoldBtn>
-                  </div>
-                )}
-
-                {createdCustomer && (
-                  <div className="text-center py-8">
-                    <p className="text-[13.5px] mb-3" style={{ color: T.muted }}>New customer — add a shipping address</p>
-                    <GoldBtn onClick={() => setShowNewAddress(true)}>Add shipping address</GoldBtn>
-                  </div>
-                )}
-              </div>
-            )}
-            {selectedAddress && (
-              <div className="mt-4 pt-3 flex justify-end" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
-                <GoldBtn onClick={() => goTo("stone")}>Next →</GoldBtn>
-              </div>
-            )}
-          </Card>
-        )}
-
-        {/* STEP: Stone */}
-        {step === "stone" && (
-          <Card>
-            <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.faint }}>Select stone from inventory</div>
-            <div className="mb-3">
-              <SearchFilter search={search} onSearchChange={setSearch} placeholder="Search SKU, gemstone…" />
-            </div>
-            {/* Header */}
-            <div
-              className="hidden md:grid grid-cols-[minmax(200px,1.2fr)_100px_140px_130px_240px] gap-x-4 px-3 py-2.5 rounded-[8px] text-[11px] tracking-[0.07em] uppercase font-semibold"
-              style={{ color: T.muted, background: "rgba(89,82,54,0.035)" }}
-            >
-              <span>Stone</span>
-              <span className="text-right">Weight</span>
-              <span className="text-right">Price / ratti</span>
-              <span className="text-right">Total</span>
-              <span />
-            </div>
-            <div className="max-h-[500px] overflow-y-auto">
-              {STONES.filter((s) => !search || s.sku.toLowerCase().includes(search.toLowerCase()) || s.gemName.toLowerCase().includes(search.toLowerCase())).slice(0, 30).map((s, i, arr) => (
-                <button
-                  key={s.sku}
-                  onClick={() => selectStone(s.sku)}
-                  className="w-full grid md:grid-cols-[minmax(200px,1.2fr)_100px_140px_130px_240px] grid-cols-1 gap-x-4 gap-y-1.5 items-center px-3 py-3 text-[13.5px] text-left transition-all duration-150 cursor-pointer rounded-[9px]"
-                  style={{
-                    background: stoneSku === s.sku ? "rgba(160,125,56,0.13)" : "transparent",
-                    borderBottom: i < Math.min(arr.length, 30) - 1 ? `1px solid ${T.borderSoft}` : "none",
-                  }}
-                >
-                  <span className="flex items-center gap-3 min-w-0">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={`/gems/${s.gem}.png`}
-                      alt={s.gemName}
-                      className="w-9 h-9 rounded-[8px] object-cover shrink-0"
-                      style={{ border: `1px solid ${T.borderSoft}` }}
-                      loading="lazy"
-                    />
-                    <span className="min-w-0">
-                      <span className="block font-medium truncate" style={{ color: T.text }}>{s.gemName}</span>
-                      <span className="block text-[11px] tracking-[0.05em] uppercase tabular-nums" style={{ color: T.faint }}>{s.sku}</span>
-                    </span>
-                  </span>
-                  <span className="tabular-nums md:text-right" style={{ color: T.muted }}>{s.ratti} r</span>
-                  <span className="tabular-nums md:text-right text-[13px]" style={{ color: T.muted }}>{inr(s.pricePerRatti)}</span>
-                  <span className="tabular-nums md:text-right font-semibold" style={{ color: T.text }}>{inr(s.price)}</span>
-                  <span className="flex items-center gap-3 md:justify-end">
-                    <a
-                      href={`https://astrolaabh.com/stones/${s.slug}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                      className="inline-flex items-center gap-1 text-[11px] transition-opacity hover:opacity-70"
-                      style={{ color: T.accent }}
-                    >
-                      Website
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                    </a>
-                    {stoneSku === s.sku && <span style={{ color: T.accent }}>✓</span>}
-                  </span>
-                </button>
-              ))}
-            </div>
-            {stoneSku && (
-              <div className="mt-4 pt-3 flex justify-end" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
-                <GoldBtn onClick={() => goTo("design")}>Next →</GoldBtn>
-              </div>
-            )}
-          </Card>
-        )}
-
-        {/* STEP: Design */}
-        {step === "design" && (
-          <Card>
-            <div className="flex items-center justify-between mb-4">
-              <div className="text-[11px] tracking-[0.08em] uppercase" style={{ color: T.faint }}>Select jewellery design (optional)</div>
-            </div>
-
-            {showCustomDesign && (
-              <Modal title="Custom jewellery" open={showCustomDesign} onClose={() => { setShowCustomDesign(false); setDesignForm("Ring"); }}>
-                <div className="space-y-3">
-                  <Input
-                    value={customDesign.name}
-                    onChange={(v) => setCustomDesign((p) => ({ ...p, name: v }))}
-                    label="Design name"
-                    placeholder="e.g. Custom Navratna Ring"
-                  />
-                  <Select
-                    value={customDesign.type}
-                    onChange={(v) => setCustomDesign((p) => ({ ...p, type: v }))}
-                    label="Jewellery type"
-                    options={[
-                      { value: "", label: "Select type…" },
-                      { value: "Ring", label: "Ring" },
-                      { value: "Pendant", label: "Pendant" },
-                      { value: "Bracelet", label: "Bracelet" },
-                      { value: "Necklace", label: "Necklace" },
-                      { value: "Earring", label: "Earring" },
-                      { value: "Bangle", label: "Bangle" },
-                      { value: "Other", label: "Other" },
-                    ]}
-                  />
-                  <Input
-                    value={customDesign.size}
-                    onChange={(v) => setCustomDesign((p) => ({ ...p, size: v }))}
-                    label="Size"
-                    placeholder="e.g. Ring size 18, Bracelet 7 inch"
-                  />
-                  <Select
-                    value={customDesign.metal}
-                    onChange={(v) => setCustomDesign((p) => ({ ...p, metal: v }))}
-                    label="Metal"
-                    options={[
-                      { value: "", label: "Select metal…" },
-                      { value: "22K Gold", label: "22K Gold" },
-                      { value: "18K Gold", label: "18K Gold" },
-                      { value: "Silver", label: "Silver" },
-                      { value: "Panchdhatu", label: "Panchdhatu" },
-                      { value: "Platinum", label: "Platinum" },
-                      { value: "Other", label: "Other" },
-                    ]}
-                  />
-                  <Input
-                    value={customDesign.price}
-                    onChange={(v) => setCustomDesign((p) => ({ ...p, price: v }))}
-                    label="Price (₹)"
-                    placeholder="e.g. 35000"
-                  />
-                  <div className="flex gap-2.5 pt-2">
-                    <GoldBtn onClick={confirmCustomDesign}>Confirm custom design</GoldBtn>
-                    <GhostBtn onClick={() => { setShowCustomDesign(false); setDesignForm("Ring"); }}>Cancel</GhostBtn>
-                  </div>
-                </div>
-              </Modal>
-            )}
-
-            <div className="space-y-5">
-                {/* Row 1: Wear type */}
-                <div>
-                  <div className="text-[11px] tracking-[0.06em] uppercase mb-2.5" style={{ color: T.muted }}>Type of wear</div>
-                  <div className="flex flex-wrap gap-2.5">
-                    {(["Ring", "Pendant", "Bracelet", "Loose"] as const).map((form) => {
-                      const isActive = designForm === form;
-                      return (
-                        <button
-                          key={form}
-                          onClick={() => {
-                            setDesignForm(form);
-                            setDesignSize("");
-                            if (form === "Loose") { setDesignSlug(""); }
-                          }}
-                          className="flex flex-col items-center justify-center w-[90px] h-[80px] rounded-[10px] transition-all duration-150 cursor-pointer"
-                          style={{
-                            background: isActive ? "rgba(160,125,56,0.15)" : T.bg,
-                            border: `1.5px solid ${isActive ? "rgba(160,125,56,0.65)" : T.borderSoft}`,
-                          }}
-                        >
-                          <span className="text-[20px] mb-1">
-                            {form === "Ring" && "💍"}
-                            {form === "Pendant" && "📿"}
-                            {form === "Bracelet" && "⌚"}
-                            {form === "Loose" && "💎"}
-                          </span>
-                          <span className="text-[11px] font-medium" style={{ color: isActive ? T.accent : T.text }}>
-                            {form === "Loose" ? "Loose stone" : form}
-                          </span>
-                        </button>
-                      );
-                    })}
-                    <button
-                      onClick={() => setShowCustomDesign(true)}
-                      className="flex flex-col items-center justify-center w-[90px] h-[80px] rounded-[10px] transition-all duration-150 cursor-pointer"
-                      style={{ background: T.bg, border: `1.5px dashed ${T.borderSoft}` }}
-                    >
-                      <span className="text-[20px] mb-1">✨</span>
-                      <span className="text-[11px] font-medium" style={{ color: T.accent }}>Custom</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Row 2: Metal */}
-                {designForm && designForm !== "Custom" && designForm !== "Loose" && (
-                  <div>
-                    <div className="text-[11px] tracking-[0.06em] uppercase mb-2.5" style={{ color: T.muted }}>Metal</div>
-                    <div className="flex flex-wrap gap-2">
-                      {["22K Gold", "18K Gold", "Silver", "Panchdhatu"].map((metal) => {
-                        const isActive = designMetal === metal;
-                        return (
-                          <button
-                            key={metal}
-                            onClick={() => setDesignMetal(isActive ? "" : metal)}
-                            className="px-4 py-2 rounded-[8px] text-[12px] font-medium transition-all duration-150 cursor-pointer"
-                            style={{
-                              background: isActive ? "rgba(160,125,56,0.15)" : T.bg,
-                              border: `1.5px solid ${isActive ? "rgba(160,125,56,0.65)" : T.borderSoft}`,
-                              color: isActive ? T.accent : T.text,
-                            }}
-                          >
-                            {metal}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* Row 3: Size */}
-                {designForm && designForm !== "Custom" && designForm !== "Loose" && (
-                  <div>
-                    <div className="text-[11px] tracking-[0.06em] uppercase mb-2.5" style={{ color: T.muted }}>Size</div>
-                    <div className="flex flex-wrap gap-2">
-                      {(designForm === "Ring"
-                        ? ["6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24"]
-                        : designForm === "Pendant"
-                          ? ["Small", "Medium", "Large"]
-                          : ["6 inch", "6.5 inch", "7 inch", "7.5 inch", "8 inch", "8.5 inch"]
-                      ).map((size) => {
-                        const isActive = designSize === size;
-                        return (
-                          <button
-                            key={size}
-                            onClick={() => setDesignSize(isActive ? "" : size)}
-                            className="px-3 py-1.5 rounded-[8px] text-[12px] font-medium transition-all duration-150 cursor-pointer"
-                            style={{
-                              background: isActive ? "rgba(160,125,56,0.15)" : T.bg,
-                              border: `1.5px solid ${isActive ? "rgba(160,125,56,0.65)" : T.borderSoft}`,
-                              color: isActive ? T.accent : T.text,
-                            }}
-                          >
-                            {size}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* Row 3: Design grid (only when a jewellery type is selected) */}
-                {designForm && designForm !== "Custom" && designForm !== "Loose" && (
-                  <div>
-                    <div className="text-[11px] tracking-[0.06em] uppercase mb-2.5" style={{ color: T.muted }}>Designs</div>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 max-h-[360px] overflow-y-auto">
-                      {DESIGNS.filter((d) => d.remaining > 0 && d.form === designForm).map((d) => {
-                        const isActive = designSlug === d.slug;
-                        return (
-                          <button
-                            key={d.slug}
-                            onClick={() => selectDesign(d.slug)}
-                            className="flex flex-col items-center p-3 rounded-[10px] transition-all duration-150 cursor-pointer"
-                            style={{
-                              background: isActive ? "rgba(160,125,56,0.15)" : T.bg,
-                              border: `1.5px solid ${isActive ? "rgba(160,125,56,0.65)" : T.borderSoft}`,
-                            }}
-                          >
-                            <div
-                              className="w-[72px] h-[72px] rounded-[8px] overflow-hidden mb-2"
-                              style={{ background: "rgba(160,125,56,0.10)", border: `1px solid ${T.borderSoft}` }}
-                            >
-                              <img
-                                src={d.image}
-                                alt={d.name}
-                                className="w-full h-full object-cover"
-                                onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                              />
-                            </div>
-                            <span className="text-[12px] font-medium text-center truncate w-full" style={{ color: isActive ? T.accent : T.text }}>{d.name}</span>
-                            <span className="text-[11px] text-center mt-0.5" style={{ color: T.faint }}>{d.remaining} left · run {d.runSize}</span>
-                            <span className="text-[11px] font-medium text-center mt-0.5" style={{ color: isActive ? T.accent : T.text }}>₹{d.price.toLocaleString("en-IN")}</span>
-                          </button>
-                        );
-                      })}
-                      {DESIGNS.filter((d) => d.remaining > 0 && d.form === designForm).length === 0 && (
-                        <div className="col-span-full text-center py-6">
-                          <p className="text-[12px]" style={{ color: T.muted }}>No designs available for {designForm}</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            {(designSlug || designForm === "Loose") && (
-              <div className="mt-4 pt-3 flex justify-end" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
-                <GoldBtn onClick={() => goTo("energisation")}>Next →</GoldBtn>
-              </div>
-            )}
-          </Card>
-        )}
-
-        {/* STEP: Energisation */}
-        {step === "energisation" && (
-          <Card>
-            <div className="text-[11px] tracking-[0.08em] uppercase mb-4" style={{ color: T.faint }}>Choose energisation package</div>
-
-            <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
-              <button
-                onClick={() => setEnergisationKey("none")}
-                className="w-full text-left rounded-[10px] p-4 transition-all duration-150 cursor-pointer"
-                style={{
-                  background: energisationKey === "none" ? "rgba(160,125,56,0.13)" : T.bg,
-                  border: `1px solid ${energisationKey === "none" ? "rgba(160,125,56,0.45)" : T.borderSoft}`,
-                }}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-[13.5px] font-medium" style={{ color: energisationKey === "none" ? T.accent : T.text }}>No energisation</span>
-                  <span className="text-[12px]" style={{ color: T.faint }}>—</span>
-                </div>
-                <p className="text-[12px] mt-1" style={{ color: T.muted }}>Ship stone/jewellery as-is without any ritual.</p>
-              </button>
-
-              {ENERGISATION.map((tier, idx) => (
-                <button
-                  key={tier.key}
-                  onClick={() => setEnergisationKey(tier.key)}
-                  className="w-full text-left rounded-[10px] p-4 transition-all duration-150 cursor-pointer"
-                  style={{
-                    background: energisationKey === tier.key ? "rgba(160,125,56,0.13)" : T.bg,
-                    border: `1px solid ${energisationKey === tier.key ? "rgba(160,125,56,0.45)" : T.borderSoft}`,
-                  }}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <span className="text-[13.5px] font-semibold" style={{ color: energisationKey === tier.key ? T.accent : T.text }}>
-                        {tier.name}
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className="text-[13.5px] font-semibold" style={{ color: T.text }}>{e.name}</span>
+                      <span className="text-[12.5px] font-semibold tabular-nums" style={{ color: e.fee === 0 ? T.good : T.text }}>
+                        {e.fee === 0 ? "Included" : inr(e.fee)}
                       </span>
-                      <span className="text-[11px]" style={{ color: T.faint }}>{tier.sanskrit}</span>
-                      {idx === 0 && <Chip tone="good">Standard</Chip>}
-                      {idx === 1 && <Chip tone="gold">Premium</Chip>}
-                      {idx === 2 && <Chip tone="gold">Premium+</Chip>}
-                      {idx === 3 && <Chip tone="gold">Elite</Chip>}
                     </div>
-                    <span className="text-[13px] font-semibold tabular-nums shrink-0" style={{ color: tier.fee === 0 ? T.good : T.text }}>
-                      {tier.fee === 0 ? "Included free" : inr(tier.fee)}
-                    </span>
-                  </div>
-                  <div className="text-[11px] mt-1.5" style={{ color: T.faint }}>{tier.duration}</div>
-                </button>
-              ))}
-            </div>
-
-            <div className="mt-4 pt-3 flex justify-end" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
-              <GoldBtn onClick={confirmEnergisation}>Next →</GoldBtn>
+                    <div className="text-[11.5px] mt-0.5" style={{ color: T.muted }}>{e.duration}</div>
+                  </button>
+                );
+              })}
             </div>
           </Card>
-        )}
+        </div>
 
-        {/* STEP: Review */}
-        {step === "review" && (
-          <Card>
-            <div className="text-[11px] tracking-[0.08em] uppercase mb-4" style={{ color: T.faint }}>Review order</div>
-            <div className="space-y-3 text-[13.5px]">
-              <div className="flex justify-between py-2" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
-                <span style={{ color: T.muted }}>Customer</span>
-                <span style={{ color: T.text }}>{selectedCustomer?.name ?? "—"}</span>
-              </div>
-              <div className="flex justify-between py-2" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
-                <span style={{ color: T.muted }}>Shipping address</span>
-                <span className="text-right max-w-[60%]" style={{ color: T.text }}>{selectedAddress || "—"}</span>
-              </div>
-              <div className="flex justify-between py-2" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
-                <span style={{ color: T.muted }}>Stone</span>
-                <span style={{ color: T.text }}>{selectedStone ? `${selectedStone.sku} · ${selectedStone.gemName} · ${selectedStone.ratti}r` : "—"}</span>
-              </div>
-              <div className="flex justify-between py-2" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
-                <span style={{ color: T.muted }}>Design</span>
-                <span className="text-right" style={{ color: T.text }}>
-                  {hasCustomDesign
-                    ? `${customDesign.name} · ${customDesign.type}${customDesign.metal ? ` · ${customDesign.metal}` : ""}${customDesign.size ? ` · ${customDesign.size}` : ""}`
-                    : selectedDesign
-                      ? `${selectedDesign.name} · ${selectedDesign.form}`
-                      : "None (stone only)"}
+        {/* ——— Live summary ——— */}
+        <aside className="w-full lg:w-[320px] shrink-0 lg:sticky lg:top-4">
+          <Card className="!p-6">
+            <h2 className="text-[15px] font-semibold tracking-[-0.01em] mb-4" style={{ color: T.text }}>Order summary</h2>
+
+            <div className="space-y-3 text-[13px]">
+              <div className="flex justify-between gap-3">
+                <span style={{ color: T.faint }}>Customer</span>
+                <span className="text-right font-medium min-w-0 truncate" style={{ color: customer ? T.text : T.faint }}>
+                  {customer ? customer.name || "New customer" : "—"}
                 </span>
               </div>
-              <div className="flex justify-between py-2" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
-                <span style={{ color: T.muted }}>Energisation</span>
-                <span style={{ color: T.text }}>
-                  {energisationKey === "none" ? "Not required" : `${selectedEnergisation?.name}${selectedEnergisation?.fee ? ` · ${inr(selectedEnergisation.fee)}` : " · Included"}`}
+              <div className="flex justify-between gap-3">
+                <span style={{ color: T.faint }}>Stone</span>
+                <span className="text-right font-medium min-w-0 truncate" style={{ color: selectedStone ? T.text : T.faint }}>
+                  {selectedStone ? `${selectedStone.gemName} ${selectedStone.ratti}r` : "—"}
                 </span>
               </div>
-              <div className="flex justify-between items-center py-2" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
-                <span style={{ color: T.muted }}>Stone price</span>
-                <div className="flex items-center gap-1 rounded-md px-2 py-1" style={{ background: "rgba(89,82,54,0.05)", border: `1px solid rgba(89,82,54,0.14)` }}>
-                  <span className="text-[12px]" style={{ color: T.faint }}>₹</span>
-                  <input
-                    type="text"
-                    value={editStonePrice || (selectedStone ? String(selectedStone.price) : "")}
-                    onChange={(e) => setEditStonePrice(e.target.value)}
-                    className="text-right font-semibold tabular-nums bg-transparent border-none outline-none w-[100px] text-[13.5px]"
-                    style={{ color: T.text }}
-                    placeholder="0"
-                  />
+              {settingType && (
+                <div className="flex justify-between gap-3">
+                  <span style={{ color: T.faint }}>Setting</span>
+                  <span className="text-right font-medium" style={{ color: T.text }}>
+                    {settingType}{metal ? ` · ${metal}` : ""}{size ? ` · ${size}` : ""}
+                  </span>
                 </div>
+              )}
+              <div className="flex justify-between gap-3">
+                <span style={{ color: T.faint }}>Energisation</span>
+                <span className="text-right font-medium" style={{ color: T.text }}>{energisation?.name}</span>
               </div>
-              {(hasCustomDesign || selectedDesign) && (
-                <div className="flex justify-between items-center py-2" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
-                  <span style={{ color: T.muted }}>{hasCustomDesign ? "Custom design price" : "Jewellery price"}</span>
-                  <div className="flex items-center gap-1 rounded-md px-2 py-1" style={{ background: "rgba(89,82,54,0.05)", border: `1px solid rgba(89,82,54,0.14)` }}>
-                    <span className="text-[12px]" style={{ color: T.faint }}>₹</span>
-                    <input
-                      type="text"
-                      value={editDesignPrice || (hasCustomDesign ? customDesign.price : selectedDesign ? String(selectedDesign.price) : "")}
-                      onChange={(e) => setEditDesignPrice(e.target.value)}
-                      className="text-right tabular-nums bg-transparent border-none outline-none w-[100px] text-[13.5px]"
-                      style={{ color: T.text }}
-                      placeholder="0"
-                    />
-                  </div>
-                </div>
-              )}
-              {selectedEnergisation && selectedEnergisation.fee > 0 && (
-                <div className="flex justify-between py-2" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
-                  <span style={{ color: T.muted }}>Energisation</span>
-                  <span className="tabular-nums" style={{ color: T.text }}>{inr(selectedEnergisation.fee)}</span>
-                </div>
-              )}
-              <div className="flex justify-between items-center py-2" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
+            </div>
+
+            <div className="mt-4 pt-4 space-y-2 text-[13px] tabular-nums" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+              <div className="flex justify-between"><span style={{ color: T.muted }}>Stone</span><span style={{ color: T.text }}>{selectedStone ? inr(stoneAmount) : "—"}</span></div>
+              {settingAmount > 0 && <div className="flex justify-between"><span style={{ color: T.muted }}>Making</span><span style={{ color: T.text }}>{inr(settingAmount)}</span></div>}
+              <div className="flex justify-between"><span style={{ color: T.muted }}>Energisation</span><span style={{ color: T.text }}>{energisationAmount === 0 ? "Free" : inr(energisationAmount)}</span></div>
+              <div className="flex items-center justify-between gap-3">
                 <span style={{ color: T.muted }}>Discount</span>
-                <div className="flex items-center gap-1 rounded-md px-2 py-1" style={{ background: "rgba(89,82,54,0.05)", border: `1px solid rgba(89,82,54,0.14)` }}>
+                <span className="flex items-center gap-1.5">
+                  <span className="text-[12px]" style={{ color: T.faint }}>− ₹</span>
                   <input
-                    type="text"
                     value={discount}
-                    onChange={(e) => setDiscount(e.target.value)}
-                    className="text-right tabular-nums bg-transparent border-none outline-none w-[100px] text-[13.5px]"
-                    style={{ color: T.danger || "#e55" }}
+                    onChange={(e) => setDiscount(e.target.value.replace(/[^0-9]/g, ""))}
                     placeholder="0"
+                    className="w-[86px] h-7 px-2 rounded-[7px] text-[12.5px] tabular-nums text-right outline-none"
+                    style={{ background: T.popover, border: `1px solid ${T.borderSoft}`, color: T.text }}
+                    aria-label="Discount"
                   />
-                  <span className="text-[12px]" style={{ color: T.faint }}>%</span>
-                </div>
-              </div>
-              <div className="flex justify-between py-2" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
-                <span className="font-medium" style={{ color: T.text }}>Total</span>
-                <span className="text-[15px] font-semibold tabular-nums" style={{ color: T.text }}>
-                  {(() => {
-                    const sp = Number(editStonePrice) || selectedStone?.price || 0;
-                    const dp = Number(editDesignPrice) || (hasCustomDesign ? Number(customDesign.price) || 0 : selectedDesign?.price || 0);
-                    const ep = energisationKey !== "none" ? (selectedEnergisation?.fee ?? 0) : 0;
-                    const discPct = Math.min(100, Math.max(0, Number(discount) || 0));
-                    const subtotal = sp + dp + ep;
-                    return inr(Math.max(0, Math.round(subtotal - (subtotal * discPct / 100))));
-                  })()}
                 </span>
               </div>
             </div>
-            <p className="text-[12px] mt-4" style={{ color: T.faint }}>
-              Customer will get a payment link once you create an order.
-            </p>
+
+            <div className="mt-4 pt-4 flex items-baseline justify-between" style={{ borderTop: `1px solid ${T.border}` }}>
+              <span className="text-[13px] font-medium" style={{ color: T.muted }}>Total</span>
+              <span className="font-title text-[22px] font-semibold tabular-nums tracking-[-0.01em]" style={{ color: T.text }}>{inr(total)}</span>
+            </div>
+
             <div className="mt-4">
-              <GoldBtn onClick={handleCreate}>Create order</GoldBtn>
+              <GoldBtn onClick={handleCreate} disabled={!canCreate} className="w-full">
+                Create order
+              </GoldBtn>
+              {!canCreate && (
+                <div className="text-[11.5px] mt-2 text-center" style={{ color: T.faint }}>
+                  {!customerReady ? "Pick or add a customer to continue" : "Pick a stone to continue"}
+                </div>
+              )}
             </div>
           </Card>
-        )}
+        </aside>
       </div>
 
       {toast && (
         <div
-          className="fixed top-6 right-6 z-[100] flex items-center gap-2 px-4 py-3 rounded-[10px] shadow-lg text-[13.5px] font-medium animate-in"
-          style={{ background: T.card, border: `1px solid ${T.border}`, color: T.good }}
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-[10px] text-[13px] font-medium"
+          style={{ background: T.primary, color: T.primaryInk, boxShadow: T.shadowLift, animation: "wl-toast 0.3s ease both" }}
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6L9 17l-5-5"/></svg>
           {toast}
         </div>
       )}

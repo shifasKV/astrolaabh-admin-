@@ -10,6 +10,9 @@ export interface AuthUser {
   role: Role;
 }
 
+/* Demo credential set — the email decides the role, like production SSO would */
+export const DEMO_PASSWORD = "astro123";
+
 const DEMO_USERS: Record<Role, AuthUser> = {
   admin: { id: "usr_admin_01", name: "Ops Admin", email: "ops@astrolaabh.house", role: "admin" },
   expert: { id: "usr_expert_01", name: "Pt. Sandeep Kochaar", email: "sandeep@astrolaabh.house", role: "expert" },
@@ -18,8 +21,33 @@ const DEMO_USERS: Record<Role, AuthUser> = {
   sales_exec: { id: "sales_02", name: "Rahul Verma", email: "rahul.verma@astrolaabh.com", role: "sales_exec" },
 };
 
+export const DEMO_ACCOUNTS: { label: string; email: string; role: Role }[] = [
+  { label: "Admin", email: DEMO_USERS.admin.email, role: "admin" },
+  { label: "Astro-Gemologist", email: DEMO_USERS.expert.email, role: "expert" },
+  { label: "Affiliate partner", email: DEMO_USERS.affiliate.email, role: "affiliate" },
+  { label: "Sales executive", email: DEMO_USERS.sales_exec.email, role: "sales_exec" },
+];
+
+/* Where each role lands after signing in / activating their account */
+export const ROLE_ROUTES: Record<Role, string> = {
+  admin: "/dashboard",
+  expert: "/expert-dashboard",
+  affiliate: "/aff-dashboard",
+  sales_admin: "/sales-dashboard",
+  sales_exec: "/sales-dashboard",
+};
+
+/* Non-admin roles are invited by an admin and set their own password on first sign-in */
+export const INVITE_ACCOUNTS: { label: string; email: string; role: Role }[] = [
+  { label: "Astro-Gemologist", email: DEMO_USERS.expert.email, role: "expert" },
+  { label: "Affiliate partner", email: DEMO_USERS.affiliate.email, role: "affiliate" },
+  { label: "Sales executive", email: DEMO_USERS.sales_exec.email, role: "sales_exec" },
+];
+
 interface AuthState {
   user: AuthUser | null;
+  login: (email: string, password: string) => AuthUser | null;
+  loginByEmail: (email: string) => AuthUser | null;
   selectRole: (role: Role) => void;
   logout: () => void;
 }
@@ -28,6 +56,19 @@ const AuthContext = createContext<AuthState | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
+
+  const login = useCallback((email: string, password: string): AuthUser | null => {
+    const match = Object.values(DEMO_USERS).find((u) => u.email.toLowerCase() === email.trim().toLowerCase());
+    if (!match || password !== DEMO_PASSWORD) return null;
+    setUser(match);
+    return match;
+  }, []);
+
+  const loginByEmail = useCallback((email: string): AuthUser | null => {
+    const match = Object.values(DEMO_USERS).find((u) => u.email.toLowerCase() === email.trim().toLowerCase());
+    if (match) setUser(match);
+    return match ?? null;
+  }, []);
 
   const selectRole = useCallback((role: Role) => {
     setUser(DEMO_USERS[role]);
@@ -38,7 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, selectRole, logout }}>
+    <AuthContext.Provider value={{ user, login, loginByEmail, selectRole, logout }}>
       {children}
     </AuthContext.Provider>
   );

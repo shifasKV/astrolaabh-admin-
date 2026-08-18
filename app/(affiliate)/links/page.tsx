@@ -1,17 +1,16 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { PageHeader, Card, GoldBtn, GhostBtn, Pagination, ConfirmDialog, TableSkeleton } from "@/components/ui";
+import { PageHeader, Card, GoldBtn, EmptyState, TableSkeleton } from "@/components/ui";
 import { T } from "@/lib/theme";
+import { useSimulatedLoad } from "@/lib/useSimulatedLoad";
 import { MOCK_AFFILIATE_LINKS, MOCK_REFERRAL_EVENTS, MOCK_AFFILIATES } from "@/lib/mock";
 import { inr } from "@/lib/types";
 
-const PER_PAGE = 8;
-
 export default function LinksPage() {
+  const loading = useSimulatedLoad();
   const router = useRouter();
   const affiliate = MOCK_AFFILIATES[0];
-  const [page, setPage] = useState(0);
   const [codeCopied, setCodeCopied] = useState(false);
   const myLinks = MOCK_AFFILIATE_LINKS.filter((l) => l.affiliateCode === affiliate.code);
   const [activeState, setActiveState] = useState<Record<string, boolean>>(() => {
@@ -26,17 +25,7 @@ export default function LinksPage() {
   const ordersByLink = (linkId: string) =>
     MOCK_REFERRAL_EVENTS.filter((r) => r.linkId === linkId && r.eventType === "order").length;
 
-  const paged = myLinks.slice(page * PER_PAGE, (page + 1) * PER_PAGE);
-
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [confirmDeactivateLinkId, setConfirmDeactivateLinkId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const t = setTimeout(() => setLoading(false), 700);
-    return () => clearTimeout(t);
-  }, []);
-
   const copyLink = (id: string, url: string) => {
     navigator.clipboard.writeText(url);
     setCopiedId(id);
@@ -51,7 +40,6 @@ export default function LinksPage() {
         title="Affiliate links"
         sub={
           <span className="flex flex-wrap items-center gap-3">
-            <span>Manage your trackable referral links</span>
             <span className="inline-flex items-center gap-1.5 text-[12px] font-medium px-2.5 py-1 rounded-[6px]" style={{ background: `${T.accent}12`, border: `1px solid ${T.accent}30`, color: T.accent }}>
               Referral code: {affiliate.code}
               <button
@@ -70,24 +58,26 @@ export default function LinksPage() {
         action={<GoldBtn onClick={() => router.push("/links/create")}>+ New link</GoldBtn>}
       />
 
-      {loading ? (
-        <Card><TableSkeleton rows={4} cols={6} /></Card>
-      ) : (
-      <Card>
+      <Card className="!p-0">
+        {loading ? <TableSkeleton cols={7} rows={8} /> : <>
         {/* Header */}
-        <div className={`grid ${cols} gap-3 px-3 py-2.5 rounded-[8px] mb-1`} style={{ background: T.panel }}>
-          {["Product", "Campaign", "Type", "Orders", "Commission", "", "Active"].map((h) => (
-            <div key={h} className="text-[11px] font-medium tracking-[0.06em] uppercase" style={{ color: T.faint }}>{h}</div>
+        <div className={`grid ${cols} gap-3 px-4 h-10 items-center rounded-t-[15px]`} style={{ background: T.card, borderBottom: `1px solid ${T.border}` }}>
+          {["Product", "Campaign", "Type", "Orders", "Commission", "", "Active"].map((h, i) => (
+            <div key={i} className={`text-[11px] font-medium tracking-[0.06em] uppercase ${i === 6 ? "text-right" : ""}`} style={{ color: T.faint }}>{h}</div>
           ))}
         </div>
 
         {/* Rows */}
-        {paged.map((link) => {
+        {myLinks.map((link, idx, arr) => {
           const isActive = activeState[link.id] ?? link.active;
           const orders = ordersByLink(link.id);
           const commission = commissionByLink(link.id);
           return (
-            <div key={link.id} className={`grid ${cols} gap-3 px-3 py-3.5 items-center card-interactive`} style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
+            <div
+              key={link.id}
+              className={`grid ${cols} gap-3 px-4 py-2.5 items-center even:bg-[rgba(89,82,54,0.025)] hover:!bg-[rgba(119,123,98,0.08)] transition-colors ${idx === arr.length - 1 ? "rounded-b-[15px]" : ""}`}
+              style={{ borderBottom: idx < arr.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
+            >
               {/* Product name */}
               <div className="min-w-0">
                 <div className="text-[13px] font-semibold truncate" style={{ color: T.text }}>{link.productName || "—"}</div>
@@ -112,24 +102,23 @@ export default function LinksPage() {
               {/* Commission */}
               <div className="text-[13px] font-semibold tabular-nums" style={{ color: T.accent }}>{inr(commission)}</div>
 
-              {/* Copy link */}
+              {/* Copy link — text-only button */}
               <div>
-                <GhostBtn className="!h-8 !px-3 !text-[11px]" onClick={() => copyLink(link.id, link.shortUrl)}>
-                  {copiedId === link.id ? "Copied!" : "Copy link"}
-                </GhostBtn>
+                <button
+                  onClick={() => copyLink(link.id, link.shortUrl)}
+                  className="h-8 px-3 rounded-[8px] text-[12px] font-medium transition-colors cursor-pointer hover:bg-[rgba(119,123,98,0.1)]"
+                  style={{ color: copiedId === link.id ? T.good : T.text, border: `1px solid ${T.border}` }}
+                >
+                  {copiedId === link.id ? "Copied" : "Copy link"}
+                </button>
               </div>
 
               {/* Active toggle */}
-              <div>
+              <div className="flex justify-end">
                 <button
                   type="button"
-                  onClick={() => {
-                    if (isActive) {
-                      setConfirmDeactivateLinkId(link.id);
-                    } else {
-                      setActiveState((prev) => ({ ...prev, [link.id]: true }));
-                    }
-                  }}
+                  onClick={() => setActiveState((prev) => ({ ...prev, [link.id]: !prev[link.id] }))}
+                  aria-label={isActive ? "Deactivate link" : "Activate link"}
                   className="relative w-10 h-[22px] rounded-full transition-all duration-200 cursor-pointer"
                   style={{ background: isActive ? T.accent : T.borderSoft }}
                 >
@@ -144,29 +133,10 @@ export default function LinksPage() {
         })}
 
         {myLinks.length === 0 && (
-          <div className="text-center py-10 text-[13px]" style={{ color: T.muted }}>No links created yet.</div>
+          <EmptyState inline icon="table" title="No links yet" description="Create your first affiliate link to start earning commission." />
         )}
-        {myLinks.length > PER_PAGE && (
-          <div className="mt-4 px-3">
-            <Pagination page={page} totalPages={Math.ceil(myLinks.length / PER_PAGE)} totalItems={myLinks.length} perPage={PER_PAGE} onPageChange={setPage} />
-          </div>
-        )}
+        </>}
       </Card>
-      )}
-
-      <ConfirmDialog
-        open={confirmDeactivateLinkId !== null}
-        onClose={() => setConfirmDeactivateLinkId(null)}
-        onConfirm={() => {
-          if (confirmDeactivateLinkId) {
-            setActiveState((prev) => ({ ...prev, [confirmDeactivateLinkId]: false }));
-          }
-        }}
-        title="Deactivate link?"
-        description="This link will stop tracking referrals."
-        variant="danger"
-        confirmLabel="Deactivate"
-      />
     </>
   );
 }

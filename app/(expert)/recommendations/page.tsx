@@ -1,8 +1,9 @@
 "use client";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, SearchFilter, Select, TableSkeleton } from "@/components/ui";
+import { PageHeader, Card, Chip, Select, Pagination, ToolbarSearch, FiltersPopover, FilterField, FilterChip, TableSkeleton } from "@/components/ui";
 import { T } from "@/lib/theme";
+import { useSimulatedLoad } from "@/lib/useSimulatedLoad";
 import { MOCK_STONE_RECOMMENDATIONS, MOCK_CONSULTATIONS, MOCK_ORDERS } from "@/lib/mock";
 
 const STATUS_OPTIONS = [
@@ -19,18 +20,14 @@ type SortKey = "newest" | "oldest";
 const PER_PAGE = 5;
 
 export default function RecommendationsPage() {
+  const loading = useSimulatedLoad();
   const [search, setSearch] = useState("");
   const [filterCustomer, setFilterCustomer] = useState("");
   const [filterStone, setFilterStone] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [sort, setSort] = useState<SortKey>("newest");
   const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const t = setTimeout(() => setLoading(false), 700);
-    return () => clearTimeout(t);
-  }, []);
+  const [showFilters, setShowFilters] = useState(false);
 
   const consultationMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -101,64 +98,29 @@ export default function RecommendationsPage() {
 
   return (
     <>
-      <PageHeader title="Recommendations" sub="Stone recommendations — track status through to order conversion" />
+      <div className="md:h-[calc(100dvh-78px)] md:flex md:flex-col md:min-h-0">
+      <PageHeader title="Recommendations" />
 
-      {/* Search */}
-      <div className="mb-3">
-        <SearchFilter search={search} onSearchChange={setSearch} placeholder="Search customer, gemstone, ID…" />
-      </div>
-
-      {/* Filters & Sort */}
-      <div className="flex flex-wrap items-center gap-2.5 mb-4">
-        <div className="w-[200px]">
-          <Select
-            value={filterCustomer}
-            onChange={(v) => { setFilterCustomer(v); setPage(1); }}
-            searchable
-            compact
-            placeholder="All customers"
-            options={[
-              { value: "", label: "All customers" },
-              ...uniqueCustomers.map((name) => ({ value: name, label: name })),
-            ]}
-          />
-        </div>
-
-        <div className="w-[220px]">
-          <Select
-            value={filterStone}
-            onChange={(v) => { setFilterStone(v); setPage(1); }}
-            searchable
-            compact
-            placeholder="All stones"
-            options={[
-              { value: "", label: "All stones" },
-              ...uniqueStones.map((name) => ({ value: name, label: name })),
-            ]}
-          />
-        </div>
-
-        <div className="w-[200px]">
-          <Select
-            value={filterStatus}
-            onChange={(v) => { setFilterStatus(v); setPage(1); }}
-            compact
-            placeholder="All statuses"
-            options={STATUS_OPTIONS}
-          />
-        </div>
-
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center gap-2 mb-3">
+        <ToolbarSearch value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search customer, gemstone, ID…" />
         <div className="ml-auto flex items-center gap-2">
-          {hasActiveFilters && (
-            <button
-              onClick={() => { setFilterCustomer(""); setFilterStone(""); setFilterStatus(""); setPage(1); }}
-              className="text-[11px] px-2.5 py-1.5 rounded-[7px] cursor-pointer transition-opacity hover:opacity-80"
-              style={{ color: T.danger, background: "rgba(176,84,84,0.08)", border: "1px solid rgba(176,84,84,0.15)" }}
-            >
-              Clear filters
-            </button>
-          )}
-          <div className="w-[200px]">
+          <FiltersPopover
+            count={[filterCustomer, filterStone, filterStatus].filter(Boolean).length}
+            open={showFilters}
+            onToggle={() => setShowFilters(!showFilters)}
+          >
+            <FilterField label="Customer">
+              <Select value={filterCustomer} onChange={(v) => { setFilterCustomer(v); setPage(1); }} searchable compact placeholder="All customers" options={[{ value: "", label: "All customers" }, ...uniqueCustomers.map((n) => ({ value: n, label: n }))]} />
+            </FilterField>
+            <FilterField label="Stone">
+              <Select value={filterStone} onChange={(v) => { setFilterStone(v); setPage(1); }} searchable compact placeholder="All stones" options={[{ value: "", label: "All stones" }, ...uniqueStones.map((n) => ({ value: n, label: n }))]} />
+            </FilterField>
+            <FilterField label="Status">
+              <Select value={filterStatus} onChange={(v) => { setFilterStatus(v); setPage(1); }} compact placeholder="All statuses" options={STATUS_OPTIONS} />
+            </FilterField>
+          </FiltersPopover>
+          <div className="w-[190px]">
             <Select
               value={sort}
               onChange={(v) => { setSort(v as SortKey); setPage(1); }}
@@ -173,22 +135,34 @@ export default function RecommendationsPage() {
         </div>
       </div>
 
-      {loading ? (
-        <Card><TableSkeleton rows={5} cols={5} /></Card>
-      ) : (
-      <>
+      {hasActiveFilters && (
+        <div className="flex flex-wrap items-center gap-1.5 mb-3">
+          {filterCustomer && <FilterChip label={`Customer: ${filterCustomer}`} onClear={() => { setFilterCustomer(""); setPage(1); }} />}
+          {filterStone && <FilterChip label={`Stone: ${filterStone}`} onClear={() => { setFilterStone(""); setPage(1); }} />}
+          {filterStatus && <FilterChip label={`Status: ${filterStatus.replace(/_/g, " ")}`} onClear={() => { setFilterStatus(""); setPage(1); }} />}
+          <button
+            onClick={() => { setFilterCustomer(""); setFilterStone(""); setFilterStatus(""); setPage(1); }}
+            className="text-[12px] px-1.5 cursor-pointer hover:underline underline-offset-4"
+            style={{ color: T.danger }}
+          >
+            Clear all
+          </button>
+        </div>
+      )}
+
       {/* Table */}
-      <Card>
+      <Card className="!p-0 md:min-h-0 md:overflow-y-auto">
+        {loading ? <TableSkeleton cols={5} rows={8} /> : <>
         {/* Column headers */}
         <div
-          className="hidden sm:grid items-center gap-4 pb-3 mb-1"
-          style={{ gridTemplateColumns: "1.4fr 1fr 0.8fr 0.8fr 1fr", borderBottom: `1px solid ${T.border}` }}
+          className="hidden sm:grid items-center gap-4 px-4 h-10 text-[11px] tracking-[0.06em] uppercase font-medium rounded-t-[15px]"
+          style={{ gridTemplateColumns: "1.4fr 1fr 0.9fr 0.9fr 1fr", color: T.faint, background: T.card, borderBottom: `1px solid ${T.border}` }}
         >
-          <div className="text-[11px] tracking-[0.08em] uppercase" style={{ color: T.faint }}>Stone details</div>
-          <div className="text-[11px] tracking-[0.08em] uppercase" style={{ color: T.faint }}>Customer</div>
-          <div className="text-[11px] tracking-[0.08em] uppercase" style={{ color: T.faint }}>Appointment date</div>
-          <div className="text-[11px] tracking-[0.08em] uppercase" style={{ color: T.faint }}>Status</div>
-          <div className="text-[11px] tracking-[0.08em] uppercase text-right" style={{ color: T.faint }}>Order info</div>
+          <span>Stone</span>
+          <span>Customer</span>
+          <span>Appointment</span>
+          <span>Status</span>
+          <span className="text-right">Order</span>
         </div>
 
         {paginated.length === 0 ? (
@@ -202,8 +176,8 @@ export default function RecommendationsPage() {
               <Link
                 key={r.id}
                 href={`/appointments/${r.consultationId}`}
-                className="grid items-center gap-4 py-3.5 transition-colors hover:bg-white/[0.02] -mx-5 px-5 cursor-pointer"
-                style={{ borderBottom: `1px solid ${T.borderSoft}`, gridTemplateColumns: "1.4fr 1fr 0.8fr 0.8fr 1fr", textDecoration: "none" }}
+                className="grid items-center gap-4 px-4 py-2.5 transition-colors cursor-pointer even:bg-[rgba(89,82,54,0.025)] hover:!bg-[rgba(119,123,98,0.08)] last:rounded-b-[15px]"
+                style={{ borderBottom: `1px solid ${T.borderSoft}`, gridTemplateColumns: "1.4fr 1fr 0.9fr 0.9fr 1fr", textDecoration: "none" }}
               >
                 {/* Stone details */}
                 <div className="min-w-0">
@@ -246,35 +220,12 @@ export default function RecommendationsPage() {
             );
           })
         )}
+        </>}
 
       </Card>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between mt-4">
-          <div className="text-[12px]" style={{ color: T.faint }}>
-            Showing {(currentPage - 1) * PER_PAGE + 1}–{Math.min(currentPage * PER_PAGE, filtered.length)} of {filtered.length}
-          </div>
-          <div className="flex items-center gap-1">
-            <button onClick={() => setPage(1)} disabled={currentPage === 1} className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[12px] transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed" style={{ background: T.popover, border: `1px solid ${T.borderSoft}`, color: T.muted }}>«</button>
-            <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1} className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[12px] transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed" style={{ background: T.popover, border: `1px solid ${T.borderSoft}`, color: T.muted }}>‹</button>
-            {Array.from({ length: totalPages }).map((_, i) => {
-              const p = i + 1;
-              if (totalPages > 7 && Math.abs(p - currentPage) > 2 && p !== 1 && p !== totalPages) {
-                if (p === currentPage - 3 || p === currentPage + 3) return <span key={p} className="w-6 text-center text-[11px]" style={{ color: T.faint }}>…</span>;
-                return null;
-              }
-              return (
-                <button key={p} onClick={() => setPage(p)} className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[12px] font-medium transition-all cursor-pointer" style={{ background: p === currentPage ? T.accent : T.panel, border: `1px solid ${p === currentPage ? T.accent : T.borderSoft}`, color: p === currentPage ? T.accentInk : T.text }}>{p}</button>
-              );
-            })}
-            <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[12px] transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed" style={{ background: T.popover, border: `1px solid ${T.borderSoft}`, color: T.muted }}>›</button>
-            <button onClick={() => setPage(totalPages)} disabled={currentPage === totalPages} className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[12px] transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed" style={{ background: T.popover, border: `1px solid ${T.borderSoft}`, color: T.muted }}>»</button>
-          </div>
-        </div>
-      )}
-      </>
-      )}
+      <Pagination page={currentPage - 1} totalPages={totalPages} totalItems={filtered.length} perPage={PER_PAGE} onPageChange={(p) => setPage(p + 1)} />
+      </div>
     </>
   );
 }

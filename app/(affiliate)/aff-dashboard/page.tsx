@@ -1,6 +1,6 @@
 "use client";
-import { useState, useMemo, useEffect } from "react";
-import { PageHeader, StatCard, Card, StatCardSkeleton } from "@/components/ui";
+import { useState, useMemo } from "react";
+import { PageHeader, StatCard, Card } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_AFFILIATES, MOCK_AFFILIATE_LINKS, MOCK_REFERRAL_EVENTS, MOCK_PAYOUTS } from "@/lib/mock";
 import { inr } from "@/lib/types";
@@ -38,13 +38,6 @@ export default function AffiliateDashboard() {
   const linksGenerated = myLinks.length;
 
   const [chartOffset, setChartOffset] = useState(0);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const t = setTimeout(() => setLoading(false), 700);
-    return () => clearTimeout(t);
-  }, []);
-
   const earningsData = useMemo(() => generateEarningsData(), []);
 
   const totalWindows = Math.ceil(earningsData.length / WINDOW);
@@ -70,15 +63,11 @@ export default function AffiliateDashboard() {
 
   return (
     <>
-      <PageHeader title="Dashboard" sub={`Welcome back, ${affiliate.name} · ${affiliate.code}`} />
+      <PageHeader title="Dashboard" />
 
-      {loading ? (
-        <StatCardSkeleton count={5} />
-      ) : (
-      <>
       {/* Row 1: Primary stats */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-3">
-        <StatCard label="Total orders" value={totalOrders} />
+        <StatCard label="Total orders" value={totalOrders} featured />
         <StatCard label="Total consultations" value={totalConsultations} />
         <StatCard label="Commission pending" value={inr(pendingCommission)} />
         <StatCard label="Commission paid" value={inr(paidCommission)} />
@@ -94,7 +83,7 @@ export default function AffiliateDashboard() {
 
       {/* Row 3: Commission rates */}
       <Card className="mb-5">
-        <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.faint }}>Commission rates</div>
+        <div className="text-[15px] font-semibold tracking-[-0.01em] mb-3" style={{ color: T.text }}>Commission rates</div>
         <div className="grid grid-cols-3 gap-4">
           {([
             { label: "Consultation", rate: commissionRates.consultation },
@@ -186,6 +175,36 @@ export default function AffiliateDashboard() {
             ))}
           </svg>
 
+          {/* Hover layer — one column per day, guide line + tooltip on hover */}
+          <div className="absolute flex" style={{ left: 58, top: 0, width: "calc(100% - 58px)", height: chartHeight }}>
+            {chartData.map((d, i) => {
+              const y = chartHeight - (d.amount / maxVal) * (chartHeight - 10);
+              const below = y < 52;
+              return (
+                <div key={i} className="relative flex-1 group">
+                  {/* vertical guide */}
+                  <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-px opacity-0 group-hover:opacity-100 transition-opacity duration-150" style={{ background: T.accentBorder }} />
+                  {/* highlighted point */}
+                  <div className="absolute w-[11px] h-[11px] rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-150 -translate-x-1/2 -translate-y-1/2" style={{ left: "50%", top: y, background: T.accent, boxShadow: `0 0 0 3px ${T.card}` }} />
+                  {/* tooltip */}
+                  <div
+                    className="absolute left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none z-20 whitespace-nowrap rounded-[9px] px-2.5 py-1.5 text-center"
+                    style={{
+                      top: below ? y + 14 : y - 14,
+                      transform: below ? "translate(-50%,0)" : "translate(-50%,-100%)",
+                      background: T.card,
+                      border: `1px solid ${T.borderSoft}`,
+                      boxShadow: T.shadowLift,
+                    }}
+                  >
+                    <div className="text-[10px]" style={{ color: T.faint }}>{new Date(d.date).toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })}</div>
+                    <div className="text-[13px] font-semibold tabular-nums" style={{ color: T.text }}>{inr(d.amount)}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
           {/* X-axis labels */}
           <div className="absolute flex justify-between" style={{ left: 58, bottom: 0, width: `calc(100% - 58px)` }}>
             {chartData.map((d, i) => (
@@ -196,8 +215,6 @@ export default function AffiliateDashboard() {
           </div>
         </div>
       </Card>
-      </>
-      )}
     </>
   );
 }

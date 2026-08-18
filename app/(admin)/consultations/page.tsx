@@ -1,20 +1,30 @@
 "use client";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, Tabs, SearchFilter, GoldBtn, Select, TableSkeleton, Pagination, ExportButton } from "@/components/ui";
+import {
+  PageHeader, Card, Chip, Tabs, GoldBtn, Select, Pagination,
+  fmtChipDate, Tooltip, ToolbarSearch, FiltersPopover, FilterField, FilterChip, DateRangeFields, ColumnStatusFilter, EmptyState, TableSkeleton } from "@/components/ui";
 import { T } from "@/lib/theme";
+import { useSimulatedLoad } from "@/lib/useSimulatedLoad";
+import { usePersistentState } from "@/lib/usePersistentState";
 import { MOCK_CONSULTATIONS, MOCK_INCOMPLETE_CONSULTATIONS } from "@/lib/mock";
 
 const TABS = [
-  { key: "all", label: "All" },
-  { key: "reschedule", label: "Reschedule request" },
-  { key: "summary_due", label: "Recommendation due" },
-  { key: "no_show", label: "No show" },
-  { key: "incomplete", label: "Incomplete booking" },
+  { key: "all", label: "All consultations" },
+  { key: "incomplete", label: "Incomplete" },
 ];
 
 const INC_REASON_LABEL: Record<string, string> = { slot_check: "Slot check", payment_failed: "Payment failed", requested_call: "Requested call" };
 const INC_REASON_TONE: Record<string, "danger" | "gold" | "muted"> = { slot_check: "muted", payment_failed: "danger", requested_call: "gold" };
+
+const STATUS_FILTER_LABEL: Record<string, string> = {
+  payment_pending: "Payment pending",
+  scheduled: "Scheduled",
+  reschedule: "Reschedule request",
+  summary_due: "Recommendation due",
+  no_show: "No show",
+  done: "Done",
+};
 
 type SortKey = "date_desc" | "date_asc" | "upcoming";
 type ViewMode = "list" | "calendar";
@@ -43,60 +53,67 @@ function formatHour(h: number): string {
   return `${h - 12} PM`;
 }
 
-function filterByTab(c: typeof MOCK_CONSULTATIONS[number], tab: string): boolean {
-  if (tab === "upcoming") return c.status === "scheduled" && c.paymentStatus === "paid";
-  if (tab === "payment_pending") return c.paymentStatus === "pending";
-  if (tab === "link_pending") return c.status === "scheduled" && !c.meetingLink;
-  if (tab === "reschedule") return c.status === "reschedule_requested";
-  if (tab === "summary_due") return c.status === "summary_pending";
-  if (tab === "no_show") return c.status === "no_show";
-  if (tab === "completed") return c.status === "closed" || c.status === "completed";
-  return true;
-}
-
 export default function ConsultationsPage() {
-  const [viewMode, setViewMode] = useState<ViewMode>("list");
+  const [viewMode, setViewMode] = usePersistentState<ViewMode>("pref-consult-view", "list");
   const [tab, setTab] = useState("all");
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<SortKey>("date_desc");
   const [filterCustomer, setFilterCustomer] = useState("");
   const [filterExpert, setFilterExpert] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
+  const [showStatusFilter, setShowStatusFilter] = useState(false);
   const [filterDateFrom, setFilterDateFrom] = useState("");
   const [filterDateTo, setFilterDateTo] = useState("");
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [dpYear, setDpYear] = useState(new Date().getFullYear());
-  const [dpMonth, setDpMonth] = useState(new Date().getMonth());
-  const [page, setPage] = useState(0);
+  const [showFilters, setShowFilters] = useState(false);
+  const [page, setPage] = useState(1);
+
+  // Incomplete tab
+  const [incFilterCustomer, setIncFilterCustomer] = useState("");
+  const [incFilterExpert, setIncFilterExpert] = useState("");
+  const [incFilterReason, setIncFilterReason] = useState("");
+  const [incFilterDateFrom, setIncFilterDateFrom] = useState("");
+  const [incFilterDateTo, setIncFilterDateTo] = useState("");
+  const [incShowFilters, setIncShowFilters] = useState(false);
+  const [incSort, setIncSort] = useState<SortKey>("date_desc");
+  const [incPage, setIncPage] = useState(1);
+
+  // Calendar
   const [calWeekBase, setCalWeekBase] = useState(() => new Date());
-  const [goToDateOpen, setGoToDateOpen] = useState(false);
+  const [calScope, setCalScope] = usePersistentState<"day" | "week">("pref-cal-scope", "week");
+  const [selectedEvent, setSelectedEvent] = useState<(typeof MOCK_CONSULTATIONS)[number] | null>(null);
   const [gtdYear, setGtdYear] = useState(new Date().getFullYear());
   const [gtdMonth, setGtdMonth] = useState(new Date().getMonth());
-  const [loading, setLoading] = useState(true);
+  const hoursRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (viewMode === "calendar" && hoursRef.current) hoursRef.current.scrollTop = 5 * 40;
+  }, [viewMode, calScope]);
 
-  useEffect(() => { const t = setTimeout(() => setLoading(false), 700); return () => clearTimeout(t); }, []);
+  const PER_PAGE = 10;
+  const loading = useSimulatedLoad();
 
-  const PER_PAGE = 9;
+  const matchesStatus = (c: (typeof MOCK_CONSULTATIONS)[number], status: string) => {
+    if (!status) return true;
+    if (status === "payment_pending") return c.paymentStatus === "pending";
+    if (status === "scheduled") return c.status === "scheduled";
+    if (status === "reschedule") return c.status === "reschedule_requested";
+    if (status === "summary_due") return c.status === "summary_pending";
+    if (status === "no_show") return c.status === "no_show";
+    if (status === "done") return c.status === "closed" || c.status === "completed";
+    return true;
+  };
 
   const uniqueCustomers = [...new Set(MOCK_CONSULTATIONS.map((c) => c.customerName))].sort();
   const uniqueExperts = [...new Set(MOCK_CONSULTATIONS.map((c) => c.expertName))].sort();
 
-  const filtered = MOCK_CONSULTATIONS.filter((c) => filterByTab(c, tab))
+  const filtered = MOCK_CONSULTATIONS
     .filter((c) => {
       if (!search) return true;
       const q = search.toLowerCase();
       return c.customerName.toLowerCase().includes(q) || c.expertName.toLowerCase().includes(q) || c.id.toLowerCase().includes(q);
     })
-    .filter((c) => {
-      if (filterCustomer && c.customerName !== filterCustomer) return false;
-      if (filterExpert && c.expertName !== filterExpert) return false;
-      if (filterStatus === "payment_pending" && c.paymentStatus !== "pending") return false;
-      if (filterStatus === "scheduled" && c.status !== "scheduled") return false;
-      if (filterStatus === "completed" && c.status !== "closed" && c.status !== "completed") return false;
-      if (filterStatus === "reschedule_requested" && c.status !== "reschedule_requested") return false;
-      if (filterStatus === "no_show" && c.status !== "no_show") return false;
-      return true;
-    })
+    .filter((c) => !filterCustomer || c.customerName === filterCustomer)
+    .filter((c) => !filterExpert || c.expertName === filterExpert)
+    .filter((c) => matchesStatus(c, filterStatus))
     .filter((c) => {
       const d = c.scheduledAt?.slice(0, 10);
       if (filterDateFrom && d && d < filterDateFrom) return false;
@@ -117,20 +134,49 @@ export default function ConsultationsPage() {
     });
 
   const totalPages = Math.ceil(filtered.length / PER_PAGE);
-  const paginated = filtered.slice(page * PER_PAGE, (page + 1) * PER_PAGE);
-
-  const exportData = filtered.map((c) => ({
-    id: c.id,
-    customer: c.customerName,
-    expert: c.expertName,
-    date: c.scheduledAt,
-    status: c.status,
-    fee: c.fee,
-  }));
+  const currentPage = page > totalPages && totalPages > 0 ? totalPages : page;
+  const paginated = filtered.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE);
 
   const hasActiveFilters = !!filterCustomer || !!filterExpert || !!filterStatus || !!filterDateFrom || !!filterDateTo;
+  const activeFilterCount = [filterCustomer, filterExpert, filterDateFrom || filterDateTo].filter(Boolean).length;
+  const statusOptions = [
+    { value: "", label: "All statuses", count: MOCK_CONSULTATIONS.length },
+    ...Object.entries(STATUS_FILTER_LABEL).map(([value, label]) => ({
+      value,
+      label,
+      count: MOCK_CONSULTATIONS.filter((c) => matchesStatus(c, value)).length,
+    })),
+  ];
 
+  // Incomplete
+  const incCustomers = [...new Set(MOCK_INCOMPLETE_CONSULTATIONS.map((c) => c.customerName))].sort();
+  const incExperts = [...new Set(MOCK_INCOMPLETE_CONSULTATIONS.map((c) => c.expertName))].sort();
+  const hasIncFilters = !!incFilterCustomer || !!incFilterExpert || !!incFilterReason || !!incFilterDateFrom || !!incFilterDateTo;
+  const incFilterCount = [incFilterCustomer, incFilterExpert, incFilterReason, incFilterDateFrom || incFilterDateTo].filter(Boolean).length;
+
+  const incFiltered = MOCK_INCOMPLETE_CONSULTATIONS
+    .filter((c) => {
+      if (!search) return true;
+      const q = search.toLowerCase();
+      return c.customerName.toLowerCase().includes(q) || c.expertName.toLowerCase().includes(q);
+    })
+    .filter((c) => !incFilterCustomer || c.customerName === incFilterCustomer)
+    .filter((c) => !incFilterExpert || c.expertName === incFilterExpert)
+    .filter((c) => !incFilterReason || c.reason === incFilterReason)
+    .filter((c) => {
+      if (incFilterDateFrom && c.date < incFilterDateFrom) return false;
+      if (incFilterDateTo && c.date > incFilterDateTo) return false;
+      return true;
+    })
+    .sort((a, b) => (incSort === "date_asc" ? new Date(a.date).getTime() - new Date(b.date).getTime() : new Date(b.date).getTime() - new Date(a.date).getTime()));
+
+  const incTotalPages = Math.ceil(incFiltered.length / PER_PAGE);
+  const incCurrentPage = incPage > incTotalPages && incTotalPages > 0 ? incTotalPages : incPage;
+  const incPaginated = incFiltered.slice((incCurrentPage - 1) * PER_PAGE, incCurrentPage * PER_PAGE);
+
+  // Calendar data
   const weekDays = useMemo(() => getWeekDays(calWeekBase), [calWeekBase]);
+  const visibleDays = calScope === "day" ? [calWeekBase] : weekDays;
   const todayISO = toISODate(new Date());
 
   const calEvents = useMemo(() => {
@@ -145,534 +191,549 @@ export default function ConsultationsPage() {
     return map;
   }, []);
 
-  const prevWeek = () => { const d = new Date(calWeekBase); d.setDate(d.getDate() - 7); setCalWeekBase(d); };
-  const nextWeek = () => { const d = new Date(calWeekBase); d.setDate(d.getDate() + 7); setCalWeekBase(d); };
-  const goToToday = () => setCalWeekBase(new Date());
-
-  const statusTone = (s: string) => {
-    if (s === "closed" || s === "completed") return "good" as const;
-    if (s === "scheduled") return "gold" as const;
-    if (s === "summary_pending" || s === "no_show") return "danger" as const;
-    if (s === "reschedule_requested") return "gold" as const;
-    if (s === "cancelled") return "muted" as const;
-    return "muted" as const;
+  const goToToday = () => {
+    setCalWeekBase(new Date());
+    setCalScope("day");
   };
 
-  const statusLabel = (c: typeof MOCK_CONSULTATIONS[number]) => {
-    if (c.paymentStatus === "pending") return "Payment pending";
-    if (c.status === "reschedule_requested") return "Scheduled";
-    if (c.status === "summary_pending") return "Recommendation due";
-    if (c.status === "closed" || c.status === "completed") return "Done";
-    if (c.status === "scheduled") return "Scheduled";
-    if (c.status === "no_show") return c.noShowBy === "expert" ? "Expert no show" : "Customer no show";
-    if (c.status === "cancelled") return "Cancelled";
-    return c.status;
+  const rowStatus = (c: (typeof MOCK_CONSULTATIONS)[number]) => {
+    if (c.paymentStatus === "pending") return { tone: "gold" as const, label: "Payment pending" };
+    if (c.status === "reschedule_requested") return { tone: "gold" as const, label: "Reschedule request" };
+    if (c.status === "summary_pending") return { tone: "danger" as const, label: "Recommendation due" };
+    if (c.status === "no_show") return { tone: "danger" as const, label: c.noShowBy === "expert" ? "Expert no show" : "Customer no show" };
+    if (c.status === "closed" || c.status === "completed") return { tone: "good" as const, label: "Done" };
+    if (c.status === "scheduled") return { tone: "info" as const, label: "Scheduled" };
+    return { tone: "muted" as const, label: c.status };
   };
+
+  const eventTone = (c: (typeof MOCK_CONSULTATIONS)[number]) =>
+    c.status === "closed" || c.status === "completed" ? T.good :
+    c.status === "scheduled" ? "#6d8ea0" :
+    c.status === "reschedule_requested" ? T.accent :
+    c.status === "summary_pending" || c.status === "no_show" ? T.danger :
+    T.muted;
 
   return (
     <>
+      <div className="md:h-[calc(100dvh-78px)] md:flex md:flex-col md:min-h-0">
       <PageHeader
         title="Consultations"
-        sub="Full consultation lifecycle — appointments, summaries, recommendations"
-        action={
-          <div className="flex items-center gap-2.5">
-            <Link href="/consultations/create"><GoldBtn>+ New consultation</GoldBtn></Link>
-          </div>
-        }
+        action={<Link href="/consultations/create"><GoldBtn>+ New consultation</GoldBtn></Link>}
       />
 
-      <div className="mb-4">
-        <Tabs
-          tabs={TABS.map((t) => ({
-            ...t,
-            count: t.key === "incomplete" ? MOCK_INCOMPLETE_CONSULTATIONS.length : MOCK_CONSULTATIONS.filter((c) => filterByTab(c, t.key)).length,
-          }))}
-          active={tab}
-          onChange={(key) => { setTab(key); setPage(0); if (key !== "all") setViewMode("list"); }}
-        />
-      </div>
 
-      {tab !== "incomplete" && <>
-      {/* Search / View toggle — fixed height row */}
-      <div className="flex items-center gap-3 mb-3 h-10">
-        <div className="flex-1 min-w-0">
-          {viewMode === "list" && (
-            <div className="w-1/2">
-              <SearchFilter search={search} onSearchChange={(v) => { setSearch(v); setPage(0); }} placeholder="Search customer, expert, consultation ID…" />
+
+      {/* Pinned controls */}
+      <div
+        className="sticky top-0 z-30 -mx-5 md:-mx-10 px-5 md:px-10 pt-1 pb-3 mb-4"
+        style={{ background: T.bg, boxShadow: `0 1px 0 ${T.borderSoft}` }}
+      >
+        <div className="flex flex-wrap items-center gap-2">
+          <Tabs
+            tabs={TABS.map((t) => ({
+              ...t,
+              count: t.key === "all" ? MOCK_CONSULTATIONS.length : MOCK_INCOMPLETE_CONSULTATIONS.length,
+            }))}
+            active={tab}
+            onChange={(key) => { setTab(key); if (key !== "all") setViewMode("list"); }}
+          />
+          {tab === "all" && (
+            <div
+              className="inline-flex items-center gap-1 p-1 rounded-full shrink-0"
+              style={{ background: "rgba(89,82,54,0.07)", border: `1px solid ${T.borderSoft}` }}
+            >
+              {(["list", "calendar"] as const).map((mode) => (
+              <Tooltip key={mode} label={mode === "list" ? "List view" : "Calendar view"}>
+                <button
+                  onClick={() => setViewMode(mode)}
+                  aria-label={mode === "list" ? "List view" : "Calendar view"}
+                  className="h-8 w-11 rounded-full inline-flex items-center justify-center shrink-0 transition-all duration-200 cursor-pointer"
+                  style={
+                    viewMode === mode
+                      ? { background: T.card, color: T.text, border: `1px solid ${T.border}`, boxShadow: "0 1px 3px rgba(43,42,34,0.10)" }
+                      : { color: T.muted, border: "1px solid transparent" }
+                  }
+                >
+                  {mode === "list" ? (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                  ) : (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 9h18"/></svg>
+                  )}
+                </button>
+              </Tooltip>
+              ))}
             </div>
           )}
+          <div className="ml-auto flex items-center gap-2">
+            {tab === "all" && viewMode === "list" && (
+              <>
+                <ToolbarSearch value={search} onChange={setSearch} placeholder="Search customer, expert, ID…" />
+                <span className="hidden lg:block w-px h-5 mx-0.5" style={{ background: T.border }} />
+                <FiltersPopover count={activeFilterCount} open={showFilters} onToggle={() => setShowFilters(!showFilters)}>
+                  <FilterField label="Customer">
+                    <Select value={filterCustomer} onChange={(v) => { setFilterCustomer(v); setPage(1); }} searchable compact placeholder="All customers" options={[{ value: "", label: "All customers" }, ...uniqueCustomers.map((n) => ({ value: n, label: n }))]} />
+                  </FilterField>
+                  <FilterField label="Expert">
+                    <Select value={filterExpert} onChange={(v) => { setFilterExpert(v); setPage(1); }} searchable compact placeholder="All experts" options={[{ value: "", label: "All experts" }, ...uniqueExperts.map((n) => ({ value: n, label: n }))]} />
+                  </FilterField>
+                  <FilterField label="Scheduled between">
+                    <DateRangeFields from={filterDateFrom} to={filterDateTo} onChange={(f, t) => { setFilterDateFrom(f); setFilterDateTo(t); setPage(1); }} />
+                  </FilterField>
+                </FiltersPopover>
+                <div className="w-[160px]">
+                  <Select
+                    value={sort}
+                    onChange={(v) => { setSort(v as SortKey); setPage(1); }}
+                    compact
+                    prefix="Sort: "
+                    options={[
+                      { value: "date_desc", label: "Newest" },
+                      { value: "date_asc", label: "Oldest" },
+                      { value: "upcoming", label: "Upcoming" },
+                    ]}
+                  />
+                </div>
+              </>
+            )}
+            {tab === "incomplete" && (
+              <>
+                <ToolbarSearch value={search} onChange={setSearch} placeholder="Search customer, astrologer…" />
+                <span className="hidden lg:block w-px h-5 mx-0.5" style={{ background: T.border }} />
+                <FiltersPopover count={incFilterCount} open={incShowFilters} onToggle={() => setIncShowFilters(!incShowFilters)}>
+                  <FilterField label="Customer">
+                    <Select value={incFilterCustomer} onChange={(v) => { setIncFilterCustomer(v); setIncPage(1); }} searchable compact placeholder="All customers" options={[{ value: "", label: "All customers" }, ...incCustomers.map((n) => ({ value: n, label: n }))]} />
+                  </FilterField>
+                  <FilterField label="Astrologer">
+                    <Select value={incFilterExpert} onChange={(v) => { setIncFilterExpert(v); setIncPage(1); }} searchable compact placeholder="All astrologers" options={[{ value: "", label: "All astrologers" }, ...incExperts.map((n) => ({ value: n, label: n }))]} />
+                  </FilterField>
+                  <FilterField label="Reason">
+                    <Select value={incFilterReason} onChange={(v) => { setIncFilterReason(v); setIncPage(1); }} compact placeholder="All reasons" options={[{ value: "", label: "All reasons" }, ...Object.entries(INC_REASON_LABEL).map(([k, v]) => ({ value: k, label: v }))]} />
+                  </FilterField>
+                  <FilterField label="Date between">
+                    <DateRangeFields from={incFilterDateFrom} to={incFilterDateTo} onChange={(f, t) => { setIncFilterDateFrom(f); setIncFilterDateTo(t); setIncPage(1); }} />
+                  </FilterField>
+                </FiltersPopover>
+                <div className="w-[160px]">
+                  <Select value={incSort} onChange={(v) => { setIncSort(v as SortKey); setIncPage(1); }} compact prefix="Sort: " options={[{ value: "date_desc", label: "Newest" }, { value: "date_asc", label: "Oldest" }]} />
+                </div>
+              </>
+            )}
+          </div>
         </div>
-        {tab === "all" && (
-          <div className="inline-flex rounded-[9px] overflow-hidden shrink-0" style={{ border: `1px solid ${T.border}` }}>
-            {(["list", "calendar"] as const).map((mode) => (
-              <button
-                key={mode}
-                onClick={() => setViewMode(mode)}
-                className="flex items-center gap-1.5 px-3 py-[6px] text-[12px] font-medium transition-all cursor-pointer"
-                style={{
-                  background: viewMode === mode ? T.accent : "transparent",
-                  color: viewMode === mode ? T.accentInk : T.muted,
-                }}
-              >
-                {mode === "list" ? (
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-                ) : (
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 9h18"/></svg>
-                )}
-                {mode === "list" ? "List" : "Calendar"}
-              </button>
-            ))}
+
+        {tab === "all" && viewMode === "list" && hasActiveFilters && (
+          <div className="flex flex-wrap items-center gap-1.5 mt-3">
+            {filterCustomer && <FilterChip label={`Customer: ${filterCustomer}`} onClear={() => { setFilterCustomer(""); setPage(1); }} />}
+            {filterExpert && <FilterChip label={`Expert: ${filterExpert}`} onClear={() => { setFilterExpert(""); setPage(1); }} />}
+            {filterStatus && <FilterChip label={`Status: ${STATUS_FILTER_LABEL[filterStatus]}`} onClear={() => { setFilterStatus(""); setPage(1); }} />}
+            {(filterDateFrom || filterDateTo) && (
+              <FilterChip label={`Date: ${fmtChipDate(filterDateFrom)} – ${fmtChipDate(filterDateTo)}`} onClear={() => { setFilterDateFrom(""); setFilterDateTo(""); setPage(1); }} />
+            )}
+            <button
+              onClick={() => { setFilterCustomer(""); setFilterExpert(""); setFilterStatus(""); setFilterDateFrom(""); setFilterDateTo(""); setPage(1); }}
+              className="text-[12px] px-1.5 cursor-pointer hover:underline underline-offset-4"
+              style={{ color: T.danger }}
+            >
+              Clear all
+            </button>
+          </div>
+        )}
+
+        {tab === "incomplete" && hasIncFilters && (
+          <div className="flex flex-wrap items-center gap-1.5 mt-3">
+            {incFilterCustomer && <FilterChip label={`Customer: ${incFilterCustomer}`} onClear={() => { setIncFilterCustomer(""); setIncPage(1); }} />}
+            {incFilterExpert && <FilterChip label={`Astrologer: ${incFilterExpert}`} onClear={() => { setIncFilterExpert(""); setIncPage(1); }} />}
+            {incFilterReason && <FilterChip label={`Reason: ${INC_REASON_LABEL[incFilterReason]}`} onClear={() => { setIncFilterReason(""); setIncPage(1); }} />}
+            {(incFilterDateFrom || incFilterDateTo) && (
+              <FilterChip label={`Date: ${fmtChipDate(incFilterDateFrom)} – ${fmtChipDate(incFilterDateTo)}`} onClear={() => { setIncFilterDateFrom(""); setIncFilterDateTo(""); setIncPage(1); }} />
+            )}
+            <button
+              onClick={() => { setIncFilterCustomer(""); setIncFilterExpert(""); setIncFilterReason(""); setIncFilterDateFrom(""); setIncFilterDateTo(""); setIncPage(1); }}
+              className="text-[12px] px-1.5 cursor-pointer hover:underline underline-offset-4"
+              style={{ color: T.danger }}
+            >
+              Clear all
+            </button>
           </div>
         )}
       </div>
 
-      {viewMode === "list" && <>
-
-      {/* Filters & Sort */}
-      <div className="flex flex-wrap items-center gap-2.5 mb-4">
-        <div className="w-[200px]">
-          <Select
-            value={filterCustomer}
-            onChange={(v) => { setFilterCustomer(v); setPage(0); }}
-            searchable
-            compact
-            placeholder="All customers"
-            options={[
-              { value: "", label: "All customers" },
-              ...uniqueCustomers.map((name) => ({ value: name, label: name })),
-            ]}
-          />
-        </div>
-
-        <div className="w-[180px]">
-          <Select
-            value={filterExpert}
-            onChange={(v) => { setFilterExpert(v); setPage(0); }}
-            compact
-            placeholder="All experts"
-            options={[
-              { value: "", label: "All experts" },
-              ...uniqueExperts.map((name) => ({ value: name, label: name })),
-            ]}
-          />
-        </div>
-
-        <div className="w-[180px]">
-          <Select
+      {/* ============ List view ============ */}
+      {tab === "all" && viewMode === "list" && <>
+      <Card className="!p-0 md:flex md:flex-col md:min-h-0">
+        {loading ? (
+          <TableSkeleton cols={4} rows={8} />
+        ) : (
+          <>
+        <div
+          className="hidden sm:grid grid-cols-[64px_1fr_150px_170px] gap-3 items-center px-4 h-10 text-[11px] font-medium tracking-[0.06em] uppercase rounded-t-[15px]"
+          style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.border}` }}
+        >
+          <span>ID</span>
+          <span>Customer</span>
+          <span>Scheduled</span>
+          <ColumnStatusFilter
             value={filterStatus}
-            onChange={(v) => { setFilterStatus(v); setPage(0); }}
-            compact
-            placeholder="All status"
-            options={[
-              { value: "", label: "All status" },
-              { value: "payment_pending", label: "Payment pending" },
-              { value: "scheduled", label: "Scheduled" },
-              { value: "reschedule_requested", label: "Reschedule" },
-              { value: "no_show", label: "No show" },
-              { value: "completed", label: "Done" },
-            ]}
+            options={statusOptions}
+            open={showStatusFilter}
+            onToggle={() => setShowStatusFilter(!showStatusFilter)}
+            onSelect={(v) => { setFilterStatus(v); setShowStatusFilter(false); setPage(1); }}
           />
         </div>
-
-        {/* Date range picker */}
-        <div className="relative">
-          <button
-            onClick={() => setShowDatePicker(!showDatePicker)}
-            className="h-9 px-3.5 rounded-[9px] text-[13.5px] flex items-center gap-2 cursor-pointer transition-all"
-            style={{ background: T.popover, border: `1px solid ${(filterDateFrom || filterDateTo) ? T.accentBorder : T.border}`, color: T.text }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-              <rect x="3" y="4" width="18" height="17" rx="2" /><path d="M8 2v4M16 2v4M3 9h18" />
-            </svg>
-            {(filterDateFrom || filterDateTo)
-              ? `${filterDateFrom ? new Date(filterDateFrom + "T00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "Start"} — ${filterDateTo ? new Date(filterDateTo + "T00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "End"}`
-              : "All dates"
-            }
-          </button>
-
-          {showDatePicker && (
-            <>
-              <div className="fixed inset-0 z-40" onClick={() => setShowDatePicker(false)} />
-              <div
-                className="absolute top-full left-0 mt-1 z-50 flex rounded-[9px] shadow-lg overflow-hidden"
-                style={{ background: T.popover, border: `1px solid ${T.border}` }}
-              >
-                <div className="w-[130px] py-2 px-1.5 shrink-0" style={{ borderRight: `1px solid ${T.borderSoft}` }}>
-                  <div className="text-[9px] tracking-[0.06em] uppercase px-2 mb-1.5" style={{ color: T.faint }}>Quick select</div>
-                  {[
-                    { label: "Today", from: new Date().toISOString().slice(0, 10), to: new Date().toISOString().slice(0, 10) },
-                    { label: "Yesterday", from: new Date(Date.now() - 86400000).toISOString().slice(0, 10), to: new Date(Date.now() - 86400000).toISOString().slice(0, 10) },
-                    { label: "Last 7 days", from: new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10), to: new Date().toISOString().slice(0, 10) },
-                    { label: "Last 30 days", from: new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10), to: new Date().toISOString().slice(0, 10) },
-                  ].map((preset) => (
-                    <button
-                      key={preset.label}
-                      onClick={() => { setFilterDateFrom(preset.from); setFilterDateTo(preset.to); setShowDatePicker(false); setPage(0); }}
-                      className="w-full text-left px-2.5 py-2 rounded-[7px] text-[12px] transition-colors cursor-pointer hover:bg-[rgba(160,125,56,0.10)]"
-                      style={{ color: T.text }}
-                    >
-                      {preset.label}
-                    </button>
-                  ))}
-                  {(filterDateFrom || filterDateTo) && (
-                    <button
-                      onClick={() => { setFilterDateFrom(""); setFilterDateTo(""); setShowDatePicker(false); setPage(0); }}
-                      className="w-full text-left px-2.5 py-2 rounded-[7px] text-[11px] mt-1 transition-colors cursor-pointer hover:bg-[rgba(176,84,84,0.06)]"
-                      style={{ color: T.danger }}
-                    >
-                      Clear dates
-                    </button>
-                  )}
-                </div>
-                <div className="p-4 w-[280px]">
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="flex-1">
-                      <div className="text-[9px] uppercase tracking-[0.06em] mb-1" style={{ color: T.faint }}>After</div>
-                      <input type="date" value={filterDateFrom} onChange={(e) => { setFilterDateFrom(e.target.value); setPage(0); }} className="w-full h-8 px-2 rounded-[7px] text-[11px] outline-none" style={{ background: T.bg, border: `1px solid ${T.borderSoft}`, color: T.text }} />
-                    </div>
-                    <span className="text-[11px] mt-3" style={{ color: T.faint }}>—</span>
-                    <div className="flex-1">
-                      <div className="text-[9px] uppercase tracking-[0.06em] mb-1" style={{ color: T.faint }}>Before</div>
-                      <input type="date" value={filterDateTo} onChange={(e) => { setFilterDateTo(e.target.value); setPage(0); }} className="w-full h-8 px-2 rounded-[7px] text-[11px] outline-none" style={{ background: T.bg, border: `1px solid ${T.borderSoft}`, color: T.text }} />
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between mb-2">
-                    <button type="button" onClick={() => { if (dpMonth === 0) { setDpMonth(11); setDpYear((y) => y - 1); } else setDpMonth((m) => m - 1); }} className="w-6 h-6 rounded-full flex items-center justify-center cursor-pointer hover:bg-[rgba(160,125,56,0.15)]" style={{ color: T.muted }}>‹</button>
-                    <span className="text-[11px] font-medium" style={{ color: T.text }}>{["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][dpMonth]} {dpYear}</span>
-                    <button type="button" onClick={() => { if (dpMonth === 11) { setDpMonth(0); setDpYear((y) => y + 1); } else setDpMonth((m) => m + 1); }} className="w-6 h-6 rounded-full flex items-center justify-center cursor-pointer hover:bg-[rgba(160,125,56,0.15)]" style={{ color: T.muted }}>›</button>
-                  </div>
-                  <div className="grid grid-cols-7 gap-0.5 mb-1">
-                    {["Mo","Tu","We","Th","Fr","Sa","Su"].map((d) => <div key={d} className="text-center text-[9px] py-0.5" style={{ color: T.faint }}>{d}</div>)}
-                  </div>
-                  <div className="grid grid-cols-7 gap-0.5">
-                    {Array.from({ length: (() => { const fd = new Date(dpYear, dpMonth, 1).getDay(); return fd === 0 ? 6 : fd - 1; })() }).map((_, i) => <div key={`e${i}`} />)}
-                    {Array.from({ length: new Date(dpYear, dpMonth + 1, 0).getDate() }).map((_, i) => {
-                      const day = i + 1;
-                      const iso = `${dpYear}-${String(dpMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-                      const isFrom = filterDateFrom === iso;
-                      const isTo = filterDateTo === iso;
-                      const inRange = filterDateFrom && filterDateTo && iso >= filterDateFrom && iso <= filterDateTo;
-                      return (
-                        <button key={day} type="button" onClick={() => { if (!filterDateFrom || (filterDateFrom && filterDateTo)) { setFilterDateFrom(iso); setFilterDateTo(""); } else { if (iso < filterDateFrom) { setFilterDateTo(filterDateFrom); setFilterDateFrom(iso); } else { setFilterDateTo(iso); } } setPage(0); }}
-                          className="w-[34px] h-[34px] rounded-full flex items-center justify-center text-[11px] transition-colors cursor-pointer"
-                          style={{ background: (isFrom || isTo) ? T.accent : inRange ? "rgba(160,125,56,0.16)" : "transparent", color: (isFrom || isTo) ? T.accentInk : T.text, fontWeight: (isFrom || isTo) ? 700 : 400 }}
-                        >{day}</button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-
-        <div className="ml-auto flex items-center gap-2">
-          {hasActiveFilters && (
-            <button
-              onClick={() => { setFilterCustomer(""); setFilterExpert(""); setFilterStatus(""); setFilterDateFrom(""); setFilterDateTo(""); setPage(0); }}
-              className="text-[11px] px-2.5 py-1.5 rounded-[7px] cursor-pointer transition-opacity hover:opacity-80"
-              style={{ color: T.danger, background: "rgba(176,84,84,0.08)", border: "1px solid rgba(176,84,84,0.15)" }}
-            >
-              Clear filters
-            </button>
-          )}
-          <div className="w-[180px]">
-            <Select
-              value={sort}
-              onChange={(val) => { setSort(val as SortKey); setPage(0); }}
-              compact
-              prefix="Sort: "
-              options={[
-                { value: "date_desc", label: "Newest" },
-                { value: "date_asc", label: "Oldest" },
-                { value: "upcoming", label: "Upcoming" },
-              ]}
-            />
-          </div>
-          <ExportButton data={exportData} filename="consultations" className="ml-2" />
-        </div>
-      </div>
-
-      {loading ? (
-        <Card><TableSkeleton rows={6} cols={5} /></Card>
-      ) : (
-        <>
-          <Card>
-            {/* Table header */}
-            <div className="hidden sm:grid grid-cols-[1fr_140px_140px_160px] gap-3 px-3 py-2 text-[11px] tracking-[0.06em] uppercase" style={{ color: T.faint, borderBottom: `1px solid ${T.borderSoft}` }}>
-              <span>Consultation details</span>
-              <span>Customer</span>
-              <span>Scheduled date</span>
-              <span>Status</span>
-            </div>
-
-            {paginated.length === 0 ? (
-              <p className="text-[13.5px] text-center py-6" style={{ color: T.muted }}>No consultations match your filters.</p>
-            ) : (
-              paginated.map((c) => (
+        <div className="md:flex-1 md:min-h-0 overflow-y-auto max-h-[560px] md:max-h-none">
+          {paginated.length === 0 ? (
+            <EmptyState inline icon="search" title="No consultations" description="Try a different search or clear the filters." />
+          ) : (
+            paginated.map((c, idx) => {
+              const st = rowStatus(c);
+              const dt = new Date(c.scheduledAt);
+              return (
                 <Link
                   key={c.id}
                   href={`/consultations/${c.id}`}
-                  className="group grid grid-cols-1 sm:grid-cols-[1fr_140px_140px_160px] gap-2 sm:gap-3 items-center px-3 py-3.5 transition-all duration-150 rounded-[8px] hover:bg-[rgba(160,125,56,0.07)]"
-                  style={{ borderBottom: `1px solid ${T.borderSoft}` }}
+                  className="group grid grid-cols-1 sm:grid-cols-[64px_1fr_150px_170px] gap-2 sm:gap-3 items-center px-4 py-2.5 transition-colors duration-150 last:rounded-b-[15px] even:bg-[rgba(89,82,54,0.025)] hover:!bg-[rgba(119,123,98,0.08)]"
+                  style={{ borderBottom: idx < paginated.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
                 >
-                  {/* Consultation details */}
+                  <span className="text-[11.5px] tabular-nums" style={{ color: T.faint }}>#{c.id.replace(/\D/g, "")}</span>
                   <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[11px] tracking-[0.06em] uppercase font-medium" style={{ color: T.accent }}>{c.id}</span>
-                      {c.status === "reschedule_requested" && <Chip tone="gold">Reschedule request</Chip>}
-                    </div>
-                    <div className="text-[14px] mt-0.5 truncate" style={{ color: T.text }}>
-                      {c.expertName}
-                    </div>
+                    <div className="text-[13px] font-semibold truncate" style={{ color: T.text }}>{c.customerName}</div>
+                    <div className="text-[12px] truncate mt-px" style={{ color: T.muted }}>with {c.expertName}</div>
                   </div>
-
-                  {/* Customer */}
-                  <div className="min-w-0">
-                    <span className="text-[12px] truncate block" style={{ color: T.text }}>{c.customerName}</span>
-                  </div>
-
-                  {/* Scheduled date */}
-                  <div className="min-w-0">
-                    <span className="text-[12px]" style={{ color: T.text }}>
-                      {new Date(c.scheduledAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }).replace(/ (\d{4})$/, ", $1")}
-                    </span>
-                  </div>
-
-                  {/* Status */}
-                  <div>
-                    <Chip tone={c.paymentStatus === "pending" ? "gold" : statusTone(c.status)}>
-                      {statusLabel(c)}
-                    </Chip>
-                  </div>
+                  <span className="text-[12px] tabular-nums" style={{ color: T.muted }}>
+                    {dt.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                    <span style={{ color: T.faint }}> · {dt.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true })}</span>
+                  </span>
+                  <div><Chip tone={st.tone}>{st.label}</Chip></div>
                 </Link>
-              ))
-            )}
-          </Card>
-
-          {/* Pagination */}
-          {filtered.length > PER_PAGE && (
-            <Pagination page={page} totalPages={totalPages} totalItems={filtered.length} perPage={PER_PAGE} onPageChange={setPage} />
+              );
+            })
           )}
-        </>
-      )}
+        </div>
+          </>
+        )}
+      </Card>
+      <Pagination page={currentPage - 1} totalPages={totalPages} totalItems={filtered.length} perPage={PER_PAGE} onPageChange={(p) => setPage(p + 1)} />
       </>}
 
-      {/* ============ Calendar view ============ */}
-      {viewMode === "calendar" && (
-        loading ? (
-          <Card><TableSkeleton rows={6} cols={5} /></Card>
-        ) : (
+      {/* ============ Incomplete bookings ============ */}
+      {tab === "incomplete" && (
         <>
-          {/* Week navigation + view toggle inline */}
-          <div className="flex flex-wrap items-center gap-3 pb-3 mb-3" style={{ borderBottom: `1px solid ${T.border}` }}>
-            <button onClick={prevWeek} className="w-9 h-9 rounded-[9px] flex items-center justify-center text-[14px] transition-colors hover:bg-[rgba(160,125,56,0.1)] cursor-pointer" style={{ color: T.muted, background: T.popover, border: `1px solid ${T.border}` }}>‹</button>
-            <button onClick={nextWeek} className="w-9 h-9 rounded-[9px] flex items-center justify-center text-[14px] transition-colors hover:bg-[rgba(160,125,56,0.1)] cursor-pointer" style={{ color: T.muted, background: T.popover, border: `1px solid ${T.border}` }}>›</button>
-            <button onClick={goToToday} className="h-9 px-3.5 rounded-[9px] text-[13.5px] font-medium transition-colors hover:bg-[rgba(160,125,56,0.1)] cursor-pointer" style={{ color: T.accent, border: `1px solid ${T.accentBorder}` }}>Today</button>
-
-            <div className="relative ml-1">
-              <button
-                onClick={() => { setGoToDateOpen((o) => !o); setGtdYear(calWeekBase.getFullYear()); setGtdMonth(calWeekBase.getMonth()); }}
-                className="text-[14px] font-semibold flex items-center gap-2 cursor-pointer hover:opacity-75 transition-opacity"
-                style={{ color: T.text }}
-              >
-                {weekDays[0].toLocaleDateString("en-IN", { day: "numeric", month: "short" })} — {weekDays[6].toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 9l6 6 6-6" /></svg>
-              </button>
-              {goToDateOpen && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setGoToDateOpen(false)} />
-                  <div className="absolute left-0 top-full mt-1 z-50 rounded-[10px] p-4 shadow-lg w-[280px]" style={{ background: T.popover, border: `1px solid ${T.border}` }}>
-                    <div className="flex items-center justify-between mb-2">
-                      <button type="button" onClick={() => { if (gtdMonth === 0) { setGtdMonth(11); setGtdYear((y) => y - 1); } else setGtdMonth((m) => m - 1); }} className="w-6 h-6 rounded-full flex items-center justify-center cursor-pointer hover:bg-[rgba(160,125,56,0.15)]" style={{ color: T.muted }}>‹</button>
-                      <span className="text-[11px] font-medium" style={{ color: T.text }}>{["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][gtdMonth]} {gtdYear}</span>
-                      <button type="button" onClick={() => { if (gtdMonth === 11) { setGtdMonth(0); setGtdYear((y) => y + 1); } else setGtdMonth((m) => m + 1); }} className="w-6 h-6 rounded-full flex items-center justify-center cursor-pointer hover:bg-[rgba(160,125,56,0.15)]" style={{ color: T.muted }}>›</button>
-                    </div>
-                    <div className="grid grid-cols-7 gap-0.5 mb-1">
-                      {["Mo","Tu","We","Th","Fr","Sa","Su"].map((d) => <div key={d} className="text-center text-[9px] py-0.5" style={{ color: T.faint }}>{d}</div>)}
-                    </div>
-                    <div className="grid grid-cols-7 gap-0.5">
-                      {Array.from({ length: (() => { const fd = new Date(gtdYear, gtdMonth, 1).getDay(); return fd === 0 ? 6 : fd - 1; })() }).map((_, i) => <div key={`e${i}`} />)}
-                      {Array.from({ length: new Date(gtdYear, gtdMonth + 1, 0).getDate() }).map((_, i) => {
-                        const day = i + 1;
-                        const iso = `${gtdYear}-${String(gtdMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-                        const isToday2 = iso === todayISO;
-                        return (
-                          <button key={day} type="button" onClick={() => { setCalWeekBase(new Date(iso + "T00:00:00")); setGoToDateOpen(false); }}
-                            className="w-[34px] h-[34px] rounded-full flex items-center justify-center text-[11px] transition-colors cursor-pointer hover:bg-[rgba(160,125,56,0.16)]"
-                            style={{ background: isToday2 ? T.accent : "transparent", color: isToday2 ? T.accentInk : T.text, fontWeight: isToday2 ? 700 : 400 }}
-                          >{day}</button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </>
+          <Card className="!p-0 md:flex md:flex-col md:min-h-0">
+            {loading ? (
+              <TableSkeleton cols={4} rows={8} />
+            ) : (
+              <>
+            <div
+              className="hidden sm:grid grid-cols-[1fr_1fr_110px_150px] gap-3 items-center px-4 h-10 text-[11px] font-medium tracking-[0.06em] uppercase rounded-t-[15px]"
+              style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.border}` }}
+            >
+              <span>Customer</span>
+              <span>Astrologer</span>
+              <span>Date</span>
+              <span>Reason</span>
+            </div>
+            <div className="md:flex-1 md:min-h-0 overflow-y-auto max-h-[560px] md:max-h-none">
+              {incPaginated.length === 0 ? (
+                <EmptyState inline icon="check" title="No incomplete bookings" description="Nothing needs recovery right now." />
+              ) : (
+                incPaginated.map((c, idx) => (
+                  <Link
+                    key={c.id}
+                    href={`/consultations/incomplete/${c.id}`}
+                    className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_110px_150px] gap-2 sm:gap-3 items-center px-4 py-2.5 transition-colors duration-150 last:rounded-b-[15px] even:bg-[rgba(89,82,54,0.025)] hover:!bg-[rgba(119,123,98,0.08)]"
+                    style={{ borderBottom: idx < incPaginated.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
+                  >
+                    <span className="text-[13px] font-semibold truncate block" style={{ color: T.text }}>{c.customerName}</span>
+                    <span className="text-[12.5px] truncate block" style={{ color: T.muted }}>{c.expertName}</span>
+                    <span className="text-[12px] tabular-nums" style={{ color: T.muted }}>{new Date(c.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>
+                    <div><Chip tone={INC_REASON_TONE[c.reason] || "muted"}>{INC_REASON_LABEL[c.reason] || c.reason}</Chip></div>
+                  </Link>
+                ))
               )}
             </div>
-          </div>
+              </>
+            )}
+          </Card>
+          <Pagination page={incCurrentPage - 1} totalPages={incTotalPages} totalItems={incFiltered.length} perPage={PER_PAGE} onPageChange={(p) => setIncPage(p + 1)} />
+        </>
+      )}
 
-          {/* Calendar grid */}
-          <Card className="overflow-hidden p-0">
-            <div className="overflow-x-auto">
-              <div style={{ minWidth: 800 }}>
-                {/* Day headers */}
-                <div className="grid sticky top-0 z-10" style={{ gridTemplateColumns: "60px repeat(7, 1fr)", background: T.card, borderBottom: `1px solid ${T.border}` }}>
-                  <div className="py-1.5" />
-                  {weekDays.map((day) => {
-                    const iso = toISODate(day);
-                    const isToday3 = iso === todayISO;
-                    return (
-                      <div key={iso} className="text-center py-2 px-1" style={{ borderLeft: `1px solid ${T.borderSoft}` }}>
-                        <div className="text-[10px] tracking-[0.06em] uppercase" style={{ color: T.faint }}>{day.toLocaleDateString("en-IN", { weekday: "short" })}</div>
-                        <div
-                          className="text-[15px] font-semibold mx-auto"
-                          style={{
-                            color: isToday3 ? T.accentInk : T.text,
-                            background: isToday3 ? T.accent : "transparent",
-                            borderRadius: isToday3 ? "50%" : undefined,
-                            width: isToday3 ? 28 : undefined,
-                            height: isToday3 ? 28 : undefined,
-                            lineHeight: isToday3 ? "28px" : undefined,
-                          }}
-                        >{day.getDate()}</div>
-                      </div>
-                    );
-                  })}
+      {/* ============ Calendar view ============ */}
+      {tab === "all" && viewMode === "calendar" && (() => {
+        const now = new Date();
+        const nowHour = now.getHours();
+        const nowPct = (now.getMinutes() / 60) * 100;
+        const nowTimeStr = now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: false });
+        const todayVisible = visibleDays.some((d) => toISODate(d) === todayISO);
+        const mmLead = (new Date(gtdYear, gtdMonth, 1).getDay() + 6) % 7;
+        const mmDays = new Date(gtdYear, gtdMonth + 1, 0).getDate();
+        const selISO = toISODate(calWeekBase);
+        return (
+          <div className="flex items-start gap-4 md:flex-1 md:min-h-0">
+            {/* Main timeline */}
+            <div className="flex-1 min-w-0 h-full flex flex-col">
+              <div className="flex flex-wrap items-end justify-between gap-3 mb-3">
+                <div>
+                  <h2 className="font-title text-[26px] leading-tight tracking-[-0.02em]">
+                    <span className="font-bold" style={{ color: T.text }}>
+                      {calScope === "day"
+                        ? calWeekBase.toLocaleDateString("en-IN", { day: "numeric", month: "long" })
+                        : `${weekDays[0].toLocaleDateString("en-IN", { day: "numeric", month: "short" })} — ${weekDays[6].toLocaleDateString("en-IN", { day: "numeric", month: "short" })}`}
+                    </span>
+                    <span className="font-normal" style={{ color: T.muted }}> {calScope === "day" ? calWeekBase.getFullYear() : weekDays[6].getFullYear()}</span>
+                  </h2>
+                  <div className="text-[13.5px] mt-0.5" style={{ color: T.muted }}>
+                    {calScope === "day" ? calWeekBase.toLocaleDateString("en-IN", { weekday: "long" }) : "Week view"}
+                  </div>
                 </div>
+                <div className="flex items-center gap-3">
+                  <div className="hidden xl:flex items-center gap-4">
+                    {[
+                      { color: "#6d8ea0", label: "Scheduled" },
+                      { color: T.accent, label: "Reschedule" },
+                      { color: T.danger, label: "Needs action" },
+                      { color: T.good, label: "Done" },
+                    ].map((l) => (
+                      <span key={l.label} className="inline-flex items-center gap-1.5 text-[11.5px]" style={{ color: T.muted }}>
+                        <span className="w-2 h-2 rounded-full" style={{ background: l.color }} />
+                        {l.label}
+                      </span>
+                    ))}
+                  </div>
+                  <div
+                    className="inline-flex items-center gap-1 p-1 rounded-full shrink-0"
+                    style={{ background: "rgba(89,82,54,0.07)", border: `1px solid ${T.borderSoft}` }}
+                  >
+                    {(["day", "week"] as const).map((scope) => (
+                      <button
+                        key={scope}
+                        onClick={() => setCalScope(scope)}
+                        className="h-7 px-3.5 rounded-full text-[12.5px] capitalize shrink-0 transition-all duration-200 cursor-pointer"
+                        style={
+                          calScope === scope
+                            ? { background: T.card, color: T.text, fontWeight: 600, border: `1px solid ${T.border}`, boxShadow: "0 1px 3px rgba(43,42,34,0.10)" }
+                            : { color: T.muted, border: "1px solid transparent" }
+                        }
+                      >
+                        {scope}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
 
-                {/* Hour rows */}
-                <div className="max-h-[600px] overflow-y-auto">
-                  {CAL_HOURS.map((hour) => (
-                    <div key={hour} className="grid" style={{ gridTemplateColumns: "60px repeat(7, 1fr)", minHeight: 40 }}>
-                      <div className="text-[10px] tabular-nums text-right pr-2 pt-0.5" style={{ color: T.faint, borderTop: `1px solid ${T.borderSoft}` }}>{formatHour(hour)}</div>
-                      {weekDays.map((day) => {
+              <Card className="overflow-hidden !p-0 flex-1 min-h-0 flex flex-col w-full">
+                <div className="overflow-x-auto flex-1 min-h-0 flex flex-col">
+                  <div className="h-full flex flex-col" style={{ minWidth: calScope === "day" ? 0 : 800 }}>
+                    <div className="grid" style={{ gridTemplateColumns: `60px repeat(${visibleDays.length}, 1fr)`, background: T.card, borderBottom: `1px solid ${T.border}` }}>
+                      <div className="py-1.5" />
+                      {visibleDays.map((day) => {
                         const iso = toISODate(day);
-                        const events = (calEvents.get(iso) ?? []).filter((c) => new Date(c.scheduledAt).getHours() === hour);
+                        const isToday = iso === todayISO;
                         return (
-                          <div key={iso} className="relative px-0.5 pt-0.5" style={{ borderTop: `1px solid ${T.borderSoft}`, borderLeft: `1px solid ${T.borderSoft}` }}>
-                            {events.map((ev) => {
-                              const dt = new Date(ev.scheduledAt);
-                              const timeStr = dt.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true });
-                              const tone =
-                                ev.status === "closed" || ev.status === "completed" ? T.good :
-                                ev.status === "scheduled" ? "#6d8ea0" :
-                                ev.status === "reschedule_requested" ? T.accent :
-                                ev.status === "summary_pending" || ev.status === "no_show" ? T.danger :
-                                T.muted;
-                              return (
-                                <Link key={ev.id} href={`/consultations/${ev.id}`}
-                                  className="block rounded-[6px] px-1.5 py-1 mb-0.5 text-[10px] leading-tight truncate transition-all hover:brightness-110"
-                                  style={{ background: `${tone}18`, borderLeft: `3px solid ${tone}`, color: tone }}
-                                  title={`${ev.customerName} — ${ev.expertName}`}
-                                >
-                                  <div className="font-medium truncate">{ev.customerName}</div>
-                                  <div className="truncate opacity-75">{timeStr} · {ev.expertName.split(" ").pop()}</div>
-                                </Link>
-                              );
-                            })}
+                          <div key={iso} className="text-center py-2 px-1" style={{ borderLeft: `1px solid ${T.borderSoft}` }}>
+                            <div className="text-[10px] tracking-[0.06em] uppercase" style={{ color: T.faint }}>
+                              {day.toLocaleDateString("en-IN", { weekday: "short" })}
+                            </div>
+                            <div
+                              className="text-[15px] font-semibold mx-auto"
+                              style={{
+                                color: isToday ? T.accentInk : T.text,
+                                background: isToday ? T.accent : "transparent",
+                                borderRadius: isToday ? "50%" : undefined,
+                                width: isToday ? 28 : undefined,
+                                height: isToday ? 28 : undefined,
+                                lineHeight: isToday ? "28px" : undefined,
+                              }}
+                            >
+                              {day.getDate()}
+                            </div>
                           </div>
                         );
                       })}
                     </div>
+
+                    <div ref={hoursRef} className="flex-1 min-h-0 overflow-y-auto max-h-[560px] lg:max-h-none">
+                      {CAL_HOURS.map((hour) => (
+                        <div key={hour} className="grid relative" style={{ gridTemplateColumns: `60px repeat(${visibleDays.length}, 1fr)`, minHeight: 40 }}>
+                          <div className="text-[10px] tabular-nums text-right pr-2 pt-0.5" style={{ color: T.faint, borderTop: `1px solid ${T.borderSoft}` }}>
+                            {formatHour(hour)}
+                          </div>
+                          {visibleDays.map((day) => {
+                            const iso = toISODate(day);
+                            const events = (calEvents.get(iso) ?? []).filter((c) => new Date(c.scheduledAt).getHours() === hour);
+                            return (
+                              <div key={iso} className="relative px-0.5 pt-0.5" style={{ borderTop: `1px solid ${T.borderSoft}`, borderLeft: `1px solid ${T.borderSoft}` }}>
+                                {events.map((ev) => {
+                                  const dt = new Date(ev.scheduledAt);
+                                  const timeStr = dt.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true });
+                                  const tone = eventTone(ev);
+                                  return (
+                                    <button
+                                      key={ev.id}
+                                      onClick={() => setSelectedEvent(selectedEvent?.id === ev.id ? null : ev)}
+                                      className="block w-full text-left rounded-[6px] px-1.5 py-1 mb-0.5 text-[10px] leading-tight truncate transition-all hover:brightness-110 cursor-pointer"
+                                      style={{
+                                        background: `${tone}${selectedEvent?.id === ev.id ? "30" : "18"}`,
+                                        color: tone,
+                                        boxShadow: selectedEvent?.id === ev.id ? `inset 0 0 0 1.5px ${tone}` : "none",
+                                      }}
+                                    >
+                                      <div className="font-medium truncate">{ev.customerName}</div>
+                                      <div className="truncate opacity-75">{timeStr} · {ev.expertName.split(" ").pop()}</div>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            );
+                          })}
+                          {todayVisible && hour === nowHour && (
+                            <div className="absolute left-0 right-0 z-10 pointer-events-none" style={{ top: `${nowPct}%` }}>
+                              <div className="relative h-[2px]" style={{ background: T.danger }}>
+                                <span
+                                  className="absolute left-0.5 top-1/2 -translate-y-1/2 text-[9px] font-bold px-1.5 py-px rounded-full tabular-nums"
+                                  style={{ background: T.danger, color: "#fdf6ea" }}
+                                >
+                                  {nowTimeStr}
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            </div>
+
+            {/* Right rail */}
+            <aside className="w-[300px] shrink-0 hidden lg:block space-y-3 lg:max-h-full lg:overflow-y-auto no-scrollbar">
+              {/* Mini month */}
+              <div className="rounded-[16px] p-4" style={{ background: T.card, border: `1px solid ${T.borderSoft}`, boxShadow: T.shadow }}>
+                <div className="flex items-center justify-between mb-2.5">
+                  <span className="text-[13px] font-semibold" style={{ color: T.text }}>
+                    {["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][gtdMonth]} {gtdYear}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => { if (gtdMonth === 0) { setGtdMonth(11); setGtdYear((y) => y - 1); } else setGtdMonth((m) => m - 1); }}
+                      aria-label="Previous month"
+                      className="w-7 h-7 rounded-[8px] flex items-center justify-center cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.12)]"
+                      style={{ color: T.muted }}
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3"><path d="m15 18-6-6 6-6" /></svg>
+                    </button>
+                    <button
+                      onClick={goToToday}
+                      className="h-7 px-2.5 rounded-[8px] text-[12px] font-medium cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.12)]"
+                      style={{ color: T.text, border: `1px solid ${T.border}` }}
+                    >
+                      Today
+                    </button>
+                    <button
+                      onClick={() => { if (gtdMonth === 11) { setGtdMonth(0); setGtdYear((y) => y + 1); } else setGtdMonth((m) => m + 1); }}
+                      aria-label="Next month"
+                      className="w-7 h-7 rounded-[8px] flex items-center justify-center cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.12)]"
+                      style={{ color: T.muted }}
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3"><path d="m9 18 6-6-6-6" /></svg>
+                    </button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-7 gap-0.5 mb-1">
+                  {["M","T","W","T","F","S","S"].map((d, i) => (
+                    <div key={i} className="text-center text-[10px] font-medium py-0.5" style={{ color: T.faint }}>{d}</div>
                   ))}
                 </div>
-              </div>
-            </div>
-          </Card>
-        </>
-        )
-      )}
-      </>}
-
-      {/* ============ INCOMPLETE BOOKINGS ============ */}
-      {tab === "incomplete" && (() => {
-        const incSearch = search.toLowerCase();
-        const incFiltered = MOCK_INCOMPLETE_CONSULTATIONS
-          .filter((c) => {
-            if (!incSearch) return true;
-            return c.customerName.toLowerCase().includes(incSearch) || c.expertName.toLowerCase().includes(incSearch);
-          })
-          .filter((c) => !filterCustomer || c.customerName === filterCustomer)
-          .filter((c) => !filterExpert || c.expertName === filterExpert)
-          .filter((c) => !filterStatus || c.reason === filterStatus)
-          .filter((c) => {
-            if (filterDateFrom && c.date < filterDateFrom) return false;
-            if (filterDateTo && c.date > filterDateTo) return false;
-            return true;
-          })
-          .sort((a, b) => sort === "date_asc" ? new Date(a.date).getTime() - new Date(b.date).getTime() : new Date(b.date).getTime() - new Date(a.date).getTime());
-
-        const incCustomers = [...new Set(MOCK_INCOMPLETE_CONSULTATIONS.map((c) => c.customerName))].sort();
-        const incExperts = [...new Set(MOCK_INCOMPLETE_CONSULTATIONS.map((c) => c.expertName))].sort();
-        const hasIncFilters = !!filterCustomer || !!filterExpert || !!filterStatus || !!filterDateFrom || !!filterDateTo;
-
-        return (
-          <>
-            <div className="mb-3">
-              <SearchFilter search={search} onSearchChange={(v) => { setSearch(v); setPage(0); }} placeholder="Search customer, astrologer…" />
-            </div>
-            <div className="flex flex-wrap items-center gap-2.5 mb-4">
-              <div className="w-[200px]">
-                <Select value={filterCustomer} onChange={(v) => { setFilterCustomer(v); setPage(0); }} searchable compact placeholder="All customers" options={[{ value: "", label: "All customers" }, ...incCustomers.map((n) => ({ value: n, label: n }))]} />
-              </div>
-              <div className="w-[200px]">
-                <Select value={filterExpert} onChange={(v) => { setFilterExpert(v); setPage(0); }} searchable compact placeholder="All astrologers" options={[{ value: "", label: "All astrologers" }, ...incExperts.map((n) => ({ value: n, label: n }))]} />
-              </div>
-              <div className="w-[180px]">
-                <Select value={filterStatus} onChange={(v) => { setFilterStatus(v as string); setPage(0); }} compact placeholder="All reasons" options={[{ value: "", label: "All reasons" }, { value: "slot_check", label: "Slot check" }, { value: "payment_failed", label: "Payment failed" }, { value: "requested_call", label: "Requested call" }]} />
-              </div>
-              {hasIncFilters && (
-                <button onClick={() => { setFilterCustomer(""); setFilterExpert(""); setFilterStatus(""); setFilterDateFrom(""); setFilterDateTo(""); setPage(0); }} className="text-[11px] font-medium px-2.5 py-1.5 rounded-[7px] cursor-pointer hover:opacity-80 transition-opacity" style={{ background: "rgba(160,125,56,0.12)", color: T.accent }}>Clear filters</button>
-              )}
-              <div className="flex-1" />
-              <div className="w-[180px]">
-                <Select value={sort} onChange={(v) => { setSort(v as SortKey); setPage(0); }} compact prefix="Sort: " options={[{ value: "date_desc", label: "Newest first" }, { value: "date_asc", label: "Oldest first" }]} />
-              </div>
-            </div>
-            {loading ? (
-              <Card><TableSkeleton rows={6} cols={5} /></Card>
-            ) : (
-              <Card>
-                <div className="hidden sm:grid grid-cols-[1fr_1fr_100px_130px_100px] gap-3 px-3 py-2 text-[11px] tracking-[0.06em] uppercase" style={{ color: T.faint, borderBottom: `1px solid ${T.borderSoft}` }}>
-                  <span>Customer</span>
-                  <span>Astrologer</span>
-                  <span>Date</span>
-                  <span>Status</span>
-                  <span>Assignee</span>
+                <div className="grid grid-cols-7 gap-0.5">
+                  {Array.from({ length: mmLead }).map((_, i) => <div key={`e${i}`} />)}
+                  {Array.from({ length: mmDays }).map((_, i) => {
+                    const day = i + 1;
+                    const iso = `${gtdYear}-${String(gtdMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+                    const isToday = iso === todayISO;
+                    const isSelected = iso === selISO;
+                    const hasEvents = calEvents.has(iso);
+                    return (
+                      <button
+                        key={day}
+                        onClick={() => { setCalWeekBase(new Date(iso + "T00:00:00")); setCalScope("day"); }}
+                        className="relative h-8 rounded-full flex items-center justify-center text-[11.5px] tabular-nums transition-colors cursor-pointer hover:bg-[rgba(119,123,98,0.14)]"
+                        style={{
+                          background: isToday ? T.danger : isSelected ? T.accent : "transparent",
+                          color: isToday || isSelected ? "#fdf6ea" : T.text,
+                          fontWeight: isToday || isSelected ? 700 : 400,
+                        }}
+                      >
+                        {day}
+                        {hasEvents && !isToday && !isSelected && (
+                          <span className="absolute bottom-0.5 w-1 h-1 rounded-full" style={{ background: T.accent }} />
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
-                {incFiltered.length === 0 ? (
-                  <p className="text-[13.5px] py-6 text-center" style={{ color: T.muted }}>No incomplete bookings found.</p>
-                ) : (
-                  incFiltered.map((c) => (
+              </div>
+
+              {/* Event details */}
+              {selectedEvent ? (() => {
+                const ev = selectedEvent;
+                const dt = new Date(ev.scheduledAt);
+                const st = rowStatus(ev);
+                return (
+                  <div
+                    className="rounded-[16px] p-5"
+                    style={{ background: T.card, border: `1px solid ${T.borderSoft}`, boxShadow: T.shadow, animation: "fadeIn 0.15s ease both" }}
+                  >
+                    <div className="flex items-center justify-between gap-3 mb-2">
+                      <Chip tone={st.tone}>{st.label}</Chip>
+                      <button
+                        onClick={() => setSelectedEvent(null)}
+                        aria-label="Close details"
+                        className="w-7 h-7 rounded-full flex items-center justify-center cursor-pointer transition-colors hover:bg-[rgba(89,82,54,0.10)]"
+                        style={{ color: T.muted }}
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="w-3.5 h-3.5"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                      </button>
+                    </div>
+                    <div className="text-[15px] font-semibold" style={{ color: T.text }}>{ev.customerName}</div>
+                    <div className="text-[12.5px] mt-0.5" style={{ color: T.muted }}>with {ev.expertName}</div>
+
+                    <div className="mt-4 pt-4 space-y-2.5" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+                      {[
+                        { label: "When", value: `${dt.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short", year: "numeric" })} · ${dt.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true })}` },
+                        { label: "Payment", value: ev.paymentStatus === "pending" ? "Pending" : "Paid" },
+                        { label: "Meeting", value: ev.meetingLink ? "Link ready" : "Link pending" },
+                        { label: "ID", value: ev.id },
+                      ].map((row) => (
+                        <div key={row.label} className="flex gap-3 text-[12.5px]">
+                          <span className="w-[76px] shrink-0" style={{ color: T.faint }}>{row.label}</span>
+                          <span className="min-w-0" style={{ color: T.text }}>{row.value}</span>
+                        </div>
+                      ))}
+                    </div>
+
                     <Link
-                      key={c.id}
-                      href={`/consultations/incomplete/${c.id}`}
-                      className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_100px_130px_100px] gap-2 sm:gap-3 items-center px-3 py-3.5 transition-all duration-150 rounded-[8px] hover:bg-[rgba(160,125,56,0.07)]"
-                      style={{ borderBottom: `1px solid ${T.borderSoft}` }}
+                      href={`/consultations/${ev.id}`}
+                      className="mt-4 h-9 w-full rounded-[9px] text-[13px] font-semibold inline-flex items-center justify-center transition-all duration-200 hover:brightness-110"
+                      style={{ background: T.primary, color: T.primaryInk }}
                     >
-                      <div className="min-w-0">
-                        <span className="text-[14px] font-medium" style={{ color: T.text }}>{c.customerName}</span>
-                      </div>
-                      <div className="min-w-0">
-                        <span className="text-[13px]" style={{ color: T.accent }}>{c.expertName}</span>
-                      </div>
-                      <div className="min-w-0">
-                        <span className="text-[12px]" style={{ color: T.text }}>{new Date(c.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</span>
-                      </div>
-                      <div>
-                        <Chip tone={INC_REASON_TONE[c.reason] || "muted"}>{INC_REASON_LABEL[c.reason] || c.reason}</Chip>
-                      </div>
-                      <div className="min-w-0">
-                        <span className="text-[12px]" style={{ color: T.faint }}>—</span>
-                      </div>
+                      Open details
                     </Link>
-                  ))
-                )}
-              </Card>
-            )}
-          </>
+                  </div>
+                );
+              })() : (
+                <div className="rounded-[16px] p-5 text-center" style={{ background: T.card, border: `1px dashed ${T.border}` }}>
+                  <div className="text-[12.5px]" style={{ color: T.faint }}>
+                    Select a consultation on the calendar to see its details here.
+                  </div>
+                </div>
+              )}
+            </aside>
+          </div>
         );
       })()}
+      </div>
     </>
   );
 }

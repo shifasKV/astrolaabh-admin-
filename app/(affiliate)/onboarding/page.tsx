@@ -1,9 +1,8 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Card, Input, GoldBtn, GhostBtn } from "@/components/ui";
+import { Card, Input, GoldBtn } from "@/components/ui";
 import { T } from "@/lib/theme";
-import { V, validate, hasErrors, type ValidationErrors } from "@/lib/validation";
 
 const STEPS = [
   { key: "personal", label: "Personal Details" },
@@ -30,51 +29,11 @@ export default function OnboardingPage() {
   const [panFile, setPanFile] = useState<string | null>(null);
   const [panDrag, setPanDrag] = useState(false);
 
-  const [errors, setErrors] = useState<ValidationErrors>({});
-  const [touched, setTouched] = useState<Set<string>>(new Set());
-  const [submitAttempted, setSubmitAttempted] = useState(false);
-
-  const markTouched = (field: string) => setTouched((prev) => new Set(prev).add(field));
-  const showError = (field: string) => (touched.has(field) || submitAttempted) ? errors[field] : undefined;
-
-  const validateStep0 = () => validate({
-    name: V.required(name),
-    email: V.email(email),
-    phone: V.phone(phone),
-  });
-
-  const validateStep1 = () => validate({
-    holderName: V.required(holderName),
-    bankName: V.required(bankName),
-    accountNumber: V.required(accountNumber),
-    accountMatch: V.accountMatch(accountNumber, confirmAccount),
-    ifsc: V.ifsc(ifsc),
-  });
-
   const canNext = () => {
-    if (step === 0) return !hasErrors(validateStep0());
-    if (step === 1) return !hasErrors(validateStep1());
-    if (step === 2) return !!panFile;
+    if (step === 0) return name && email && phone;
+    if (step === 1) return holderName && bankName && accountNumber && confirmAccount && ifsc && accountNumber === confirmAccount;
+    if (step === 2) return panFile;
     return false;
-  };
-
-  const handleContinue = () => {
-    setSubmitAttempted(true);
-    if (step === 0) {
-      setTouched(new Set(["name", "email", "phone"]));
-      const errs = validateStep0();
-      setErrors(errs);
-      if (hasErrors(errs)) return;
-    } else if (step === 1) {
-      setTouched(new Set(["holderName", "bankName", "accountNumber", "confirmAccount", "ifsc"]));
-      const errs = validateStep1();
-      setErrors(errs);
-      if (hasErrors(errs)) return;
-    }
-    setSubmitAttempted(false);
-    setTouched(new Set());
-    setErrors({});
-    setStep(step + 1);
   };
 
   const handleSubmit = () => {
@@ -82,12 +41,25 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-10" style={{ background: T.bg }}>
-      <div className="w-full max-w-[560px]">
+    <div className="min-h-screen flex items-center justify-center px-4 py-10 relative overflow-hidden" style={{ background: `url(/login/bg-onboarding.jpg) center / cover no-repeat, ${T.bg}` }}>
+      <div className="absolute inset-0 pointer-events-none" style={{ background: "linear-gradient(180deg, rgba(241,235,220,0.62) 0%, rgba(241,235,220,0.42) 55%, rgba(241,235,220,0.6) 100%)" }} />
+      <div className="relative z-10 w-full max-w-[560px]">
+        {/* Back — to sign in on the first step, to the previous step after */}
+        <div className="mb-5">
+          <button
+            onClick={() => (step === 0 ? router.push("/") : setStep(step - 1))}
+            className="group inline-flex items-center gap-1.5 text-[12.5px] font-medium h-8 pl-2 pr-3 rounded-full transition-all duration-200 hover:-translate-x-0.5 cursor-pointer"
+            style={{ color: T.muted, background: T.card, border: `1px solid ${T.borderSoft}`, boxShadow: T.shadow }}
+          >
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 transition-transform duration-200 group-hover:-translate-x-0.5"><path d="M10 3.5 5.5 8 10 12.5" /></svg>
+            {step === 0 ? "Back to sign in" : "Back"}
+          </button>
+        </div>
+
         {/* Header */}
         <div className="text-center mb-8">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo/mark-gold.webp" alt="AstroLaabh" className="w-14 h-14 object-contain mx-auto mb-4 drop-shadow-[0_4px_12px_rgba(160,125,56,0.35)]" />
+          <img src="/logo/mark-gold.webp" alt="AstroLaabh" className="w-14 h-14 object-contain mx-auto mb-4 drop-shadow-[0_4px_12px_rgba(119,123,98,0.35)]" />
           <h1 className="font-title text-[24px] font-semibold tracking-[-0.02em]" style={{ color: T.text }}>Welcome to AstroLaabh</h1>
           <p className="text-[14px] mt-2" style={{ color: T.muted }}>Complete your profile to start as an affiliate partner</p>
         </div>
@@ -128,12 +100,12 @@ export default function OnboardingPage() {
           {/* Step 1: Personal Details */}
           {step === 0 && (
             <>
-              <h2 className="text-[16px] font-semibold mb-1" style={{ color: T.text }}>Personal Details</h2>
+              <h2 className="text-[15px] font-semibold mb-1" style={{ color: T.text }}>Personal Details</h2>
               <p className="text-[13px] mb-5" style={{ color: T.muted }}>Tell us a bit about yourself</p>
               <div className="space-y-4">
-                <Input value={name} onChange={(v) => { markTouched("name"); setName(v); }} label="Full name" placeholder="e.g. Pt. Sandeep Kochaar" error={showError("name")} />
-                <Input value={email} onChange={(v) => { markTouched("email"); setEmail(v); }} label="Email address" type="email" placeholder="you@example.com" error={showError("email")} />
-                <Input value={phone} onChange={(v) => { markTouched("phone"); setPhone(v); }} label="Phone number" placeholder="+91 98100 00000" error={showError("phone")} />
+                <Input value={name} onChange={setName} label="Full name" placeholder="e.g. Pt. Sandeep Kochaar" />
+                <Input value={email} onChange={setEmail} label="Email address" type="email" placeholder="you@example.com" />
+                <Input value={phone} onChange={setPhone} label="Phone number" placeholder="+91 98100 00000" />
                 <Input value={city} onChange={setCity} label="City (optional)" placeholder="e.g. New Delhi" />
               </div>
             </>
@@ -142,17 +114,20 @@ export default function OnboardingPage() {
           {/* Step 2: Bank Details */}
           {step === 1 && (
             <>
-              <h2 className="text-[16px] font-semibold mb-1" style={{ color: T.text }}>Bank Details</h2>
+              <h2 className="text-[15px] font-semibold mb-1" style={{ color: T.text }}>Bank Details</h2>
               <p className="text-[13px] mb-5" style={{ color: T.muted }}>For commission payouts</p>
               <div className="space-y-4">
-                <Input value={holderName} onChange={(v) => { markTouched("holderName"); setHolderName(v); }} label="Account holder name" placeholder="As on bank records" error={showError("holderName")} />
-                <Input value={bankName} onChange={(v) => { markTouched("bankName"); setBankName(v); }} label="Bank name" placeholder="e.g. HDFC Bank" error={showError("bankName")} />
+                <Input value={holderName} onChange={setHolderName} label="Account holder name" placeholder="As on bank records" />
+                <Input value={bankName} onChange={setBankName} label="Bank name" placeholder="e.g. HDFC Bank" />
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Input value={accountNumber} onChange={(v) => { markTouched("accountNumber"); setAccountNumber(v); }} label="Account number" placeholder="Enter account number" error={showError("accountNumber")} />
-                  <Input value={confirmAccount} onChange={(v) => { markTouched("confirmAccount"); setConfirmAccount(v); }} label="Confirm account number" placeholder="Re-enter account number" error={showError("accountMatch")} />
+                  <Input value={accountNumber} onChange={setAccountNumber} label="Account number" placeholder="Enter account number" />
+                  <Input value={confirmAccount} onChange={setConfirmAccount} label="Confirm account number" placeholder="Re-enter account number" />
                 </div>
+                {accountNumber && confirmAccount && accountNumber !== confirmAccount && (
+                  <p className="text-[12px] -mt-2" style={{ color: T.danger }}>Account numbers do not match</p>
+                )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Input value={ifsc} onChange={(v) => { markTouched("ifsc"); setIfsc(v); }} label="IFSC code" placeholder="e.g. HDFC0001234" error={showError("ifsc")} />
+                  <Input value={ifsc} onChange={setIfsc} label="IFSC code" placeholder="e.g. HDFC0001234" />
                   <Input value={upiId} onChange={setUpiId} label="UPI ID (optional)" placeholder="e.g. name@upi" />
                 </div>
               </div>
@@ -162,7 +137,7 @@ export default function OnboardingPage() {
           {/* Step 3: Upload PAN */}
           {step === 2 && (
             <>
-              <h2 className="text-[16px] font-semibold mb-1" style={{ color: T.text }}>Upload PAN Card</h2>
+              <h2 className="text-[15px] font-semibold mb-1" style={{ color: T.text }}>Upload PAN Card</h2>
               <p className="text-[13px] mb-5" style={{ color: T.muted }}>Required for KYC verification</p>
               <div
                 className="border-2 border-dashed rounded-[12px] p-8 text-center transition-colors cursor-pointer"
@@ -210,13 +185,9 @@ export default function OnboardingPage() {
 
           {/* Navigation buttons */}
           <div className="flex items-center justify-between mt-6 pt-5" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
-            {step > 0 ? (
-              <GhostBtn onClick={() => setStep(step - 1)}>← Back</GhostBtn>
-            ) : (
-              <span />
-            )}
+            <span className="text-[12px] font-medium" style={{ color: T.faint }}>Step {step + 1} of {STEPS.length}</span>
             {step < STEPS.length - 1 ? (
-              <GoldBtn onClick={handleContinue}>
+              <GoldBtn onClick={() => setStep(step + 1)} disabled={!canNext()}>
                 Continue →
               </GoldBtn>
             ) : (

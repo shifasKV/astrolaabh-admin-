@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Card, Chip, StatCard, Tabs, SearchFilter, Pagination, Select, BackLink, ConfirmDialog, LoadingState } from "@/components/ui";
+import { Card, Chip, StatCard, Tabs, Pagination, Select, BackLink, ToolbarSearch, Toast, ConfirmDialog } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_SALES_MEMBERS, MOCK_INCOMPLETE_ORDERS, MOCK_INCOMPLETE_CONSULTATIONS } from "@/lib/mock";
 import type { IncompleteOrderStatus, IncompleteConsultationStatus } from "@/lib/mock";
@@ -77,12 +77,6 @@ export default function SalesDetailPage() {
   const [conStatusFilter, setConStatusFilter] = useState("");
   const [toast, setToast] = useState("");
   const [confirmDeactivate, setConfirmDeactivate] = useState(false);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const t = setTimeout(() => setLoading(false), 700);
-    return () => clearTimeout(t);
-  }, []);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -141,7 +135,7 @@ export default function SalesDetailPage() {
     { value: "lost", label: "Lost" },
   ];
 
-  const handleToggleActive = () => {
+  const handleDeactivate = () => {
     setShowMenu(false);
     if (isActive) {
       setConfirmDeactivate(true);
@@ -154,14 +148,13 @@ export default function SalesDetailPage() {
 
   return (
     <>
-      <BackLink href="/sales" label="Sales" />
+      <div className="md:h-[calc(100dvh-78px)] md:flex md:flex-col md:min-h-0">
+      <div className="mb-4">
+        <BackLink href="/sales" label="Sales" />
+      </div>
 
-      {loading ? (
-        <Card className="mb-6"><LoadingState lines={6} /></Card>
-      ) : (
-      <>
       {/* Profile card */}
-      <Card className="mb-6">
+      <Card className="mb-4 !p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex items-start gap-4">
             <span
@@ -197,19 +190,24 @@ export default function SalesDetailPage() {
                 style={{ background: T.card, border: `1px solid ${T.border}` }}
               >
                 <button
-                  onClick={() => { router.push(`/sales/${id}/edit`); setShowMenu(false); }}
-                  className="w-full text-left px-3 py-2 text-[13px] hover:opacity-80 cursor-pointer"
+                  onClick={() => { router.push(`/sales/create?edit=${id}`); setShowMenu(false); }}
+                  className="w-full text-left px-3 py-2 text-[13px] flex items-center gap-2.5 transition-colors hover:bg-[rgba(119,123,98,0.08)] cursor-pointer"
                   style={{ color: T.text }}
                 >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
                   Edit details
                 </button>
                 <div style={{ borderTop: `1px solid ${T.borderSoft}`, margin: "2px 0" }} />
                 <button
-                  onClick={handleToggleActive}
-                  className="w-full text-left px-3 py-2 text-[13px] hover:opacity-80 cursor-pointer"
+                  onClick={handleDeactivate}
+                  className="w-full text-left px-3 py-2 text-[13px] flex items-center gap-2.5 transition-colors hover:bg-[rgba(119,123,98,0.08)] cursor-pointer"
                   style={{ color: isActive ? T.danger : T.good }}
                 >
-                  {isActive ? "Deactivate" : "Activate"}
+                  {isActive ? (
+                    <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/></svg>Deactivate</>
+                  ) : (
+                    <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M20 6 9 17l-5-5"/></svg>Activate</>
+                  )}
                 </button>
               </div>
             )}
@@ -218,7 +216,7 @@ export default function SalesDetailPage() {
       </Card>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
         <StatCard label="Total leads" value={stoneLeads.length + consultationLeads.length} />
         <StatCard label="Active" value={activeLeads} />
         <StatCard label="Converted" value={converted} />
@@ -226,152 +224,127 @@ export default function SalesDetailPage() {
       </div>
 
       {/* Tabs */}
-      <Tabs
-        tabs={LEAD_TABS.map((t) => ({
-          ...t,
-          label: `${t.label} (${t.key === "stone" ? stoneLeads.length : consultationLeads.length})`,
-        }))}
-        active={activeTab}
-        onChange={(k) => { setActiveTab(k); setStonePage(0); setConPage(0); }}
-      />
+      <div className="mb-4">
+        <Tabs
+          tabs={LEAD_TABS.map((t) => ({
+            ...t,
+            count: t.key === "stone" ? stoneLeads.length : consultationLeads.length,
+          }))}
+          active={activeTab}
+          onChange={(k) => { setActiveTab(k); setStonePage(0); setConPage(0); }}
+        />
+      </div>
 
       {/* Stone Leads Tab */}
       {activeTab === "stone" && (
-        <div className="mt-4">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="flex-1">
-              <SearchFilter search={stoneSearch} onSearchChange={(v) => { setStoneSearch(v); setStonePage(0); }} placeholder="Search customer, item…" />
-            </div>
-            <div className="w-[160px]">
-              <Select value={stoneStatusFilter} onChange={(v) => { setStoneStatusFilter(v); setStonePage(0); }} options={statusOptions} placeholder="Status" />
+        <>
+          <div className="flex flex-wrap items-center gap-2 mb-3">
+            <ToolbarSearch value={stoneSearch} onChange={(v) => { setStoneSearch(v); setStonePage(0); }} placeholder="Search customer, item…" />
+            <div className="ml-auto w-[160px]">
+              <Select value={stoneStatusFilter} onChange={(v) => { setStoneStatusFilter(v); setStonePage(0); }} options={statusOptions} compact placeholder="All statuses" />
             </div>
           </div>
 
-          {/* Table header */}
-          <div
-            className="hidden sm:grid grid-cols-[1fr_1fr_100px_120px_100px_100px] gap-3 px-3 py-2 text-[11px] tracking-[0.06em] uppercase"
-            style={{ color: T.faint }}
-          >
-            <span>Customer</span>
-            <span>Item</span>
-            <span>Date</span>
-            <span>Reason</span>
-            <span>Status</span>
-            <span className="text-right">Amount</span>
-          </div>
-
-          <div className="space-y-1">
-            {pagedStone.length === 0 && (
-              <div className="text-center py-10 text-[13px]" style={{ color: T.muted }}>No stone leads found.</div>
-            )}
-            {pagedStone.map((o) => (
-              <Link key={o.id} href={`/orders/incomplete/${o.id}`}>
-                <div
-                  className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_100px_120px_100px_100px] gap-3 items-center px-3 py-2.5 rounded-[8px] row-interactive cursor-pointer"
-                  style={{ borderBottom: `1px solid ${T.borderSoft}` }}
+          <Card className="!p-0 md:flex md:flex-col md:min-h-0">
+            <div
+              className="hidden sm:grid grid-cols-[1fr_1fr_110px_130px_110px_110px] gap-3 items-center px-4 h-10 text-[11px] tracking-[0.06em] uppercase font-medium rounded-t-[15px]"
+              style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.border}` }}
+            >
+              <span>Customer</span>
+              <span>Item</span>
+              <span>Date</span>
+              <span>Reason</span>
+              <span>Status</span>
+              <span className="text-right">Amount</span>
+            </div>
+            <div className="md:min-h-0 overflow-y-auto max-h-[560px] md:max-h-none flex-1">
+              {pagedStone.length === 0 && (
+                <div className="text-center py-10 text-[13px]" style={{ color: T.muted }}>No stone leads found.</div>
+              )}
+              {pagedStone.map((o, i, arr) => (
+                <Link
+                  key={o.id}
+                  href={`/orders/incomplete/${o.id}`}
+                  className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_110px_130px_110px_110px] gap-2 sm:gap-3 items-center px-4 py-2.5 transition-colors even:bg-[rgba(89,82,54,0.025)] hover:!bg-[rgba(119,123,98,0.08)] last:rounded-b-[15px]"
+                  style={{ borderBottom: i < arr.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
                 >
                   <div className="min-w-0">
-                    <div className="text-[13px] font-medium truncate" style={{ color: T.text }}>{o.customerName}</div>
-                    <div className="text-[11px] truncate" style={{ color: T.faint }}>{o.customerPhone}</div>
+                    <div className="text-[13px] font-semibold truncate" style={{ color: T.text }}>{o.customerName}</div>
+                    <div className="text-[11.5px] truncate tabular-nums" style={{ color: T.faint }}>{o.customerPhone}</div>
                   </div>
-                  <div className="min-w-0">
-                    <div className="text-[13px] truncate" style={{ color: T.text }}>{o.itemName}</div>
-                  </div>
-                  <div className="text-[12px]" style={{ color: T.muted }}>{fmtDate(o.failedAt)}</div>
+                  <div className="text-[12.5px] truncate" style={{ color: T.muted }}>{o.itemName}</div>
+                  <div className="text-[12px] tabular-nums" style={{ color: T.muted }}>{fmtDate(o.failedAt)}</div>
                   <div><Chip tone={ORDER_REASON_TONE[o.reason] || "muted"}>{ORDER_REASON_LABEL[o.reason] || o.reason}</Chip></div>
                   <div><Chip tone={STATUS_TONE[o.leadStatus] || "muted"}>{STATUS_LABEL[o.leadStatus] || o.leadStatus}</Chip></div>
-                  <div className="text-[13px] text-right font-medium" style={{ color: T.text }}>{inr(o.amount)}</div>
-                </div>
-              </Link>
-            ))}
-          </div>
-
-          {filteredStoneLeads.length > PAGE_SIZE && (
-            <div className="mt-4">
-              <Pagination page={stonePage} totalPages={stoneTotalPages} onPageChange={setStonePage} perPage={PAGE_SIZE} totalItems={filteredStoneLeads.length} />
+                  <div className="text-[13px] text-right font-semibold tabular-nums" style={{ color: T.text }}>{inr(o.amount)}</div>
+                </Link>
+              ))}
             </div>
-          )}
-        </div>
+          </Card>
+          <Pagination page={stonePage} totalPages={stoneTotalPages} onPageChange={setStonePage} perPage={PAGE_SIZE} totalItems={filteredStoneLeads.length} />
+        </>
       )}
 
       {/* Consultation Leads Tab */}
       {activeTab === "consultation" && (
-        <div className="mt-4">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="flex-1">
-              <SearchFilter search={conSearch} onSearchChange={(v) => { setConSearch(v); setConPage(0); }} placeholder="Search customer, astrologer…" />
-            </div>
-            <div className="w-[160px]">
-              <Select value={conStatusFilter} onChange={(v) => { setConStatusFilter(v); setConPage(0); }} options={statusOptions} placeholder="Status" />
+        <>
+          <div className="flex flex-wrap items-center gap-2 mb-3">
+            <ToolbarSearch value={conSearch} onChange={(v) => { setConSearch(v); setConPage(0); }} placeholder="Search customer, astrologer…" />
+            <div className="ml-auto w-[160px]">
+              <Select value={conStatusFilter} onChange={(v) => { setConStatusFilter(v); setConPage(0); }} options={statusOptions} compact placeholder="All statuses" />
             </div>
           </div>
 
-          <div
-            className="hidden sm:grid grid-cols-[1fr_1fr_100px_120px_100px] gap-3 px-3 py-2 text-[11px] tracking-[0.06em] uppercase"
-            style={{ color: T.faint }}
-          >
-            <span>Customer</span>
-            <span>Astrologer</span>
-            <span>Date</span>
-            <span>Reason</span>
-            <span>Status</span>
-          </div>
-
-          <div className="space-y-1">
-            {pagedCon.length === 0 && (
-              <div className="text-center py-10 text-[13px]" style={{ color: T.muted }}>No consultation leads found.</div>
-            )}
-            {pagedCon.map((c) => (
-              <Link key={c.id} href={`/consultations/incomplete/${c.id}`}>
-                <div
-                  className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_100px_120px_100px] gap-3 items-center px-3 py-2.5 rounded-[8px] row-interactive cursor-pointer"
-                  style={{ borderBottom: `1px solid ${T.borderSoft}` }}
+          <Card className="!p-0 md:flex md:flex-col md:min-h-0">
+            <div
+              className="hidden sm:grid grid-cols-[1fr_1fr_110px_130px_110px] gap-3 items-center px-4 h-10 text-[11px] tracking-[0.06em] uppercase font-medium rounded-t-[15px]"
+              style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.border}` }}
+            >
+              <span>Customer</span>
+              <span>Astrologer</span>
+              <span>Date</span>
+              <span>Reason</span>
+              <span>Status</span>
+            </div>
+            <div className="md:min-h-0 overflow-y-auto max-h-[560px] md:max-h-none flex-1">
+              {pagedCon.length === 0 && (
+                <div className="text-center py-10 text-[13px]" style={{ color: T.muted }}>No consultation leads found.</div>
+              )}
+              {pagedCon.map((c, i, arr) => (
+                <Link
+                  key={c.id}
+                  href={`/consultations/incomplete/${c.id}`}
+                  className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_110px_130px_110px] gap-2 sm:gap-3 items-center px-4 py-2.5 transition-colors even:bg-[rgba(89,82,54,0.025)] hover:!bg-[rgba(119,123,98,0.08)] last:rounded-b-[15px]"
+                  style={{ borderBottom: i < arr.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
                 >
                   <div className="min-w-0">
-                    <div className="text-[13px] font-medium truncate" style={{ color: T.text }}>{c.customerName}</div>
-                    <div className="text-[11px] truncate" style={{ color: T.faint }}>{c.customerPhone}</div>
+                    <div className="text-[13px] font-semibold truncate" style={{ color: T.text }}>{c.customerName}</div>
+                    <div className="text-[11.5px] truncate tabular-nums" style={{ color: T.faint }}>{c.customerPhone}</div>
                   </div>
-                  <div className="min-w-0">
-                    <div className="text-[13px] truncate" style={{ color: T.text }}>{c.expertName}</div>
-                  </div>
-                  <div className="text-[12px]" style={{ color: T.muted }}>{fmtDate(c.date)}</div>
+                  <div className="text-[12.5px] truncate" style={{ color: T.muted }}>{c.expertName}</div>
+                  <div className="text-[12px] tabular-nums" style={{ color: T.muted }}>{fmtDate(c.date)}</div>
                   <div><Chip tone={CON_REASON_TONE[c.reason] || "muted"}>{CON_REASON_LABEL[c.reason] || c.reason}</Chip></div>
                   <div><Chip tone={STATUS_TONE[c.leadStatus] || "muted"}>{STATUS_LABEL[c.leadStatus] || c.leadStatus}</Chip></div>
-                </div>
-              </Link>
-            ))}
-          </div>
-
-          {filteredConLeads.length > PAGE_SIZE && (
-            <div className="mt-4">
-              <Pagination page={conPage} totalPages={conTotalPages} onPageChange={setConPage} perPage={PAGE_SIZE} totalItems={filteredConLeads.length} />
+                </Link>
+              ))}
             </div>
-          )}
-        </div>
+          </Card>
+          <Pagination page={conPage} totalPages={conTotalPages} onPageChange={setConPage} perPage={PAGE_SIZE} totalItems={filteredConLeads.length} />
+        </>
       )}
 
-      </>
-      )}
+      {toast && <Toast message={toast} />}
 
       <ConfirmDialog
         open={confirmDeactivate}
         onClose={() => setConfirmDeactivate(false)}
         onConfirm={() => { setIsActive(false); setToast("Sales member deactivated"); setTimeout(() => setToast(""), 2500); }}
-        title="Deactivate member?"
-        description="This member will lose access to leads."
-        variant="danger"
+        title={`Deactivate ${member.name}?`}
+        message="They'll lose portal access until reactivated."
         confirmLabel="Deactivate"
+        tone="danger"
       />
-
-      {toast && (
-        <div
-          className="fixed top-6 right-6 z-[100] flex items-center gap-2 px-4 py-3 rounded-[10px] shadow-lg text-[13.5px] font-medium animate-in"
-          style={{ background: T.card, border: `1px solid ${T.border}`, color: T.good }}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6L9 17l-5-5"/></svg>
-          {toast}
-        </div>
-      )}
+      </div>
     </>
   );
 }

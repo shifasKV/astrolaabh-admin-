@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { PageHeader, Card, Chip, SearchFilter, Pagination, Select } from "@/components/ui";
+import { PageHeader, Card, Chip, SearchFilter, Pagination, Select, EmptyState } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { EXPERT_PROFILES, MOCK_STONE_RECOMMENDATIONS, MOCK_ORDERS, MOCK_PAYMENTS } from "@/lib/mock";
 import { inr } from "@/lib/types";
@@ -67,7 +67,6 @@ export default function ExpertRecommendationsPage() {
     <>
       <PageHeader
         title={`Recommendations`}
-        sub={`All stone recommendations by ${expert?.name ?? "this expert"} (${allRecs.length} total)`}
         back={{ label: expert?.name ?? "Profile", href: `/astro-gemologists/${id}` }}
       />
 
@@ -143,7 +142,7 @@ export default function ExpertRecommendationsPage() {
           <span className="text-right">Order info</span>
         </div>
         {paginated.length === 0 ? (
-          <p className="text-[13.5px] py-8 text-center" style={{ color: T.muted }}>No recommendations found.</p>
+          <EmptyState inline icon="search" title="No recommendations" description="No recommendations match your filters." />
         ) : (
           paginated.map((r) => {
             const href = r.orderId ? `/orders/${r.orderId}` : `/consultations/${r.consultationId}`;
@@ -155,7 +154,7 @@ export default function ExpertRecommendationsPage() {
               <Link
                 key={r.id}
                 href={href}
-                className="grid grid-cols-1 sm:grid-cols-[1fr_140px_140px_100px_120px_150px] gap-2 sm:gap-3 items-center px-3 py-3.5 transition-all duration-150 rounded-[8px] hover:bg-[rgba(160,125,56,0.07)]"
+                className="grid grid-cols-1 sm:grid-cols-[1fr_140px_140px_100px_120px_150px] gap-2 sm:gap-3 items-center px-3 py-3.5 transition-all duration-150 rounded-[8px] hover:bg-[rgba(119,123,98,0.07)]"
                 style={{ borderBottom: `1px solid ${T.borderSoft}` }}
               >
                 <div className="min-w-0">

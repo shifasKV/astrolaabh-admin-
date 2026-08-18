@@ -42,8 +42,8 @@ export function StatusPipeline({ stages, current }: StatusPipelineProps) {
           <span
             className="text-[11px] px-2.5 py-1 rounded-full whitespace-nowrap"
             style={{
-              background: i === current ? "rgba(160,125,56,0.15)" : "transparent",
-              border: `1px solid ${i <= current ? "rgba(160,125,56,0.45)" : T.borderSoft}`,
+              background: i === current ? "rgba(119,123,98,0.15)" : "transparent",
+              border: `1px solid ${i <= current ? "rgba(119,123,98,0.45)" : T.borderSoft}`,
               color: i <= current ? T.accent : T.faint,
               fontWeight: i === current ? 600 : 400,
             }}

@@ -8,7 +8,7 @@
   --beige: #e5d3b5;
   --warm-sand: #c7af90;
   --warm-bone: #f4ecdd;
-  --paper: #f1ebdc;
+  --paper: #f8f5ee;
   --ink: #2b2a22;
   --ink-soft: #4b4736;
   --hairline: rgba(89, 82, 54, 0.13);
@@ -22,7 +22,7 @@
   --shadow-sm: 0 1px 2px rgba(43, 42, 34, 0.05), 0 3px 10px -4px rgba(43, 42, 34, 0.12);
   --shadow-md: 0 2px 6px rgba(43, 42, 34, 0.06), 0 16px 36px -18px rgba(43, 42, 34, 0.26);
   --shadow-lg: 0 4px 12px rgba(43, 42, 34, 0.07), 0 40px 80px -36px rgba(43, 42, 34, 0.4);
-  --gold-glow: 0 0 0 1px rgba(195, 160, 88, 0.22), 0 22px 60px -26px rgba(176, 138, 62, 0.42);
+  --gold-glow: 0 0 0 1px rgba(119, 123, 98, 0.28), 0 22px 60px -26px rgba(101, 105, 79, 0.48);
 }
 
 @theme inline {
@@ -36,8 +36,8 @@
   --color-paper: var(--paper);
   --color-ink: var(--ink);
   --color-inksoft: var(--ink-soft);
-  --font-title: var(--font-manrope);
-  --font-body: var(--font-inter);
+  --font-title: var(--font-geist);
+  --font-body: var(--font-geist);
 }
 
 html {
@@ -48,7 +48,7 @@ html {
 html, body {
   background: var(--paper);
   color: var(--ink);
-  font-family: var(--font-inter), system-ui, sans-serif;
+  font-family: var(--font-geist), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
@@ -64,19 +64,32 @@ html, body {
   html { scroll-behavior: auto; }
 }
 
-.font-title { font-family: var(--font-manrope), system-ui, sans-serif; letter-spacing: -0.02em; }
-.font-body { font-family: var(--font-inter), system-ui, sans-serif; }
+.font-title { font-family: var(--font-geist), system-ui, sans-serif; letter-spacing: -0.02em; }
+.font-body { font-family: var(--font-geist), system-ui, sans-serif; }
 .font-devanagari { font-family: var(--font-devanagari), serif; }
 
 /* Display headings breathe — tabular numerals kept crisp, orphans smoothed */
 h1, h2, h3 { text-wrap: balance; }
 .tabular-nums, [class*="tabular"] { font-variant-numeric: tabular-nums; }
 
-/* Gold focus ring — visible for keyboard users, in the house's own metal */
+/* Sage focus ring — visible for keyboard users, in the house's primary tone */
 :focus-visible {
-  outline: 2px solid rgba(195, 160, 88, 0.5);
+  outline: 2px solid rgba(119, 123, 98, 0.6);
   outline-offset: 2px;
   border-radius: 6px;
+}
+
+/* Text fields carry their own soft focus treatment (inner sage shadow / border),
+   so skip the offset outline box — it reads as a stray stroke around the field. */
+input:focus,
+input:focus-visible,
+textarea:focus,
+textarea:focus-visible,
+select:focus,
+select:focus-visible {
+  outline: none;
+  outline-offset: 0;
+  border-radius: inherit;
 }
 
 /* Portal modal animation */
@@ -98,15 +111,15 @@ a, button, [role="button"] { transition: transform 0.18s var(--ease-spring); }
 button:active:not(:disabled), a:active, [role="button"]:active { transform: translateY(0.5px) scale(0.992); }
 
 /* Warm scrollbar — dark-aware */
-* { scrollbar-width: thin; scrollbar-color: rgba(176, 138, 62, 0.3) transparent; }
+* { scrollbar-width: thin; scrollbar-color: rgba(119, 123, 98, 0.35) transparent; }
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background: rgba(195, 160, 88, 0.25);
+  background: rgba(119, 123, 98, 0.3);
   border: 2px solid transparent;
   border-radius: 999px;
 }
-::-webkit-scrollbar-thumb:hover { background: rgba(195, 160, 88, 0.4); }
+::-webkit-scrollbar-thumb:hover { background: rgba(119, 123, 98, 0.45); }
 
 /* Premium surface — warm ground, inner refraction hairline, tinted lift on hover.
    Opt-in: add class="card-luxe" to any panel that should feel like an object. */
@@ -120,17 +133,17 @@ button:active:not(:disabled), a:active, [role="button"]:active { transform: tran
 }
 .card-luxe:hover {
   transform: translateY(-3px);
-  border-color: rgba(176, 138, 62, 0.35);
+  border-color: rgba(119, 123, 98, 0.45);
   box-shadow: var(--shadow-md), inset 0 1px 0 rgba(255, 253, 247, 0.7);
 }
 
 .eyebrow {
-  font-family: var(--font-inter);
+  font-family: var(--font-geist);
   font-weight: 500;
   letter-spacing: 0.24em;
   text-transform: uppercase;
   font-size: 0.66rem;
-  color: rgba(176, 138, 62, 0.82);
+  color: rgba(101, 105, 79, 0.85);
 }
 
 .hairline {
@@ -176,6 +189,22 @@ button:active:not(:disabled), a:active, [role="button"]:active { transform: tran
   100% { background-position: 200% 0; }
 }
 
+/* Skeleton loading block */
+.shimmer {
+  background: linear-gradient(100deg, rgba(89,82,54,0.07) 30%, rgba(89,82,54,0.13) 50%, rgba(89,82,54,0.07) 70%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .shimmer { animation: none; }
+}
+
+/* Toast entrance */
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
 .gold-text {
   background: linear-gradient(100deg, #b08a3e 0%, #e6cf8e 40%, #b08a3e 60%, #c3a058 100%);
   background-size: 200% 100%;
@@ -185,7 +214,7 @@ button:active:not(:disabled), a:active, [role="button"]:active { transform: tran
   animation: shimmer 8s linear infinite;
 }
 
-::selection { background: rgba(195, 160, 88, 0.35); color: var(--ink); }
+::selection { background: rgba(119, 123, 98, 0.35); color: var(--ink); }
 
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { scrollbar-width: none; }
@@ -195,8 +224,8 @@ button:active:not(:disabled), a:active, [role="button"]:active { transform: tran
   transition: border-color 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
 }
 .card-interactive:hover {
-  border-color: rgba(195, 160, 88, 0.25) !important;
-  background-color: rgba(195, 160, 88, 0.06) !important;
+  border-color: rgba(119, 123, 98, 0.35) !important;
+  background-color: rgba(119, 123, 98, 0.07) !important;
 }
 
 /* Interactive list row — subtle background on hover */
@@ -204,7 +233,7 @@ button:active:not(:disabled), a:active, [role="button"]:active { transform: tran
   transition: background-color 0.2s ease, transform 0.15s ease;
 }
 .row-interactive:hover {
-  background-color: rgba(195, 160, 88, 0.03);
+  background-color: rgba(119, 123, 98, 0.05);
 }
 
 /* Scroll-reveal — elements start soft, rise into place when observed */
@@ -293,3 +322,13 @@ button:active:not(:disabled), a:active, [role="button"]:active { transform: tran
 /* step-in — configurator steps surface one at a time as choices are made */
 @keyframes step-in { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
 .step-in { animation: step-in 0.65s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* Autofill — keep the house surface, not the browser's blue */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px #fbf8f1 inset;
+  -webkit-text-fill-color: #292617;
+  caret-color: #292617;
+  transition: background-color 9999s ease-in-out 0s;
+}

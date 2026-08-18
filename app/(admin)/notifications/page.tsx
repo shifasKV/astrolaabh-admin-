@@ -1,28 +1,29 @@
 "use client";
-import { PageHeader, Card, NotificationItem, Tabs, Pagination, TableSkeleton } from "@/components/ui";
-import { useState, useEffect } from "react";
+import { PageHeader, Card, NotificationItem, Tabs, Pagination, EmptyState, TableSkeleton } from "@/components/ui";
+import { useState } from "react";
 import { T } from "@/lib/theme";
 import { MOCK_NOTIFICATIONS } from "@/lib/mock";
-
-const PER_PAGE = 8;
+import { useSimulatedLoad } from "@/lib/useSimulatedLoad";
 
 export default function NotificationsPage() {
+  const loading = useSimulatedLoad();
   const [tab, setTab] = useState("all");
-  const [page, setPage] = useState(0);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => { const t = setTimeout(() => setLoading(false), 700); return () => clearTimeout(t); }, []);
 
   const filtered = MOCK_NOTIFICATIONS.filter((n) => {
     if (tab === "unread") return !n.read;
     return true;
   });
 
-  const paged = filtered.slice(page * PER_PAGE, (page + 1) * PER_PAGE);
+  const PER_PAGE = 10;
+  const [page, setPage] = useState(1);
+  const totalPages = Math.ceil(filtered.length / PER_PAGE);
+  const currentPage = page > totalPages && totalPages > 0 ? totalPages : page;
+  const paginated = filtered.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE);
 
   return (
     <>
-      <PageHeader title="Notifications" sub="In-app alerts for assignments, exceptions, and important updates" />
+      <div className="md:h-[calc(100dvh-78px)] md:flex md:flex-col md:min-h-0">
+      <PageHeader title="Notifications" />
 
       <div className="mb-4">
         <Tabs
@@ -31,34 +32,32 @@ export default function NotificationsPage() {
             { key: "unread", label: "Unread", count: MOCK_NOTIFICATIONS.filter((n) => !n.read).length },
           ]}
           active={tab}
-          onChange={(k) => { setTab(k); setPage(0); }}
+          onChange={setTab}
         />
       </div>
 
-      {loading ? (
-        <Card className="!p-0 overflow-hidden"><TableSkeleton rows={5} cols={3} /></Card>
-      ) : (
-        <Card className="!p-0 overflow-hidden">
-          {filtered.length === 0 ? (
-            <p className="text-[13.5px] text-center py-8" style={{ color: T.muted }}>No notifications.</p>
-          ) : (
-            paged.map((n) => (
-              <NotificationItem
-                key={n.id}
-                title={n.title}
-                description={n.description}
-                time={n.time}
-                read={n.read}
-              />
-            ))
-          )}
-          {filtered.length > PER_PAGE && (
-            <div className="px-4 pb-4">
-              <Pagination page={page} totalPages={Math.ceil(filtered.length / PER_PAGE)} totalItems={filtered.length} perPage={PER_PAGE} onPageChange={setPage} />
-            </div>
-          )}
-        </Card>
-      )}
+      <Card className="!p-0 md:flex md:flex-col md:min-h-0 overflow-hidden">
+        <div className="md:min-h-0 overflow-y-auto max-h-[560px] md:max-h-none">
+        {loading ? (
+          <TableSkeleton cols={2} rows={8} />
+        ) : filtered.length === 0 ? (
+          <EmptyState inline icon="check" title="You're all caught up" description="New notifications will show up here." />
+        ) : (
+          paginated.map((n) => (
+            <NotificationItem
+              key={n.id}
+              title={n.title}
+              description={n.description}
+              time={n.time}
+              read={n.read}
+              href={n.linkTo}
+            />
+          ))
+        )}
+        </div>
+      </Card>
+      <Pagination page={currentPage - 1} totalPages={totalPages} totalItems={filtered.length} perPage={PER_PAGE} onPageChange={(p) => setPage(p + 1)} />
+      </div>
     </>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
-import { use, useState, useEffect } from "react";
+import { use, useState } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, GoldBtn, GhostBtn, Input, Textarea, Modal, DateInput, TimeInput, Select, BackLink, LoadingState, ConfirmDialog } from "@/components/ui";
+import { PageHeader, Card, Chip, GoldBtn, GhostBtn, Input, Textarea, Modal, DateInput, TimeInput, Select, BackLink, Toast, ConfirmDialog } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_ENERGISATION, MOCK_ORDERS, MOCK_CUSTOMERS } from "@/lib/mock";
 
@@ -32,12 +32,6 @@ export default function EnergisationDetailPage({ params }: { params: Promise<{ i
   const [editLiveLink, setEditLiveLink] = useState("");
   const [editProofUrl, setEditProofUrl] = useState("");
   const [editNotes, setEditNotes] = useState("");
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const t = setTimeout(() => setLoading(false), 700);
-    return () => clearTimeout(t);
-  }, []);
 
   if (!task) {
     return (
@@ -88,13 +82,12 @@ export default function EnergisationDetailPage({ params }: { params: Promise<{ i
       <PageHeader
         back={{ label: "Energisation", href: "/energisation" }}
         title={task.customerName}
-        sub={`${task.stoneDescription} · ${task.orderNumber}`}
         action={
           localStatus === "completed" ? (
             <button
               onClick={() => { setLocalStatus("scheduled"); setToast("Marked as not completed"); setTimeout(() => setToast(""), 3000); }}
               className="text-[12px] font-medium px-3 py-1.5 rounded-[8px] cursor-pointer transition-all hover:brightness-110"
-              style={{ background: "rgba(160,125,56,0.12)", color: T.accent, border: `1px solid ${T.accentBorder}` }}
+              style={{ background: "rgba(119,123,98,0.12)", color: T.accent, border: `1px solid ${T.accentBorder}` }}
             >
               Undo completed
             </button>
@@ -106,10 +99,6 @@ export default function EnergisationDetailPage({ params }: { params: Promise<{ i
         }
       />
 
-      {loading ? (
-        <Card className="mb-4"><LoadingState lines={6} /></Card>
-      ) : (
-      <>
       {/* Energisation details card */}
       <Card className="mb-5">
         <div className="rounded-[9px] p-4 mb-4" style={{ background: T.bg, border: `1px solid ${T.borderSoft}` }}>
@@ -166,7 +155,7 @@ export default function EnergisationDetailPage({ params }: { params: Promise<{ i
         <Card className="mb-5">
           <div className="flex items-center justify-between mb-3">
             <div className="text-[11px] tracking-[0.08em] uppercase" style={{ color: T.faint }}>Session</div>
-            <span className="text-[11px] px-2 py-0.5 rounded" style={{ background: "rgba(160,125,56,0.15)", color: T.accent }}>Editing</span>
+            <span className="text-[11px] px-2 py-0.5 rounded" style={{ background: "rgba(119,123,98,0.15)", color: T.accent }}>Editing</span>
           </div>
           <div className="space-y-3">
             <Input value={editLiveLink} onChange={setEditLiveLink} label="Session link" type="url" placeholder="https://live.astrolaabh.house/…" />
@@ -243,7 +232,7 @@ export default function EnergisationDetailPage({ params }: { params: Promise<{ i
               className="card-interactive rounded-[12px] p-5 h-full cursor-pointer"
               style={{ background: T.card, border: `1px solid ${T.border}` }}
             >
-              <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.faint }}>Order</div>
+              <div className="text-[15px] font-semibold tracking-[-0.01em] mb-3" style={{ color: T.text }}>Order</div>
               <div className="space-y-2.5 text-[13px]">
                 <div className="flex justify-between gap-2">
                   <span style={{ color: T.muted }}>Order ID</span>
@@ -272,7 +261,7 @@ export default function EnergisationDetailPage({ params }: { params: Promise<{ i
               className="card-interactive rounded-[12px] p-5 h-full cursor-pointer"
               style={{ background: T.card, border: `1px solid ${T.border}` }}
             >
-              <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.faint }}>Customer</div>
+              <div className="text-[15px] font-semibold tracking-[-0.01em] mb-3" style={{ color: T.text }}>Customer</div>
               <div className="space-y-2.5 text-[13px]">
                 <div className="flex justify-between gap-2">
                   <span style={{ color: T.muted }}>Name</span>
@@ -295,8 +284,6 @@ export default function EnergisationDetailPage({ params }: { params: Promise<{ i
           </Link>
         )}
       </div>
-      </>
-      )}
 
       {/* Schedule / Update modal */}
       <Modal open={action === "schedule"} onClose={() => setAction(null)} title={localStatus === "scheduled" ? "Reschedule energisation" : "Schedule energisation"}>
@@ -326,25 +313,18 @@ export default function EnergisationDetailPage({ params }: { params: Promise<{ i
         </div>
       </Modal>
 
+      {/* Mark energisation as completed */}
       <ConfirmDialog
         open={confirmComplete}
         onClose={() => setConfirmComplete(false)}
         onConfirm={() => { setLocalStatus("completed"); setToast("Energisation marked as completed"); setTimeout(() => setToast(""), 3000); }}
         title="Mark energisation as completed?"
-        description="This will finalize the ritual and notify the customer."
-        variant="default"
+        message="This marks the energisation ritual as completed for this task."
         confirmLabel="Mark as completed"
+        tone="default"
       />
 
-      {toast && (
-        <div
-          className="fixed top-6 right-6 z-[100] flex items-center gap-2 px-4 py-3 rounded-[10px] shadow-lg text-[13.5px] font-medium animate-in"
-          style={{ background: T.card, border: `1px solid ${T.border}`, color: T.good }}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6L9 17l-5-5"/></svg>
-          {toast}
-        </div>
-      )}
+      {toast && <Toast message={toast} />}
 
     </>
   );

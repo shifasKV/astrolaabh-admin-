@@ -1,9 +1,10 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { PageHeader, Card, Chip, StatCard, GoldBtn, SearchFilter, CardSkeleton } from "@/components/ui";
+import { PageHeader, Card, Chip, StatCard, GoldBtn, ToolbarSearch, EmptyState, TableSkeleton } from "@/components/ui";
 import { T } from "@/lib/theme";
+import { useSimulatedLoad } from "@/lib/useSimulatedLoad";
 import { MOCK_SALES_MEMBERS, MOCK_INCOMPLETE_ORDERS, MOCK_INCOMPLETE_CONSULTATIONS } from "@/lib/mock";
 
 function getMemberStats(memberId: string) {
@@ -18,9 +19,7 @@ function getMemberStats(memberId: string) {
 export default function SalesPage() {
   const router = useRouter();
   const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => { const t = setTimeout(() => setLoading(false), 700); return () => clearTimeout(t); }, []);
+  const loading = useSimulatedLoad();
 
   const totalActiveLeads = [...MOCK_INCOMPLETE_ORDERS, ...MOCK_INCOMPLETE_CONSULTATIONS].filter(
     (l) => l.assignedTo && (l.leadStatus === "new" || l.leadStatus === "contacted" || l.leadStatus === "follow_up"),
@@ -30,84 +29,94 @@ export default function SalesPage() {
   ).length;
   const unassigned = [...MOCK_INCOMPLETE_ORDERS, ...MOCK_INCOMPLETE_CONSULTATIONS].filter((l) => !l.assignedTo).length;
 
+  const filtered = MOCK_SALES_MEMBERS.filter((m) => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return m.name.toLowerCase().includes(q) || m.role.toLowerCase().includes(q) || m.email.toLowerCase().includes(q);
+  });
+
   return (
     <>
+      <div className="md:h-[calc(100dvh-78px)] md:flex md:flex-col md:min-h-0">
       <PageHeader
         title="Sales"
-        sub="Manage sales team members and track their leads"
         action={<GoldBtn onClick={() => router.push("/sales/create")}>+ New Sales Member</GoldBtn>}
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-        <StatCard label="Active members" value={MOCK_SALES_MEMBERS.filter((m) => m.status === "active").length} />
+        <StatCard label="Active members" value={MOCK_SALES_MEMBERS.filter((m) => m.status === "active").length} featured />
         <StatCard label="Active leads" value={totalActiveLeads} />
         <StatCard label="Converted" value={totalConverted} />
         <StatCard label="Unassigned leads" value={unassigned} />
       </div>
 
-      <div className="mb-4">
-        <SearchFilter search={search} onSearchChange={setSearch} placeholder="Search name, role…" />
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        <ToolbarSearch value={search} onChange={setSearch} placeholder="Search name, role…" />
       </div>
 
-      {loading ? (
-        <CardSkeleton count={3} />
-      ) : (
-        <div className="grid gap-4">
-          {MOCK_SALES_MEMBERS.filter((m) => {
-            if (!search) return true;
-            const q = search.toLowerCase();
-            return m.name.toLowerCase().includes(q) || m.role.toLowerCase().includes(q) || m.email.toLowerCase().includes(q);
-          }).map((member) => {
-            const stats = getMemberStats(member.id);
-            return (
-              <Link key={member.id} href={`/sales/${member.id}`}>
-                <Card className="card-interactive cursor-pointer">
-                  <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div className="flex items-start gap-3.5">
-                      <span
-                        className="w-11 h-11 rounded-full flex items-center justify-center text-[14px] font-semibold shrink-0"
-                        style={{ background: `${T.accent}18`, border: `1.5px solid ${T.accent}40`, color: T.accent }}
-                      >
-                        {member.name[0]}
-                      </span>
-                      <div>
-                        <div className="text-[14px] font-semibold" style={{ color: T.text }}>{member.name}</div>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-[12px]" style={{ color: T.faint }}>{member.email}</span>
-                          <span className="text-[12px]" style={{ color: T.faint }}>·</span>
-                          <span className="text-[12px]" style={{ color: T.faint }}>{member.phone}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <Chip tone={member.status === "active" ? "good" : "muted"}>{member.status}</Chip>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 pt-4" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
-                    <div>
-                      <div className="text-[11px] uppercase tracking-wider" style={{ color: T.faint }}>Total leads</div>
-                      <div className="text-[15px] font-semibold mt-0.5" style={{ color: T.text }}>{stats.totalLeads}</div>
-                    </div>
-                    <div>
-                      <div className="text-[11px] uppercase tracking-wider" style={{ color: T.faint }}>Active</div>
-                      <div className="text-[15px] font-semibold mt-0.5" style={{ color: stats.activeLeads > 0 ? T.accent : T.text }}>{stats.activeLeads}</div>
-                    </div>
-                    <div>
-                      <div className="text-[11px] uppercase tracking-wider" style={{ color: T.faint }}>Stone leads</div>
-                      <div className="text-[15px] font-semibold mt-0.5" style={{ color: T.text }}>{stats.stoneLeads}</div>
-                    </div>
-                    <div>
-                      <div className="text-[11px] uppercase tracking-wider" style={{ color: T.faint }}>Consultation leads</div>
-                      <div className="text-[15px] font-semibold mt-0.5" style={{ color: T.text }}>{stats.consultationLeads}</div>
-                    </div>
-                  </div>
-                </Card>
-              </Link>
-            );
-          })}
+      <Card className="!p-0 md:flex md:flex-col md:min-h-0">
+        {loading ? (
+          <TableSkeleton cols={7} rows={8} />
+        ) : (
+        <>
+        <div
+          className="hidden md:grid grid-cols-[minmax(220px,1.3fr)_1fr_100px_90px_110px_140px_110px] gap-x-4 items-center px-4 h-10 text-[11px] tracking-[0.06em] uppercase font-medium rounded-t-[15px]"
+          style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.border}` }}
+        >
+          <span>Member</span>
+          <span>Contact</span>
+          <span className="text-right">Total leads</span>
+          <span className="text-right">Active</span>
+          <span className="text-right">Stone leads</span>
+          <span className="text-right">Consult leads</span>
+          <span>Status</span>
         </div>
-      )}
+        <div className="md:min-h-0 overflow-y-auto max-h-[560px] md:max-h-none">
+          {filtered.length === 0 ? (
+            <EmptyState inline icon="search" title="No sales members" description="No members match your search." />
+          ) : (
+            filtered.map((member, idx) => {
+              const stats = getMemberStats(member.id);
+              return (
+                <Link
+                  key={member.id}
+                  href={`/sales/${member.id}`}
+                  className="group grid grid-cols-1 md:grid-cols-[minmax(220px,1.3fr)_1fr_100px_90px_110px_140px_110px] gap-2 md:gap-x-4 items-center px-4 py-2.5 transition-colors duration-150 last:rounded-b-[15px] even:bg-[rgba(89,82,54,0.025)] hover:!bg-[rgba(119,123,98,0.08)]"
+                  style={{ borderBottom: idx < filtered.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span
+                      className="w-9 h-9 rounded-[11px] flex items-center justify-center text-[12px] font-semibold shrink-0"
+                      style={{ background: T.accentFaint, border: `1px solid ${T.borderSoft}`, color: T.accent }}
+                    >
+                      {member.name.split(" ").map((w) => w[0]).slice(0, 2).join("")}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="text-[13px] font-semibold truncate" style={{ color: T.text }}>{member.name}</div>
+                      <div className="text-[12px] truncate mt-px" style={{ color: T.muted }}>{member.role}</div>
+                    </div>
+                  </div>
+                  <span className="text-[12px] truncate md:pl-0 pl-12 tabular-nums" style={{ color: T.muted }}>
+                    {member.email} <span style={{ color: T.faint }}>· {member.phone}</span>
+                  </span>
+                  <span className="text-[12.5px] tabular-nums md:text-right md:pl-0 pl-12" style={{ color: T.text }}>{stats.totalLeads}</span>
+                  <span className="text-[12.5px] font-semibold tabular-nums md:text-right md:pl-0 pl-12" style={{ color: stats.activeLeads > 0 ? T.accent : T.faint }}>
+                    {stats.activeLeads}
+                  </span>
+                  <span className="text-[12.5px] tabular-nums md:text-right md:pl-0 pl-12" style={{ color: T.text }}>{stats.stoneLeads}</span>
+                  <span className="text-[12.5px] tabular-nums md:text-right md:pl-0 pl-12" style={{ color: T.text }}>{stats.consultationLeads}</span>
+                  <div className="md:pl-0 pl-12">
+                    <Chip tone={member.status === "active" ? "good" : "muted"}>{member.status}</Chip>
+                  </div>
+                </Link>
+              );
+            })
+          )}
+        </div>
+        </>
+        )}
+      </Card>
+      </div>
     </>
   );
 }

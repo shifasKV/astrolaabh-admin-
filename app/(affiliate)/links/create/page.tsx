@@ -178,7 +178,7 @@ export default function CreateLinkPage() {
 
   return (
     <>
-      <PageHeader title="Create Affiliate Link" sub="Generate a trackable referral link" back={{ label: "Links", href: "/links" }} />
+      <PageHeader title="Create Affiliate Link" back={{ label: "Links", href: "/links" }} />
 
       {/* Type toggle + Stepper row */}
       <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
@@ -342,7 +342,7 @@ export default function CreateLinkPage() {
           {stoneStep === 3 && (
             <div className="max-w-[600px] space-y-4">
               <Card>
-                <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.faint }}>Your selection</div>
+                <div className="text-[15px] font-semibold tracking-[-0.01em] mb-3" style={{ color: T.text }}>Your selection</div>
                 {selectedStone && (
                   <div className="flex items-center gap-3 mb-3">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -376,7 +376,7 @@ export default function CreateLinkPage() {
               </Card>
 
               <Card>
-                <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.faint }}>Campaign name (optional)</div>
+                <div className="text-[15px] font-semibold tracking-[-0.01em] mb-3" style={{ color: T.text }}>Campaign name (optional)</div>
                 <input
                   value={campaign}
                   onChange={(e) => setCampaign(e.target.value)}
@@ -439,7 +439,7 @@ export default function CreateLinkPage() {
           {selectedExpert && (
             <div className="max-w-[700px] mt-5 space-y-4">
               <Card>
-                <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.faint }}>Campaign name (optional)</div>
+                <div className="text-[15px] font-semibold tracking-[-0.01em] mb-3" style={{ color: T.text }}>Campaign name (optional)</div>
                 <input
                   value={campaign}
                   onChange={(e) => setCampaign(e.target.value)}

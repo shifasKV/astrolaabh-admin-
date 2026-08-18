@@ -1,7 +1,7 @@
 "use client";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, SearchFilter, Pagination, Select, TableSkeleton } from "@/components/ui";
+import { PageHeader, Card, Chip, SearchFilter, Pagination, Select } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { useAuth } from "@/lib/store/auth";
 import { MOCK_INCOMPLETE_CONSULTATIONS, MOCK_SALES_MEMBERS } from "@/lib/mock";
@@ -49,12 +49,6 @@ export default function ConsultationLeadsPage() {
   const [assigneeFilter, setAssigneeFilter] = useState("");
   const [sort, setSort] = useState("newest");
   const [page, setPage] = useState(0);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const t = setTimeout(() => setLoading(false), 700);
-    return () => clearTimeout(t);
-  }, []);
 
   const assigneeOptions = useMemo(() => [
     { value: "", label: "All assignees" },
@@ -94,7 +88,8 @@ export default function ConsultationLeadsPage() {
 
   return (
     <>
-      <PageHeader title="Consultation Leads" sub={isAdmin ? "All incomplete consultation bookings across the team" : "Your assigned consultation leads"} />
+      <div className="md:h-[calc(100dvh-78px)] md:flex md:flex-col md:min-h-0">
+      <PageHeader title="Consultation Leads" />
 
       <div className="flex flex-wrap items-center gap-3 mb-4">
         <div className="flex-1 min-w-[200px]">
@@ -106,10 +101,7 @@ export default function ConsultationLeadsPage() {
         <div className="w-[130px]"><Select value={sort} onChange={setSort} options={SORT_OPTIONS} placeholder="Sort" /></div>
       </div>
 
-      {loading ? (
-        <Card><TableSkeleton rows={5} cols={5} /></Card>
-      ) : (
-      <Card>
+      <Card className="!p-0 md:min-h-0 md:overflow-y-auto">
         <div className={`hidden sm:grid ${isAdmin ? "grid-cols-[1fr_1fr_90px_120px_100px_100px]" : "grid-cols-[1fr_1fr_90px_120px_100px]"} gap-3 px-3 py-2 text-[11px] tracking-[0.06em] uppercase`} style={{ color: T.faint, borderBottom: `1px solid ${T.borderSoft}` }}>
           <span>Customer</span>
           <span>Astrologer</span>
@@ -122,7 +114,7 @@ export default function ConsultationLeadsPage() {
         {paged.length === 0 && <div className="text-center py-10 text-[13px]" style={{ color: T.muted }}>No consultation leads found.</div>}
         {paged.map((c) => (
           <Link key={c.id} href={`/consultation-leads/${c.id}`}
-            className={`grid grid-cols-1 ${isAdmin ? "sm:grid-cols-[1fr_1fr_90px_120px_100px_100px]" : "sm:grid-cols-[1fr_1fr_90px_120px_100px]"} gap-3 items-center px-3 py-3 transition-all duration-150 rounded-[8px] hover:bg-[rgba(160,125,56,0.07)]`}
+            className={`grid grid-cols-1 ${isAdmin ? "sm:grid-cols-[1fr_1fr_90px_120px_100px_100px]" : "sm:grid-cols-[1fr_1fr_90px_120px_100px]"} gap-3 items-center px-3 py-3 transition-all duration-150 rounded-[8px] hover:bg-[rgba(119,123,98,0.07)]`}
             style={{ borderBottom: `1px solid ${T.borderSoft}` }}
           >
             <div className="min-w-0">
@@ -142,7 +134,7 @@ export default function ConsultationLeadsPage() {
 
         <Pagination page={page} totalPages={totalPages} onPageChange={setPage} perPage={PAGE_SIZE} totalItems={filtered.length} />
       </Card>
-      )}
+      </div>
     </>
   );
 }

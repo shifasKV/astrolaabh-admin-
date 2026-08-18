@@ -1,7 +1,7 @@
 "use client";
 import { use, useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, GoldBtn, GhostBtn, Textarea, Input, Modal, SearchFilter, StepIndicator, BackLink, ConfirmDialog, LoadingState } from "@/components/ui";
+import { PageHeader, Card, Chip, GoldBtn, GhostBtn, Textarea, Input, Modal, SearchFilter, StepIndicator, BackLink } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_CONSULTATIONS, MOCK_CUSTOMERS, MOCK_STONE_RECOMMENDATIONS, MOCK_REMEDY_RECOMMENDATIONS } from "@/lib/mock";
 import { STONES, DESIGNS, inr } from "@/lib/catalog";
@@ -98,14 +98,6 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
   const actionMenuRef = useRef<HTMLDivElement>(null);
   const [localStatus, setLocalStatus] = useState(consultation?.status ?? "scheduled");
   const [localNoShowBy, setLocalNoShowBy] = useState("");
-  const [confirmCustomerNoShow, setConfirmCustomerNoShow] = useState(false);
-  const [confirmExpertNoShow, setConfirmExpertNoShow] = useState(false);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const t = setTimeout(() => setLoading(false), 700);
-    return () => clearTimeout(t);
-  }, []);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -223,10 +215,6 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
         <BackLink label="Appointments" href="/appointments" />
       </div>
 
-      {loading ? (
-        <Card className="mb-4"><LoadingState lines={8} /></Card>
-      ) : (
-      <>
       {/* Main consultation card — matching admin detail style */}
       <Card className="mb-5">
         <div className="mb-4">
@@ -258,7 +246,7 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
                     {isUpcoming && (
                       <button
                         onClick={() => { setShowActionMenu(false); setShowReschedule(true); }}
-                        className="w-full text-left px-3.5 py-2.5 text-[13px] transition-colors cursor-pointer hover:bg-[rgba(160,125,56,0.08)]"
+                        className="w-full text-left px-3.5 py-2.5 text-[13px] transition-colors cursor-pointer hover:bg-[rgba(119,123,98,0.08)]"
                         style={{ color: T.text }}
                       >
                         Request reschedule
@@ -267,15 +255,15 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
                     {isRecommendationDue && (
                       <>
                         <button
-                          onClick={() => { setShowActionMenu(false); setConfirmCustomerNoShow(true); }}
-                          className="w-full text-left px-3.5 py-2.5 text-[13px] transition-colors cursor-pointer hover:bg-[rgba(160,125,56,0.08)]"
+                          onClick={() => { setShowActionMenu(false); setLocalStatus("no_show"); setLocalNoShowBy("customer"); showToast("Marked as customer no show"); }}
+                          className="w-full text-left px-3.5 py-2.5 text-[13px] transition-colors cursor-pointer hover:bg-[rgba(119,123,98,0.08)]"
                           style={{ color: T.text }}
                         >
                           Mark as customer no show
                         </button>
                         <button
-                          onClick={() => { setShowActionMenu(false); setConfirmExpertNoShow(true); }}
-                          className="w-full text-left px-3.5 py-2.5 text-[13px] transition-colors cursor-pointer hover:bg-[rgba(160,125,56,0.08)]"
+                          onClick={() => { setShowActionMenu(false); setLocalStatus("no_show"); setLocalNoShowBy("expert"); showToast("Marked as astrologer no show"); }}
+                          className="w-full text-left px-3.5 py-2.5 text-[13px] transition-colors cursor-pointer hover:bg-[rgba(119,123,98,0.08)]"
                           style={{ color: T.text }}
                         >
                           Mark as astrologer no show
@@ -285,7 +273,7 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
                     {isNoShow && (
                       <button
                         onClick={() => { setShowActionMenu(false); setShowReschedule(true); showToast("Reschedule request sent"); }}
-                        className="w-full text-left px-3.5 py-2.5 text-[13px] transition-colors cursor-pointer hover:bg-[rgba(160,125,56,0.08)]"
+                        className="w-full text-left px-3.5 py-2.5 text-[13px] transition-colors cursor-pointer hover:bg-[rgba(119,123,98,0.08)]"
                         style={{ color: T.text }}
                       >
                         Request reschedule
@@ -318,7 +306,7 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
       {/* Customer context */}
       <div className="grid md:grid-cols-2 gap-4 mb-4">
         <Card>
-          <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.faint }}>Customer context</div>
+          <div className="text-[15px] font-semibold tracking-[-0.01em] mb-3" style={{ color: T.text }}>Customer context</div>
           {customer ? (
             <div className="space-y-2 text-[13px]">
               {[
@@ -350,7 +338,7 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
         </Card>
 
         <Card>
-          <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.faint }}>Problem & intake</div>
+          <div className="text-[15px] font-semibold tracking-[-0.01em] mb-3" style={{ color: T.text }}>Problem & intake</div>
           <p className="text-[13.5px] leading-relaxed" style={{ color: T.text }}>
             {consultation.problemStatement || "No problem statement recorded."}
           </p>
@@ -389,7 +377,7 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
                   onClick={() => setActiveWorkTab(t.key)}
                   className="flex items-center gap-2 px-3 py-2 rounded-[8px] text-[13px] font-medium transition-all cursor-pointer"
                   style={{
-                    background: active ? "rgba(160,125,56,0.12)" : "transparent",
+                    background: active ? "rgba(119,123,98,0.12)" : "transparent",
                     color: active ? T.accent : T.muted,
                   }}
                 >
@@ -445,7 +433,7 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
             <div>
               {recData.status === "not_recommended" && (
                 <div className="text-center py-6">
-                  <div className="w-12 h-12 rounded-full mx-auto mb-3 flex items-center justify-center text-[20px]" style={{ background: "rgba(160,125,56,0.1)" }}>💎</div>
+                  <div className="w-12 h-12 rounded-full mx-auto mb-3 flex items-center justify-center text-[20px]" style={{ background: "rgba(119,123,98,0.1)" }}>💎</div>
                   <p className="text-[13.5px] mb-3" style={{ color: T.muted }}>No stone recommendation yet</p>
                   <GoldBtn onClick={openRecModal}>Select stone from inventory</GoldBtn>
                 </div>
@@ -519,8 +507,8 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
                             onClick={() => setRemedyType(type)}
                             className="px-3 py-1.5 rounded-[8px] text-[12px] font-medium transition-all cursor-pointer"
                             style={{
-                              background: remedyType === type ? "rgba(160,125,56,0.15)" : T.bg,
-                              border: `1.5px solid ${remedyType === type ? "rgba(160,125,56,0.65)" : T.borderSoft}`,
+                              background: remedyType === type ? "rgba(119,123,98,0.15)" : T.bg,
+                              border: `1.5px solid ${remedyType === type ? "rgba(119,123,98,0.65)" : T.borderSoft}`,
                               color: remedyType === type ? T.accent : T.text,
                             }}
                           >{type}</button>
@@ -545,9 +533,6 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
         </Card>
       )}
 
-      </>
-      )}
-
       {/* ================================================================ */}
       {/*  Recommendation modal                                            */}
       {/* ================================================================ */}
@@ -566,7 +551,7 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
           {/* STEP: Stone */}
           {recStep === "stone" && (
             <>
-              <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.faint }}>Select stone from inventory</div>
+              <div className="text-[15px] font-semibold tracking-[-0.01em] mb-3" style={{ color: T.text }}>Select stone from inventory</div>
               <div className="mb-3">
                 <SearchFilter search={recSearch} onSearchChange={setRecSearch} placeholder="Search SKU, gemstone…" />
               </div>
@@ -577,7 +562,7 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
                     onClick={() => { setRecStoneSku(s.sku); setRecSearch(""); }}
                     className="w-full flex items-center justify-between py-3 px-3 text-left rounded-[9px] transition-all duration-150 cursor-pointer hover:pl-4"
                     style={{
-                      background: recStoneSku === s.sku ? "rgba(160,125,56,0.13)" : "transparent",
+                      background: recStoneSku === s.sku ? "rgba(119,123,98,0.13)" : "transparent",
                       borderBottom: `1px solid ${T.borderSoft}`,
                     }}
                   >
@@ -602,7 +587,7 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
           {/* STEP: Design */}
           {recStep === "design" && (
             <>
-              <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.faint }}>Select jewellery design (optional)</div>
+              <div className="text-[15px] font-semibold tracking-[-0.01em] mb-3" style={{ color: T.text }}>Select jewellery design (optional)</div>
               <div className="space-y-5">
                 <div>
                   <div className="text-[11px] tracking-[0.06em] uppercase mb-2.5" style={{ color: T.muted }}>Type of wear</div>
@@ -615,8 +600,8 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
                           onClick={() => { setRecDesignForm(form); setRecDesignSize(""); if (form === "Loose") setRecDesignSlug(""); }}
                           className="flex flex-col items-center justify-center w-[80px] h-[70px] rounded-[10px] transition-all duration-150 cursor-pointer"
                           style={{
-                            background: isActive ? "rgba(160,125,56,0.15)" : T.bg,
-                            border: `1.5px solid ${isActive ? "rgba(160,125,56,0.65)" : T.borderSoft}`,
+                            background: isActive ? "rgba(119,123,98,0.15)" : T.bg,
+                            border: `1.5px solid ${isActive ? "rgba(119,123,98,0.65)" : T.borderSoft}`,
                           }}
                         >
                           <span className="text-[18px] mb-1">
@@ -641,8 +626,8 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
                           onClick={() => setRecDesignMetal(recDesignMetal === metal ? "" : metal)}
                           className="px-3 py-1.5 rounded-[8px] text-[11px] font-medium transition-all duration-150 cursor-pointer"
                           style={{
-                            background: recDesignMetal === metal ? "rgba(160,125,56,0.15)" : T.bg,
-                            border: `1.5px solid ${recDesignMetal === metal ? "rgba(160,125,56,0.65)" : T.borderSoft}`,
+                            background: recDesignMetal === metal ? "rgba(119,123,98,0.15)" : T.bg,
+                            border: `1.5px solid ${recDesignMetal === metal ? "rgba(119,123,98,0.65)" : T.borderSoft}`,
                             color: recDesignMetal === metal ? T.accent : T.text,
                           }}
                         >{metal}</button>
@@ -663,11 +648,11 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
                             onClick={() => setRecDesignSlug(d.slug)}
                             className="flex flex-col items-center p-2.5 rounded-[10px] transition-all duration-150 cursor-pointer"
                             style={{
-                              background: isActive ? "rgba(160,125,56,0.15)" : T.bg,
-                              border: `1.5px solid ${isActive ? "rgba(160,125,56,0.65)" : T.borderSoft}`,
+                              background: isActive ? "rgba(119,123,98,0.15)" : T.bg,
+                              border: `1.5px solid ${isActive ? "rgba(119,123,98,0.65)" : T.borderSoft}`,
                             }}
                           >
-                            <div className="w-[56px] h-[56px] rounded-[8px] overflow-hidden mb-1.5" style={{ background: "rgba(160,125,56,0.10)", border: `1px solid ${T.borderSoft}` }}>
+                            <div className="w-[56px] h-[56px] rounded-[8px] overflow-hidden mb-1.5" style={{ background: "rgba(119,123,98,0.10)", border: `1px solid ${T.borderSoft}` }}>
                               <img src={d.image} alt={d.name} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
                             </div>
                             <span className="text-[11px] font-medium text-center truncate w-full" style={{ color: isActive ? T.accent : T.text }}>{d.name}</span>
@@ -753,25 +738,6 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
           </div>
         </div>
       </Modal>
-
-      <ConfirmDialog
-        open={confirmCustomerNoShow}
-        onClose={() => setConfirmCustomerNoShow(false)}
-        onConfirm={() => { setLocalStatus("no_show"); setLocalNoShowBy("customer"); showToast("Marked as customer no show"); }}
-        title="Mark as no show?"
-        description="This will record the customer as a no-show for this appointment."
-        variant="danger"
-        confirmLabel="Confirm"
-      />
-      <ConfirmDialog
-        open={confirmExpertNoShow}
-        onClose={() => setConfirmExpertNoShow(false)}
-        onConfirm={() => { setLocalStatus("no_show"); setLocalNoShowBy("expert"); showToast("Marked as astrologer no show"); }}
-        title="Mark as no show?"
-        description="This will record the astrologer as a no-show for this appointment."
-        variant="danger"
-        confirmLabel="Confirm"
-      />
 
       {/* Toast */}
       {toast && (

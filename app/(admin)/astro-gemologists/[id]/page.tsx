@@ -2,8 +2,9 @@
 import { useCallback, useMemo, useState, useRef, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Card, Chip, StatCard, GhostBtn, GoldBtn, SectionLink, BackLink, Tabs, SearchFilter, Pagination, Select, Modal, Input, ConfirmDialog, LoadingState } from "@/components/ui";
+import { Card, Chip, StatCard, GhostBtn, GoldBtn, SectionLink, BackLink, Tabs, Tooltip, Pagination, Select, Modal, Input, ToolbarSearch, FiltersPopover, FilterField, FilterChip, DateRangeFields, EmptyState, Toast, ConfirmDialog } from "@/components/ui";
 import { T } from "@/lib/theme";
+import { usePersistentState } from "@/lib/usePersistentState";
 import { EXPERT_PROFILES, EXPERT_AVAILABILITY, MOCK_CONSULTATIONS, MOCK_STONE_RECOMMENDATIONS, MOCK_ORDERS, MOCK_PAYMENTS } from "@/lib/mock";
 import { inr } from "@/lib/types";
 import type { StoneRecommendation } from "@/lib/types";
@@ -12,10 +13,9 @@ const PAGE_SIZE = 8;
 type SortKey = "date_desc" | "date_asc";
 
 const DETAIL_TABS = [
+  { key: "overview", label: "Overview" },
   { key: "upcoming", label: "Consultations" },
   { key: "availability", label: "Availability" },
-  { key: "summary_due", label: "Recommendation due" },
-  { key: "no_show", label: "No show" },
   { key: "recommendations", label: "Recommendations" },
   { key: "payments", label: "Payments" },
 ];
@@ -60,13 +60,6 @@ function getEstimatedPrice(rec: StoneRecommendation): number | null {
 
 export default function AstroGemologistDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const t = setTimeout(() => setLoading(false), 700);
-    return () => clearTimeout(t);
-  }, []);
-
   const expert = EXPERT_PROFILES.find((e) => e.id === id);
   const availability = EXPERT_AVAILABILITY.find((e) => e.expertId === id);
 
@@ -105,9 +98,9 @@ export default function AstroGemologistDetailPage() {
   const router = useRouter();
   const [isActive, setIsActive] = useState(expert.status === "active");
   const [showMenu, setShowMenu] = useState(false);
-  const [confirmDeactivate, setConfirmDeactivate] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const [toast, setToast] = useState("");
+  const [confirmDeactivate, setConfirmDeactivate] = useState(false);
   const [commissionEditing, setCommissionEditing] = useState(false);
   const [commissionToast, setCommissionToast] = useState("");
   const [commissionRates, setCommissionRates] = useState({ stone: "8", jewellery: "6", consultation: "15" });
@@ -123,8 +116,8 @@ export default function AstroGemologistDetailPage() {
     return () => document.removeEventListener("mousedown", handler);
   }, [showMenu]);
 
-  const [activeTab, setActiveTab] = useState("upcoming");
-  const [viewMode, setViewMode] = useState<"list" | "calendar">("calendar");
+  const [activeTab, setActiveTab] = useState("overview");
+  const [viewMode, setViewMode] = usePersistentState<"list" | "calendar">("pref-consult-view", "calendar");
 
   // Consultations tab state (list + calendar)
   const [consSearch, setConsSearch] = useState("");
@@ -185,6 +178,39 @@ export default function AstroGemologistDetailPage() {
   const nextWeek = () => { const d = new Date(calWeekBase); d.setDate(d.getDate() + 7); setCalWeekBase(d); };
   const goToToday = () => setCalWeekBase(new Date());
 
+  const [calScope, setCalScope] = usePersistentState<"day" | "week">("pref-cal-scope", "week");
+  const [selectedEvent, setSelectedEvent] = useState<(typeof consultations)[number] | null>(null);
+
+  // Add-consultation → same multi-step flow as new order (/consultations/create), expert prelocked
+  const openAddConsult = (date?: string) => {
+    const qs = new URLSearchParams({ expertId: id });
+    if (date) qs.set("date", date);
+    router.push(`/consultations/create?${qs.toString()}`);
+  };
+  const hoursRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (viewMode === "calendar" && hoursRef.current) hoursRef.current.scrollTop = 6 * 40;
+  }, [viewMode, calScope]);
+
+  const visibleDays = calScope === "day" ? [calWeekBase] : weekDays;
+
+  const rowStatus = (c: (typeof consultations)[number]) => {
+    if (c.paymentStatus === "pending") return { tone: "gold" as const, label: "Payment pending" };
+    if (c.status === "reschedule_requested") return { tone: "gold" as const, label: "Reschedule request" };
+    if (c.status === "summary_pending") return { tone: "danger" as const, label: "Recommendation due" };
+    if (c.status === "no_show") return { tone: "danger" as const, label: c.noShowBy === "expert" ? "Expert no show" : "Customer no show" };
+    if (c.status === "closed" || c.status === "completed") return { tone: "good" as const, label: "Done" };
+    if (c.status === "scheduled") return { tone: "info" as const, label: "Scheduled" };
+    return { tone: "muted" as const, label: c.status };
+  };
+
+  const eventTone = (c: (typeof consultations)[number]) =>
+    c.status === "closed" || c.status === "completed" ? T.good :
+    c.status === "scheduled" ? "#6d8ea0" :
+    c.status === "reschedule_requested" ? T.accent :
+    c.status === "summary_pending" || c.status === "no_show" ? T.danger :
+    T.muted;
+
   // Filtered data helpers
   function searchFilter<T extends { customerName: string; id: string }>(items: T[], q: string): T[] {
     if (!q) return items;
@@ -220,6 +246,8 @@ export default function AstroGemologistDetailPage() {
     }),
     consSort,
   );
+  const [showConsFilters, setShowConsFilters] = useState(false);
+  const consFilterCount = [consFilterCustomer, consFilterStatus, consFilterDateFrom || consFilterDateTo].filter(Boolean).length;
   const consTotalPages = Math.ceil(consFiltered.length / PAGE_SIZE);
   const consPaginated = consFiltered.slice(consPage * PAGE_SIZE, (consPage + 1) * PAGE_SIZE);
 
@@ -250,6 +278,7 @@ export default function AstroGemologistDetailPage() {
       if (recSort === "date_asc") return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
+  const [showRecFilters, setShowRecFilters] = useState(false);
   const recTotalPages = Math.ceil(recFiltered.length / PAGE_SIZE);
   const recPaginated = recFiltered.slice(recPage * PAGE_SIZE, (recPage + 1) * PAGE_SIZE);
 
@@ -294,7 +323,7 @@ export default function AstroGemologistDetailPage() {
     return (
       <Link
         href={`/consultations/${c.id}`}
-        className="group grid grid-cols-1 sm:grid-cols-[1fr_140px_100px_120px] gap-2 sm:gap-3 items-center px-3 py-3.5 transition-all duration-150 rounded-[8px] hover:bg-[rgba(160,125,56,0.07)]"
+        className="group grid grid-cols-1 sm:grid-cols-[1fr_140px_100px_120px] gap-2 sm:gap-3 items-center px-4 py-2.5 transition-colors duration-150 even:bg-[rgba(89,82,54,0.025)] hover:!bg-[rgba(119,123,98,0.08)] last:rounded-b-[15px]"
         style={{ borderBottom: `1px solid ${T.borderSoft}` }}
       >
         <div className="min-w-0">
@@ -328,7 +357,7 @@ export default function AstroGemologistDetailPage() {
 
   function TableHeader({ cols }: { cols: string[] }) {
     return (
-      <div className={`hidden sm:grid gap-3 px-3 py-2 text-[11px] tracking-[0.06em] uppercase`} style={{ color: T.faint, borderBottom: `1px solid ${T.borderSoft}`, gridTemplateColumns: "1fr 140px 100px 120px" }}>
+      <div className="hidden sm:grid gap-3 items-center px-4 h-10 text-[11px] tracking-[0.06em] uppercase font-medium rounded-t-[15px]" style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.border}`, gridTemplateColumns: "1fr 140px 100px 120px" }}>
         {cols.map((c) => <span key={c}>{c}</span>)}
       </div>
     );
@@ -354,33 +383,34 @@ export default function AstroGemologistDetailPage() {
 
   return (
     <>
-      <div className="mb-5">
+      <div className="md:h-[calc(100dvh-78px)] md:flex md:flex-col md:min-h-0">
+      <div className="mb-4">
         <BackLink label="Astro-Gemologists" href="/astro-gemologists" />
       </div>
 
-      {loading ? (
-        <Card className="mb-6"><LoadingState lines={8} /></Card>
-      ) : (
-      <>
-      {/* Profile + Commission + Account — combined card */}
-      <div className="rounded-[14px] p-6 mb-6" style={{ background: `linear-gradient(135deg, ${T.card} 0%, ${T.panel} 100%)`, border: `1px solid ${T.border}` }}>
-        {/* Expert info + 3-dot menu */}
+      {/* Identity */}
+      <Card className="!p-6 mb-4">
         <div className="flex flex-wrap items-start gap-5">
-          <div className="w-14 h-14 rounded-full flex items-center justify-center text-[20px] font-bold shrink-0" style={{ background: `${T.accent}15`, border: `2px solid ${T.accent}40`, color: T.accent }}>{expert.name[0]}</div>
+          <div
+            className="w-14 h-14 rounded-[16px] flex items-center justify-center text-[18px] font-semibold shrink-0"
+            style={{ background: T.accentFaint, border: `1px solid ${T.accentBorder}`, color: T.accent }}
+          >
+            {expert.name.split(" ").map((w) => w[0]).slice(-2).join("")}
+          </div>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-3">
-              <span className="text-[17px] font-semibold" style={{ color: T.text }}>{expert.name}</span>
+            <div className="flex flex-wrap items-center gap-2.5">
+              <span className="text-[18px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>{expert.name}</span>
               {isActive ? (expert.calendlyStatus === "pending" ? <Chip tone="gold">Calendly invite pending</Chip> : <Chip tone="good">active</Chip>) : <Chip tone="danger">inactive</Chip>}
             </div>
-            <div className="text-[13.5px] mt-1" style={{ color: T.muted }}>{expert.specialization}</div>
-            <div className="flex flex-wrap items-center gap-4 mt-3 text-[12px]" style={{ color: T.faint }}>
-              <span>{expert.experience}</span><span>·</span>
-              <span>{expert.languages.join(", ")}</span><span>·</span>
-              <span style={{ color: T.accent }}>{inr(expert.fee)}/session</span><span>·</span>
-              <span className="flex items-center gap-1">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-                {expert.phone}
-              </span>
+            <div className="text-[13px] mt-1" style={{ color: T.muted }}>{expert.specialization}</div>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-[12.5px]" style={{ color: T.muted }}>
+              <span>{expert.experience}</span>
+              <span style={{ color: T.faint }}>·</span>
+              <span>{expert.languages.join(", ")}</span>
+              <span style={{ color: T.faint }}>·</span>
+              <span className="font-medium" style={{ color: T.accent }}>{inr(expert.fee)}/session</span>
+              <span style={{ color: T.faint }}>·</span>
+              <span className="tabular-nums">{expert.phone}</span>
             </div>
           </div>
           <div className="relative shrink-0" ref={menuRef}>
@@ -389,34 +419,78 @@ export default function AstroGemologistDetailPage() {
             </button>
             {showMenu && (
               <div className="absolute right-0 top-full mt-1 z-50 rounded-[10px] overflow-hidden shadow-lg py-1 min-w-[190px]" style={{ background: T.popover, border: `1px solid ${T.border}`, animation: "fadeIn 120ms ease-out" }}>
-                <button type="button" onClick={() => { setShowMenu(false); router.push(`/astro-gemologists/${id}/edit`); }} className="w-full text-left px-4 py-2.5 text-[13px] flex items-center gap-2.5 transition-colors hover:bg-[rgba(160,125,56,0.08)] cursor-pointer" style={{ color: T.text }}>
+                <button type="button" onClick={() => { setShowMenu(false); router.push(`/astro-gemologists/${id}/edit`); }} className="w-full text-left px-4 py-2.5 text-[13px] flex items-center gap-2.5 transition-colors hover:bg-[rgba(119,123,98,0.08)] cursor-pointer" style={{ color: T.text }}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17 3a2.83 2.83 0 114 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
                   Edit profile
                 </button>
                 {expert.calendlyStatus === "pending" && isActive && (
-                  <button type="button" onClick={() => { setShowMenu(false); setToast("Calendly invitation resent"); setTimeout(() => setToast(""), 3000); }} className="w-full text-left px-4 py-2.5 text-[13px] flex items-center gap-2.5 transition-colors hover:bg-[rgba(160,125,56,0.08)] cursor-pointer" style={{ color: T.text }}>
+                  <button type="button" onClick={() => { setShowMenu(false); setToast("Calendly invitation resent"); setTimeout(() => setToast(""), 3000); }} className="w-full text-left px-4 py-2.5 text-[13px] flex items-center gap-2.5 transition-colors hover:bg-[rgba(119,123,98,0.08)] cursor-pointer" style={{ color: T.text }}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M22 2L11 13"/><path d="M22 2L15 22l-4-9-9-4z"/></svg>
                     Resend invitation
                   </button>
                 )}
-                <button type="button" onClick={() => { setShowMenu(false); setShowPayoutModal(true); }} className="w-full text-left px-4 py-2.5 text-[13px] flex items-center gap-2.5 transition-colors hover:bg-[rgba(160,125,56,0.08)] cursor-pointer" style={{ color: T.text }}>
+                <button type="button" onClick={() => { setShowMenu(false); setShowPayoutModal(true); }} className="w-full text-left px-4 py-2.5 text-[13px] flex items-center gap-2.5 transition-colors hover:bg-[rgba(119,123,98,0.08)] cursor-pointer" style={{ color: T.text }}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 2v20M6 6h9a3 3 0 0 1 0 6H5M7 12h8a3 3 0 0 1 0 6H6"/></svg>
                   Make payout
                 </button>
                 <div className="mx-2 my-1" style={{ borderTop: `1px solid ${T.borderSoft}` }} />
-                <button type="button" onClick={() => { setShowMenu(false); if (isActive) { setConfirmDeactivate(true); } else { setIsActive(true); setToast("Gemologist activated"); setTimeout(() => setToast(""), 3000); } }} className="w-full text-left px-4 py-2.5 text-[13px] flex items-center gap-2.5 transition-colors hover:bg-[rgba(160,125,56,0.08)] cursor-pointer" style={{ color: isActive ? T.danger : T.good }}>
+                <button type="button" onClick={() => { setShowMenu(false); if (isActive) { setConfirmDeactivate(true); } else { setIsActive(true); setToast("Gemologist activated"); setTimeout(() => setToast(""), 3000); } }} className="w-full text-left px-4 py-2.5 text-[13px] flex items-center gap-2.5 transition-colors hover:bg-[rgba(119,123,98,0.08)] cursor-pointer" style={{ color: isActive ? T.danger : T.good }}>
                   {isActive ? <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/></svg>Deactivate</> : <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M20 6L9 17l-5-5"/></svg>Activate</>}
                 </button>
               </div>
             )}
           </div>
         </div>
+      </Card>
 
-        {/* Commission rates */}
-        <div className="mt-5 pt-5" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
-          <div className="flex items-center justify-between mb-3">
+      {/* Tabs + (Consultations) view controls on the same line */}
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+        <Tabs
+          tabs={DETAIL_TABS.map((t) => ({ ...t, count: t.key === "overview" ? undefined : tabCounts[t.key] }))}
+          active={activeTab}
+          onChange={(key) => { setActiveTab(key); }}
+        />
+        {activeTab === "upcoming" && (
+          <div className="ml-auto flex items-center gap-2">
+            <div className="inline-flex items-center gap-1 p-[3px] rounded-full shrink-0" style={{ background: "rgba(89,82,54,0.055)" }}>
+              {(["list", "calendar"] as const).map((mode) => (
+                <Tooltip key={mode} label={mode === "list" ? "List view" : "Calendar view"}>
+                <button
+                  onClick={() => setViewMode(mode)}
+                  aria-label={mode === "list" ? "List view" : "Calendar view"}
+                  className="h-8 w-11 rounded-full inline-flex items-center justify-center shrink-0 transition-all duration-200 cursor-pointer"
+                  style={viewMode === mode ? { background: T.card, color: T.text, border: `1px solid ${T.borderSoft}`, boxShadow: "0 1px 2px rgba(43,42,34,0.08)" } : { color: T.muted, border: "1px solid transparent" }}
+                >
+                  {mode === "list" ? (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                  ) : (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 9h18"/></svg>
+                  )}
+                </button>
+                </Tooltip>
+              ))}
+            </div>
+            <button
+              onClick={() => openAddConsult(toISODate(calWeekBase))}
+              className="inline-flex items-center gap-1.5 h-8 pl-2.5 pr-3.5 rounded-[9px] text-[12.5px] font-medium transition-all duration-200 hover:brightness-110 cursor-pointer"
+              style={{ background: T.primary, color: T.primaryInk }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+              Add consultation
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* ========= OVERVIEW TAB ========= */}
+      {activeTab === "overview" && (
+        <div className="md:min-h-0 md:overflow-y-auto">
+      {/* Rates + payout — named cards */}
+      <div className="grid md:grid-cols-2 gap-4 mb-4">
+        <Card className="!p-6">
+          <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <span className="text-[11px] tracking-[0.08em] uppercase font-medium" style={{ color: T.faint }}>Commission rates</span>
+              <h2 className="text-[15px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>Commission rates</h2>
               {commissionToast && <span className="text-[12px] font-medium" style={{ color: T.good }}>✓ {commissionToast}</span>}
             </div>
             {commissionEditing ? (
@@ -425,297 +499,361 @@ export default function AstroGemologistDetailPage() {
               <GhostBtn className="!h-7 !px-3 !text-[11px]" onClick={() => setCommissionEditing(true)}>Edit</GhostBtn>
             )}
           </div>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-3 gap-3">
             {(["stone", "jewellery", "consultation"] as const).map((cat) => (
-              <div key={cat} className="rounded-[10px] p-3" style={{ background: "rgba(250,246,236,0.6)", border: `1px solid ${T.borderSoft}` }}>
-                <div className="text-[10px] tracking-[0.06em] uppercase mb-1" style={{ color: T.faint }}>{cat}</div>
+              <div key={cat}>
+                <div className="text-[11px] tracking-[0.07em] uppercase" style={{ color: T.faint }}>{cat}</div>
                 {commissionEditing ? (
-                  <div className="flex items-center gap-1.5">
-                    <input type="number" value={commissionRates[cat]} onChange={(e) => setCommissionRates((p) => ({ ...p, [cat]: e.target.value }))} className="w-full h-8 px-2 rounded-[7px] text-[13px] outline-none" style={{ background: T.card, border: `1px solid ${T.border}`, color: T.text }} />
+                  <div className="flex items-center gap-1.5 mt-1">
+                    <input type="number" value={commissionRates[cat]} onChange={(e) => setCommissionRates((p) => ({ ...p, [cat]: e.target.value }))} className="w-full h-8 px-2 rounded-[7px] text-[13px] outline-none" style={{ background: T.bg, border: `1px solid ${T.border}`, color: T.text }} />
                     <span className="text-[12px] font-medium shrink-0" style={{ color: T.muted }}>%</span>
                   </div>
                 ) : (
-                  <div className="text-[16px] font-semibold tabular-nums" style={{ color: T.text }}>{commissionRates[cat]}%</div>
+                  <div className="font-title text-[22px] font-semibold tabular-nums mt-1" style={{ color: T.text }}>{commissionRates[cat]}%</div>
                 )}
               </div>
             ))}
           </div>
-        </div>
-
-        {/* Bank details */}
-        <div className="mt-4 pt-4" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <div><div className="text-[10px] uppercase tracking-wider" style={{ color: T.faint }}>Bank</div><div className="text-[13px] mt-0.5" style={{ color: T.text }}>HDFC Bank</div></div>
-            <div><div className="text-[10px] uppercase tracking-wider" style={{ color: T.faint }}>Account</div><div className="text-[13px] mt-0.5" style={{ color: T.text }}>1234 5678 6789</div></div>
-            <div><div className="text-[10px] uppercase tracking-wider" style={{ color: T.faint }}>IFSC</div><div className="text-[13px] mt-0.5" style={{ color: T.text }}>HDFC0001234</div></div>
-            <div><div className="text-[10px] uppercase tracking-wider" style={{ color: T.faint }}>UPI</div><div className="text-[13px] mt-0.5" style={{ color: T.accent }}>{expert.name.split(" ").pop()?.toLowerCase()}@upi</div></div>
+        </Card>
+        <Card className="!p-6">
+          <h2 className="text-[15px] font-semibold tracking-[-0.01em] mb-4" style={{ color: T.text }}>Payout account</h2>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+            {[
+              ["Bank", "HDFC Bank"],
+              ["Account", "1234 5678 6789"],
+              ["IFSC", "HDFC0001234"],
+              ["UPI", `${expert.name.split(" ").pop()?.toLowerCase()}@upi`],
+            ].map(([k, v]) => (
+              <div key={k}>
+                <div className="text-[11px] tracking-[0.07em] uppercase" style={{ color: T.faint }}>{k}</div>
+                <div className="text-[13px] font-medium tabular-nums mt-0.5" style={{ color: T.text }}>{v}</div>
+              </div>
+            ))}
           </div>
-        </div>
+        </Card>
       </div>
 
-      {/* Dashboard stats — header / value / status */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
+      {/* KPIs — alert cards jump into the filtered Consultations tab */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
         {[
-          { label: "Consultations", value: allCompleted.length, status: "completed", tone: T.good },
-          { label: "Purchases", value: allRecommendations.filter((r) => r.status === "converted_to_order").length, status: "completed", tone: T.good },
-          { label: "Recommendation", value: allPendingSummaries.length, status: "due", tone: allPendingSummaries.length > 0 ? T.danger : T.good },
-          { label: "Commission", value: inr(Math.max(0, totalEarnings - expertPayments.filter((p) => p.status === "paid").reduce((s, p) => s + p.amount, 0))), status: "due", tone: T.accent },
-          { label: "Commission", value: inr(totalEarnings), status: "earned", tone: T.good },
+          { label: "Consultations", value: allCompleted.length, status: "completed", tone: T.good, hero: false, jump: () => { setActiveTab("upcoming"); setViewMode("list"); setConsFilterStatus("completed"); } },
+          { label: "Purchases", value: allRecommendations.filter((r) => r.status === "converted_to_order").length, status: "completed", tone: T.good, hero: false, jump: () => setActiveTab("recommendations") },
+          { label: "Recommendation due", value: allPendingSummaries.length, status: allPendingSummaries.length > 0 ? "action needed" : "all clear", tone: allPendingSummaries.length > 0 ? T.danger : T.good, hero: false, jump: () => { setActiveTab("upcoming"); setViewMode("list"); setConsFilterStatus("summary_pending"); } },
+          { label: "No-shows", value: allNoShows.length, status: allNoShows.length > 0 ? "review" : "all clear", tone: allNoShows.length > 0 ? T.danger : T.good, hero: false, jump: () => { setActiveTab("upcoming"); setViewMode("list"); setConsFilterStatus("no_show"); } },
+          { label: "Commission earned", value: inr(totalEarnings), status: "lifetime", tone: "#8a6a2f", hero: true, jump: () => setActiveTab("payments") },
         ].map((stat, i) => (
-          <div key={i} className="rounded-[12px] p-5" style={{ background: T.card, border: `1px solid ${T.border}` }}>
-            <div className="text-[11px] tracking-[0.08em] uppercase" style={{ color: T.faint }}>{stat.label}</div>
+          <button
+            key={i}
+            onClick={stat.jump}
+            className="rounded-[16px] p-5 text-left transition-all duration-200 hover:-translate-y-[2px] cursor-pointer"
+            style={
+              stat.hero
+                ? { background: "linear-gradient(160deg, #faf0d8 0%, #efdfb8 100%)", border: "1px solid rgba(160,125,56,0.35)", boxShadow: T.shadow }
+                : { background: T.card, border: `1px solid ${T.borderSoft}`, boxShadow: T.shadow }
+            }
+          >
+            <div className="text-[11px] tracking-[0.08em] uppercase" style={{ color: stat.hero ? "#8a6a2f" : T.faint }}>{stat.label}</div>
             <div className="text-[20px] font-semibold mt-1 tabular-nums" style={{ color: T.text }}>{stat.value}</div>
             <div className="text-[11px] font-medium mt-1" style={{ color: stat.tone }}>{stat.status}</div>
-          </div>
+          </button>
         ))}
       </div>
 
-      {/* Tabs */}
-      <div className="mb-4">
-        <Tabs
-          tabs={DETAIL_TABS.map((t) => ({ ...t, count: tabCounts[t.key] }))}
-          active={activeTab}
-          onChange={(key) => { setActiveTab(key); }}
-        />
-      </div>
+        </div>
+      )}
 
       {/* ========= CONSULTATIONS TAB ========= */}
       {activeTab === "upcoming" && (
         <>
-          {/* Search + View toggle — fixed height row */}
-          <div className="flex items-center gap-3 mb-3 h-10">
-            <div className="flex-1 min-w-0">
-              {viewMode === "list" && (
-                <div className="w-1/2">
-                  <SearchFilter search={consSearch} onSearchChange={(v) => { setConsSearch(v); setConsPage(0); }} placeholder="Search customer, consultation ID…" />
+          {/* Toolbar — list view only (search + filters + sort); view toggle & add live on the tabs row */}
+          {viewMode === "list" && (
+            <div className="flex flex-wrap items-center gap-2 mb-3">
+              <ToolbarSearch value={consSearch} onChange={(v) => { setConsSearch(v); setConsPage(0); }} placeholder="Search customer, consultation ID…" />
+              <div className="ml-auto flex items-center gap-2">
+                <FiltersPopover count={consFilterCount} open={showConsFilters} onToggle={() => setShowConsFilters(!showConsFilters)}>
+                  <FilterField label="Status">
+                    <Select value={consFilterStatus} onChange={(v) => { setConsFilterStatus(v); setConsPage(0); }} compact placeholder="All status" options={[
+                      { value: "", label: "All status" },
+                      { value: "payment_pending", label: "Payment pending" },
+                      { value: "scheduled", label: "Scheduled" },
+                      { value: "reschedule_requested", label: "Reschedule" },
+                      { value: "no_show", label: "No show" },
+                      { value: "completed", label: "Completed" },
+                    ]} />
+                  </FilterField>
+                  <FilterField label="Scheduled between">
+                    <DateRangeFields from={consFilterDateFrom} to={consFilterDateTo} onChange={(f, t) => { setConsFilterDateFrom(f); setConsFilterDateTo(t); setConsPage(0); }} />
+                  </FilterField>
+                </FiltersPopover>
+                <div className="w-[160px]">
+                  <Select value={consSort} onChange={(val) => { setConsSort(val as SortKey); setConsPage(0); }} compact prefix="Sort: " options={[{ value: "date_desc", label: "Newest first" }, { value: "date_asc", label: "Oldest first" }]} />
                 </div>
-              )}
+              </div>
             </div>
-            <div className="inline-flex rounded-[9px] overflow-hidden shrink-0" style={{ border: `1px solid ${T.border}` }}>
-              {(["list", "calendar"] as const).map((mode) => (
-                <button
-                  key={mode}
-                  onClick={() => setViewMode(mode)}
-                  className="flex items-center gap-1.5 px-3 py-[6px] text-[12px] font-medium transition-all cursor-pointer"
-                  style={{ background: viewMode === mode ? T.accent : "transparent", color: viewMode === mode ? T.accentInk : T.muted }}
-                >
-                  {mode === "list" ? (
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-                  ) : (
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 9h18"/></svg>
-                  )}
-                  {mode === "list" ? "List" : "Calendar"}
-                </button>
-              ))}
+          )}
+
+          {viewMode === "list" && consHasActiveFilters && (
+            <div className="flex flex-wrap items-center gap-1.5 mb-3">
+              {consFilterCustomer && <FilterChip label={`Customer: ${consFilterCustomer}`} onClear={() => { setConsFilterCustomer(""); setConsPage(0); }} />}
+              {consFilterStatus && <FilterChip label={`Status: ${consFilterStatus.replace(/_/g, " ")}`} onClear={() => { setConsFilterStatus(""); setConsPage(0); }} />}
+              {(consFilterDateFrom || consFilterDateTo) && <FilterChip label="Date range" onClear={() => { setConsFilterDateFrom(""); setConsFilterDateTo(""); setConsPage(0); }} />}
+              <button onClick={() => { setConsFilterCustomer(""); setConsFilterStatus(""); setConsFilterDateFrom(""); setConsFilterDateTo(""); setConsPage(0); }} className="text-[12px] px-1.5 cursor-pointer hover:underline underline-offset-4" style={{ color: T.danger }}>Clear all</button>
             </div>
-          </div>
+          )}
 
           {/* ---- List view ---- */}
           {viewMode === "list" && (
             <>
-              {/* Filters & Sort */}
-              <div className="flex flex-wrap items-center gap-2.5 mb-4">
-                <div className="w-[200px]">
-                  <Select value={consFilterCustomer} onChange={(v) => { setConsFilterCustomer(v); setConsPage(0); }} searchable compact placeholder="All customers" options={[{ value: "", label: "All customers" }, ...uniqueConsCustomers.map((n) => ({ value: n, label: n }))]} />
-                </div>
-                <div className="w-[180px]">
-                  <Select value={consFilterStatus} onChange={(v) => { setConsFilterStatus(v); setConsPage(0); }} compact placeholder="All status" options={[
-                    { value: "", label: "All status" },
-                    { value: "payment_pending", label: "Payment pending" },
-                    { value: "scheduled", label: "Scheduled" },
-                    { value: "reschedule_requested", label: "Reschedule" },
-                    { value: "no_show", label: "No show" },
-                    { value: "completed", label: "Completed" },
-                  ]} />
-                </div>
-                {/* Date range */}
-                <div className="relative">
-                  <button onClick={() => setShowConsDatePicker(!showConsDatePicker)} className="h-9 px-3.5 rounded-[9px] text-[13.5px] flex items-center gap-2 cursor-pointer transition-all" style={{ background: T.popover, border: `1px solid ${(consFilterDateFrom || consFilterDateTo) ? T.accentBorder : T.border}`, color: T.text }}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 9h18"/></svg>
-                    {(consFilterDateFrom || consFilterDateTo)
-                      ? `${consFilterDateFrom ? new Date(consFilterDateFrom + "T00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "Start"} — ${consFilterDateTo ? new Date(consFilterDateTo + "T00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "End"}`
-                      : "All dates"}
-                  </button>
-                  {showConsDatePicker && (
-                    <>
-                      <div className="fixed inset-0 z-40" onClick={() => setShowConsDatePicker(false)} />
-                      <div className="absolute top-full left-0 mt-1 z-50 flex rounded-[9px] shadow-lg overflow-hidden" style={{ background: T.popover, border: `1px solid ${T.border}` }}>
-                        <div className="w-[130px] py-2 px-1.5 shrink-0" style={{ borderRight: `1px solid ${T.borderSoft}` }}>
-                          <div className="text-[9px] tracking-[0.06em] uppercase px-2 mb-1.5" style={{ color: T.faint }}>Quick select</div>
-                          {[
-                            { label: "Today", from: new Date().toISOString().slice(0, 10), to: new Date().toISOString().slice(0, 10) },
-                            { label: "Last 7 days", from: new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10), to: new Date().toISOString().slice(0, 10) },
-                            { label: "Last 30 days", from: new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10), to: new Date().toISOString().slice(0, 10) },
-                          ].map((preset) => (
-                            <button key={preset.label} onClick={() => { setConsFilterDateFrom(preset.from); setConsFilterDateTo(preset.to); setShowConsDatePicker(false); setConsPage(0); }} className="w-full text-left px-2.5 py-2 rounded-[7px] text-[12px] transition-colors cursor-pointer hover:bg-[rgba(160,125,56,0.10)]" style={{ color: T.text }}>{preset.label}</button>
-                          ))}
-                          {(consFilterDateFrom || consFilterDateTo) && (
-                            <button onClick={() => { setConsFilterDateFrom(""); setConsFilterDateTo(""); setShowConsDatePicker(false); setConsPage(0); }} className="w-full text-left px-2.5 py-2 rounded-[7px] text-[11px] mt-1 transition-colors cursor-pointer hover:bg-[rgba(176,84,84,0.06)]" style={{ color: T.danger }}>Clear dates</button>
-                          )}
-                        </div>
-                        <div className="p-4 w-[280px]">
-                          <div className="flex items-center gap-2 mb-3">
-                            <div className="flex-1">
-                              <div className="text-[9px] uppercase tracking-[0.06em] mb-1" style={{ color: T.faint }}>After</div>
-                              <input type="date" value={consFilterDateFrom} onChange={(e) => { setConsFilterDateFrom(e.target.value); setConsPage(0); }} className="w-full h-8 px-2 rounded-[7px] text-[11px] outline-none" style={{ background: T.bg, border: `1px solid ${T.borderSoft}`, color: T.text }} />
-                            </div>
-                            <span className="text-[11px] mt-3" style={{ color: T.faint }}>—</span>
-                            <div className="flex-1">
-                              <div className="text-[9px] uppercase tracking-[0.06em] mb-1" style={{ color: T.faint }}>Before</div>
-                              <input type="date" value={consFilterDateTo} onChange={(e) => { setConsFilterDateTo(e.target.value); setConsPage(0); }} className="w-full h-8 px-2 rounded-[7px] text-[11px] outline-none" style={{ background: T.bg, border: `1px solid ${T.borderSoft}`, color: T.text }} />
-                            </div>
-                          </div>
-                          <div className="flex items-center justify-between mb-2">
-                            <button type="button" onClick={() => { if (consDpMonth === 0) { setConsDpMonth(11); setConsDpYear((y) => y - 1); } else setConsDpMonth((m) => m - 1); }} className="w-6 h-6 rounded-full flex items-center justify-center cursor-pointer hover:bg-[rgba(160,125,56,0.15)]" style={{ color: T.muted }}>‹</button>
-                            <span className="text-[11px] font-medium" style={{ color: T.text }}>{["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][consDpMonth]} {consDpYear}</span>
-                            <button type="button" onClick={() => { if (consDpMonth === 11) { setConsDpMonth(0); setConsDpYear((y) => y + 1); } else setConsDpMonth((m) => m + 1); }} className="w-6 h-6 rounded-full flex items-center justify-center cursor-pointer hover:bg-[rgba(160,125,56,0.15)]" style={{ color: T.muted }}>›</button>
-                          </div>
-                          <div className="grid grid-cols-7 gap-0.5 mb-1">
-                            {["Mo","Tu","We","Th","Fr","Sa","Su"].map((d) => <div key={d} className="text-center text-[9px] py-0.5" style={{ color: T.faint }}>{d}</div>)}
-                          </div>
-                          <div className="grid grid-cols-7 gap-0.5">
-                            {Array.from({ length: (() => { const fd = new Date(consDpYear, consDpMonth, 1).getDay(); return fd === 0 ? 6 : fd - 1; })() }).map((_, i) => <div key={`e${i}`} />)}
-                            {Array.from({ length: new Date(consDpYear, consDpMonth + 1, 0).getDate() }).map((_, i) => {
-                              const day = i + 1;
-                              const iso = `${consDpYear}-${String(consDpMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-                              const isFrom = consFilterDateFrom === iso;
-                              const isTo = consFilterDateTo === iso;
-                              const inRange = consFilterDateFrom && consFilterDateTo && iso >= consFilterDateFrom && iso <= consFilterDateTo;
-                              return (
-                                <button key={day} type="button" onClick={() => { if (!consFilterDateFrom || (consFilterDateFrom && consFilterDateTo)) { setConsFilterDateFrom(iso); setConsFilterDateTo(""); } else { if (iso < consFilterDateFrom) { setConsFilterDateTo(consFilterDateFrom); setConsFilterDateFrom(iso); } else { setConsFilterDateTo(iso); } } setConsPage(0); }}
-                                  className="w-[34px] h-[34px] rounded-full flex items-center justify-center text-[11px] transition-colors cursor-pointer"
-                                  style={{ background: (isFrom || isTo) ? T.accent : inRange ? "rgba(160,125,56,0.16)" : "transparent", color: (isFrom || isTo) ? T.accentInk : T.text, fontWeight: (isFrom || isTo) ? 700 : 400 }}
-                                >{day}</button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-                <div className="ml-auto flex items-center gap-2">
-                  {consHasActiveFilters && (
-                    <button onClick={() => { setConsFilterCustomer(""); setConsFilterStatus(""); setConsFilterDateFrom(""); setConsFilterDateTo(""); setConsPage(0); }} className="text-[11px] px-2.5 py-1.5 rounded-[7px] cursor-pointer transition-opacity hover:opacity-80" style={{ color: T.danger, background: "rgba(176,84,84,0.08)", border: "1px solid rgba(176,84,84,0.15)" }}>Clear filters</button>
-                  )}
-                  <div className="w-[180px]">
-                    <Select value={consSort} onChange={(val) => { setConsSort(val as SortKey); setConsPage(0); }} compact prefix="Sort: " options={[{ value: "date_desc", label: "Newest first" }, { value: "date_asc", label: "Oldest first" }]} />
-                  </div>
-                </div>
-              </div>
-
-              <Card>
+                            <Card className="!p-0 md:flex md:flex-col md:min-h-0">
+          <div className="md:min-h-0 overflow-y-auto max-h-[560px] md:max-h-none flex-1">
                 <TableHeader cols={["Consultation", "Date", "Commission", "Status"]} />
                 {consPaginated.length === 0 ? (
-                  <p className="text-[13.5px] py-8 text-center" style={{ color: T.muted }}>No consultations match your filters.</p>
+                  <EmptyState inline icon="search" title="No consultations" description="Try a different search or clear the filters." />
                 ) : (
                   consPaginated.map((c) => <ConsultationRow key={c.id} c={c} />)
                 )}
-                <Pagination page={consPage} totalPages={consTotalPages} totalItems={consFiltered.length} perPage={PAGE_SIZE} onPageChange={setConsPage} />
-              </Card>
+              </div>
+        </Card>
+        <Pagination page={consPage} totalPages={consTotalPages} totalItems={consFiltered.length} perPage={PAGE_SIZE} onPageChange={setConsPage} />
             </>
           )}
 
           {/* ---- Calendar view ---- */}
-          {viewMode === "calendar" && (
-            <>
-              {/* Week navigation */}
-              <div className="flex flex-wrap items-center gap-3 pb-3 mb-3" style={{ borderBottom: `1px solid ${T.border}` }}>
-                <button onClick={prevWeek} className="w-9 h-9 rounded-[9px] flex items-center justify-center text-[14px] transition-colors hover:bg-[rgba(160,125,56,0.1)] cursor-pointer" style={{ color: T.muted, background: T.popover, border: `1px solid ${T.border}` }}>‹</button>
-                <button onClick={nextWeek} className="w-9 h-9 rounded-[9px] flex items-center justify-center text-[14px] transition-colors hover:bg-[rgba(160,125,56,0.1)] cursor-pointer" style={{ color: T.muted, background: T.popover, border: `1px solid ${T.border}` }}>›</button>
-                <button onClick={goToToday} className="h-9 px-3.5 rounded-[9px] text-[13.5px] font-medium transition-colors hover:bg-[rgba(160,125,56,0.1)] cursor-pointer" style={{ color: T.accent, border: `1px solid ${T.accentBorder}` }}>Today</button>
-                <div className="relative ml-1">
-                  <button onClick={() => { setGoToDateOpen((o) => !o); setGtdYear(calWeekBase.getFullYear()); setGtdMonth(calWeekBase.getMonth()); }} className="text-[14px] font-semibold flex items-center gap-2 cursor-pointer hover:opacity-75 transition-opacity" style={{ color: T.text }}>
-                    {weekDays[0].toLocaleDateString("en-IN", { day: "numeric", month: "short" })} — {weekDays[6].toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 9l6 6 6-6" /></svg>
-                  </button>
-                  {goToDateOpen && (
-                    <>
-                      <div className="fixed inset-0 z-40" onClick={() => setGoToDateOpen(false)} />
-                      <div className="absolute left-0 top-full mt-1 z-50 rounded-[10px] p-4 shadow-lg w-[280px]" style={{ background: T.popover, border: `1px solid ${T.border}` }}>
-                        <div className="flex items-center justify-between mb-2">
-                          <button type="button" onClick={() => { if (gtdMonth === 0) { setGtdMonth(11); setGtdYear((y) => y - 1); } else setGtdMonth((m) => m - 1); }} className="w-6 h-6 rounded-full flex items-center justify-center cursor-pointer hover:bg-[rgba(160,125,56,0.15)]" style={{ color: T.muted }}>‹</button>
-                          <span className="text-[11px] font-medium" style={{ color: T.text }}>{["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][gtdMonth]} {gtdYear}</span>
-                          <button type="button" onClick={() => { if (gtdMonth === 11) { setGtdMonth(0); setGtdYear((y) => y + 1); } else setGtdMonth((m) => m + 1); }} className="w-6 h-6 rounded-full flex items-center justify-center cursor-pointer hover:bg-[rgba(160,125,56,0.15)]" style={{ color: T.muted }}>›</button>
-                        </div>
-                        <div className="grid grid-cols-7 gap-0.5 mb-1">
-                          {["Mo","Tu","We","Th","Fr","Sa","Su"].map((d) => <div key={d} className="text-center text-[9px] py-0.5" style={{ color: T.faint }}>{d}</div>)}
-                        </div>
-                        <div className="grid grid-cols-7 gap-0.5">
-                          {Array.from({ length: (() => { const fd = new Date(gtdYear, gtdMonth, 1).getDay(); return fd === 0 ? 6 : fd - 1; })() }).map((_, i) => <div key={`e${i}`} />)}
-                          {Array.from({ length: new Date(gtdYear, gtdMonth + 1, 0).getDate() }).map((_, i) => {
-                            const day = i + 1;
-                            const iso = `${gtdYear}-${String(gtdMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-                            const isToday2 = iso === todayISO;
-                            return (
-                              <button key={day} type="button" onClick={() => { setCalWeekBase(new Date(iso + "T00:00:00")); setGoToDateOpen(false); }}
-                                className="w-[34px] h-[34px] rounded-full flex items-center justify-center text-[11px] transition-colors cursor-pointer hover:bg-[rgba(160,125,56,0.16)]"
-                                style={{ background: isToday2 ? T.accent : "transparent", color: isToday2 ? T.accentInk : T.text, fontWeight: isToday2 ? 700 : 400 }}
-                              >{day}</button>
-                            );
-                          })}
+          {viewMode === "calendar" && (() => {
+            const now = new Date();
+            const nowHour = now.getHours();
+            const nowPct = (now.getMinutes() / 60) * 100;
+            const nowTimeStr = now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: false });
+            const todayVisible = visibleDays.some((d) => toISODate(d) === todayISO);
+            const mmLead = (new Date(gtdYear, gtdMonth, 1).getDay() + 6) % 7;
+            const mmDays = new Date(gtdYear, gtdMonth + 1, 0).getDate();
+            const selISO = toISODate(calWeekBase);
+            return (
+              <div className="flex items-start gap-4 md:flex-1 md:min-h-0">
+                {/* Main timeline */}
+                <div className="flex-1 min-w-0 h-full flex flex-col">
+                  <div className="flex flex-wrap items-end justify-between gap-3 mb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="inline-flex rounded-[9px] overflow-hidden" style={{ border: `1px solid ${T.border}`, background: T.bg }}>
+                        <button onClick={prevWeek} aria-label="Previous week" className="w-8 h-8 flex items-center justify-center transition-colors hover:bg-[rgba(119,123,98,0.1)] cursor-pointer" style={{ color: T.muted, borderRight: `1px solid ${T.borderSoft}` }}>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="m15 18-6-6 6-6" /></svg>
+                        </button>
+                        <button onClick={nextWeek} aria-label="Next week" className="w-8 h-8 flex items-center justify-center transition-colors hover:bg-[rgba(119,123,98,0.1)] cursor-pointer" style={{ color: T.muted }}>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="m9 18 6-6-6-6" /></svg>
+                        </button>
+                      </div>
+                      <div>
+                        <h2 className="font-title text-[22px] leading-tight tracking-[-0.02em]">
+                          <span className="font-bold" style={{ color: T.text }}>
+                            {calScope === "day"
+                              ? calWeekBase.toLocaleDateString("en-IN", { day: "numeric", month: "long" })
+                              : `${weekDays[0].toLocaleDateString("en-IN", { day: "numeric", month: "short" })} — ${weekDays[6].toLocaleDateString("en-IN", { day: "numeric", month: "short" })}`}
+                          </span>
+                          <span className="font-normal" style={{ color: T.muted }}> {calScope === "day" ? calWeekBase.getFullYear() : weekDays[6].getFullYear()}</span>
+                        </h2>
+                        <div className="text-[12.5px]" style={{ color: T.muted }}>
+                          {calScope === "day" ? calWeekBase.toLocaleDateString("en-IN", { weekday: "long" }) : "Week view"}
                         </div>
                       </div>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              <Card className="overflow-hidden p-0">
-                <div className="overflow-x-auto">
-                  <div style={{ minWidth: 800 }}>
-                    <div className="grid sticky top-0 z-10" style={{ gridTemplateColumns: "60px repeat(7, 1fr)", background: T.card, borderBottom: `1px solid ${T.border}` }}>
-                      <div className="py-1.5" />
-                      {weekDays.map((day) => {
-                        const iso = toISODate(day);
-                        const isToday3 = iso === todayISO;
-                        return (
-                          <div key={iso} className="text-center py-2 px-1" style={{ borderLeft: `1px solid ${T.borderSoft}` }}>
-                            <div className="text-[10px] tracking-[0.06em] uppercase" style={{ color: T.faint }}>{day.toLocaleDateString("en-IN", { weekday: "short" })}</div>
-                            <div className="text-[15px] font-semibold mx-auto" style={{ color: isToday3 ? T.accentInk : T.text, background: isToday3 ? T.accent : "transparent", borderRadius: isToday3 ? "50%" : undefined, width: isToday3 ? 28 : undefined, height: isToday3 ? 28 : undefined, lineHeight: isToday3 ? "28px" : undefined }}>{day.getDate()}</div>
-                          </div>
-                        );
-                      })}
                     </div>
-                    <div className="max-h-[600px] overflow-y-auto">
-                      {CAL_HOURS.map((hour) => (
-                        <div key={hour} className="grid" style={{ gridTemplateColumns: "60px repeat(7, 1fr)", minHeight: 40 }}>
-                          <div className="text-[10px] tabular-nums text-right pr-2 pt-0.5" style={{ color: T.faint, borderTop: `1px solid ${T.borderSoft}` }}>{formatHour(hour)}</div>
-                          {weekDays.map((day) => {
+                    <div className="flex items-center gap-3">
+                      <div className="hidden xl:flex items-center gap-4">
+                        {[
+                          { color: "#6d8ea0", label: "Scheduled" },
+                          { color: T.accent, label: "Reschedule" },
+                          { color: T.danger, label: "Needs action" },
+                          { color: T.good, label: "Done" },
+                        ].map((l) => (
+                          <span key={l.label} className="inline-flex items-center gap-1.5 text-[11.5px]" style={{ color: T.muted }}>
+                            <span className="w-2 h-2 rounded-full" style={{ background: l.color }} />
+                            {l.label}
+                          </span>
+                        ))}
+                      </div>
+                      <div className="inline-flex items-center gap-1 p-1 rounded-full shrink-0" style={{ background: "rgba(89,82,54,0.07)", border: `1px solid ${T.borderSoft}` }}>
+                        {(["day", "week"] as const).map((scope) => (
+                          <button
+                            key={scope}
+                            onClick={() => setCalScope(scope)}
+                            className="h-7 px-3.5 rounded-full text-[12.5px] capitalize shrink-0 transition-all duration-200 cursor-pointer"
+                            style={
+                              calScope === scope
+                                ? { background: T.card, color: T.text, fontWeight: 600, border: `1px solid ${T.border}`, boxShadow: "0 1px 3px rgba(43,42,34,0.10)" }
+                                : { color: T.muted, border: "1px solid transparent" }
+                            }
+                          >
+                            {scope}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <Card className="overflow-hidden !p-0 flex-1 min-h-0 flex flex-col w-full">
+                    <div className="overflow-x-auto flex-1 min-h-0 flex flex-col">
+                      <div className="h-full flex flex-col" style={{ minWidth: calScope === "day" ? 0 : 800 }}>
+                        <div className="grid" style={{ gridTemplateColumns: `60px repeat(${visibleDays.length}, 1fr)`, background: T.card, borderBottom: `1px solid ${T.border}` }}>
+                          <div className="py-1.5" />
+                          {visibleDays.map((day) => {
                             const iso = toISODate(day);
-                            const events = (calEvents.get(iso) ?? []).filter((c) => new Date(c.scheduledAt).getHours() === hour);
+                            const isToday = iso === todayISO;
                             return (
-                              <div key={iso} className="relative px-0.5 pt-0.5" style={{ borderTop: `1px solid ${T.borderSoft}`, borderLeft: `1px solid ${T.borderSoft}` }}>
-                                {events.map((ev) => {
-                                  const dt = new Date(ev.scheduledAt);
-                                  const timeStr = dt.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true });
-                                  const tone = ev.status === "closed" || ev.status === "completed" ? T.good : ev.status === "scheduled" ? "#6d8ea0" : ev.status === "reschedule_requested" ? T.accent : ev.status === "summary_pending" || ev.status === "no_show" ? T.danger : T.muted;
-                                  return (
-                                    <Link key={ev.id} href={`/consultations/${ev.id}`} className="block rounded-[6px] px-1.5 py-1 mb-0.5 text-[10px] leading-tight truncate transition-all hover:brightness-110" style={{ background: `${tone}18`, borderLeft: `3px solid ${tone}`, color: tone }} title={`${ev.customerName} — ${ev.expertName}`}>
-                                      <div className="font-medium truncate">{ev.customerName}</div>
-                                      <div className="truncate opacity-75">{timeStr}</div>
-                                    </Link>
-                                  );
-                                })}
+                              <div key={iso} className="text-center py-2 px-1" style={{ borderLeft: `1px solid ${T.borderSoft}` }}>
+                                <div className="text-[10px] tracking-[0.06em] uppercase" style={{ color: T.faint }}>{day.toLocaleDateString("en-IN", { weekday: "short" })}</div>
+                                <div className="text-[15px] font-semibold mx-auto" style={{ color: isToday ? T.accentInk : T.text, background: isToday ? T.accent : "transparent", borderRadius: isToday ? "50%" : undefined, width: isToday ? 28 : undefined, height: isToday ? 28 : undefined, lineHeight: isToday ? "28px" : undefined }}>{day.getDate()}</div>
                               </div>
                             );
                           })}
                         </div>
+
+                        <div ref={hoursRef} className="flex-1 min-h-0 overflow-y-auto max-h-[560px] lg:max-h-none">
+                          {CAL_HOURS.map((hour) => (
+                            <div key={hour} className="grid relative" style={{ gridTemplateColumns: `60px repeat(${visibleDays.length}, 1fr)`, minHeight: 40 }}>
+                              <div className="text-[10px] tabular-nums text-right pr-2 pt-0.5" style={{ color: T.faint, borderTop: `1px solid ${T.borderSoft}` }}>{formatHour(hour)}</div>
+                              {visibleDays.map((day) => {
+                                const iso = toISODate(day);
+                                const events = (calEvents.get(iso) ?? []).filter((c) => new Date(c.scheduledAt).getHours() === hour);
+                                return (
+                                  <div
+                                    key={iso}
+                                    onClick={() => openAddConsult(iso)}
+                                    className="relative px-0.5 pt-0.5 cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.045)]"
+                                    style={{ borderTop: `1px solid ${T.borderSoft}`, borderLeft: `1px solid ${T.borderSoft}` }}
+                                  >
+                                    {events.map((ev) => {
+                                      const dt = new Date(ev.scheduledAt);
+                                      const timeStr = dt.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true });
+                                      const tone = eventTone(ev);
+                                      return (
+                                        <button
+                                          key={ev.id}
+                                          onClick={(e) => { e.stopPropagation(); setSelectedEvent(selectedEvent?.id === ev.id ? null : ev); }}
+                                          className="block w-full text-left rounded-[6px] px-1.5 py-1 mb-0.5 text-[10px] leading-tight truncate transition-all hover:brightness-110 cursor-pointer"
+                                          style={{ background: `${tone}${selectedEvent?.id === ev.id ? "30" : "18"}`, color: tone, boxShadow: selectedEvent?.id === ev.id ? `inset 0 0 0 1.5px ${tone}` : "none" }}
+                                        >
+                                          <div className="font-medium truncate">{ev.customerName}</div>
+                                          <div className="truncate opacity-75">{timeStr}</div>
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                );
+                              })}
+                              {todayVisible && hour === nowHour && (
+                                <div className="absolute left-0 right-0 z-10 pointer-events-none" style={{ top: `${nowPct}%` }}>
+                                  <div className="relative h-[2px]" style={{ background: T.danger }}>
+                                    <span className="absolute left-0.5 top-1/2 -translate-y-1/2 text-[9px] font-bold px-1.5 py-px rounded-full tabular-nums" style={{ background: T.danger, color: "#fdf6ea" }}>
+                                      {nowTimeStr}
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                </div>
+
+                {/* Right rail */}
+                <aside className="w-[300px] shrink-0 hidden lg:block space-y-3 lg:max-h-full lg:overflow-y-auto no-scrollbar">
+                  {/* Mini month */}
+                  <div className="rounded-[16px] p-4" style={{ background: T.card, border: `1px solid ${T.borderSoft}`, boxShadow: T.shadow }}>
+                    <div className="flex items-center justify-between mb-2.5">
+                      <span className="text-[13px] font-semibold" style={{ color: T.text }}>
+                        {["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][gtdMonth]} {gtdYear}
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => { if (gtdMonth === 0) { setGtdMonth(11); setGtdYear((y) => y - 1); } else setGtdMonth((m) => m - 1); }} aria-label="Previous month" className="w-7 h-7 rounded-[8px] flex items-center justify-center cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.12)]" style={{ color: T.muted }}>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3"><path d="m15 18-6-6 6-6" /></svg>
+                        </button>
+                        <button onClick={() => { goToToday(); setGtdYear(new Date().getFullYear()); setGtdMonth(new Date().getMonth()); }} className="h-7 px-2.5 rounded-[8px] text-[12px] font-medium cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.12)]" style={{ color: T.text, border: `1px solid ${T.border}` }}>Today</button>
+                        <button onClick={() => { if (gtdMonth === 11) { setGtdMonth(0); setGtdYear((y) => y + 1); } else setGtdMonth((m) => m + 1); }} aria-label="Next month" className="w-7 h-7 rounded-[8px] flex items-center justify-center cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.12)]" style={{ color: T.muted }}>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3"><path d="m9 18 6-6-6-6" /></svg>
+                        </button>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-7 gap-0.5 mb-1">
+                      {["M","T","W","T","F","S","S"].map((d, i) => (
+                        <div key={i} className="text-center text-[10px] font-medium py-0.5" style={{ color: T.faint }}>{d}</div>
                       ))}
                     </div>
+                    <div className="grid grid-cols-7 gap-0.5">
+                      {Array.from({ length: mmLead }).map((_, i) => <div key={`e${i}`} />)}
+                      {Array.from({ length: mmDays }).map((_, i) => {
+                        const day = i + 1;
+                        const iso = `${gtdYear}-${String(gtdMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+                        const isToday = iso === todayISO;
+                        const isSelected = iso === selISO;
+                        const hasEvents = calEvents.has(iso);
+                        return (
+                          <button
+                            key={day}
+                            onClick={() => { setCalWeekBase(new Date(iso + "T00:00:00")); setCalScope("day"); }}
+                            className="relative h-8 rounded-full flex items-center justify-center text-[11.5px] tabular-nums transition-colors cursor-pointer hover:bg-[rgba(119,123,98,0.14)]"
+                            style={{ background: isToday ? T.danger : isSelected ? T.accent : "transparent", color: isToday || isSelected ? "#fdf6ea" : T.text, fontWeight: isToday || isSelected ? 700 : 400 }}
+                          >
+                            {day}
+                            {hasEvents && !isToday && !isSelected && <span className="absolute bottom-0.5 w-1 h-1 rounded-full" style={{ background: T.accent }} />}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              </Card>
-            </>
-          )}
+
+                  {/* Event details */}
+                  {selectedEvent ? (() => {
+                    const ev = selectedEvent;
+                    const dt = new Date(ev.scheduledAt);
+                    const st = rowStatus(ev);
+                    return (
+                      <div className="rounded-[16px] p-5" style={{ background: T.card, border: `1px solid ${T.borderSoft}`, boxShadow: T.shadow, animation: "fadeIn 0.15s ease both" }}>
+                        <div className="flex items-center justify-between gap-3 mb-2">
+                          <Chip tone={st.tone}>{st.label}</Chip>
+                          <button onClick={() => setSelectedEvent(null)} aria-label="Close details" className="w-7 h-7 rounded-full flex items-center justify-center cursor-pointer transition-colors hover:bg-[rgba(89,82,54,0.10)]" style={{ color: T.muted }}>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="w-3.5 h-3.5"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                          </button>
+                        </div>
+                        <div className="text-[15px] font-semibold" style={{ color: T.text }}>{ev.customerName}</div>
+                        <div className="text-[12.5px] mt-0.5" style={{ color: T.muted }}>with {ev.expertName}</div>
+                        <div className="mt-4 pt-4 space-y-2.5" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+                          {[
+                            { label: "When", value: `${dt.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short", year: "numeric" })} · ${dt.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true })}` },
+                            { label: "Payment", value: ev.paymentStatus === "pending" ? "Pending" : "Paid" },
+                            { label: "Meeting", value: ev.meetingLink ? "Link ready" : "Link pending" },
+                            { label: "ID", value: ev.id },
+                          ].map((row) => (
+                            <div key={row.label} className="flex gap-3 text-[12.5px]">
+                              <span className="w-[76px] shrink-0" style={{ color: T.faint }}>{row.label}</span>
+                              <span className="min-w-0" style={{ color: T.text }}>{row.value}</span>
+                            </div>
+                          ))}
+                        </div>
+                        <Link href={`/consultations/${ev.id}`} className="mt-4 h-9 w-full rounded-[9px] text-[13px] font-semibold inline-flex items-center justify-center transition-all duration-200 hover:brightness-110" style={{ background: T.primary, color: T.primaryInk }}>
+                          Open details
+                        </Link>
+                      </div>
+                    );
+                  })() : (
+                    <div className="rounded-[16px] p-5 text-center" style={{ background: T.card, border: `1px dashed ${T.border}` }}>
+                      <div className="text-[12.5px]" style={{ color: T.faint }}>
+                        Select a consultation on the calendar to see its details, or click an empty slot to add one.
+                      </div>
+                    </div>
+                  )}
+                </aside>
+              </div>
+            );
+          })()}
         </>
       )}
 
       {/* ========= AVAILABILITY TAB ========= */}
       {activeTab === "availability" && (
-        <Card>
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-[15px] font-semibold" style={{ color: T.text }}>Week availability</span>
+        <Card className="!p-6 md:min-h-0 md:overflow-y-auto">
+          <div className="flex items-center justify-between mb-4 pb-4" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
+            <h2 className="text-[15px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>Week availability</h2>
             <Link
               href={`/astro-gemologists/${id}/availability`}
               className="inline-flex items-center gap-1.5 h-9 px-4 rounded-[9px] text-[12px] font-medium transition-all duration-200 hover:brightness-110 cursor-pointer"
@@ -726,7 +864,7 @@ export default function AstroGemologistDetailPage() {
             </Link>
           </div>
           {next7Days.length === 0 ? (
-            <p className="text-[13.5px] py-6 text-center" style={{ color: T.muted }}>No availability data.</p>
+            <EmptyState inline icon="calendar" title="No availability set" description="This expert hasn't configured availability." />
           ) : (
             <div>
               {next7Days.map((day, i) => {
@@ -758,7 +896,7 @@ export default function AstroGemologistDetailPage() {
                                 key={slot.time}
                                 href={`/consultations/${booking.id}`}
                                 className="text-[11px] tabular-nums px-2 py-1 rounded-[6px] transition-all hover:brightness-125 cursor-pointer"
-                                style={{ background: "rgba(195,160,88,0.12)", color: T.accent, border: `1px solid rgba(195,160,88,0.3)` }}
+                                style={{ background: "rgba(119,123,98,0.12)", color: T.accent, border: `1px solid rgba(119,123,98,0.3)` }}
                                 title={`Booked — ${booking.customerName}`}
                               >
                                 {slot.time}
@@ -789,84 +927,74 @@ export default function AstroGemologistDetailPage() {
       {/* ========= SUMMARY DUE TAB ========= */}
       {activeTab === "summary_due" && (
         <>
-          <div className="flex flex-wrap items-center gap-2.5 mb-4">
-            <div className="flex-1 min-w-[200px]">
-              <SearchFilter search={sdSearch} onSearchChange={(v) => { setSdSearch(v); setSdPage(0); }} placeholder="Search customer, ID…" />
+          <div className="flex flex-wrap items-center gap-2 mb-3">
+            <ToolbarSearch value={sdSearch} onChange={(v) => { setSdSearch(v); setSdPage(0); }} placeholder="Search customer, ID…" />
+            <div className="ml-auto w-[160px]">
+              <Select value={sdSort} onChange={(val) => { setSdSort(val as SortKey); setSdPage(0); }} compact prefix="Sort: " options={[{ value: "date_desc", label: "Newest first" }, { value: "date_asc", label: "Oldest first" }]} />
             </div>
-            <SortControl value={sdSort} onChange={(v) => { setSdSort(v); setSdPage(0); }} />
           </div>
 
-          <Card>
+          <Card className="!p-0 md:flex md:flex-col md:min-h-0">
+          <div className="md:min-h-0 overflow-y-auto max-h-[560px] md:max-h-none flex-1">
             <TableHeader cols={["Customer", "Date", "Commission", "Status"]} />
             {sdPaginated.length === 0 ? (
-              <p className="text-[13.5px] py-8 text-center" style={{ color: T.muted }}>No summaries pending.</p>
+              <EmptyState inline icon="check" title="Nothing pending" description="All recommendations are up to date." />
             ) : (
               sdPaginated.map((c) => <ConsultationRow key={c.id} c={c} />)
             )}
-            <Pagination page={sdPage} totalPages={sdTotalPages} totalItems={sdFiltered.length} perPage={PAGE_SIZE} onPageChange={setSdPage} />
-          </Card>
+          </div>
+        </Card>
+        <Pagination page={sdPage} totalPages={sdTotalPages} totalItems={sdFiltered.length} perPage={PAGE_SIZE} onPageChange={setSdPage} />
         </>
       )}
 
       {/* ========= NO SHOW TAB ========= */}
       {activeTab === "no_show" && (
         <>
-          <div className="flex flex-wrap items-center gap-2.5 mb-4">
-            <div className="flex-1 min-w-[200px]">
-              <SearchFilter search={nsSearch} onSearchChange={(v) => { setNsSearch(v); setNsPage(0); }} placeholder="Search customer, ID…" />
+          <div className="flex flex-wrap items-center gap-2 mb-3">
+            <ToolbarSearch value={nsSearch} onChange={(v) => { setNsSearch(v); setNsPage(0); }} placeholder="Search customer, ID…" />
+            <div className="ml-auto w-[160px]">
+              <Select value={nsSort} onChange={(val) => { setNsSort(val as SortKey); setNsPage(0); }} compact prefix="Sort: " options={[{ value: "date_desc", label: "Newest first" }, { value: "date_asc", label: "Oldest first" }]} />
             </div>
-            <SortControl value={nsSort} onChange={(v) => { setNsSort(v); setNsPage(0); }} />
           </div>
 
-          <Card>
+          <Card className="!p-0 md:flex md:flex-col md:min-h-0">
+          <div className="md:min-h-0 overflow-y-auto max-h-[560px] md:max-h-none flex-1">
             <TableHeader cols={["Customer", "Date", "Commission", "Status"]} />
             {nsPaginated.length === 0 ? (
-              <p className="text-[13.5px] py-8 text-center" style={{ color: T.muted }}>No no-show records.</p>
+              <EmptyState inline icon="check" title="No no-shows" description="This expert has no no-show records." />
             ) : (
               nsPaginated.map((c) => <ConsultationRow key={c.id} c={c} />)
             )}
-            <Pagination page={nsPage} totalPages={nsTotalPages} totalItems={nsFiltered.length} perPage={PAGE_SIZE} onPageChange={setNsPage} />
-          </Card>
+          </div>
+        </Card>
+        <Pagination page={nsPage} totalPages={nsTotalPages} totalItems={nsFiltered.length} perPage={PAGE_SIZE} onPageChange={setNsPage} />
         </>
       )}
 
       {/* ========= RECOMMENDATIONS TAB ========= */}
       {activeTab === "recommendations" && (
         <>
-          <div className="flex flex-wrap items-center gap-2.5 mb-4">
-            <div className="flex-1 min-w-[200px]">
-              <SearchFilter search={recSearch} onSearchChange={(v) => { setRecSearch(v); setRecPage(0); }} placeholder="Search gemstone, customer…" />
+          <div className="flex flex-wrap items-center gap-2 mb-3">
+            <ToolbarSearch value={recSearch} onChange={(v) => { setRecSearch(v); setRecPage(0); }} placeholder="Search gemstone, customer…" />
+            <div className="ml-auto flex items-center gap-2">
+              <FiltersPopover count={[recFilterStone, recFilterStatus].filter(Boolean).length} open={showRecFilters} onToggle={() => setShowRecFilters(!showRecFilters)}>
+                <FilterField label="Stone">
+                  <Select value={recFilterStone} onChange={(v) => { setRecFilterStone(v); setRecPage(0); }} searchable compact placeholder="All stones" options={[{ value: "", label: "All stones" }, ...recStones.map((s2) => ({ value: s2, label: s2 }))]} />
+                </FilterField>
+                <FilterField label="Status">
+                  <Select value={recFilterStatus} onChange={(v) => { setRecFilterStatus(v); setRecPage(0); }} compact placeholder="All statuses" options={[{ value: "", label: "All statuses" }, { value: "submitted", label: "Submitted" }, { value: "converted_to_order", label: "Converted" }]} />
+                </FilterField>
+              </FiltersPopover>
+              <div className="w-[160px]">
+                <Select value={recSort} onChange={(val) => { setRecSort(val as SortKey); setRecPage(0); }} compact prefix="Sort: " options={[{ value: "date_desc", label: "Newest first" }, { value: "date_asc", label: "Oldest first" }]} />
+              </div>
             </div>
-            <Select
-              value={recFilterStone}
-              onChange={(v) => { setRecFilterStone(v); setRecPage(0); }}
-              compact
-              placeholder="Stone: All"
-              prefix="Stone: "
-              options={[
-                { value: "", label: "All" },
-                ...recStones.map((s) => ({ value: s, label: s })),
-              ]}
-              className="w-[200px]"
-            />
-            <Select
-              value={recFilterStatus}
-              onChange={(v) => { setRecFilterStatus(v); setRecPage(0); }}
-              compact
-              placeholder="Status: All"
-              prefix="Status: "
-              options={[
-                { value: "", label: "All" },
-                { value: "submitted", label: "Submitted" },
-                { value: "converted_to_order", label: "Converted" },
-              ]}
-              className="w-[150px]"
-            />
-            <SortControl value={recSort} onChange={(v) => { setRecSort(v); setRecPage(0); }} />
           </div>
 
-          <Card>
-            <div className="hidden sm:grid grid-cols-[1fr_130px_100px_100px_120px_120px] gap-3 px-3 py-2 text-[11px] tracking-[0.06em] uppercase" style={{ color: T.faint, borderBottom: `1px solid ${T.borderSoft}` }}>
+          <Card className="!p-0 md:flex md:flex-col md:min-h-0">
+          <div className="md:min-h-0 overflow-y-auto max-h-[560px] md:max-h-none flex-1">
+            <div className="hidden sm:grid grid-cols-[1fr_130px_100px_100px_120px_120px] gap-3 items-center px-4 h-10 text-[11px] tracking-[0.06em] uppercase font-medium rounded-t-[15px]" style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.border}` }}>
               <span>Stone</span>
               <span>Customer</span>
               <span className="text-right">Price</span>
@@ -875,7 +1003,7 @@ export default function AstroGemologistDetailPage() {
               <span>Status</span>
             </div>
             {recPaginated.length === 0 ? (
-              <p className="text-[13.5px] py-8 text-center" style={{ color: T.muted }}>No recommendations found.</p>
+              <EmptyState inline icon="search" title="No recommendations" description="No recommendations match your filters." />
             ) : (
               recPaginated.map((r) => {
                 const href = r.orderId ? `/orders/${r.orderId}` : `/consultations/${r.consultationId}`;
@@ -885,7 +1013,7 @@ export default function AstroGemologistDetailPage() {
                   <Link
                     key={r.id}
                     href={href}
-                    className="group grid grid-cols-1 sm:grid-cols-[1fr_130px_100px_100px_120px_120px] gap-2 sm:gap-3 items-center px-3 py-3.5 transition-all duration-150 rounded-[8px] hover:bg-[rgba(160,125,56,0.07)]"
+                    className="group grid grid-cols-1 sm:grid-cols-[1fr_130px_100px_100px_120px_120px] gap-2 sm:gap-3 items-center px-4 py-2.5 transition-colors duration-150 even:bg-[rgba(89,82,54,0.025)] hover:!bg-[rgba(119,123,98,0.08)] last:rounded-b-[15px]"
                     style={{ borderBottom: `1px solid ${T.borderSoft}` }}
                   >
                     <div className="min-w-0">
@@ -915,29 +1043,31 @@ export default function AstroGemologistDetailPage() {
                 );
               })
             )}
-            <Pagination page={recPage} totalPages={recTotalPages} totalItems={recFiltered.length} perPage={PAGE_SIZE} onPageChange={setRecPage} />
-          </Card>
+          </div>
+        </Card>
+        <Pagination page={recPage} totalPages={recTotalPages} totalItems={recFiltered.length} perPage={PAGE_SIZE} onPageChange={setRecPage} />
         </>
       )}
 
       {/* ========= PAYMENTS TAB ========= */}
       {activeTab === "payments" && (
         <>
-          <div className="flex flex-wrap items-center gap-2.5 mb-4">
-            <div className="flex-1 min-w-[200px]">
-              <SearchFilter search={paySearch} onSearchChange={(v) => { setPaySearch(v); setPayPage(0); }} placeholder="Search customer, payment ID…" />
-            </div>
-            <SortControl value={paySort} onChange={(v) => { setPaySort(v); setPayPage(0); }} />
-          </div>
-
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
-            <StatCard label="Total earnings" value={inr(totalEarnings)} />
+            <StatCard label="Total earnings" value={inr(totalEarnings)} featured />
             <StatCard label="Total payments" value={expertPayments.length} />
             <StatCard label="Pending" value={expertPayments.filter((p) => p.status !== "paid").length} />
           </div>
 
-          <Card>
-            <div className="hidden sm:grid grid-cols-[1fr_1fr_120px_100px_120px] gap-3 px-3 py-2 text-[11px] tracking-[0.06em] uppercase" style={{ color: T.faint, borderBottom: `1px solid ${T.borderSoft}` }}>
+          <div className="flex flex-wrap items-center gap-2 mb-3">
+            <ToolbarSearch value={paySearch} onChange={(v) => { setPaySearch(v); setPayPage(0); }} placeholder="Search customer, payment ID…" />
+            <div className="ml-auto w-[160px]">
+              <Select value={paySort} onChange={(val) => { setPaySort(val as SortKey); setPayPage(0); }} compact prefix="Sort: " options={[{ value: "date_desc", label: "Newest first" }, { value: "date_asc", label: "Oldest first" }]} />
+            </div>
+          </div>
+
+          <Card className="!p-0 md:flex md:flex-col md:min-h-0">
+          <div className="md:min-h-0 overflow-y-auto max-h-[560px] md:max-h-none flex-1">
+            <div className="hidden sm:grid grid-cols-[1fr_1fr_120px_100px_120px] gap-3 items-center px-4 h-10 text-[11px] tracking-[0.06em] uppercase font-medium rounded-t-[15px]" style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.border}` }}>
               <span>Payment</span>
               <span>Customer</span>
               <span>Date</span>
@@ -945,10 +1075,10 @@ export default function AstroGemologistDetailPage() {
               <span className="text-right">Amount</span>
             </div>
             {payPaginated.length === 0 ? (
-              <p className="text-[13.5px] py-8 text-center" style={{ color: T.muted }}>No payments found.</p>
+              <EmptyState inline icon="inbox" title="No payments" description="No payments to show yet." />
             ) : (
               payPaginated.map((p) => (
-                <div key={p.id} className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_120px_100px_120px] gap-3 items-center px-3 py-3" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
+                <div key={p.id} className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_120px_100px_120px] gap-3 items-center px-4 py-2.5 even:bg-[rgba(89,82,54,0.025)] last:rounded-b-[15px]" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
                   <div className="min-w-0">
                     <div className="text-[11px] tracking-[0.06em] uppercase font-medium" style={{ color: T.accent }}>{p.id}</div>
                     <div className="text-[12px] mt-0.5 truncate" style={{ color: T.muted }}>{p.purpose}</div>
@@ -962,56 +1092,52 @@ export default function AstroGemologistDetailPage() {
                 </div>
               ))
             )}
-            <Pagination page={payPage} totalPages={payTotalPages} totalItems={payFiltered.length} perPage={PAGE_SIZE} onPageChange={setPayPage} />
-          </Card>
+          </div>
+        </Card>
+        <Pagination page={payPage} totalPages={payTotalPages} totalItems={payFiltered.length} perPage={PAGE_SIZE} onPageChange={setPayPage} />
         </>
-      )}
-      </>
       )}
 
       {/* Make Payout Modal */}
       <Modal open={showPayoutModal} onClose={() => setShowPayoutModal(false)} title="Initiate payout">
-        <div className="space-y-5">
-          <div className="p-4 rounded-[10px]" style={{ background: T.panel, border: `1px solid ${T.borderSoft}` }}>
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-[13.5px] font-medium" style={{ color: T.text }}>{expert.name}</div>
-                <div className="text-[12px] mt-0.5" style={{ color: T.muted }}>{expert.specialization}</div>
-              </div>
-              <div className="text-right">
-                <div className="text-[11px] uppercase tracking-wider" style={{ color: T.faint }}>Total earnings</div>
-                <div className="text-[16px] font-semibold" style={{ color: T.accent }}>{inr(totalEarnings)}</div>
-              </div>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between gap-3 p-3.5 rounded-[12px]" style={{ background: T.accentFaint, border: `1px solid ${T.borderSoft}` }}>
+            <div className="min-w-0">
+              <div className="text-[13.5px] font-semibold truncate" style={{ color: T.text }}>{expert.name}</div>
+              <div className="text-[12px] mt-0.5 truncate" style={{ color: T.muted }}>{expert.specialization}</div>
+            </div>
+            <div className="text-right shrink-0">
+              <div className="text-[10px] font-medium uppercase tracking-[0.08em]" style={{ color: T.faint }}>Total earnings</div>
+              <div className="text-[16px] font-semibold tabular-nums" style={{ color: T.accent }}>{inr(totalEarnings)}</div>
             </div>
           </div>
-          <Input value={payoutForm.amount} onChange={(v) => setPayoutForm((p) => ({ ...p, amount: v }))} label="Payout amount (₹)" placeholder={String(totalEarnings)} />
+          <Input value={payoutForm.amount} onChange={(v) => setPayoutForm((p) => ({ ...p, amount: v }))} label="Payout amount (₹)" type="number" placeholder={String(totalEarnings)} />
           <Input value={payoutForm.notes} onChange={(v) => setPayoutForm((p) => ({ ...p, notes: v }))} label="Period / notes" placeholder="e.g. May – Jul 2026" />
-          <div className="pt-2">
-            <GoldBtn onClick={() => { setShowPayoutModal(false); setToast("Payout initiated"); setTimeout(() => setToast(""), 3000); }}>Proceed to payment →</GoldBtn>
+          <p className="text-[11.5px]" style={{ color: T.faint }}>You&apos;ll be redirected to the payment gateway to complete the transfer.</p>
+          <div className="flex items-center justify-end gap-2.5 pt-1">
+            <GhostBtn onClick={() => setShowPayoutModal(false)}>Cancel</GhostBtn>
+            <GoldBtn
+              onClick={() => { setShowPayoutModal(false); setToast("Payout initiated"); setTimeout(() => setToast(""), 3000); }}
+              disabled={Number(payoutForm.amount || totalEarnings) <= 0}
+            >
+              Proceed to payment →
+            </GoldBtn>
           </div>
-          <p className="text-[11px] text-center" style={{ color: T.faint }}>You will be redirected to the payment gateway to complete the transfer.</p>
         </div>
       </Modal>
+
+      {toast && <Toast message={toast} />}
 
       <ConfirmDialog
         open={confirmDeactivate}
         onClose={() => setConfirmDeactivate(false)}
         onConfirm={() => { setIsActive(false); setToast("Gemologist deactivated"); setTimeout(() => setToast(""), 3000); }}
-        title="Deactivate expert?"
-        description="This expert will be removed from scheduling."
-        variant="danger"
+        title={`Deactivate ${expert.name}?`}
+        message="They'll lose portal access until reactivated."
         confirmLabel="Deactivate"
+        tone="danger"
       />
-
-      {toast && (
-        <div
-          className="fixed top-6 right-6 z-[100] flex items-center gap-2 px-4 py-3 rounded-[10px] shadow-lg text-[13.5px] font-medium animate-in"
-          style={{ background: T.card, border: `1px solid ${T.border}`, color: T.good }}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6L9 17l-5-5"/></svg>
-          {toast}
-        </div>
-      )}
+      </div>
     </>
   );
 }

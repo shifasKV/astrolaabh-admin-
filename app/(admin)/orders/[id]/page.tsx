@@ -1,11 +1,12 @@
 "use client";
-import { use, useState, useEffect } from "react";
+import { use, useState } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, GoldBtn, GhostBtn, Modal, Input, Select, FileInput, Textarea, DateInput, TimeInput, ShopifyButton, BackLink, LoadingState, ConfirmDialog } from "@/components/ui";
+import { PageHeader, Card, Chip, GoldBtn, GhostBtn, Modal, Input, Select, FileInput, Textarea, DateInput, TimeInput, ShopifyButton, BackLink, Toast, ConfirmDialog } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_ORDERS, MOCK_CUSTOMERS, MOCK_CERTIFICATES, MOCK_ENERGISATION } from "@/lib/mock";
 import { ENERGISATION } from "@/lib/catalog";
 import { inr } from "@/lib/types";
+import * as V from "@/lib/validators";
 
 type CertUploadTarget = "lab_authenticity" | "energisation" | null;
 type PipelineStep = 0 | 1 | 2 | 3;
@@ -42,6 +43,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const [showMarkPaid, setShowMarkPaid] = useState(false);
   const [paymentRef, setPaymentRef] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("");
+  const [payErrors, setPayErrors] = useState<Record<string, string>>({});
 
   const [localItemStatuses, setLocalItemStatuses] = useState<Record<string, string>>({});
   const [localVendorNames, setLocalVendorNames] = useState<Record<string, string>>({});
@@ -53,16 +55,11 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const [trackingCourier, setTrackingCourier] = useState("");
   const [trackingInput, setTrackingInput] = useState("");
   const [dispatched, setDispatched] = useState(false);
-  const [confirmDispatch, setConfirmDispatch] = useState(false);
   const [receivedNotes, setReceivedNotes] = useState("");
 
   const [viewStep, setViewStep] = useState<PipelineStep | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const t = setTimeout(() => setLoading(false), 700);
-    return () => clearTimeout(t);
-  }, []);
+  const [confirmEnergComplete, setConfirmEnergComplete] = useState(false);
+  const [confirmDispatch, setConfirmDispatch] = useState(false);
 
   if (!order) {
     return (
@@ -119,10 +116,17 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const flash = (msg: string) => { setToast(msg); setTimeout(() => setToast(""), 3000); };
 
   const handleMarkPaid = () => {
+    const e: Record<string, string> = {
+      paymentMethod: V.required(paymentMethod, "Payment method"),
+      paymentRef: V.required(paymentRef, "Payment reference"),
+    };
+    setPayErrors(e);
+    if (!V.isClean(e)) return;
     setLocalPaymentStatus("paid");
     setShowMarkPaid(false);
     setPaymentRef("");
     setPaymentMethod("");
+    setPayErrors({});
     flash("Payment marked as received");
   };
 
@@ -162,42 +166,42 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
         back={{ label: "Orders", href: "/orders" }}
         action={
           <div className="flex items-center gap-2.5">
+            <Chip tone={isPaid ? "good" : "gold"}>{isPaid ? "Paid" : "Payment pending"}</Chip>
             <ShopifyButton href="https://admin.shopify.com/orders">Open in Shopify</ShopifyButton>
           </div>
         }
       />
 
-      {loading ? (
-        <Card className="mb-4"><LoadingState lines={8} /></Card>
-      ) : (
-      <>
       {/* ============ PAYMENT BANNER ============ */}
       {!isPaid && (
         <div
-          className="flex items-center gap-3 rounded-[10px] px-4 py-3 mb-4"
-          style={{ background: "rgba(195,160,88,0.12)", border: `1px solid rgba(195,160,88,0.3)` }}
+          className="flex flex-wrap items-center gap-3 rounded-[12px] px-4 py-3 mb-4"
+          style={{ background: "rgba(160,125,56,0.08)", border: "1px solid rgba(160,125,56,0.28)" }}
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-          <div className="flex-1">
-            <span className="text-[13.5px] font-medium" style={{ color: T.text }}>Payment pending</span>
-            <span className="text-[12px] ml-2" style={{ color: T.muted }}>— fulfillment steps are locked until payment is received.</span>
+          <span className="w-2 h-2 rounded-full shrink-0" style={{ background: T.gold }} />
+          <div className="flex-1 min-w-0 text-[13px]">
+            <span className="font-semibold" style={{ color: T.text }}>Payment pending</span>
+            <span style={{ color: T.muted }}> — fulfillment is locked until payment is received.</span>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <button onClick={() => setShowMarkPaid(true)} className="text-[12px] font-medium px-3 py-1.5 rounded-[8px] cursor-pointer hover:brightness-110 transition-all" style={{ background: T.primary, color: T.primaryInk }}>Mark as paid</button>
-            <button onClick={() => flash("Payment link sent to customer")} className="text-[12px] font-medium px-3 py-1.5 rounded-[8px] cursor-pointer hover:opacity-90 transition-opacity" style={{ background: T.accent, color: T.accentInk }}>Resend link</button>
+            <button onClick={() => flash("Payment link sent to customer")} className="text-[12.5px] font-medium h-8 px-3 rounded-[8px] cursor-pointer transition-colors hover:bg-[rgba(160,125,56,0.12)]" style={{ color: T.gold }}>Resend link</button>
+            <button onClick={() => setShowMarkPaid(true)} className="text-[12.5px] font-semibold h-8 px-3.5 rounded-[8px] cursor-pointer hover:brightness-110 transition-all" style={{ background: T.primary, color: T.primaryInk }}>Mark as paid</button>
           </div>
         </div>
       )}
 
+      {/* ============ TWO-COLUMN BODY — work left, context right ============ */}
+      <div className="flex flex-col xl:flex-row items-start gap-4">
+        <div className="flex-1 min-w-0 space-y-4 w-full">
       {/* ============ ORDER SUMMARY (invoice-style) ============ */}
-      <Card className="mb-4">
+      <Card>
         <div className="flex items-center justify-between mb-3">
-          <div className="text-[11px] tracking-[0.08em] uppercase" style={{ color: T.faint }}>Order summary</div>
+          <h2 className="text-[15px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>Order summary</h2>
           {isPaid && (
             <button
               onClick={() => flash("Invoice downloaded")}
               className="inline-flex items-center gap-1.5 text-[12px] font-medium px-3 py-1.5 rounded-[8px] cursor-pointer transition-all hover:brightness-110"
-              style={{ background: "rgba(160,125,56,0.12)", color: T.accent, border: `1px solid ${T.accentBorder}` }}
+              style={{ background: "rgba(119,123,98,0.12)", color: T.accent, border: `1px solid ${T.accentBorder}` }}
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
               Download invoice
@@ -206,7 +210,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
         </div>
 
         {/* Column header */}
-        <div className="hidden sm:grid grid-cols-[auto_1fr_100px_120px] gap-3 px-3 py-2 text-[10px] tracking-[0.06em] uppercase font-semibold rounded-[6px] mb-1" style={{ color: T.muted, background: "rgba(89,82,54,0.04)" }}>
+        <div className="hidden sm:grid grid-cols-[auto_1fr_100px_120px] gap-3 px-3 py-2 text-[11px] tracking-[0.06em] uppercase font-medium" style={{ color: T.faint, borderBottom: `1px solid ${T.border}` }}>
           <span className="w-6" />
           <span>Item</span>
           <span className="text-right">Qty</span>
@@ -215,14 +219,14 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
         {order.items.map((item, i) => (
           <div key={item.sku} className="grid grid-cols-[auto_1fr_100px_120px] gap-3 items-center px-3 py-3 text-[13px]" style={{ borderBottom: i < order.items.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}>
-            <div className="w-6 h-6 rounded-[5px] flex items-center justify-center text-[10px] font-semibold shrink-0" style={{ background: "rgba(160,125,56,0.12)", color: T.accent }}>
+            <div className="w-6 h-6 rounded-[5px] flex items-center justify-center text-[10px] font-semibold shrink-0" style={{ background: "rgba(119,123,98,0.12)", color: T.accent }}>
               {i + 1}
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <span className="text-[13px] font-medium truncate" style={{ color: T.text }}>{item.name}</span>
                 <span className="text-[9px] tracking-[0.06em] uppercase px-1.5 py-0.5 rounded-full shrink-0 font-semibold" style={{
-                  background: item.itemType === "jewellery" ? "rgba(160,125,56,0.10)" : "rgba(95,112,64,0.10)",
+                  background: item.itemType === "jewellery" ? "rgba(119,123,98,0.10)" : "rgba(95,112,64,0.10)",
                   color: item.itemType === "jewellery" ? T.accent : T.good,
                 }}>
                   {item.itemType === "jewellery" ? "Jewellery" : "Stone"}
@@ -250,73 +254,17 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               <span className="tabular-nums" style={{ color: T.text }}>{inr(tier.fee)}</span>
             </div>
           )}
-          <div className="flex items-center justify-between px-3 py-2 mt-1 rounded-[8px]" style={{ background: "rgba(89,82,54,0.04)" }}>
-            <span className="text-[14px] font-semibold" style={{ color: T.text }}>Total</span>
-            <span className="text-[17px] font-bold tabular-nums" style={{ color: T.text }}>
+          <div className="flex items-baseline justify-between px-3 pt-3 mt-2" style={{ borderTop: `1px solid ${T.border}` }}>
+            <span className="text-[13.5px] font-medium" style={{ color: T.muted }}>Total</span>
+            <span className="font-title text-[20px] font-semibold tabular-nums tracking-[-0.01em]" style={{ color: T.text }}>
               {inr(order.total + (tier && tier.fee > 0 ? tier.fee : 0))}
             </span>
           </div>
         </div>
       </Card>
-
-      {/* ============ CUSTOMER + ORDER INFO ============ */}
-      <div className="grid md:grid-cols-2 gap-4 mb-4">
-        {customer ? (
-          <Link href={`/customers/${customer.id}`} className="block group">
-            <div className="card-interactive rounded-[12px] p-5 h-full cursor-pointer" style={{ background: T.card, border: `1px solid ${T.border}` }}>
-              <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.faint }}>Customer</div>
-              <div className="space-y-2.5 text-[13px]">
-                {[["Name", customer.name], ["Phone", customer.phone], ["Email", customer.email], ["Location", customer.birthPlace]].map(([k, v]) => (
-                  <div key={k} className="flex items-center justify-between">
-                    <span style={{ color: T.muted }}>{k}</span>
-                    <span className="text-right" style={{ color: T.text }}>{v}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </Link>
-        ) : (
-          <Card>
-            <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.faint }}>Customer</div>
-            <div className="flex items-center justify-between text-[13px]">
-              <span style={{ color: T.muted }}>Name</span>
-              <span style={{ color: T.text }}>{order.customerName}</span>
-            </div>
-          </Card>
-        )}
-
-        <Card>
-          <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.faint }}>Order details</div>
-          <div className="space-y-2.5 text-[13px]">
-            <div className="flex items-center justify-between">
-              <span style={{ color: T.muted }}>Payment</span>
-              <Chip tone={isPaid ? "good" : "gold"}>{isPaid ? "Paid" : "Pending"}</Chip>
-            </div>
-            <div className="flex items-start justify-between">
-              <span style={{ color: T.muted }}>Ship to</span>
-              <span className="text-right max-w-[220px]" style={{ color: customer?.shippingAddress ? T.text : T.faint }}>
-                {customer ? `${customer.name}, ${customer.shippingAddress || "—"}` : "—"}
-              </span>
-            </div>
-            {order.affiliateCode && (
-              <div className="flex items-center justify-between">
-                <span style={{ color: T.muted }}>Affiliate</span>
-                <span style={{ color: T.accent }}>{order.affiliateCode}</span>
-              </div>
-            )}
-            {order.placedBy && (
-              <div className="flex items-center justify-between">
-                <span style={{ color: T.muted }}>Placed by</span>
-                <span style={{ color: T.text }}>{order.placedBy}</span>
-              </div>
-            )}
-          </div>
-        </Card>
-      </div>
-
       {/* ============ FULFILLMENT PIPELINE ============ */}
-      <Card className="mb-4">
-        <div className="text-[11px] tracking-[0.08em] uppercase mb-4" style={{ color: T.faint }}>Fulfillment</div>
+      <Card>
+        <h2 className="text-[15px] font-semibold tracking-[-0.01em] mb-4" style={{ color: T.text }}>Fulfillment</h2>
 
         {/* Stepper */}
         <div className="flex items-center gap-1 mb-5 overflow-x-auto no-scrollbar">
@@ -495,7 +443,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               {!allStonesReceived && !energiseComplete && (
                 <div
                   className="flex items-center gap-3 rounded-[10px] px-4 py-3 mb-4"
-                  style={{ background: "rgba(195,160,88,0.12)", border: "1px solid rgba(195,160,88,0.3)" }}
+                  style={{ background: "rgba(119,123,98,0.12)", border: "1px solid rgba(119,123,98,0.3)" }}
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                   <span className="text-[12.5px] font-medium" style={{ color: T.text }}>Product is not yet with us</span>
@@ -553,7 +501,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                       )}
                       {(localEnergStatus === "scheduled" || localEnergStatus === "in_progress") && (
                         <span onClick={(e) => e.preventDefault()}>
-                          <GoldBtn onClick={() => { setLocalEnergStatus("completed"); flash("Energisation marked as completed"); }}>Mark as completed</GoldBtn>
+                          <GoldBtn onClick={() => setConfirmEnergComplete(true)}>Mark as completed</GoldBtn>
                         </span>
                       )}
                     </div>
@@ -576,7 +524,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               {!allStonesReceived && (
                 <div
                   className="flex items-center gap-3 rounded-[10px] px-4 py-3 mb-4"
-                  style={{ background: "rgba(195,160,88,0.12)", border: "1px solid rgba(195,160,88,0.3)" }}
+                  style={{ background: "rgba(119,123,98,0.12)", border: "1px solid rgba(119,123,98,0.3)" }}
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                   <span className="text-[12.5px] font-medium" style={{ color: T.text }}>Product is not yet with us</span>
@@ -646,7 +594,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               {!isStepUnlocked(3) ? (
                 <div
                   className="flex items-center gap-3 rounded-[10px] px-4 py-3"
-                  style={{ background: "rgba(195,160,88,0.12)", border: "1px solid rgba(195,160,88,0.3)" }}
+                  style={{ background: "rgba(119,123,98,0.12)", border: "1px solid rgba(119,123,98,0.3)" }}
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                   <span className="text-[12.5px] font-medium" style={{ color: T.text }}>Complete Source, Energise and Certify to ship</span>
@@ -690,8 +638,72 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
           )}
         </div>
       </Card>
-      </>
-      )}
+        </div>
+
+        {/* Context rail — who, where, meta */}
+        <aside className="w-full xl:w-[320px] shrink-0 space-y-4 xl:sticky xl:top-4">
+        {customer ? (
+          <Link href={`/customers/${customer.id}`} className="block group">
+            <div className="card-interactive rounded-[16px] p-5 h-full cursor-pointer" style={{ background: T.card, border: `1px solid ${T.borderSoft}`, boxShadow: T.shadow }}>
+              {/* Identity header */}
+              <div className="flex items-center gap-3 pb-4 mb-4" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
+                <span className="w-10 h-10 rounded-[12px] flex items-center justify-center text-[13.5px] font-semibold shrink-0" style={{ background: T.accentFaint, border: `1px solid ${T.accentBorder}`, color: T.accent }}>
+                  {customer.name.split(" ").map((w) => w[0]).slice(0, 2).join("")}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[10px] font-medium tracking-[0.08em] uppercase" style={{ color: T.faint }}>Customer</div>
+                  <div className="text-[14.5px] font-semibold truncate" style={{ color: T.text }}>{customer.name}</div>
+                </div>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" style={{ color: T.faint }}><path d="m9 18 6-6-6-6" /></svg>
+              </div>
+              <div className="space-y-3">
+                {[["Phone", customer.phone], ["Email", customer.email], ["Location", customer.birthPlace]].map(([k, v]) => (
+                  <div key={k}>
+                    <div className="text-[10px] font-medium tracking-[0.08em] uppercase mb-0.5" style={{ color: T.faint }}>{k}</div>
+                    <div className="text-[13px] font-medium truncate" style={{ color: T.text }}>{v}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </Link>
+        ) : (
+          <Card>
+            <h2 className="text-[15px] font-semibold tracking-[-0.01em] mb-3" style={{ color: T.text }}>Customer</h2>
+            <div className="flex items-center justify-between text-[13px]">
+              <span style={{ color: T.muted }}>Name</span>
+              <span style={{ color: T.text }}>{order.customerName}</span>
+            </div>
+          </Card>
+        )}
+
+        <Card>
+          <div className="flex items-center justify-between mb-3.5">
+            <h2 className="text-[15px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>Order details</h2>
+            <Chip tone={isPaid ? "good" : "gold"}>{isPaid ? "Paid" : "Pending"}</Chip>
+          </div>
+          <div className="space-y-3">
+            <div>
+              <div className="text-[10px] font-medium tracking-[0.08em] uppercase mb-0.5" style={{ color: T.faint }}>Ship to</div>
+              <div className="text-[13px] font-medium leading-relaxed" style={{ color: customer?.shippingAddress ? T.text : T.faint }}>
+                {customer ? `${customer.name}, ${customer.shippingAddress || "—"}` : "—"}
+              </div>
+            </div>
+            {order.affiliateCode && (
+              <div className="flex items-center justify-between pt-3" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+                <span className="text-[10px] font-medium tracking-[0.08em] uppercase" style={{ color: T.faint }}>Affiliate</span>
+                <span className="text-[13px] font-medium" style={{ color: T.accent }}>{order.affiliateCode}</span>
+              </div>
+            )}
+            {order.placedBy && (
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-medium tracking-[0.08em] uppercase" style={{ color: T.faint }}>Placed by</span>
+                <span className="text-[13px] font-medium" style={{ color: T.text }}>{order.placedBy}</span>
+              </div>
+            )}
+          </div>
+        </Card>
+        </aside>
+      </div>
 
       {/* ============ MODALS ============ */}
 
@@ -700,7 +712,8 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
         <div className="space-y-3">
           <Select
             value={paymentMethod}
-            onChange={setPaymentMethod}
+            onChange={(v) => { setPaymentMethod(v); setPayErrors((p) => (p.paymentMethod ? { ...p, paymentMethod: "" } : p)); }}
+            error={payErrors.paymentMethod}
             label="Payment method"
             options={[
               { value: "", label: "Select…" },
@@ -711,7 +724,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               { value: "cash", label: "Cash" },
             ]}
           />
-          <Input value={paymentRef} onChange={setPaymentRef} label="Payment reference / transaction ID" placeholder="e.g. UTR number, cheque number" />
+          <Input value={paymentRef} onChange={(v) => { setPaymentRef(v); setPayErrors((p) => (p.paymentRef ? { ...p, paymentRef: "" } : p)); }} onBlur={() => setPayErrors((p) => ({ ...p, paymentRef: V.required(paymentRef, "Payment reference") }))} error={payErrors.paymentRef} label="Payment reference / transaction ID" placeholder="e.g. UTR number, cheque number" />
         </div>
         <div className="flex gap-2.5 mt-5">
           <GoldBtn onClick={handleMarkPaid}>Confirm payment</GoldBtn>
@@ -778,23 +791,30 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
         </div>
       </Modal>
 
-      {/* Toast */}
-      {toast && (
-        <div className="fixed top-6 right-6 z-[100] flex items-center gap-2 px-4 py-3 rounded-[10px] shadow-lg text-[13.5px] font-medium animate-in" style={{ background: T.card, border: `1px solid ${T.border}`, color: T.good }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6L9 17l-5-5"/></svg>
-          {toast}
-        </div>
-      )}
+      {/* Mark energisation as completed */}
+      <ConfirmDialog
+        open={confirmEnergComplete}
+        onClose={() => setConfirmEnergComplete(false)}
+        onConfirm={() => { setLocalEnergStatus("completed"); flash("Energisation marked as completed"); }}
+        title="Mark energisation as completed?"
+        message="This marks the energisation ritual as completed for this order."
+        confirmLabel="Mark as completed"
+        tone="default"
+      />
 
+      {/* Mark order as dispatched */}
       <ConfirmDialog
         open={confirmDispatch}
         onClose={() => setConfirmDispatch(false)}
         onConfirm={() => { setLocalTracking(trackingInput); setDispatched(true); flash("Order dispatched"); }}
-        title="Mark as dispatched?"
-        description="This will notify the customer and update tracking."
-        variant="default"
+        title="Mark order as dispatched?"
+        message="This confirms the order has been handed to the courier and notifies the customer."
         confirmLabel="Mark as dispatched"
+        tone="default"
       />
+
+      {/* Toast */}
+      {toast && <Toast message={toast} />}
     </>
   );
 }

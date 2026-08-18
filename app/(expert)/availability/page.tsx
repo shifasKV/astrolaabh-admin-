@@ -7,7 +7,7 @@ const EXPERT_ID = "usr_expert_01";
 export default function AvailabilityPage() {
   return (
     <>
-      <PageHeader title="Availability" sub="Manage your consultation schedule" />
+      <PageHeader title="Availability" />
       <AvailabilityEditor expertId={EXPERT_ID} />
     </>
   );

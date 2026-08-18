@@ -19,7 +19,7 @@ export function Pagination({ page, totalPages, totalItems, perPage = 8, onPageCh
   const btnClass = "w-8 h-8 rounded-[8px] flex items-center justify-center text-[12px] transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed";
 
   return (
-    <div className="flex items-center justify-between mt-4">
+    <div className="flex items-center justify-between mt-4 md:mt-auto md:pt-4">
       <div className="text-[12px]" style={{ color: T.faint }}>
         Showing {first}–{last} of {totalItems}
       </div>

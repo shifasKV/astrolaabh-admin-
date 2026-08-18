@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { PageHeader, Card, GoldBtn, GhostBtn, Input, Select, Textarea } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_CUSTOMERS } from "@/lib/mock";
-import { V, validate, hasErrors, type ValidationErrors } from "@/lib/validation";
+import * as V from "@/lib/validators";
 
 export default function CreatePaymentPage() {
   const router = useRouter();
@@ -15,21 +15,20 @@ export default function CreatePaymentPage() {
   const [linkedRef, setLinkedRef] = useState("");
   const [notes, setNotes] = useState("");
 
-  const [errors, setErrors] = useState<ValidationErrors>({});
-  const [touched, setTouched] = useState<Set<string>>(new Set());
-  const [submitAttempted, setSubmitAttempted] = useState(false);
-
-  const markTouched = (field: string) => setTouched((prev) => new Set(prev).add(field));
-  const showError = (field: string) => (touched.has(field) || submitAttempted) ? errors[field] : undefined;
-
-  const canSubmit = customerId && purpose && !hasErrors(validate({ amount: V.positiveAmount(amount) }));
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const clearErr = (k: string) => setErrors((p) => (p[k] ? { ...p, [k]: "" } : p));
+  const validate = () => {
+    const e: Record<string, string> = {
+      customerId: V.required(customerId, "Customer"),
+      purpose: V.required(purpose, "Purpose"),
+      amount: V.positiveNumber(amount, "Amount"),
+    };
+    setErrors(e);
+    return V.isClean(e);
+  };
 
   const handleCreate = () => {
-    setSubmitAttempted(true);
-    setTouched(new Set(["amount"]));
-    const errs = validate({ amount: V.positiveAmount(amount) });
-    setErrors(errs);
-    if (hasErrors(errs)) return;
+    if (!validate()) return;
     router.push("/payments");
   };
 
@@ -37,7 +36,6 @@ export default function CreatePaymentPage() {
     <>
       <PageHeader
         title="Create payment request"
-        sub="Generate a payment link to share with the customer"
         back={{ label: "Payments", onClick: () => router.push("/payments") }}
       />
 
@@ -45,7 +43,8 @@ export default function CreatePaymentPage() {
         <div className="max-w-lg space-y-4">
           <Select
             value={customerId}
-            onChange={setCustomerId}
+            onChange={(v) => { setCustomerId(v); clearErr("customerId"); }}
+            error={errors.customerId}
             label="Customer"
             searchable
             placeholder="Select customer…"
@@ -57,18 +56,21 @@ export default function CreatePaymentPage() {
 
           <Input
             value={purpose}
-            onChange={setPurpose}
+            onChange={(v) => { setPurpose(v); clearErr("purpose"); }}
+            onBlur={() => setErrors((p) => ({ ...p, purpose: V.required(purpose, "Purpose") }))}
+            error={errors.purpose}
             label="Purpose"
             placeholder="e.g. Stone purchase — AL-PKJ-0417"
           />
 
           <Input
             value={amount}
-            onChange={(v) => { markTouched("amount"); setAmount(v); }}
+            onChange={(v) => { setAmount(v); clearErr("amount"); }}
+            onBlur={() => setErrors((p) => ({ ...p, amount: V.positiveNumber(amount, "Amount") }))}
+            error={errors.amount}
             label="Amount (₹)"
             type="number"
             placeholder="e.g. 250000"
-            error={showError("amount")}
           />
 
           <Select
@@ -100,7 +102,7 @@ export default function CreatePaymentPage() {
           />
 
           <div className="flex gap-2.5 pt-3">
-            <GoldBtn onClick={handleCreate} disabled={!canSubmit}>Create & send link</GoldBtn>
+            <GoldBtn onClick={handleCreate}>Create & send link</GoldBtn>
             <GhostBtn onClick={() => router.push("/payments")}>Cancel</GhostBtn>
           </div>
         </div>

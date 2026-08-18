@@ -1,11 +1,11 @@
 "use client";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { PageHeader, Card, GoldBtn, GhostBtn, SearchFilter, Input, Textarea, StepIndicator } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_CUSTOMERS, EXPERT_PROFILES, getExpertDates, getExpertSlots } from "@/lib/mock";
 import type { ExpertProfile, TimeSlot } from "@/lib/mock";
-import { V, validate, hasErrors, type ValidationErrors } from "@/lib/validation";
+import * as V from "@/lib/validators";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const DAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
@@ -18,15 +18,22 @@ const STEPS: { key: Step; label: string }[] = [
   { key: "review", label: "Review" },
 ];
 
-export default function CreateConsultationPage() {
+function CreateConsultationPageInner() {
   const router = useRouter();
+  const params = useSearchParams();
+  // Prefill when arriving from an expert's calendar (?expertId=&date=&customerId=)
+  const preExpert = EXPERT_PROFILES.find((e) => e.id === params.get("expertId")) ?? null;
+  const preDate = params.get("date") ?? "";
+  const preCustomerId = params.get("customerId") ?? "";
+  const preDateObj = preDate ? new Date(preDate + "T00:00:00") : null;
+
   const [step, setStep] = useState<Step>("customer");
   const [search, setSearch] = useState("");
   const [animating, setAnimating] = useState(false);
   const [toast, setToast] = useState("");
 
   // Customer
-  const [customerId, setCustomerId] = useState("");
+  const [customerId, setCustomerId] = useState(preCustomerId);
   const [showNewCustomer, setShowNewCustomer] = useState(false);
   const [newCustomer, setNewCustomer] = useState({ name: "", email: "", phone: "", birthDate: "", birthTime: "", birthPlace: "" });
   const [createdCustomer, setCreatedCustomer] = useState<{ id: string; name: string; email: string; phone: string } | null>(null);
@@ -35,32 +42,15 @@ export default function CreateConsultationPage() {
   const [problem, setProblem] = useState("");
 
   // Schedule
-  const [selectedExpert, setSelectedExpert] = useState<ExpertProfile | null>(null);
-  const [selectedDate, setSelectedDate] = useState("");
-  const [viewYear, setViewYear] = useState(new Date().getFullYear());
-  const [viewMonth, setViewMonth] = useState(new Date().getMonth());
+  const [selectedExpert, setSelectedExpert] = useState<ExpertProfile | null>(preExpert);
+  const [selectedDate, setSelectedDate] = useState(preExpert && preDate && getExpertDates(preExpert.id).includes(preDate) ? preDate : "");
+  const [viewYear, setViewYear] = useState((preDateObj ?? new Date()).getFullYear());
+  const [viewMonth, setViewMonth] = useState((preDateObj ?? new Date()).getMonth());
   const [selectedSlot, setSelectedSlot] = useState("");
 
   // Review editable fields
   const [editFee, setEditFee] = useState("");
   const [discount, setDiscount] = useState("");
-
-  const [errors, setErrors] = useState<ValidationErrors>({});
-  const [touched, setTouched] = useState<Set<string>>(new Set());
-  const [submitAttempted, setSubmitAttempted] = useState(false);
-
-  const markTouched = (field: string) => setTouched((prev) => new Set(prev).add(field));
-  const showError = (field: string) => (touched.has(field) || submitAttempted) ? errors[field] : undefined;
-
-  const validateNewCustomer = () => {
-    const errs = validate({
-      name: V.required(newCustomer.name),
-      phone: V.phone(newCustomer.phone),
-      email: newCustomer.email.trim() ? V.email(newCustomer.email) : "",
-    });
-    setErrors(errs);
-    return errs;
-  };
 
   const selectedCustomer = createdCustomer ?? MOCK_CUSTOMERS.find((c) => c.id === customerId);
   const customerName = selectedCustomer?.name ?? "";
@@ -93,17 +83,25 @@ export default function CreateConsultationPage() {
     setSearch("");
   };
 
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const clearErr = (k: string) => setErrors((p) => (p[k] ? { ...p, [k]: "" } : p));
+  const validateCustomer = () => {
+    const e: Record<string, string> = {
+      name: V.required(newCustomer.name, "Name"),
+      phone: V.phone(newCustomer.phone),
+      email: V.email(newCustomer.email),
+    };
+    setErrors(e);
+    return V.isClean(e);
+  };
+
   const handleCreateCustomer = () => {
-    setSubmitAttempted(true);
-    setTouched(new Set(["name", "phone", "email"]));
-    const errs = validateNewCustomer();
-    if (hasErrors(errs)) return;
+    if (!validateCustomer()) return;
     const id = `cust_new_${Date.now()}`;
     setCreatedCustomer({ id, ...newCustomer });
     setCustomerId(id);
     setShowNewCustomer(false);
     setSearch("");
-    setSubmitAttempted(false);
     goTo("schedule");
   };
 
@@ -147,7 +145,6 @@ export default function CreateConsultationPage() {
     <>
       <PageHeader
         title="Book consultation"
-        sub="Schedule a new consultation for a customer"
         back={{ label: "Consultations", href: "/consultations" }}
       />
 
@@ -174,7 +171,7 @@ export default function CreateConsultationPage() {
                 onClick={() => setShowNewCustomer((v) => !v)}
                 className="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-[8px] text-[12px] font-medium cursor-pointer transition-all hover:brightness-110 active:scale-[0.97]"
                 style={{
-                  background: showNewCustomer ? "rgba(160,125,56,0.12)" : `${T.accent}`,
+                  background: showNewCustomer ? "rgba(119,123,98,0.12)" : `${T.accent}`,
                   border: `1px solid ${showNewCustomer ? T.accentBorder : T.accent}`,
                   color: showNewCustomer ? T.accent : T.accentInk,
                 }}
@@ -193,24 +190,27 @@ export default function CreateConsultationPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <Input
                     value={newCustomer.name}
-                    onChange={(v) => { markTouched("name"); setNewCustomer((p) => ({ ...p, name: v })); }}
+                    onChange={(v) => { setNewCustomer((p) => ({ ...p, name: v })); clearErr("name"); }}
+                    onBlur={() => setErrors((p) => ({ ...p, name: V.required(newCustomer.name, "Name") }))}
+                    error={errors.name}
                     label="Name"
                     placeholder="e.g. Priya Sharma"
-                    error={showError("name")}
                   />
                   <Input
                     value={newCustomer.phone}
-                    onChange={(v) => { markTouched("phone"); setNewCustomer((p) => ({ ...p, phone: v })); }}
+                    onChange={(v) => { setNewCustomer((p) => ({ ...p, phone: v })); clearErr("phone"); }}
+                    onBlur={() => setErrors((p) => ({ ...p, phone: V.phone(newCustomer.phone) }))}
+                    error={errors.phone}
                     label="Phone / WhatsApp"
                     placeholder="e.g. +91 98765 43210"
-                    error={showError("phone")}
                   />
                   <Input
                     value={newCustomer.email}
-                    onChange={(v) => { markTouched("email"); setNewCustomer((p) => ({ ...p, email: v })); }}
+                    onChange={(v) => { setNewCustomer((p) => ({ ...p, email: v })); clearErr("email"); }}
+                    onBlur={() => setErrors((p) => ({ ...p, email: V.email(newCustomer.email) }))}
+                    error={errors.email}
                     label="Email"
                     placeholder="e.g. priya@example.com"
-                    error={showError("email")}
                   />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -261,7 +261,7 @@ export default function CreateConsultationPage() {
                       onClick={() => selectCustomer(c.id)}
                       className={`w-full flex items-center gap-3 py-2.5 px-3 text-left rounded-[10px] transition-colors duration-150 cursor-pointer ${customerId === c.id ? "" : "hover:bg-[rgba(89,82,54,0.05)]"}`}
                       style={{
-                        background: customerId === c.id ? "rgba(160,125,56,0.13)" : undefined,
+                        background: customerId === c.id ? "rgba(119,123,98,0.13)" : undefined,
                         border: `1px solid ${customerId === c.id ? T.accentBorder : "transparent"}`,
                       }}
                     >
@@ -336,7 +336,7 @@ export default function CreateConsultationPage() {
                     style={{
                       background: T.card,
                       border: `1px solid ${selectedExpert?.id === ep.id ? T.accent : T.border}`,
-                      boxShadow: selectedExpert?.id === ep.id ? "0 0 0 1px rgba(160,125,56,0.38)" : "none",
+                      boxShadow: selectedExpert?.id === ep.id ? "0 0 0 1px rgba(119,123,98,0.38)" : "none",
                     }}
                   >
                     <div className="text-[14px] font-semibold mb-1" style={{ color: T.text }}>{ep.name}</div>
@@ -365,9 +365,9 @@ export default function CreateConsultationPage() {
                     </div>
                     <div className="max-w-[320px]">
                       <div className="flex items-center justify-between mb-4">
-                        <button type="button" onClick={prevMonth} className="w-8 h-8 rounded-full flex items-center justify-center cursor-pointer hover:bg-[rgba(160,125,56,0.15)]" style={{ color: T.muted }}>‹</button>
+                        <button type="button" onClick={prevMonth} className="w-8 h-8 rounded-full flex items-center justify-center cursor-pointer hover:bg-[rgba(119,123,98,0.15)]" style={{ color: T.muted }}>‹</button>
                         <span className="text-[13.5px] font-medium" style={{ color: T.text }}>{MONTHS[viewMonth]} {viewYear}</span>
-                        <button type="button" onClick={nextMonth} className="w-8 h-8 rounded-full flex items-center justify-center cursor-pointer hover:bg-[rgba(160,125,56,0.15)]" style={{ color: T.muted }}>›</button>
+                        <button type="button" onClick={nextMonth} className="w-8 h-8 rounded-full flex items-center justify-center cursor-pointer hover:bg-[rgba(119,123,98,0.15)]" style={{ color: T.muted }}>›</button>
                       </div>
                       <div className="grid grid-cols-7 gap-1 mb-2">
                         {DAYS.map((d) => (
@@ -388,7 +388,7 @@ export default function CreateConsultationPage() {
                               disabled={!available}
                               className="w-9 h-9 rounded-full flex items-center justify-center text-[12px] transition-colors disabled:cursor-not-allowed cursor-pointer"
                               style={{
-                                background: selected ? T.accent : available ? "rgba(160,125,56,0.13)" : "transparent",
+                                background: selected ? T.accent : available ? "rgba(119,123,98,0.13)" : "transparent",
                                 color: selected ? T.accentInk : available ? T.text : T.faint,
                                 fontWeight: selected ? 700 : available ? 500 : 400,
                                 opacity: available ? 1 : 0.4,
@@ -401,7 +401,7 @@ export default function CreateConsultationPage() {
                       </div>
                       <div className="flex items-center gap-3 mt-4 text-[11px]" style={{ color: T.faint }}>
                         <span className="flex items-center gap-1.5">
-                          <span className="w-3 h-3 rounded-full" style={{ background: "rgba(160,125,56,0.25)" }} /> Available
+                          <span className="w-3 h-3 rounded-full" style={{ background: "rgba(119,123,98,0.25)" }} /> Available
                         </span>
                         <span className="flex items-center gap-1.5">
                           <span className="w-3 h-3 rounded-full opacity-40" style={{ background: T.border }} /> Unavailable
@@ -535,5 +535,13 @@ export default function CreateConsultationPage() {
         </div>
       )}
     </>
+  );
+}
+
+export default function CreateConsultationPage() {
+  return (
+    <Suspense fallback={null}>
+      <CreateConsultationPageInner />
+    </Suspense>
   );
 }

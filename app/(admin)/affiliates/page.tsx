@@ -1,9 +1,10 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { PageHeader, Card, StatCard, Chip, GoldBtn, SearchFilter, StatCardSkeleton, CardSkeleton } from "@/components/ui";
+import { PageHeader, Card, StatCard, Chip, GoldBtn, ToolbarSearch, EmptyState, TableSkeleton } from "@/components/ui";
 import { T } from "@/lib/theme";
+import { useSimulatedLoad } from "@/lib/useSimulatedLoad";
 import { MOCK_AFFILIATES, MOCK_CUSTOMERS, MOCK_ORDERS, MOCK_CONSULTATIONS } from "@/lib/mock";
 import { inr } from "@/lib/types";
 
@@ -29,9 +30,7 @@ export default function AffiliatesPage() {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "pending">("all");
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => { const t = setTimeout(() => setLoading(false), 700); return () => clearTimeout(t); }, []);
+  const loading = useSimulatedLoad();
 
   const totalRegs = MOCK_AFFILIATES.reduce((s, a) => s + a.totalRegistrations, 0);
   const totalPurchases = MOCK_AFFILIATES.reduce((s, a) => s + a.totalPurchases, 0);
@@ -48,102 +47,119 @@ export default function AffiliatesPage() {
 
   return (
     <>
+      <div className="md:h-[calc(100dvh-78px)] md:flex md:flex-col md:min-h-0">
       <PageHeader
         title="Affiliate operations"
-        sub="Manage affiliates, attribution, commissions, and payouts"
         action={<GoldBtn onClick={() => router.push("/affiliates/create")}>+ New Affiliate</GoldBtn>}
       />
 
-      <div className="mb-4">
-        <SearchFilter search={search} onSearchChange={setSearch} placeholder="Search name, code, email…" />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+        <div
+          className="rounded-[12px] p-5 text-left transition-all duration-200 cursor-pointer"
+          style={{
+            background: statusFilter === "active" ? `${T.accent}14` : T.card,
+            border: `1.5px solid ${statusFilter === "active" ? T.accent : T.border}`,
+            boxShadow: statusFilter === "active" ? `0 0 0 1px ${T.accent}30` : T.shadow,
+          }}
+          onClick={() => setStatusFilter(statusFilter === "active" ? "all" : "active")}
+        >
+          <div className="text-[11px] tracking-[0.08em] uppercase font-semibold mb-1.5" style={{ color: T.faint }}>Active affiliates</div>
+          <div className="text-[22px] font-bold tabular-nums" style={{ color: T.text }}>{activeCount}</div>
+        </div>
+        <div
+          className="rounded-[12px] p-5 text-left transition-all duration-200 cursor-pointer"
+          style={{
+            background: statusFilter === "pending" ? `${T.accent}14` : T.card,
+            border: `1.5px solid ${statusFilter === "pending" ? T.accent : T.border}`,
+            boxShadow: statusFilter === "pending" ? `0 0 0 1px ${T.accent}30` : T.shadow,
+          }}
+          onClick={() => setStatusFilter(statusFilter === "pending" ? "all" : "pending")}
+        >
+          <div className="text-[11px] tracking-[0.08em] uppercase font-semibold mb-1.5" style={{ color: T.faint }}>Pending for approval</div>
+          <div className="text-[22px] font-bold tabular-nums" style={{ color: T.text }}>{pendingCount}</div>
+        </div>
+        <StatCard label="Referred registrations" value={totalRegs} />
+        <StatCard label="Referred purchases" value={totalPurchases} />
       </div>
 
-      {loading ? (
-        <>
-          <div className="mb-6"><StatCardSkeleton count={4} /></div>
-          <CardSkeleton count={3} />
-        </>
-      ) : (
-        <>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-            <div
-              className="rounded-[12px] p-5 text-left transition-all duration-200 cursor-pointer"
-              style={{
-                background: statusFilter === "active" ? `${T.accent}14` : T.card,
-                border: `1.5px solid ${statusFilter === "active" ? T.accent : T.border}`,
-                boxShadow: statusFilter === "active" ? `0 0 0 1px ${T.accent}30` : T.shadow,
-              }}
-              onClick={() => setStatusFilter(statusFilter === "active" ? "all" : "active")}
-            >
-              <div className="text-[11px] tracking-[0.08em] uppercase font-semibold mb-1.5" style={{ color: T.faint }}>Active affiliates</div>
-              <div className="text-[22px] font-bold tabular-nums" style={{ color: T.text }}>{activeCount}</div>
-            </div>
-            <div
-              className="rounded-[12px] p-5 text-left transition-all duration-200 cursor-pointer"
-              style={{
-                background: statusFilter === "pending" ? `${T.accent}14` : T.card,
-                border: `1.5px solid ${statusFilter === "pending" ? T.accent : T.border}`,
-                boxShadow: statusFilter === "pending" ? `0 0 0 1px ${T.accent}30` : T.shadow,
-              }}
-              onClick={() => setStatusFilter(statusFilter === "pending" ? "all" : "pending")}
-            >
-              <div className="text-[11px] tracking-[0.08em] uppercase font-semibold mb-1.5" style={{ color: T.faint }}>Pending for approval</div>
-              <div className="text-[22px] font-bold tabular-nums" style={{ color: T.text }}>{pendingCount}</div>
-            </div>
-            <StatCard label="Referred registrations" value={totalRegs} />
-            <StatCard label="Referred purchases" value={totalPurchases} />
-          </div>
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        <ToolbarSearch value={search} onChange={setSearch} placeholder="Search name, code, email…" />
+      </div>
 
-          <div className="grid gap-4">
-            {filtered.map((a) => {
+      <Card className="!p-0 md:flex md:flex-col md:min-h-0">
+        {loading ? (
+          <TableSkeleton cols={8} rows={8} />
+        ) : (
+        <>
+        <div
+          className="hidden md:grid grid-cols-[minmax(220px,1.3fr)_120px_70px_120px_110px_110px_130px_140px] gap-x-4 items-center px-4 h-10 text-[11px] tracking-[0.06em] uppercase font-medium rounded-t-[15px]"
+          style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.border}` }}
+        >
+          <span>Affiliate</span>
+          <span>Code</span>
+          <span className="text-right">Rate</span>
+          <span className="text-right">Registrations</span>
+          <span className="text-right">Purchases</span>
+          <span className="text-right">Consults</span>
+          <span className="text-right">Commission</span>
+          <span>Status</span>
+        </div>
+        <div className="md:min-h-0 overflow-y-auto max-h-[560px] md:max-h-none">
+          {filtered.length === 0 ? (
+            <EmptyState inline icon="search" title="No affiliates" description="No affiliates match your search." />
+          ) : (
+            filtered.map((a, idx) => {
               const stats = getAffiliateStats(a);
               return (
-                <Link key={a.id} href={`/affiliates/${a.id}`}>
-                  <Card className="card-interactive cursor-pointer">
-                    <div className="flex flex-wrap items-start justify-between gap-4">
-                      <div className="flex items-start gap-3.5">
-                        <span
-                          className="w-11 h-11 rounded-full flex items-center justify-center text-[14px] font-semibold shrink-0"
-                          style={{ background: `${T.accent}18`, border: `1.5px solid ${T.accent}40`, color: T.accent }}
-                        >
-                          {a.name[0]}
-                        </span>
-                        <div>
-                          <div className="text-[14px] font-semibold" style={{ color: T.text }}>{a.name}</div>
-                          <div className="text-[13px] mt-0.5" style={{ color: T.muted }}>{a.email}</div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <Chip tone={a.status === "active" ? "good" : a.status === "under_review" ? "gold" : "danger"}>
-                          {a.status.replace(/_/g, " ")}
-                        </Chip>
-                      </div>
+                <Link
+                  key={a.id}
+                  href={`/affiliates/${a.id}`}
+                  className="group grid grid-cols-1 md:grid-cols-[minmax(220px,1.3fr)_120px_70px_120px_110px_110px_130px_140px] gap-2 md:gap-x-4 items-center px-4 py-2.5 transition-colors duration-150 last:rounded-b-[15px] even:bg-[rgba(89,82,54,0.025)] hover:!bg-[rgba(119,123,98,0.08)]"
+                  style={{ borderBottom: idx < filtered.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span
+                      className="w-9 h-9 rounded-[11px] flex items-center justify-center text-[12px] font-semibold shrink-0"
+                      style={{ background: T.accentFaint, border: `1px solid ${T.borderSoft}`, color: T.accent }}
+                    >
+                      {a.name.split(" ").map((w) => w[0]).slice(0, 2).join("")}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="text-[13px] font-semibold truncate" style={{ color: T.text }}>{a.name}</div>
+                      <div className="text-[12px] truncate mt-px" style={{ color: T.muted }}>{a.email}</div>
                     </div>
-
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 pt-4" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
-                      {[
-                        { label: "Purchases", value: stats.purchases, status: "completed", tone: T.good },
-                        { label: "Consultations", value: stats.consultations, status: "completed", tone: T.good },
-                        { label: "Registrations", value: stats.registrations, status: "completed", tone: T.good },
-                        { label: "Commission", value: inr(stats.pendingCommission), status: "due", tone: stats.pendingCommission > 0 ? T.accent : T.good },
-                      ].map((s, i) => (
-                        <div key={i}>
-                          <div className="text-[11px] uppercase tracking-wider" style={{ color: T.faint }}>{s.label}</div>
-                          <div className="text-[15px] font-semibold mt-0.5 tabular-nums" style={{ color: T.text }}>{s.value}</div>
-                          <div className="text-[10px] font-medium mt-0.5" style={{ color: s.tone }}>{s.status}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </Card>
+                  </div>
+                  <span className="text-[11.5px] font-medium tracking-[0.05em] uppercase tabular-nums md:pl-0 pl-12" style={{ color: T.accent }}>{a.code}</span>
+                  <span className="text-[12.5px] tabular-nums md:text-right md:pl-0 pl-12" style={{ color: T.muted }}>{a.commissionRate}%</span>
+                  <span className="text-[12.5px] tabular-nums md:text-right md:pl-0 pl-12" style={{ color: T.text }}>{stats.registrations}</span>
+                  <span className="text-[12.5px] tabular-nums md:text-right md:pl-0 pl-12" style={{ color: T.text }}>{stats.purchases}</span>
+                  <span className="text-[12.5px] tabular-nums md:text-right md:pl-0 pl-12" style={{ color: T.text }}>{stats.consultations}</span>
+                  <span className="md:text-right md:pl-0 pl-12">
+                    {stats.pendingCommission > 0 ? (
+                      <span
+                        className="inline-flex items-center text-[12px] font-semibold tabular-nums px-2 py-0.5 rounded-[6px]"
+                        style={{ background: "rgba(160,125,56,0.14)", color: "#8a6a2f" }}
+                      >
+                        {inr(stats.pendingCommission)}
+                      </span>
+                    ) : (
+                      <span className="text-[12.5px]" style={{ color: T.faint }}>—</span>
+                    )}
+                  </span>
+                  <div className="md:pl-0 pl-12">
+                    <Chip tone={a.status === "active" ? "good" : a.status === "under_review" ? "gold" : "danger"}>
+                      {a.status.replace(/_/g, " ")}
+                    </Chip>
+                  </div>
                 </Link>
               );
-            })}
-            {filtered.length === 0 && (
-              <p className="text-[13.5px] text-center py-8" style={{ color: T.muted }}>No affiliates found.</p>
-            )}
-          </div>
+            })
+          )}
+        </div>
         </>
-      )}
+        )}
+      </Card>
+      </div>
     </>
   );
 }

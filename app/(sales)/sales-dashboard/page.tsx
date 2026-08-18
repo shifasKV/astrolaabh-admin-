@@ -77,11 +77,10 @@ export default function SalesDashboard() {
     <>
       <PageHeader
         title={isAdmin ? "Sales Dashboard" : "My Dashboard"}
-        sub={isAdmin ? "Overview of all leads across the sales team" : "Your assigned leads and activity"}
       />
 
       <div className={`grid grid-cols-2 ${isAdmin ? "lg:grid-cols-5" : "lg:grid-cols-4"} gap-3 mb-6`}>
-        <StatCard label="Total leads" value={allLeads.length} />
+        <StatCard label="Total leads" value={allLeads.length} featured />
         <StatCard label="Active" value={activeLeads} />
         <StatCard label="New" value={newLeads} />
         <StatCard label="Converted" value={converted} />
@@ -91,7 +90,7 @@ export default function SalesDashboard() {
       {/* Admin: team overview */}
       {isAdmin && (
         <Card className="mb-6">
-          <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.faint }}>Team performance</div>
+          <div className="text-[15px] font-semibold tracking-[-0.01em] mb-3" style={{ color: T.text }}>Team performance</div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {MOCK_SALES_MEMBERS.filter((m) => m.status === "active").map((m) => {
               const mStone = MOCK_INCOMPLETE_ORDERS.filter((o) => o.assignedTo === m.id);

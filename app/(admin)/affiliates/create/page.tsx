@@ -1,12 +1,26 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { Suspense, useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { PageHeader, Card, GoldBtn, GhostBtn, Input, Select } from "@/components/ui";
+import { PageHeader, Card, GoldBtn, GhostBtn, Input } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_AFFILIATES } from "@/lib/mock";
-import { V, validate, hasErrors, type ValidationErrors } from "@/lib/validation";
+import * as V from "@/lib/validators";
 
-export default function CreateAffiliatePage() {
+function Section({ title, sub, children, first }: { title: string; sub?: string; children: React.ReactNode; first?: boolean }) {
+  return (
+    <div className="p-6" style={first ? undefined : { borderTop: `1px solid ${T.borderSoft}` }}>
+      <h2 className="text-[15px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>{title}</h2>
+      {sub && <p className="text-[12.5px] mt-1" style={{ color: T.muted }}>{sub}</p>}
+      <div className="mt-5 space-y-5">{children}</div>
+    </div>
+  );
+}
+
+function FieldLabel({ children }: { children: React.ReactNode }) {
+  return <label className="block text-[11px] font-medium tracking-[0.1em] uppercase mb-2" style={{ color: T.faint }}>{children}</label>;
+}
+
+function CreateAffiliatePageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const editId = searchParams.get("edit");
@@ -29,31 +43,8 @@ export default function CreateAffiliatePage() {
 
   const [bankName, setBankName] = useState(isEdit ? "HDFC Bank" : "");
   const [accountNumber, setAccountNumber] = useState(isEdit ? "1234 5678 6789" : "");
-  const [confirmAccount, setConfirmAccount] = useState(isEdit ? "1234 5678 6789" : "");
   const [ifsc, setIfsc] = useState(isEdit ? "HDFC0001234" : "");
   const [upi, setUpi] = useState(isEdit ? `${existing?.name.split(" ").pop()?.toLowerCase()}@upi` : "");
-
-  const [errors, setErrors] = useState<ValidationErrors>({});
-  const [touched, setTouched] = useState<Set<string>>(new Set());
-  const [submitAttempted, setSubmitAttempted] = useState(false);
-
-  const markTouched = (field: string) => setTouched((prev) => new Set(prev).add(field));
-  const showError = (field: string) => (touched.has(field) || submitAttempted) ? errors[field] : undefined;
-
-  const validateForm = () => {
-    const errs = validate({
-      name: V.required(name),
-      email: V.email(email),
-      phone: V.phone(phone),
-      stoneRate: V.percent(stoneRate),
-      jewelleryRate: V.percent(jewelleryRate),
-      consultationRate: V.percent(consultationRate),
-      accountMatch: V.accountMatch(accountNumber, confirmAccount),
-      ifsc: ifsc.trim() ? V.ifsc(ifsc) : "",
-    });
-    setErrors(errs);
-    return errs;
-  };
 
   useEffect(() => {
     if (!scrollTo) return;
@@ -64,98 +55,118 @@ export default function CreateAffiliatePage() {
     return () => clearTimeout(timeout);
   }, [scrollTo]);
 
-  const canSubmit = name.trim() && email.trim() && phone.trim() && !hasErrors(validate({
-    name: V.required(name),
-    email: V.email(email),
-    phone: V.phone(phone),
-    stoneRate: V.percent(stoneRate),
-    jewelleryRate: V.percent(jewelleryRate),
-    consultationRate: V.percent(consultationRate),
-    accountMatch: V.accountMatch(accountNumber, confirmAccount),
-    ifsc: ifsc.trim() ? V.ifsc(ifsc) : "",
-  }));
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const clearErr = (k: string) => setErrors((p) => (p[k] ? { ...p, [k]: "" } : p));
+  const validate = () => {
+    const e: Record<string, string> = {
+      name: V.required(name, "Full name"),
+      email: V.email(email),
+      phone: V.phone(phone),
+      ifsc: V.ifsc(ifsc),
+    };
+    setErrors(e);
+    return V.isClean(e);
+  };
 
   const handleSubmit = () => {
-    setSubmitAttempted(true);
-    setTouched(new Set(["name", "email", "phone", "stoneRate", "jewelleryRate", "consultationRate", "accountNumber", "confirmAccount", "ifsc"]));
-    const errs = validateForm();
-    if (hasErrors(errs)) return;
+    if (!validate()) return;
     setToast(isEdit ? "Affiliate updated" : "Affiliate created — invitation sent");
     setTimeout(() => {
       router.push(isEdit ? `/affiliates/${editId}` : "/affiliates");
     }, 1500);
   };
 
+  const cancelHref = isEdit ? `/affiliates/${editId}` : "/affiliates";
+
   return (
     <>
       <PageHeader
         title={isEdit ? "Edit Affiliate" : "Add Affiliate"}
-        sub={isEdit ? `Editing ${existing?.name}` : "Create a new affiliate partner profile"}
-        back={{ label: isEdit ? existing?.name ?? "Affiliate" : "Affiliates", href: isEdit ? `/affiliates/${editId}` : "/affiliates" }}
+        back={{ label: isEdit ? existing?.name ?? "Affiliate" : "Affiliates", href: cancelHref }}
       />
 
-      <div className="space-y-6 max-w-[820px]">
-        <Card>
-          <div className="text-[11px] tracking-[0.08em] uppercase mb-4" style={{ color: T.accent }}>Personal information</div>
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Input value={name} onChange={(v) => { markTouched("name"); setName(v); }} label="Full name" placeholder="e.g. Dr. Meenakshi Joshi" error={showError("name")} />
-              <Input value={email} onChange={(v) => { markTouched("email"); setEmail(v); }} label="Email" type="email" placeholder="e.g. name@example.com" error={showError("email")} />
+      <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-5 items-start pb-24">
+        {/* Live preview rail */}
+        <aside className="lg:sticky lg:top-4">
+          <Card className="!p-5">
+            <div className="flex flex-col items-center text-center pb-4 mb-4" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
+              <div className="w-[72px] h-[72px] rounded-[20px] flex items-center justify-center text-[24px] font-semibold" style={{ background: T.accentFaint, border: `1px solid ${T.accentBorder}`, color: T.accent }}>{(name || "A")[0]}</div>
+              <div className="text-[15px] font-semibold mt-3 leading-tight" style={{ color: T.text }}>{name || "New affiliate"}</div>
+              <div className="text-[12px] mt-0.5 truncate max-w-full" style={{ color: T.muted }}>{email || "—"}</div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Input value={phone} onChange={(v) => { markTouched("phone"); setPhone(v); }} label="Phone number" placeholder="e.g. +91 98765 43210" error={showError("phone")} />
-            </div>
-          </div>
-        </Card>
-
-        <div ref={commissionRef}>
-          <Card>
-            <div className="text-[11px] tracking-[0.08em] uppercase mb-4" style={{ color: T.accent }}>Commission setup</div>
-            <p className="text-[12px] mb-4" style={{ color: T.muted }}>Set the commission percentage for each category. Can be updated later.</p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {([["stone", stoneRate, setStoneRate, "stoneRate"], ["jewellery", jewelleryRate, setJewelleryRate, "jewelleryRate"], ["consultation", consultationRate, setConsultationRate, "consultationRate"]] as const).map(([cat, val, setter, fieldKey]) => (
-                <div key={cat} className="rounded-[10px] p-4" style={{ background: T.panel, border: `1px solid ${T.borderSoft}` }}>
-                  <div className="text-[11px] tracking-[0.06em] uppercase mb-2" style={{ color: T.faint }}>{cat}</div>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="number"
-                      value={val}
-                      onChange={(e) => { markTouched(fieldKey); setter(e.target.value); }}
-                      className="w-full h-9 px-3 rounded-[8px] text-[13px] outline-none"
-                      style={{ background: T.card, border: `1px solid ${showError(fieldKey) ? T.danger : T.border}`, color: T.text }}
-                    />
-                    <span className="text-[13px] font-medium shrink-0" style={{ color: T.muted }}>%</span>
-                  </div>
-                  {showError(fieldKey) && <p className="text-[11px] mt-1" style={{ color: T.danger }}>{showError(fieldKey)}</p>}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-[12.5px]">
+                <span style={{ color: T.faint }}>Phone</span>
+                <span className="font-medium tabular-nums" style={{ color: T.text }}>{phone || "—"}</span>
+              </div>
+              <div className="flex items-center justify-between text-[12.5px]">
+                <span style={{ color: T.faint }}>Bank</span>
+                <span className="font-medium" style={{ color: T.text }}>{bankName || "—"}</span>
+              </div>
+              <div className="pt-3" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+                <div className="text-[11px] font-medium tracking-[0.08em] uppercase mb-2" style={{ color: T.faint }}>Commission</div>
+                <div className="flex flex-wrap gap-1.5">
+                  <span className="text-[11px] px-2 py-0.5 rounded-full" style={{ background: T.accentFaint, color: T.accent, border: `1px solid ${T.borderSoft}` }}>Stone {stoneRate || 0}%</span>
+                  <span className="text-[11px] px-2 py-0.5 rounded-full" style={{ background: T.accentFaint, color: T.accent, border: `1px solid ${T.borderSoft}` }}>Jewellery {jewelleryRate || 0}%</span>
+                  <span className="text-[11px] px-2 py-0.5 rounded-full" style={{ background: T.accentFaint, color: T.accent, border: `1px solid ${T.borderSoft}` }}>Consult {consultationRate || 0}%</span>
                 </div>
-              ))}
+              </div>
             </div>
           </Card>
-        </div>
+        </aside>
 
-        <div ref={accountRef}>
-          <Card>
-            <div className="text-[11px] tracking-[0.08em] uppercase mb-4" style={{ color: T.accent }}>Account details</div>
-            <p className="text-[12px] mb-4" style={{ color: T.muted }}>Bank account and UPI details for commission payouts.</p>
-            <div className="space-y-4">
+        {/* Seamless form */}
+        <Card className="!p-0 overflow-hidden">
+          <Section title="Identity & contact" sub="Name and how the affiliate is reached." first>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input value={name} onChange={(v) => { setName(v); clearErr("name"); }} onBlur={() => setErrors((p) => ({ ...p, name: V.required(name, "Full name") }))} error={errors.name} label="Full name" placeholder="e.g. Dr. Meenakshi Joshi" />
+              <Input value={email} onChange={(v) => { setEmail(v); clearErr("email"); }} onBlur={() => setErrors((p) => ({ ...p, email: V.email(email) }))} error={errors.email} label="Email" type="email" placeholder="e.g. name@example.com" />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input value={phone} onChange={(v) => { setPhone(v); clearErr("phone"); }} onBlur={() => setErrors((p) => ({ ...p, phone: V.phone(phone) }))} error={errors.phone} label="Phone number" placeholder="e.g. +91 98765 43210" />
+            </div>
+          </Section>
+
+          <div ref={commissionRef}>
+            <Section title="Commission setup" sub="Set the commission percentage for each category. Can be updated later.">
+              <div>
+                <FieldLabel>Commission rates</FieldLabel>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {([["Stone", stoneRate, setStoneRate], ["Jewellery", jewelleryRate, setJewelleryRate], ["Consultation", consultationRate, setConsultationRate]] as const).map(([cat, val, setter]) => (
+                    <div key={cat} className="rounded-[12px] p-3.5" style={{ background: T.accentFaint, border: `1px solid ${T.borderSoft}` }}>
+                      <div className="text-[10px] font-medium tracking-[0.08em] uppercase mb-2" style={{ color: T.faint }}>{cat}</div>
+                      <div className="flex items-center gap-1.5">
+                        <input type="number" value={val} onChange={(e) => setter(e.target.value)} className="w-full h-9 px-3 rounded-[8px] text-[13px] font-semibold tabular-nums outline-none" style={{ background: T.card, border: `1px solid ${T.border}`, color: T.text }} />
+                        <span className="text-[13px] font-medium shrink-0" style={{ color: T.muted }}>%</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </Section>
+          </div>
+
+          <div ref={accountRef}>
+            <Section title="Account details" sub="Bank account and UPI details for commission payouts.">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Input value={bankName} onChange={setBankName} label="Bank name" placeholder="e.g. HDFC Bank" />
-                <Input value={accountNumber} onChange={(v) => { markTouched("accountNumber"); setAccountNumber(v); }} label="Account number" placeholder="e.g. 1234 5678 6789" />
+                <Input value={accountNumber} onChange={setAccountNumber} label="Account number" placeholder="e.g. 1234 5678 6789" />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Input value={confirmAccount} onChange={(v) => { markTouched("confirmAccount"); setConfirmAccount(v); }} label="Confirm account number" placeholder="Re-enter account number" error={showError("accountMatch")} />
-                <Input value={ifsc} onChange={(v) => { markTouched("ifsc"); setIfsc(v); }} label="IFSC code" placeholder="e.g. HDFC0001234" error={showError("ifsc")} />
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Input value={ifsc} onChange={(v) => { setIfsc(v); clearErr("ifsc"); }} onBlur={() => setErrors((p) => ({ ...p, ifsc: V.ifsc(ifsc) }))} error={errors.ifsc} label="IFSC code" placeholder="e.g. HDFC0001234" />
                 <Input value={upi} onChange={setUpi} label="UPI ID" placeholder="e.g. name@upi" />
               </div>
-            </div>
-          </Card>
-        </div>
+            </Section>
+          </div>
+        </Card>
+      </div>
 
-        <div className="flex items-center gap-3 pb-8">
-          <GoldBtn onClick={handleSubmit} disabled={!canSubmit}>{isEdit ? "Save Changes" : "Create Affiliate"}</GoldBtn>
-          <GhostBtn onClick={() => router.push(isEdit ? `/affiliates/${editId}` : "/affiliates")}>Cancel</GhostBtn>
+      {/* Sticky action bar */}
+      <div className="sticky bottom-0 -mx-5 md:-mx-10 px-5 md:px-10 py-3.5 flex items-center justify-between gap-2.5" style={{ background: "rgba(248,245,238,0.9)", backdropFilter: "blur(6px)", borderTop: `1px solid ${T.borderSoft}` }}>
+        <span className="text-[12px] hidden sm:block" style={{ color: T.faint }}>{isEdit ? "Changes take effect immediately after saving." : "An invitation will be emailed so they can set up their account."}</span>
+        <div className="flex items-center gap-2.5 ml-auto">
+          <GhostBtn onClick={() => router.push(cancelHref)}>Cancel</GhostBtn>
+          <GoldBtn onClick={handleSubmit}>{isEdit ? "Save Changes" : "Create Affiliate"}</GoldBtn>
         </div>
       </div>
 
@@ -169,5 +180,13 @@ export default function CreateAffiliatePage() {
         </div>
       )}
     </>
+  );
+}
+
+export default function CreateAffiliatePage() {
+  return (
+    <Suspense fallback={null}>
+      <CreateAffiliatePageInner />
+    </Suspense>
   );
 }

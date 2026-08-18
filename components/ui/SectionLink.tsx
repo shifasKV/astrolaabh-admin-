@@ -11,7 +11,7 @@ export function SectionLink({ href, children = "View all →" }: SectionLinkProp
   return (
     <Link
       href={href}
-      className="text-[11px] px-2.5 py-1 rounded-[9px] transition-all duration-200 hover:bg-[rgba(160,125,56,0.10)]"
+      className="text-[11px] px-2.5 py-1 rounded-[9px] transition-all duration-200 hover:bg-[rgba(119,123,98,0.10)]"
       style={{ color: T.accent, border: `1px solid ${T.accentBorder}` }}
     >
       {children}
