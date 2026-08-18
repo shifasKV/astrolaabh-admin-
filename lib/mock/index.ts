@@ -14,3 +14,5 @@ export { EXPERT_PROFILES, EXPERT_AVAILABILITY, getExpertDates, getExpertSlots, M
 export type { ExpertProfile, TimeSlot, DayAvailability, ExpertAvailability, TimeRange, WeeklyScheduleDay, DateOverride, ExpertSchedule } from "./expert-availability";
 export { MOCK_SALES_MEMBERS } from "./sales";
 export type { SalesMember } from "./sales";
+export { SCENARIO_CATALOGUE, SEED_ORDERS, SEED_CUSTOMERS, SEED_PAYMENTS, SEED_ENERGISATION, SEED_CERTIFICATES, SEED_CONSULTATIONS, SEED_RECOMMENDATIONS, ASSUMPTIONS, UNSUPPORTED_CASES, validateSeedData } from "./seed-scenarios";
+export type { ValidationResult } from "./seed-scenarios";

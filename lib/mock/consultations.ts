@@ -1,4 +1,5 @@
 import type { Consultation } from "@/lib/types";
+import { SEED_CONSULTATIONS } from "./seed-scenarios";
 
 export const MOCK_CONSULTATIONS: Consultation[] = [
   { id: "cons_001", customerId: "cust_001", customerName: "Radhika Oberoi", expertId: "usr_expert_01", expertName: "Pt. Sandeep Kochaar", type: "initial", status: "closed", scheduledAt: "2026-02-05T10:00:00+05:30", duration: 45, fee: 5000, paymentStatus: "paid", timezone: "Asia/Kolkata", meetingLink: "https://meet.google.com/abc-defg-hij", problemStatement: "Career stagnation despite senior leadership role; seeking Jupiter-related remedies", summary: "Jupiter weak in 10th house. Recommended Pukhraj 5+ ratti, Ceylon origin preferred. Begin wearing on Thursday in gold ring, index finger right hand.", summarySubmittedAt: "2026-02-05T12:00:00+05:30", recommendationId: "rec_001", paymentRequestId: "pay_009", createdAt: "2026-01-20", updatedAt: "2026-02-05" },
@@ -37,4 +38,5 @@ export const MOCK_CONSULTATIONS: Consultation[] = [
   // ── Future (later, Sept 2026) ──
   { id: "cons_027", customerId: "cust_005", customerName: "Kavya Menon", expertId: "usr_expert_01", expertName: "Pt. Sandeep Kochaar", type: "follow_up", status: "scheduled", scheduledAt: "2026-09-02T16:00:00+05:30", duration: 45, fee: 3000, paymentStatus: "pending", timezone: "Asia/Kolkata", meetingLink: "https://meet.google.com/fut-ure-ggg", problemStatement: "Relationship remedy follow-up — Venus gemstone effect", createdAt: "2026-08-16", updatedAt: "2026-08-16" },
   { id: "cons_028", customerId: "cust_006", customerName: "Vikram Singh Randhawa", expertId: "usr_expert_03", expertName: "Acharya V. Tripathi", type: "initial", status: "scheduled", scheduledAt: "2026-09-10T11:00:00+05:30", duration: 60, fee: 5500, paymentStatus: "paid", timezone: "Asia/Kolkata", meetingLink: "https://meet.google.com/fut-ure-hhh", problemStatement: "Comprehensive chart reading and remedy plan", createdAt: "2026-08-17", updatedAt: "2026-08-17" },
+  ...SEED_CONSULTATIONS,
 ];

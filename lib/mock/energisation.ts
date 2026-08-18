@@ -1,4 +1,5 @@
 import type { EnergisationTask } from "@/lib/types";
+import { SEED_ENERGISATION } from "./seed-scenarios";
 
 export const MOCK_ENERGISATION: EnergisationTask[] = [
   { id: "eng_001", orderId: "AL-ORD-001", orderNumber: "AL-ORD-001", customerId: "cust_001", customerName: "Radhika Oberoi", stoneSku: "AL-PKJ-0417", stoneDescription: "Pukhraj · Ceylon Yellow Sapphire · 5.2r", status: "completed", scheduledAt: "2026-02-18T06:00:00+05:30", method: "Vedic Brihaspati Mantra — 108 repetitions", assignedTo: "Pt. Sandeep Kochaar", completedAt: "2026-02-18T07:30:00+05:30", liveLink: "https://live.astrolaabh.house/eng_001", proofUrl: "https://vault.astrolaabh.house/recordings/eng_001.mp4", proofType: "video", buyerNotified: true, createdAt: "2026-02-12", updatedAt: "2026-02-18" },
@@ -19,4 +20,5 @@ export const MOCK_ENERGISATION: EnergisationTask[] = [
   { id: "eng_016", orderId: "AL-ORD-007", orderNumber: "AL-ORD-007", customerId: "cust_009", customerName: "Meera Patel", stoneSku: "AL-PKJ-0610", stoneDescription: "Pukhraj · Thai Yellow Sapphire · 3.5r", status: "scheduled", scheduledAt: "2026-08-21T05:45:00+05:30", method: "Brihaspati Mantra — Maha Abhishek at sunrise", assignedTo: "Pt. Sandeep Kochaar", liveLink: "https://live.astrolaabh.house/eng_016", buyerNotified: true, createdAt: "2026-08-12", updatedAt: "2026-08-16" },
   { id: "eng_017", orderId: "AL-ORD-008", orderNumber: "AL-ORD-008", customerId: "cust_010", customerName: "Arjun Nair", stoneSku: "AL-NLM-0089", stoneDescription: "Neelam · Kashmiri Blue Sapphire · 8.1r", status: "scheduled", scheduledAt: "2026-08-22T10:00:00+05:30", method: "Shani Mantra — follow-up Abhishek", assignedTo: "Acharya V. Tripathi", liveLink: "https://live.astrolaabh.house/eng_017", buyerNotified: true, createdAt: "2026-08-13", updatedAt: "2026-08-16" },
   { id: "eng_018", orderId: "AL-ORD-010", orderNumber: "AL-ORD-010", customerId: "cust_011", customerName: "Divya Kapoor", stoneSku: "AL-MNG-0142", stoneDescription: "Moonga · Italian Red Coral · 6.5r", status: "scheduled", scheduledAt: "2026-08-25T06:30:00+05:30", method: "Mangal Mantra — Tuesday sunrise puja", assignedTo: "Acharya V. Tripathi", liveLink: "https://live.astrolaabh.house/eng_010", buyerNotified: true, createdAt: "2026-08-15", updatedAt: "2026-08-16" },
+  ...SEED_ENERGISATION,
 ];

@@ -1,4 +1,5 @@
 import type { PaymentRequest } from "@/lib/types";
+import { SEED_PAYMENTS } from "./seed-scenarios";
 
 export const MOCK_PAYMENTS: PaymentRequest[] = [
   { id: "pay_001", customerId: "cust_001", customerName: "Radhika Oberoi", purpose: "Stone purchase — Pukhraj Ceylon Yellow Sapphire", amount: 285000, currency: "INR", status: "paid", linkedRecommendationId: "rec_001", linkedOrderId: "AL-ORD-001", paymentLink: "https://pay.astrolaabh.house/p/pay_001", paidAt: "2026-02-10T09:15:00+05:30", transactionRef: "TXN-RZP-78234", ownerId: "usr_admin_01", ownerName: "Ops Admin", createdAt: "2026-02-07", updatedAt: "2026-02-10" },
@@ -23,4 +24,5 @@ export const MOCK_PAYMENTS: PaymentRequest[] = [
   { id: "pay_020", customerId: "cust_012", customerName: "Rohan Malhotra", purpose: "Stone purchase — Lehsunia Cat's Eye + Moti Pearl set", amount: 257760, currency: "INR", status: "draft", linkedRecommendationId: "rec_007", linkedOrderId: "AL-ORD-012", paymentLink: "https://pay.astrolaabh.house/p/pay_020", ownerId: "usr_admin_01", ownerName: "Ops Admin", createdAt: "2026-08-06", updatedAt: "2026-08-06" },
   { id: "pay_021", customerId: "cust_010", customerName: "Arjun Nair", purpose: "Stone purchase — Neelam Kashmiri Blue Sapphire", amount: 890000, currency: "INR", status: "paid", linkedOrderId: "AL-ORD-008", paymentLink: "https://pay.astrolaabh.house/p/pay_021", paidAt: "2026-04-02T11:00:00+05:30", transactionRef: "TXN-RZP-80901", ownerId: "usr_admin_01", ownerName: "Ops Admin", createdAt: "2026-03-28", updatedAt: "2026-04-02" },
   { id: "pay_022", customerId: "cust_006", customerName: "Vikram Singh Randhawa", purpose: "Stone purchase — Moti South Sea Pearl", amount: 82000, currency: "INR", status: "paid", linkedOrderId: "AL-ORD-013", paymentLink: "https://pay.astrolaabh.house/p/pay_022", paidAt: "2026-06-25T15:30:00+05:30", transactionRef: "TXN-RZP-84890", ownerId: "usr_admin_01", ownerName: "Ops Admin", createdAt: "2026-06-22", updatedAt: "2026-06-25" },
+  ...SEED_PAYMENTS,
 ];

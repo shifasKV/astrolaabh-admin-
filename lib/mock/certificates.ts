@@ -1,4 +1,5 @@
 import type { Certificate } from "@/lib/types";
+import { SEED_CERTIFICATES } from "./seed-scenarios";
 
 export const MOCK_CERTIFICATES: Certificate[] = [
   { id: "cert_001", orderId: "AL-ORD-001", orderNumber: "AL-ORD-001", type: "lab_authenticity", status: "verified", fileName: "AL-PKJ-0417-GIA-cert.pdf", certificateNumber: "GIA-2026-78451", issuingAuthority: "GIA (Gemological Institute of America)", issueDate: "2026-01-28", applicableSku: "AL-PKJ-0417", verifiedBy: "Ops Admin", verifiedAt: "2026-02-02", verificationNotes: "Origin confirmed Ceylon, natural unheated, 5.21 carat", uploadedBy: "Ops Admin", uploadedAt: "2026-01-30", createdAt: "2026-01-30", updatedAt: "2026-02-02" },
@@ -12,4 +13,5 @@ export const MOCK_CERTIFICATES: Certificate[] = [
   { id: "cert_009", orderId: "AL-ORD-008", orderNumber: "AL-ORD-008", type: "energisation", status: "verified", fileName: "AL-NLM-0089-energisation.pdf", certificateNumber: "AEC-2026-008", issuingAuthority: "AstroLaabh Puja Division", issueDate: "2026-05-20", applicableSku: "AL-NLM-0089", verifiedBy: "Pt. Sandeep Kochaar", verifiedAt: "2026-05-21", uploadedBy: "Ops Admin", uploadedAt: "2026-05-21", createdAt: "2026-05-21", updatedAt: "2026-05-21" },
   { id: "cert_010", orderId: "AL-ORD-009", orderNumber: "AL-ORD-009", type: "lab_authenticity", status: "verified", fileName: "AL-PNA-0445-IGI-cert.pdf", certificateNumber: "IGI-2026-38902", issuingAuthority: "IGI", issueDate: "2026-03-10", applicableSku: "AL-PNA-0445", verifiedBy: "Ops Admin", verifiedAt: "2026-03-15", uploadedBy: "Ops Admin", uploadedAt: "2026-03-12", createdAt: "2026-03-12", updatedAt: "2026-03-15" },
   { id: "cert_011", orderId: "AL-ORD-013", orderNumber: "AL-ORD-013", type: "lab_authenticity", status: "uploaded", fileName: "AL-MTI-0155-GIA-cert.pdf", certificateNumber: "GIA-2026-91234", issuingAuthority: "GIA", issueDate: "2026-06-20", applicableSku: "AL-MTI-0155", uploadedBy: "Ops Admin", uploadedAt: "2026-07-01", createdAt: "2026-07-01", updatedAt: "2026-07-01" },
+  ...SEED_CERTIFICATES,
 ];

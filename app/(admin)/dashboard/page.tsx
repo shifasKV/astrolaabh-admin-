@@ -1,4 +1,5 @@
 "use client";
+import { useState } from "react";
 import Link from "next/link";
 import { PageHeader, Card, Chip } from "@/components/ui";
 import { T } from "@/lib/theme";
@@ -25,6 +26,7 @@ function CircleArrow({ dark }: { dark?: boolean }) {
 }
 
 export default function AdminDashboard() {
+  const [chartHover, setChartHover] = useState(false);
   const now = new Date();
   const in7Days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
@@ -50,15 +52,21 @@ export default function AdminDashboard() {
   const summariesDue = MOCK_CONSULTATIONS.filter((c) => c.status === "summary_pending").length;
   const noShows = MOCK_CONSULTATIONS.filter((c) => c.status === "no_show").length;
 
-  /* Orders per month, last 6 months — feeds the hero bar chart */
+  /* Orders per month, last 6 months — feeds the hero bar chart with fulfillment breakdown */
   const months = Array.from({ length: 6 }, (_, i) => new Date(now.getFullYear(), now.getMonth() - 5 + i, 1));
-  const monthlyCounts = months.map(
-    (m) =>
-      MOCK_ORDERS.filter((o) => {
-        const d = new Date(o.placedAt);
-        return d.getFullYear() === m.getFullYear() && d.getMonth() === m.getMonth();
-      }).length,
-  );
+  const monthlyBreakdown = months.map((m) => {
+    const inMonth = MOCK_ORDERS.filter((o) => {
+      const d = new Date(o.placedAt);
+      return d.getFullYear() === m.getFullYear() && d.getMonth() === m.getMonth();
+    });
+    return {
+      total: inMonth.length,
+      completed: inMonth.filter((o) => o.operationalStatus === "completed").length,
+      inTransit: inMonth.filter((o) => o.stage === 7 && o.operationalStatus !== "completed").length,
+      notShipped: inMonth.filter((o) => o.stage < 7 && o.operationalStatus !== "completed").length,
+    };
+  });
+  const monthlyCounts = monthlyBreakdown.map((b) => b.total);
   const maxMonthly = Math.max(...monthlyCounts, 1);
   const monthRevenue = MOCK_ORDERS.filter((o) => {
     const d = new Date(o.placedAt);
@@ -96,40 +104,45 @@ export default function AdminDashboard() {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <div className="text-[11px] font-medium tracking-[0.09em] uppercase" style={{ color: "#8a6a2f" }}>
-                  Active orders
+                  All active orders
                 </div>
-                <div className="font-title text-[42px] leading-none font-semibold mt-3 tracking-[-0.02em] tabular-nums" style={{ color: T.text }}>
-                  {activeOrders}
-                </div>
-                <div className="text-[12.5px] mt-2.5" style={{ color: T.muted }}>
-                  in progress · {inr(monthRevenue)} collected this month
+                <div className="font-title text-[42px] leading-none font-semibold mt-3 tracking-[-0.02em] tabular-nums transition-all duration-150" style={{ color: T.text, textDecoration: chartHover ? "none" : undefined, textDecorationColor: "rgba(160,125,56,0.35)" }}>
+                  <span className={`underline-offset-4 decoration-2 ${chartHover ? "" : "group-hover:underline"}`} style={{ textDecorationColor: "rgba(160,125,56,0.35)" }}>{activeOrders}</span>
                 </div>
               </div>
               <CircleArrow />
             </div>
 
-            {/* Monthly volume, current month in mint */}
-            <div className="mt-auto pt-6">
-              <div className="flex items-end gap-1.5 h-[56px]">
-                {monthlyCounts.map((c, i) => (
-                  <div key={i} className="group/bar relative flex-1 h-full flex items-end">
-                    <span
-                      className="pointer-events-none absolute -top-1.5 left-1/2 -translate-x-1/2 translate-y-1 opacity-0 group-hover/bar:opacity-100 group-hover/bar:translate-y-0 transition-all duration-150 text-[10.5px] font-semibold px-2 py-0.5 rounded-[6px] tabular-nums whitespace-nowrap"
-                      style={{ background: "#5e4a20", color: "#faf0d8" }}
-                    >
-                      {c} {c === 1 ? "order" : "orders"}
-                    </span>
-                    <div
-                      className="w-full rounded-t-[4px] transition-all duration-300 group-hover/bar:brightness-125"
-                      style={{
-                        height: `${Math.max((c / maxMonthly) * 100, 6)}%`,
-                        background: i === monthlyCounts.length - 1 ? "#c3a058" : "rgba(160,125,56,0.20)",
-                      }}
-                    />
-                  </div>
-                ))}
+            {/* Monthly volume — simple bar chart (all orders) */}
+            <div className="mt-auto pt-4" onMouseEnter={() => setChartHover(true)} onMouseLeave={() => setChartHover(false)}>
+              <div className="flex items-end gap-2 h-[64px]">
+                {monthlyBreakdown.map((b, i) => {
+                  const isCurrent = i === monthlyBreakdown.length - 1;
+                  return (
+                    <div key={i} className="group/bar relative flex-1 h-full flex items-end">
+                      {/* Tooltip */}
+                      <div
+                        className="pointer-events-none absolute bottom-full mb-2 left-1/2 -translate-x-1/2 opacity-0 group-hover/bar:opacity-100 transition-opacity duration-150 z-10"
+                      >
+                        <div className="rounded-[10px] px-3 py-2.5 min-w-[90px] text-center" style={{ background: "rgba(41,38,23,0.92)", backdropFilter: "blur(8px)", boxShadow: "0 4px 16px rgba(0,0,0,0.18)" }}>
+                          <div className="text-[10px] mb-1" style={{ color: "rgba(250,246,236,0.55)" }}>
+                            {months[i].toLocaleDateString("en-IN", { month: "short", year: "numeric" })}
+                          </div>
+                          <div className="text-[18px] font-bold tabular-nums leading-none" style={{ color: "#faf6ec" }}>{b.total}</div>
+                          <div className="text-[10px] mt-0.5" style={{ color: "rgba(250,246,236,0.5)" }}>orders</div>
+                        </div>
+                        <div className="w-2 h-2 rotate-45 mx-auto -mt-1" style={{ background: "rgba(41,38,23,0.92)" }} />
+                      </div>
+                      {/* Bar — single solid color */}
+                      <div
+                        className="w-full rounded-[5px] transition-all duration-300 group-hover/bar:scale-x-105"
+                        style={{ height: `${Math.max((b.total / maxMonthly) * 100, 8)}%`, background: isCurrent ? "#c3a058" : "rgba(160,125,56,0.22)", minHeight: 3 }}
+                      />
+                    </div>
+                  );
+                })}
               </div>
-              <div className="flex gap-1.5 mt-1.5">
+              <div className="flex gap-2 mt-1.5">
                 {months.map((m, i) => (
                   <div key={i} className="flex-1 text-center text-[10px] tabular-nums" style={{ color: i === months.length - 1 ? "#8a6a2f" : T.faint }}>
                     {m.toLocaleDateString("en-IN", { month: "short" })}

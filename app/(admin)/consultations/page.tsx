@@ -3,14 +3,17 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
 import {
   PageHeader, Card, Chip, Tabs, GoldBtn, Select, Pagination,
-  fmtChipDate, Tooltip, ToolbarSearch, FiltersPopover, FilterField, FilterChip, DateRangeFields, ColumnStatusFilter, EmptyState, TableSkeleton } from "@/components/ui";
+  Tooltip, ToolbarSearch, ExportBtn, downloadXLS, downloadPDF, EmptyState, TableSkeleton } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { useSimulatedLoad } from "@/lib/useSimulatedLoad";
 import { usePersistentState } from "@/lib/usePersistentState";
 import { MOCK_CONSULTATIONS, MOCK_INCOMPLETE_CONSULTATIONS } from "@/lib/mock";
 
 const TABS = [
-  { key: "all", label: "All consultations" },
+  { key: "all", label: "All" },
+  { key: "reschedule", label: "Reschedule Request" },
+  { key: "summary_due", label: "Recommendation due" },
+  { key: "no_show", label: "No show" },
   { key: "incomplete", label: "Incomplete" },
 ];
 
@@ -53,18 +56,196 @@ function formatHour(h: number): string {
   return `${h - 12} PM`;
 }
 
+const DATE_PRESETS = [
+  { key: "today", label: "Today" },
+  { key: "yesterday", label: "Yesterday" },
+  { key: "last_7", label: "Last 7 days" },
+  { key: "last_30", label: "Last 30 days" },
+  { key: "last_90", label: "Last 90 days" },
+  { key: "this_month", label: "This month" },
+  { key: "last_month", label: "Last month" },
+  { key: "custom", label: "Custom range" },
+];
+
+function getPresetDates(key: string): { from: string; to: string } {
+  const today = new Date();
+  const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  if (key === "today") return { from: iso(today), to: iso(today) };
+  if (key === "yesterday") { const y = new Date(today); y.setDate(today.getDate() - 1); return { from: iso(y), to: iso(y) }; }
+  if (key === "last_7") { const f = new Date(today); f.setDate(today.getDate() - 7); return { from: iso(f), to: iso(today) }; }
+  if (key === "last_30") { const f = new Date(today); f.setDate(today.getDate() - 30); return { from: iso(f), to: iso(today) }; }
+  if (key === "last_90") { const f = new Date(today); f.setDate(today.getDate() - 90); return { from: iso(f), to: iso(today) }; }
+  if (key === "this_month") return { from: iso(new Date(today.getFullYear(), today.getMonth(), 1)), to: iso(today) };
+  if (key === "last_month") return { from: iso(new Date(today.getFullYear(), today.getMonth() - 1, 1)), to: iso(new Date(today.getFullYear(), today.getMonth(), 0)) };
+  return { from: "", to: "" };
+}
+
+function CFilterButton({ label, active, open, onClick, icon }: { label: string; active: boolean; open: boolean; onClick: () => void; icon: React.ReactNode }) {
+  return (
+    <button onClick={onClick}
+      className="h-9 px-3 rounded-[9px] text-[12.5px] font-medium inline-flex items-center gap-1.5 cursor-pointer transition-all duration-200 whitespace-nowrap"
+      style={{ background: active ? T.accentFaint : open ? T.accentFaint : T.bg, border: `1px solid ${active ? T.accentBorder : open ? T.accentBorder : T.border}`, color: active ? T.accent : T.text }}>
+      {icon}{label}
+      {active && <span className="w-1.5 h-1.5 rounded-full" style={{ background: T.accent }} />}
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="w-3 h-3" style={{ color: T.faint }}><path d="m6 9 6 6 6-6" /></svg>
+    </button>
+  );
+}
+
+function ConsultExpertFilter({ value, onChange, experts, open, onToggle, resetPage }: { value: string[]; onChange: (v: string[]) => void; experts: string[]; open: boolean; onToggle: () => void; resetPage: () => void }) {
+  const toggle = (v: string) => { const next = value.includes(v) ? value.filter(x => x !== v) : [...value, v]; onChange(next); resetPage(); };
+  const label = value.length === 0 ? "Expert" : value.length === 1 ? value[0].split(" ").slice(-1)[0] : `${value.length} experts`;
+  return (
+    <div className="relative">
+      <CFilterButton label={label} active={value.length > 0} open={open} onClick={onToggle}
+        icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className="w-3.5 h-3.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>} />
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={onToggle} />
+          <div className="absolute left-0 top-full mt-1.5 z-50 w-[240px] rounded-[12px] p-1.5" style={{ background: T.popover, border: `1px solid ${T.border}`, boxShadow: T.shadowLift }}>
+            {experts.map((exp) => {
+              const isActive = value.includes(exp);
+              return (
+                <button key={exp} onClick={() => toggle(exp)}
+                  className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-[8px] text-[12.5px] text-left cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.08)]"
+                  style={{ color: isActive ? T.accent : T.text, fontWeight: isActive ? 600 : 400, background: isActive ? T.accentFaint : "transparent" }}>
+                  <span className="w-3.5 h-3.5 rounded-[3px] flex items-center justify-center shrink-0" style={{ border: `1.5px solid ${isActive ? T.accent : "rgba(89,82,54,0.25)"}`, background: isActive ? T.accent : "transparent" }}>
+                    {isActive && <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke={T.accentInk} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>}
+                  </span>
+                  {exp}
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function ConsultStatusFilter({ value, onChange, open, onToggle, resetPage }: { value: string[]; onChange: (v: string[]) => void; open: boolean; onToggle: () => void; resetPage: () => void }) {
+  const toggle = (v: string) => { if (!v) { onChange([]); resetPage(); return; } const next = value.includes(v) ? value.filter(x => x !== v) : [...value, v]; onChange(next); resetPage(); };
+  const label = value.length === 0 ? "Status" : value.length === 1 ? STATUS_FILTER_LABEL[value[0]] : `${value.length} statuses`;
+  return (
+    <div className="relative">
+      <CFilterButton label={label} active={value.length > 0} open={open} onClick={onToggle}
+        icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className="w-3.5 h-3.5"><circle cx="12" cy="12" r="10" /><path d="m9 12 2 2 4-4" /></svg>} />
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={onToggle} />
+          <div className="absolute left-0 top-full mt-1.5 z-50 w-[220px] rounded-[12px] p-1.5" style={{ background: T.popover, border: `1px solid ${T.border}`, boxShadow: T.shadowLift }}>
+            {[{ value: "", label: "All" }, ...Object.entries(STATUS_FILTER_LABEL).map(([k, v]) => ({ value: k, label: v }))].map((opt) => {
+              const isActive = opt.value === "" ? value.length === 0 : value.includes(opt.value);
+              return (
+                <button key={opt.value} onClick={() => toggle(opt.value)}
+                  className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-[8px] text-[12.5px] text-left cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.08)]"
+                  style={{ color: isActive ? T.accent : T.text, fontWeight: isActive ? 600 : 400, background: isActive ? T.accentFaint : "transparent" }}>
+                  <span className="w-3.5 h-3.5 rounded-[3px] flex items-center justify-center shrink-0" style={{ border: `1.5px solid ${isActive ? T.accent : "rgba(89,82,54,0.25)"}`, background: isActive ? T.accent : "transparent" }}>
+                    {isActive && <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke={T.accentInk} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>}
+                  </span>
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function CMiniCalendar({ value, onChange, label }: { value: string; onChange: (v: string) => void; label: string }) {
+  const [viewDate, setViewDate] = useState(() => value ? new Date(value + "T00:00") : new Date());
+  const year = viewDate.getFullYear();
+  const month = viewDate.getMonth();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstDayOfWeek = (new Date(year, month, 1).getDay() + 6) % 7;
+  const days: (number | null)[] = [...Array(firstDayOfWeek).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)];
+  const monthName = viewDate.toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+  const iso = (d: number) => `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  return (
+    <div>
+      <div className="text-[10px] font-medium tracking-[0.06em] uppercase mb-1.5" style={{ color: T.faint }}>{label}</div>
+      <div className="flex items-center justify-between mb-2">
+        <button onClick={() => setViewDate(new Date(year, month - 1, 1))} className="w-6 h-6 rounded-[6px] flex items-center justify-center cursor-pointer hover:bg-[rgba(89,82,54,0.08)]" style={{ color: T.muted }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="m15 18-6-6 6-6" /></svg></button>
+        <span className="text-[12px] font-medium" style={{ color: T.text }}>{monthName}</span>
+        <button onClick={() => setViewDate(new Date(year, month + 1, 1))} className="w-6 h-6 rounded-[6px] flex items-center justify-center cursor-pointer hover:bg-[rgba(89,82,54,0.08)]" style={{ color: T.muted }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="m9 18 6-6-6-6" /></svg></button>
+      </div>
+      <div className="grid grid-cols-7 gap-0.5 text-center">
+        {["M", "T", "W", "T", "F", "S", "S"].map((d, i) => (<span key={i} className="text-[9px] font-medium py-1" style={{ color: T.faint }}>{d}</span>))}
+        {days.map((day, i) => {
+          if (day === null) return <span key={`e-${i}`} />;
+          const dateStr = iso(day);
+          const isSelected = dateStr === value;
+          const isToday = dateStr === new Date().toISOString().slice(0, 10);
+          return (<button key={i} onClick={() => onChange(dateStr)} className="w-7 h-7 rounded-[6px] text-[11px] flex items-center justify-center cursor-pointer transition-colors"
+            style={{ background: isSelected ? T.primary : "transparent", color: isSelected ? T.primaryInk : isToday ? T.accent : T.text, fontWeight: isSelected || isToday ? 600 : 400 }}>{day}</button>);
+        })}
+      </div>
+    </div>
+  );
+}
+
+function ConsultDateFilter({ from, to, onChangeFrom, onChangeTo, open, onToggle, resetPage }: { from: string; to: string; onChangeFrom: (v: string) => void; onChangeTo: (v: string) => void; open: boolean; onToggle: () => void; resetPage: () => void }) {
+  const [datePreset, setDatePreset] = useState<string>("");
+  const hasValue = !!(from || to);
+  const handlePreset = (key: string) => { setDatePreset(key); if (key !== "custom") { const d = getPresetDates(key); onChangeFrom(d.from); onChangeTo(d.to); resetPage(); } };
+  const dateLabel = hasValue
+    ? `${from ? new Date(from + "T00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "…"} – ${to ? new Date(to + "T00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "…"}`
+    : "Scheduled Date";
+  return (
+    <div className="relative">
+      <CFilterButton label={dateLabel} active={hasValue} open={open} onClick={onToggle}
+        icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className="w-3.5 h-3.5"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>} />
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={onToggle} />
+          <div className="absolute left-0 top-full mt-1.5 z-50 w-[520px] rounded-[12px] p-4" style={{ background: T.popover, border: `1px solid ${T.border}`, boxShadow: T.shadowLift }}>
+            <div className="flex gap-4">
+              <div className="w-[148px] shrink-0 space-y-0.5">
+                <div className="text-[10px] font-medium tracking-[0.06em] uppercase mb-2" style={{ color: T.faint }}>Quick select</div>
+                {DATE_PRESETS.map((p) => {
+                  const isActive = datePreset === p.key;
+                  return (<button key={p.key} onClick={() => handlePreset(p.key)} className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-[7px] text-[11.5px] text-left cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.08)]"
+                    style={{ color: isActive ? T.accent : T.text, fontWeight: isActive ? 600 : 400, background: isActive ? T.accentFaint : "transparent" }}>
+                    <span className="w-[13px] h-[13px] rounded-full flex items-center justify-center shrink-0" style={{ border: `1.5px solid ${isActive ? T.accent : "rgba(89,82,54,0.3)"}` }}>{isActive && <span className="w-[5px] h-[5px] rounded-full" style={{ background: T.accent }} />}</span>
+                    {p.label}</button>);
+                })}
+                {hasValue && (<button onClick={() => { onChangeFrom(""); onChangeTo(""); setDatePreset(""); resetPage(); }} className="w-full mt-2 text-[11px] text-left px-2.5 py-1 cursor-pointer hover:underline underline-offset-4" style={{ color: T.danger }}>Clear dates</button>)}
+              </div>
+              <div className="flex-1 min-w-0" style={{ borderLeft: `1px solid ${T.borderSoft}`, paddingLeft: "16px" }}>
+                <div className="grid grid-cols-2 gap-3">
+                  <CMiniCalendar value={from} onChange={(v) => { onChangeFrom(v); setDatePreset("custom"); resetPage(); }} label="From" />
+                  <CMiniCalendar value={to} onChange={(v) => { onChangeTo(v); setDatePreset("custom"); resetPage(); }} label="To" />
+                </div>
+                {hasValue && (
+                  <div className="mt-3 pt-2.5 text-[11px] flex items-center gap-2" style={{ borderTop: `1px solid ${T.borderSoft}`, color: T.muted }}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-3.5 h-3.5 shrink-0" style={{ color: T.accent }}><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
+                    <span>{from ? new Date(from + "T00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "Start"}</span>
+                    <span style={{ color: T.faint }}>→</span>
+                    <span>{to ? new Date(to + "T00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "End"}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function ConsultationsPage() {
   const [viewMode, setViewMode] = usePersistentState<ViewMode>("pref-consult-view", "list");
   const [tab, setTab] = useState("all");
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<SortKey>("date_desc");
   const [filterCustomer, setFilterCustomer] = useState("");
-  const [filterExpert, setFilterExpert] = useState("");
-  const [filterStatus, setFilterStatus] = useState("");
-  const [showStatusFilter, setShowStatusFilter] = useState(false);
+  const [filterExpert, setFilterExpert] = useState<string[]>([]);
+  const [filterStatus, setFilterStatus] = useState<string[]>([]);
   const [filterDateFrom, setFilterDateFrom] = useState("");
   const [filterDateTo, setFilterDateTo] = useState("");
-  const [showFilters, setShowFilters] = useState(false);
+  const [openFilter, setOpenFilter] = useState<"expert" | "status" | "date" | null>(null);
   const [page, setPage] = useState(1);
 
   // Incomplete tab
@@ -73,7 +254,6 @@ export default function ConsultationsPage() {
   const [incFilterReason, setIncFilterReason] = useState("");
   const [incFilterDateFrom, setIncFilterDateFrom] = useState("");
   const [incFilterDateTo, setIncFilterDateTo] = useState("");
-  const [incShowFilters, setIncShowFilters] = useState(false);
   const [incSort, setIncSort] = useState<SortKey>("date_desc");
   const [incPage, setIncPage] = useState(1);
 
@@ -102,18 +282,24 @@ export default function ConsultationsPage() {
     return true;
   };
 
-  const uniqueCustomers = [...new Set(MOCK_CONSULTATIONS.map((c) => c.customerName))].sort();
   const uniqueExperts = [...new Set(MOCK_CONSULTATIONS.map((c) => c.expertName))].sort();
 
   const filtered = MOCK_CONSULTATIONS
+    .filter((c) => {
+      if (tab === "all" || tab === "incomplete") return true;
+      return matchesStatus(c, tab);
+    })
     .filter((c) => {
       if (!search) return true;
       const q = search.toLowerCase();
       return c.customerName.toLowerCase().includes(q) || c.expertName.toLowerCase().includes(q) || c.id.toLowerCase().includes(q);
     })
     .filter((c) => !filterCustomer || c.customerName === filterCustomer)
-    .filter((c) => !filterExpert || c.expertName === filterExpert)
-    .filter((c) => matchesStatus(c, filterStatus))
+    .filter((c) => filterExpert.length === 0 || filterExpert.includes(c.expertName))
+    .filter((c) => {
+      if (filterStatus.length === 0) return true;
+      return filterStatus.some((s) => matchesStatus(c, s));
+    })
     .filter((c) => {
       const d = c.scheduledAt?.slice(0, 10);
       if (filterDateFrom && d && d < filterDateFrom) return false;
@@ -137,22 +323,18 @@ export default function ConsultationsPage() {
   const currentPage = page > totalPages && totalPages > 0 ? totalPages : page;
   const paginated = filtered.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE);
 
-  const hasActiveFilters = !!filterCustomer || !!filterExpert || !!filterStatus || !!filterDateFrom || !!filterDateTo;
-  const activeFilterCount = [filterCustomer, filterExpert, filterDateFrom || filterDateTo].filter(Boolean).length;
-  const statusOptions = [
-    { value: "", label: "All statuses", count: MOCK_CONSULTATIONS.length },
-    ...Object.entries(STATUS_FILTER_LABEL).map(([value, label]) => ({
-      value,
-      label,
-      count: MOCK_CONSULTATIONS.filter((c) => matchesStatus(c, value)).length,
-    })),
-  ];
-
+  const hasActiveFilters = !!filterCustomer || filterExpert.length > 0 || filterStatus.length > 0 || !!filterDateFrom || !!filterDateTo;
+  const tabCounts: Record<string, number> = {
+    all: MOCK_CONSULTATIONS.length,
+    reschedule: MOCK_CONSULTATIONS.filter(c => matchesStatus(c, "reschedule")).length,
+    summary_due: MOCK_CONSULTATIONS.filter(c => matchesStatus(c, "summary_due")).length,
+    no_show: MOCK_CONSULTATIONS.filter(c => matchesStatus(c, "no_show")).length,
+    incomplete: MOCK_INCOMPLETE_CONSULTATIONS.length,
+  };
   // Incomplete
   const incCustomers = [...new Set(MOCK_INCOMPLETE_CONSULTATIONS.map((c) => c.customerName))].sort();
   const incExperts = [...new Set(MOCK_INCOMPLETE_CONSULTATIONS.map((c) => c.expertName))].sort();
-  const hasIncFilters = !!incFilterCustomer || !!incFilterExpert || !!incFilterReason || !!incFilterDateFrom || !!incFilterDateTo;
-  const incFilterCount = [incFilterCustomer, incFilterExpert, incFilterReason, incFilterDateFrom || incFilterDateTo].filter(Boolean).length;
+
 
   const incFiltered = MOCK_INCOMPLETE_CONSULTATIONS
     .filter((c) => {
@@ -213,153 +395,104 @@ export default function ConsultationsPage() {
     c.status === "summary_pending" || c.status === "no_show" ? T.danger :
     T.muted;
 
+  const handleExport = ({ from, to, format, periodLabel }: { from: string; to: string; format: "pdf" | "xls"; periodLabel: string }) => {
+    const inRange = (d: string) => (!from || d.slice(0, 10) >= from) && (!to || d.slice(0, 10) <= to);
+    if (tab === "incomplete") {
+      const header = ["Customer", "Expert", "Date", "Reason"];
+      const rows = incFiltered.filter((c) => inRange(c.date)).map((c) => [c.customerName, c.expertName, c.date, INC_REASON_LABEL[c.reason] || c.reason]);
+      if (format === "xls") downloadXLS(header, rows, `incomplete-consultations-${from}-to-${to}.xls`);
+      else downloadPDF(`Incomplete consultations — ${periodLabel}`, header, rows);
+    } else {
+      const header = ["ID", "Customer", "Expert", "Scheduled at", "Status", "Payment"];
+      const rows = filtered.filter((c) => inRange(c.scheduledAt || "")).map((c) => [c.id, c.customerName, c.expertName, c.scheduledAt || "—", c.status || "—", c.paymentStatus || "—"] as (string | number)[]);
+      if (format === "xls") downloadXLS(header, rows, `consultations-${from}-to-${to}.xls`);
+      else downloadPDF(`Consultations — ${periodLabel}`, header, rows);
+    }
+  };
+
   return (
     <>
       <div className="md:h-[calc(100dvh-78px)] md:flex md:flex-col md:min-h-0">
       <PageHeader
         title="Consultations"
-        action={<Link href="/consultations/create"><GoldBtn>+ New consultation</GoldBtn></Link>}
+        action={
+          <div className="flex items-center gap-2.5">
+            <ExportBtn onExport={handleExport} dateLabel="Select consultation date range" />
+            <Link href="/consultations/create"><GoldBtn>+ New consultation</GoldBtn></Link>
+          </div>
+        }
       />
 
 
 
       {/* Pinned controls */}
       <div
-        className="sticky top-0 z-30 -mx-5 md:-mx-10 px-5 md:px-10 pt-1 pb-3 mb-4"
+        className="sticky top-0 z-30 -mx-5 md:-mx-10 px-5 md:px-10 pt-1 pb-0.5 mb-4"
         style={{ background: T.bg, boxShadow: `0 1px 0 ${T.borderSoft}` }}
       >
-        <div className="flex flex-wrap items-center gap-2">
+        {/* Row 1: Tabs + view toggle (right) */}
+        <div className="flex flex-wrap items-center gap-2 mb-3">
           <Tabs
-            tabs={TABS.map((t) => ({
-              ...t,
-              count: t.key === "all" ? MOCK_CONSULTATIONS.length : MOCK_INCOMPLETE_CONSULTATIONS.length,
-            }))}
+            tabs={TABS.map((t) => ({ ...t, count: tabCounts[t.key] ?? 0 }))}
             active={tab}
-            onChange={(key) => { setTab(key); if (key !== "all") setViewMode("list"); }}
+            onChange={(key) => { setTab(key); if (key !== "all") setViewMode("list"); setPage(1); }}
           />
           {tab === "all" && (
-            <div
-              className="inline-flex items-center gap-1 p-1 rounded-full shrink-0"
-              style={{ background: "rgba(89,82,54,0.07)", border: `1px solid ${T.borderSoft}` }}
-            >
+            <div className="ml-auto inline-flex items-center gap-1 p-1 rounded-full shrink-0" style={{ background: "rgba(89,82,54,0.07)", border: `1px solid ${T.borderSoft}` }}>
               {(["list", "calendar"] as const).map((mode) => (
-              <Tooltip key={mode} label={mode === "list" ? "List view" : "Calendar view"}>
-                <button
-                  onClick={() => setViewMode(mode)}
-                  aria-label={mode === "list" ? "List view" : "Calendar view"}
+                <Tooltip key={mode} label={mode === "list" ? "List view" : "Calendar view"}>
+                <button onClick={() => setViewMode(mode)} aria-label={mode === "list" ? "List view" : "Calendar view"}
                   className="h-8 w-11 rounded-full inline-flex items-center justify-center shrink-0 transition-all duration-200 cursor-pointer"
-                  style={
-                    viewMode === mode
-                      ? { background: T.card, color: T.text, border: `1px solid ${T.border}`, boxShadow: "0 1px 3px rgba(43,42,34,0.10)" }
-                      : { color: T.muted, border: "1px solid transparent" }
-                  }
-                >
+                  style={viewMode === mode ? { background: T.card, color: T.text, border: `1px solid ${T.border}`, boxShadow: "0 1px 3px rgba(43,42,34,0.10)" } : { color: T.muted, border: "1px solid transparent" }}>
                   {mode === "list" ? (
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
                   ) : (
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 9h18"/></svg>
                   )}
                 </button>
-              </Tooltip>
+                </Tooltip>
               ))}
             </div>
           )}
-          <div className="ml-auto flex items-center gap-2">
-            {tab === "all" && viewMode === "list" && (
-              <>
-                <ToolbarSearch value={search} onChange={setSearch} placeholder="Search customer, expert, ID…" />
-                <span className="hidden lg:block w-px h-5 mx-0.5" style={{ background: T.border }} />
-                <FiltersPopover count={activeFilterCount} open={showFilters} onToggle={() => setShowFilters(!showFilters)}>
-                  <FilterField label="Customer">
-                    <Select value={filterCustomer} onChange={(v) => { setFilterCustomer(v); setPage(1); }} searchable compact placeholder="All customers" options={[{ value: "", label: "All customers" }, ...uniqueCustomers.map((n) => ({ value: n, label: n }))]} />
-                  </FilterField>
-                  <FilterField label="Expert">
-                    <Select value={filterExpert} onChange={(v) => { setFilterExpert(v); setPage(1); }} searchable compact placeholder="All experts" options={[{ value: "", label: "All experts" }, ...uniqueExperts.map((n) => ({ value: n, label: n }))]} />
-                  </FilterField>
-                  <FilterField label="Scheduled between">
-                    <DateRangeFields from={filterDateFrom} to={filterDateTo} onChange={(f, t) => { setFilterDateFrom(f); setFilterDateTo(t); setPage(1); }} />
-                  </FilterField>
-                </FiltersPopover>
-                <div className="w-[160px]">
-                  <Select
-                    value={sort}
-                    onChange={(v) => { setSort(v as SortKey); setPage(1); }}
-                    compact
-                    prefix="Sort: "
-                    options={[
-                      { value: "date_desc", label: "Newest" },
-                      { value: "date_asc", label: "Oldest" },
-                      { value: "upcoming", label: "Upcoming" },
-                    ]}
-                  />
-                </div>
-              </>
-            )}
-            {tab === "incomplete" && (
-              <>
-                <ToolbarSearch value={search} onChange={setSearch} placeholder="Search customer, astrologer…" />
-                <span className="hidden lg:block w-px h-5 mx-0.5" style={{ background: T.border }} />
-                <FiltersPopover count={incFilterCount} open={incShowFilters} onToggle={() => setIncShowFilters(!incShowFilters)}>
-                  <FilterField label="Customer">
-                    <Select value={incFilterCustomer} onChange={(v) => { setIncFilterCustomer(v); setIncPage(1); }} searchable compact placeholder="All customers" options={[{ value: "", label: "All customers" }, ...incCustomers.map((n) => ({ value: n, label: n }))]} />
-                  </FilterField>
-                  <FilterField label="Astrologer">
-                    <Select value={incFilterExpert} onChange={(v) => { setIncFilterExpert(v); setIncPage(1); }} searchable compact placeholder="All astrologers" options={[{ value: "", label: "All astrologers" }, ...incExperts.map((n) => ({ value: n, label: n }))]} />
-                  </FilterField>
-                  <FilterField label="Reason">
-                    <Select value={incFilterReason} onChange={(v) => { setIncFilterReason(v); setIncPage(1); }} compact placeholder="All reasons" options={[{ value: "", label: "All reasons" }, ...Object.entries(INC_REASON_LABEL).map(([k, v]) => ({ value: k, label: v }))]} />
-                  </FilterField>
-                  <FilterField label="Date between">
-                    <DateRangeFields from={incFilterDateFrom} to={incFilterDateTo} onChange={(f, t) => { setIncFilterDateFrom(f); setIncFilterDateTo(t); setIncPage(1); }} />
-                  </FilterField>
-                </FiltersPopover>
-                <div className="w-[160px]">
-                  <Select value={incSort} onChange={(v) => { setIncSort(v as SortKey); setIncPage(1); }} compact prefix="Sort: " options={[{ value: "date_desc", label: "Newest" }, { value: "date_asc", label: "Oldest" }]} />
-                </div>
-              </>
-            )}
-          </div>
         </div>
 
-        {tab === "all" && viewMode === "list" && hasActiveFilters && (
-          <div className="flex flex-wrap items-center gap-1.5 mt-3">
-            {filterCustomer && <FilterChip label={`Customer: ${filterCustomer}`} onClear={() => { setFilterCustomer(""); setPage(1); }} />}
-            {filterExpert && <FilterChip label={`Expert: ${filterExpert}`} onClear={() => { setFilterExpert(""); setPage(1); }} />}
-            {filterStatus && <FilterChip label={`Status: ${STATUS_FILTER_LABEL[filterStatus]}`} onClear={() => { setFilterStatus(""); setPage(1); }} />}
-            {(filterDateFrom || filterDateTo) && (
-              <FilterChip label={`Date: ${fmtChipDate(filterDateFrom)} – ${fmtChipDate(filterDateTo)}`} onClear={() => { setFilterDateFrom(""); setFilterDateTo(""); setPage(1); }} />
-            )}
-            <button
-              onClick={() => { setFilterCustomer(""); setFilterExpert(""); setFilterStatus(""); setFilterDateFrom(""); setFilterDateTo(""); setPage(1); }}
-              className="text-[12px] px-1.5 cursor-pointer hover:underline underline-offset-4"
-              style={{ color: T.danger }}
-            >
-              Clear all
-            </button>
+        {/* Row 2: Search + filters + sort + clear */}
+        <div className="flex flex-wrap items-center gap-2 mb-3">
+          <ToolbarSearch value={search} onChange={setSearch} placeholder="Search customer, expert, ID…" />
+          <div className="ml-auto flex items-center gap-2">
+            <ConsultExpertFilter value={filterExpert} onChange={setFilterExpert} experts={uniqueExperts} open={openFilter === "expert"} onToggle={() => setOpenFilter(openFilter === "expert" ? null : "expert")} resetPage={() => setPage(1)} />
+            <ConsultStatusFilter value={filterStatus} onChange={setFilterStatus} open={openFilter === "status"} onToggle={() => setOpenFilter(openFilter === "status" ? null : "status")} resetPage={() => setPage(1)} />
+            <ConsultDateFilter from={filterDateFrom} to={filterDateTo} onChangeFrom={setFilterDateFrom} onChangeTo={setFilterDateTo} open={openFilter === "date"} onToggle={() => setOpenFilter(openFilter === "date" ? null : "date")} resetPage={() => setPage(1)} />
+            <div className="w-[160px]">
+              <Select
+                value={sort}
+                onChange={(v) => { setSort(v as SortKey); setPage(1); }}
+                compact
+                prefix="Sort: "
+                options={[
+                  { value: "date_desc", label: "Newest" },
+                  { value: "date_asc", label: "Oldest" },
+                  { value: "upcoming", label: "Upcoming" },
+                ]}
+              />
+            </div>
+            <div className="w-[57px] flex items-center justify-center">
+              {hasActiveFilters && (
+                <button
+                  onClick={() => { setFilterCustomer(""); setFilterExpert([]); setFilterStatus([]); setFilterDateFrom(""); setFilterDateTo(""); setPage(1); }}
+                  className="text-[12px] px-1.5 cursor-pointer hover:underline underline-offset-4 whitespace-nowrap"
+                  style={{ color: T.danger }}
+                >
+                  Clear all
+                </button>
+              )}
+            </div>
           </div>
-        )}
-
-        {tab === "incomplete" && hasIncFilters && (
-          <div className="flex flex-wrap items-center gap-1.5 mt-3">
-            {incFilterCustomer && <FilterChip label={`Customer: ${incFilterCustomer}`} onClear={() => { setIncFilterCustomer(""); setIncPage(1); }} />}
-            {incFilterExpert && <FilterChip label={`Astrologer: ${incFilterExpert}`} onClear={() => { setIncFilterExpert(""); setIncPage(1); }} />}
-            {incFilterReason && <FilterChip label={`Reason: ${INC_REASON_LABEL[incFilterReason]}`} onClear={() => { setIncFilterReason(""); setIncPage(1); }} />}
-            {(incFilterDateFrom || incFilterDateTo) && (
-              <FilterChip label={`Date: ${fmtChipDate(incFilterDateFrom)} – ${fmtChipDate(incFilterDateTo)}`} onClear={() => { setIncFilterDateFrom(""); setIncFilterDateTo(""); setIncPage(1); }} />
-            )}
-            <button
-              onClick={() => { setIncFilterCustomer(""); setIncFilterExpert(""); setIncFilterReason(""); setIncFilterDateFrom(""); setIncFilterDateTo(""); setIncPage(1); }}
-              className="text-[12px] px-1.5 cursor-pointer hover:underline underline-offset-4"
-              style={{ color: T.danger }}
-            >
-              Clear all
-            </button>
-          </div>
-        )}
+        </div>
       </div>
 
       {/* ============ List view ============ */}
-      {tab === "all" && viewMode === "list" && <>
+      {tab !== "incomplete" && viewMode === "list" && <>
       <Card className="!p-0 md:flex md:flex-col md:min-h-0">
         {loading ? (
           <TableSkeleton cols={4} rows={8} />
@@ -372,13 +505,7 @@ export default function ConsultationsPage() {
           <span>ID</span>
           <span>Customer</span>
           <span>Scheduled</span>
-          <ColumnStatusFilter
-            value={filterStatus}
-            options={statusOptions}
-            open={showStatusFilter}
-            onToggle={() => setShowStatusFilter(!showStatusFilter)}
-            onSelect={(v) => { setFilterStatus(v); setShowStatusFilter(false); setPage(1); }}
-          />
+          <span>Status</span>
         </div>
         <div className="md:flex-1 md:min-h-0 overflow-y-auto max-h-[560px] md:max-h-none">
           {paginated.length === 0 ? (
@@ -424,12 +551,13 @@ export default function ConsultationsPage() {
             ) : (
               <>
             <div
-              className="hidden sm:grid grid-cols-[1fr_1fr_110px_150px] gap-3 items-center px-4 h-10 text-[11px] font-medium tracking-[0.06em] uppercase rounded-t-[15px]"
+              className="hidden sm:grid grid-cols-[1fr_1fr_100px_100px_140px] gap-3 items-center px-4 h-10 text-[11px] font-medium tracking-[0.06em] uppercase rounded-t-[15px]"
               style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.border}` }}
             >
               <span>Customer</span>
               <span>Astrologer</span>
               <span>Date</span>
+              <span>Assignee</span>
               <span>Reason</span>
             </div>
             <div className="md:flex-1 md:min-h-0 overflow-y-auto max-h-[560px] md:max-h-none">
@@ -440,12 +568,13 @@ export default function ConsultationsPage() {
                   <Link
                     key={c.id}
                     href={`/consultations/incomplete/${c.id}`}
-                    className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_110px_150px] gap-2 sm:gap-3 items-center px-4 py-2.5 transition-colors duration-150 last:rounded-b-[15px] even:bg-[rgba(89,82,54,0.025)] hover:!bg-[rgba(119,123,98,0.08)]"
+                    className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_100px_100px_140px] gap-2 sm:gap-3 items-center px-4 py-2.5 transition-colors duration-150 last:rounded-b-[15px] even:bg-[rgba(89,82,54,0.025)] hover:!bg-[rgba(119,123,98,0.08)]"
                     style={{ borderBottom: idx < incPaginated.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
                   >
                     <span className="text-[13px] font-semibold truncate block" style={{ color: T.text }}>{c.customerName}</span>
                     <span className="text-[12.5px] truncate block" style={{ color: T.muted }}>{c.expertName}</span>
                     <span className="text-[12px] tabular-nums" style={{ color: T.muted }}>{new Date(c.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>
+                    <span className="text-[12px] truncate" style={{ color: c.assignedTo ? T.text : T.faint }}>{c.assignedTo || "—"}</span>
                     <div><Chip tone={INC_REASON_TONE[c.reason] || "muted"}>{INC_REASON_LABEL[c.reason] || c.reason}</Chip></div>
                   </Link>
                 ))

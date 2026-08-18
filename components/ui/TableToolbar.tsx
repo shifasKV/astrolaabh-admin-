@@ -104,19 +104,80 @@ function periodRange(key: string, customFrom: string, customTo: string): { from:
   return { from: customFrom, to: customTo };
 }
 
-/* Export menu — pick a period, download as PDF or XLS */
-export function ExportBtn({ onExport }: { onExport: (opts: ExportOptions) => void }) {
+function ExportCalendar({ value, onChange, label }: { value: string; onChange: (v: string) => void; label: string }) {
+  const [viewDate, setViewDate] = useState(() => value ? new Date(value + "T00:00") : new Date());
+  const year = viewDate.getFullYear();
+  const month = viewDate.getMonth();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstDayOfWeek = (new Date(year, month, 1).getDay() + 6) % 7;
+  const days: (number | null)[] = [...Array(firstDayOfWeek).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)];
+  const monthName = viewDate.toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+  const iso = (d: number) => `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+
+  return (
+    <div>
+      <div className="text-[10px] font-medium tracking-[0.06em] uppercase mb-1.5" style={{ color: T.faint }}>{label}</div>
+      <div className="flex items-center justify-between mb-2">
+        <button onClick={() => setViewDate(new Date(year, month - 1, 1))} className="w-6 h-6 rounded-[6px] flex items-center justify-center cursor-pointer hover:bg-[rgba(89,82,54,0.08)]" style={{ color: T.muted }}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="m15 18-6-6 6-6" /></svg>
+        </button>
+        <span className="text-[12px] font-medium" style={{ color: T.text }}>{monthName}</span>
+        <button onClick={() => setViewDate(new Date(year, month + 1, 1))} className="w-6 h-6 rounded-[6px] flex items-center justify-center cursor-pointer hover:bg-[rgba(89,82,54,0.08)]" style={{ color: T.muted }}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="m9 18 6-6-6-6" /></svg>
+        </button>
+      </div>
+      <div className="grid grid-cols-7 gap-0.5 text-center">
+        {["M", "T", "W", "T", "F", "S", "S"].map((d, i) => (
+          <span key={i} className="text-[9px] font-medium py-1" style={{ color: T.faint }}>{d}</span>
+        ))}
+        {days.map((day, i) => {
+          if (day === null) return <span key={`e-${i}`} />;
+          const dateStr = iso(day);
+          const isSelected = dateStr === value;
+          const isToday = dateStr === new Date().toISOString().slice(0, 10);
+          return (
+            <button
+              key={i}
+              onClick={() => onChange(dateStr)}
+              className="w-7 h-7 rounded-[6px] text-[11px] flex items-center justify-center cursor-pointer transition-colors"
+              style={{
+                background: isSelected ? T.primary : "transparent",
+                color: isSelected ? T.primaryInk : isToday ? T.accent : T.text,
+                fontWeight: isSelected || isToday ? 600 : 400,
+              }}
+            >
+              {day}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* Export menu — calendar-based date picker with presets + download buttons */
+export function ExportBtn({ onExport, dateLabel }: { onExport: (opts: ExportOptions) => void; dateLabel?: string }) {
   const [open, setOpen] = useState(false);
   const [period, setPeriod] = useState("last_month");
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
 
-  const customIncomplete = period === "custom" && (!customFrom || !customTo);
-  const inputStyle = { background: T.bg, border: `1px solid ${T.border}`, color: T.text };
+  const isCustom = period === "custom";
+  const customIncomplete = isCustom && (!customFrom || !customTo);
+
+  const handlePreset = (key: string) => {
+    setPeriod(key);
+    if (key !== "custom") {
+      const { from, to } = periodRange(key, "", "");
+      setCustomFrom(from);
+      setCustomTo(to);
+    }
+  };
 
   const fire = (format: "pdf" | "xls") => {
-    const { from, to } = periodRange(period, customFrom, customTo);
-    const periodLabel = period === "custom" ? `${customFrom} to ${customTo}` : EXPORT_PERIODS.find((x) => x.key === period)!.label;
+    const from = customFrom;
+    const to = customTo;
+    const periodLabel = isCustom ? `${from} to ${to}` : EXPORT_PERIODS.find((x) => x.key === period)!.label;
     onExport({ from, to, format, periodLabel });
     setOpen(false);
   };
@@ -139,45 +200,55 @@ export function ExportBtn({ onExport }: { onExport: (opts: ExportOptions) => voi
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
           <div
-            className="absolute right-0 top-full mt-1.5 z-50 w-[264px] rounded-[14px] p-3"
+            className="absolute right-0 top-full mt-1.5 z-50 w-[540px] rounded-[14px] p-4"
             style={{ background: T.popover, border: `1px solid ${T.border}`, boxShadow: T.shadowLift }}
           >
-            <div className="px-1 pb-2 text-[11px] font-medium tracking-[0.06em] uppercase" style={{ color: T.faint }}>Time range</div>
-            <div className="space-y-0.5">
-              {EXPORT_PERIODS.map((pOpt) => {
-                const active = period === pOpt.key;
-                return (
-                  <button
-                    key={pOpt.key}
-                    onClick={() => setPeriod(pOpt.key)}
-                    className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-[8px] text-[12.5px] text-left cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.08)]"
-                    style={{ color: active ? T.text : T.muted, fontWeight: active ? 600 : 400, background: active ? T.accentFaint : "transparent" }}
-                  >
-                    <span
-                      className="w-[15px] h-[15px] rounded-full flex items-center justify-center shrink-0"
-                      style={{ border: `1.5px solid ${active ? T.accent : "rgba(89,82,54,0.3)"}` }}
+            <div className="px-0.5 pb-3 text-[11px] font-medium tracking-[0.06em] uppercase" style={{ color: T.faint }}>{dateLabel || "Select order date range"}</div>
+            <div className="flex gap-4">
+              {/* Left: presets */}
+              <div className="w-[148px] shrink-0 space-y-0.5">
+                <div className="text-[10px] font-medium tracking-[0.06em] uppercase mb-2" style={{ color: T.faint }}>Quick select</div>
+                {EXPORT_PERIODS.map((pOpt) => {
+                  const active = period === pOpt.key;
+                  return (
+                    <button
+                      key={pOpt.key}
+                      onClick={() => handlePreset(pOpt.key)}
+                      className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-[7px] text-[11.5px] text-left cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.08)]"
+                      style={{ color: active ? T.accent : T.text, fontWeight: active ? 600 : 400, background: active ? T.accentFaint : "transparent" }}
                     >
-                      {active && <span className="w-[7px] h-[7px] rounded-full" style={{ background: T.accent }} />}
-                    </span>
-                    {pOpt.label}
-                  </button>
-                );
-              })}
-            </div>
-            {period === "custom" && (
-              <div className="flex items-center gap-2 mt-2 px-1">
-                <input type="date" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)} className="flex-1 h-8 px-2 rounded-[7px] text-[11.5px] outline-none min-w-0" style={inputStyle} />
-                <span className="text-[11px]" style={{ color: T.faint }}>–</span>
-                <input type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)} className="flex-1 h-8 px-2 rounded-[7px] text-[11.5px] outline-none min-w-0" style={inputStyle} />
+                      <span className="w-[13px] h-[13px] rounded-full flex items-center justify-center shrink-0" style={{ border: `1.5px solid ${active ? T.accent : "rgba(89,82,54,0.3)"}` }}>
+                        {active && <span className="w-[5px] h-[5px] rounded-full" style={{ background: T.accent }} />}
+                      </span>
+                      {pOpt.label}
+                    </button>
+                  );
+                })}
               </div>
-            )}
-            <div className="flex items-center gap-2 mt-3 pt-3" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+              {/* Right: calendars */}
+              <div className="flex-1 min-w-0" style={{ borderLeft: `1px solid ${T.borderSoft}`, paddingLeft: "16px" }}>
+                <div className="grid grid-cols-2 gap-3">
+                  <ExportCalendar value={customFrom} onChange={(v) => { setCustomFrom(v); setPeriod("custom"); }} label="From" />
+                  <ExportCalendar value={customTo} onChange={(v) => { setCustomTo(v); setPeriod("custom"); }} label="To" />
+                </div>
+                {(customFrom || customTo) && (
+                  <div className="mt-3 pt-2.5 text-[11px] flex items-center gap-2" style={{ borderTop: `1px solid ${T.borderSoft}`, color: T.muted }}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-3.5 h-3.5 shrink-0" style={{ color: T.accent }}><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
+                    <span>{customFrom ? new Date(customFrom + "T00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "Start"}</span>
+                    <span style={{ color: T.faint }}>→</span>
+                    <span>{customTo ? new Date(customTo + "T00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "End"}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+            {/* Download buttons */}
+            <div className="flex items-center gap-2 mt-4 pt-3" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
               {(["pdf", "xls"] as const).map((fmt) => (
                 <button
                   key={fmt}
                   onClick={() => fire(fmt)}
                   disabled={customIncomplete}
-                  className="flex-1 h-8 rounded-[8px] text-[12px] font-semibold uppercase tracking-[0.04em] cursor-pointer transition-all hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="flex-1 h-9 rounded-[8px] text-[12px] font-semibold uppercase tracking-[0.04em] cursor-pointer transition-all hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed"
                   style={fmt === "pdf" ? { background: T.primary, color: T.primaryInk } : { background: T.accentMuted, color: T.accent }}
                 >
                   {fmt === "pdf" ? "Download PDF" : "Download XLS"}
@@ -192,20 +263,39 @@ export function ExportBtn({ onExport }: { onExport: (opts: ExportOptions) => voi
 }
 
 export function ToolbarSearch({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) {
+  const [focused, setFocused] = useState(false);
+  const hasValue = value.length > 0;
   return (
-    <div className="relative w-full sm:w-[280px]">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: T.faint }}>
+    <div className="relative w-full sm:w-[310px]">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none transition-colors" style={{ color: focused || hasValue ? T.accent : T.faint }}>
         <circle cx="11" cy="11" r="7" strokeWidth="1.5" />
         <path d="m16 16 4 4" strokeWidth="1.5" strokeLinecap="round" />
       </svg>
       <input
-        type="search"
+        type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
         placeholder={placeholder}
-        className="w-full h-9 pl-9 pr-3 rounded-[9px] text-[13px] outline-none transition-shadow duration-200 focus:shadow-[0_0_0_3px_rgba(119,123,98,0.18)]"
-        style={{ background: T.bg, border: `1px solid ${T.border}`, color: T.text }}
+        className="w-full h-9 pl-9 pr-8 rounded-[9px] text-[13px] outline-none transition-all duration-200"
+        style={{
+          background: focused ? T.card : T.bg,
+          border: `1px solid ${focused ? T.accentBorder : hasValue ? T.accentBorder : T.border}`,
+          color: T.text,
+          boxShadow: focused ? `0 0 0 3px ${T.accentFaint}` : "none",
+        }}
       />
+      {hasValue && (
+        <button
+          onClick={() => onChange("")}
+          className="absolute right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full flex items-center justify-center cursor-pointer transition-colors hover:bg-[rgba(89,82,54,0.1)]"
+          style={{ color: T.muted }}
+          tabIndex={-1}
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
+        </button>
+      )}
     </div>
   );
 }

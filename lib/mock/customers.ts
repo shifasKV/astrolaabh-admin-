@@ -1,4 +1,5 @@
 import type { Customer } from "@/lib/types";
+import { SEED_CUSTOMERS } from "./seed-scenarios";
 
 export const MOCK_CUSTOMERS: Customer[] = [
   { id: "cust_001", name: "Radhika Oberoi", email: "radhika.oberoi@gmail.com", phone: "+91 98100 42310", birthDate: "1989-03-14", birthTime: "05:42", birthPlace: "Jaipur, Rajasthan", shippingAddress: "Oberoi Residency, C-Scheme, Jaipur 302001, Rajasthan", chartRef: "CHT-001", rashi: "Vrishabha", nakshatra: "Rohini", createdAt: "2026-01-15", affiliateCode: "SANDEEP108" },
@@ -13,4 +14,5 @@ export const MOCK_CUSTOMERS: Customer[] = [
   { id: "cust_010", name: "Arjun Nair", email: "arjun.nair@gmail.com", phone: "+91 80123 45678", birthDate: "1986-06-22", birthTime: "01:20", birthPlace: "Bengaluru, Karnataka", shippingAddress: "1502, Prestige Shantiniketan, Whitefield, Bengaluru 560048", chartRef: "CHT-010", rashi: "Mesha", nakshatra: "Ashwini", createdAt: "2026-06-14" },
   { id: "cust_011", name: "Divya Kapoor", email: "divya.k@gmail.com", phone: "+91 99001 23456", birthDate: "1990-10-11", birthTime: "09:40", birthPlace: "Chandigarh", shippingAddress: "House 221, Sector 21-A, Chandigarh 160022", chartRef: "CHT-011", rashi: "Tula", nakshatra: "Chitra", createdAt: "2026-06-30", affiliateCode: "MEENA9" },
   { id: "cust_012", name: "Rohan Malhotra", email: "rohan.m@outlook.com", phone: "+91 88900 11234", birthDate: "1984-02-28", birthTime: "23:15", birthPlace: "Kolkata, West Bengal", shippingAddress: "4B, Lake View Apartments, Southern Avenue, Kolkata 700029", chartRef: "CHT-012", rashi: "Vrischika", nakshatra: "Anuradha", createdAt: "2026-07-08", affiliateCode: "RAJENDRA7" },
+  ...SEED_CUSTOMERS,
 ];

@@ -1,4 +1,5 @@
 import type { Order } from "@/lib/types";
+import { SEED_ORDERS } from "./seed-scenarios";
 
 export const MOCK_ORDERS: Order[] = [
   {
@@ -107,4 +108,5 @@ export const MOCK_ORDERS: Order[] = [
     energisationStatus: "completed", energisationTier: "shuddhi", certificateStatus: "uploaded", affiliateCode: "VTRI21", tracking: "AWB-BLU-6619023",
     placedAt: "2026-06-25", updatedAt: "2026-08-07",
   },
+  ...SEED_ORDERS,
 ];
