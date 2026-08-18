@@ -6,7 +6,7 @@ import { T } from "@/lib/theme";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, selectRole } = useAuth();
+  const { login } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -186,7 +186,7 @@ export default function LoginPage() {
           </div>
 
           <button
-            onClick={() => { selectRole("affiliate"); router.push("/onboarding"); }}
+            onClick={() => router.push("/affiliate-program")}
             className="group mt-5 w-full flex items-center justify-center gap-2 h-11 rounded-[10px] text-[13px] font-medium cursor-pointer transition-all duration-200 hover:bg-[rgba(119,123,98,0.06)]"
             style={{ background: T.card, border: `1px solid ${T.border}`, color: T.text }}
           >

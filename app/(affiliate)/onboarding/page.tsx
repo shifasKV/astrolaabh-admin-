@@ -44,17 +44,18 @@ export default function OnboardingPage() {
     <div className="min-h-screen flex items-center justify-center px-4 py-10 relative overflow-hidden" style={{ background: `url(/login/bg-onboarding.jpg) center / cover no-repeat, ${T.bg}` }}>
       <div className="absolute inset-0 pointer-events-none" style={{ background: "linear-gradient(180deg, rgba(241,235,220,0.62) 0%, rgba(241,235,220,0.42) 55%, rgba(241,235,220,0.6) 100%)" }} />
       <div className="relative z-10 w-full max-w-[560px]">
-        {/* Back — to sign in on the first step, to the previous step after */}
-        <div className="mb-5">
-          <button
-            onClick={() => (step === 0 ? router.push("/") : setStep(step - 1))}
-            className="group inline-flex items-center gap-1.5 text-[12.5px] font-medium h-8 pl-2 pr-3 rounded-full transition-all duration-200 hover:-translate-x-0.5 cursor-pointer"
-            style={{ color: T.muted, background: T.card, border: `1px solid ${T.borderSoft}`, boxShadow: T.shadow }}
-          >
-            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 transition-transform duration-200 group-hover:-translate-x-0.5"><path d="M10 3.5 5.5 8 10 12.5" /></svg>
-            {step === 0 ? "Back to sign in" : "Back"}
-          </button>
-        </div>
+        {step > 0 && (
+          <div className="mb-5">
+            <button
+              onClick={() => setStep(step - 1)}
+              className="group inline-flex items-center gap-1.5 text-[12.5px] font-medium h-8 pl-2 pr-3 rounded-full transition-all duration-200 hover:-translate-x-0.5 cursor-pointer"
+              style={{ color: T.muted, background: T.card, border: `1px solid ${T.borderSoft}`, boxShadow: T.shadow }}
+            >
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 transition-transform duration-200 group-hover:-translate-x-0.5"><path d="M10 3.5 5.5 8 10 12.5" /></svg>
+              Back
+            </button>
+          </div>
+        )}
 
         {/* Header */}
         <div className="text-center mb-8">

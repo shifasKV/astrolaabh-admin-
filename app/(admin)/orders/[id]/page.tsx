@@ -133,6 +133,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const handleCertUpload = () => {
     const isGenerate = certUploadTarget === "energisation";
     setCertUploadTarget(null);
+    setLocalCertStatus("uploaded");
     setCertNumber(""); setCertIssueDate(""); setCertWeight(""); setCertOrigin(""); setCertNotes(""); setCertRitualMethod(""); setCertIssueDateActual("");
     flash(isGenerate ? "Certificate generated" : "Certificate uploaded");
   };
@@ -157,6 +158,15 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
   const tier = order.energisationTier ? ENERGISATION.find((e) => e.key === order.energisationTier) : null;
 
+  const overallStatus = (() => {
+    if (!isPaid) return { label: "Payment pending", tone: "gold" as const };
+    if (shipComplete) return { label: "Delivered", tone: "good" as const };
+    if (dispatched || localTracking) return { label: "In transit", tone: "gold" as const };
+    if (!certifyComplete) return { label: "Cert missing", tone: "danger" as const };
+    if (!energiseComplete) return { label: "Energisation pending", tone: "danger" as const };
+    return { label: "Not shipped", tone: "muted" as const };
+  })();
+
   return (
     <>
       {/* ============ HEADER ============ */}
@@ -166,7 +176,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
         back={{ label: "Orders", href: "/orders" }}
         action={
           <div className="flex items-center gap-2.5">
-            <Chip tone={isPaid ? "good" : "gold"}>{isPaid ? "Paid" : "Payment pending"}</Chip>
+            <Chip tone={overallStatus.tone}>{overallStatus.label}</Chip>
             <ShopifyButton href="https://admin.shopify.com/orders">Open in Shopify</ShopifyButton>
           </div>
         }
@@ -199,12 +209,12 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
           <h2 className="text-[15px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>Order summary</h2>
           {isPaid && (
             <button
-              onClick={() => flash("Invoice downloaded")}
+              onClick={() => flash("Invoice opened")}
               className="inline-flex items-center gap-1.5 text-[12px] font-medium px-3 py-1.5 rounded-[8px] cursor-pointer transition-all hover:brightness-110"
               style={{ background: "rgba(119,123,98,0.12)", color: T.accent, border: `1px solid ${T.accentBorder}` }}
             >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              Download invoice
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+              View invoice
             </button>
           )}
         </div>
@@ -263,7 +273,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
         </div>
       </Card>
       {/* ============ FULFILLMENT PIPELINE ============ */}
-      <Card>
+      {isPaid && <Card>
         <h2 className="text-[15px] font-semibold tracking-[-0.01em] mb-4" style={{ color: T.text }}>Fulfillment</h2>
 
         {/* Stepper */}
@@ -574,14 +584,21 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                         </div>
                       </div>
                     ) : (
-                      <GoldBtn onClick={() => {
-                        const stone = order.items.find((i) => i.itemType === "stone");
-                        setCertWeight(stone?.caratWeight ?? "");
-                        setCertOrigin(order.customerName ?? "");
-                        if (energisation?.completedAt) setCertIssueDate(energisation.completedAt.split("T")[0]);
-                        if (energisation?.method) setCertRitualMethod(energisation.method);
-                        setCertUploadTarget("energisation");
-                      }}>Generate certificate</GoldBtn>
+                      <button
+                        onClick={() => {
+                          const stone = order.items.find((i) => i.itemType === "stone");
+                          setCertWeight(stone?.caratWeight ?? "");
+                          setCertOrigin(order.customerName ?? "");
+                          if (energisation?.completedAt) setCertIssueDate(energisation.completedAt.split("T")[0]);
+                          if (energisation?.method) setCertRitualMethod(energisation.method);
+                          flash("Certificate auto-generated");
+                        }}
+                        className="inline-flex items-center gap-1.5 text-[12px] font-medium px-3 py-1.5 rounded-[8px] cursor-pointer transition-all hover:brightness-110"
+                        style={{ background: "rgba(119,123,98,0.12)", color: T.accent, border: `1px solid ${T.accentBorder}` }}
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                        View certificate
+                      </button>
                     )}
                   </div>
                 </div>
@@ -637,7 +654,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
             </div>
           )}
         </div>
-      </Card>
+      </Card>}
         </div>
 
         {/* Context rail — who, where, meta */}
@@ -676,32 +693,84 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
           </Card>
         )}
 
+        {/* Payment details */}
         <Card>
           <div className="flex items-center justify-between mb-3.5">
-            <h2 className="text-[15px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>Order details</h2>
-            <Chip tone={isPaid ? "good" : "gold"}>{isPaid ? "Paid" : "Pending"}</Chip>
+            <h2 className="text-[15px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>Payment details</h2>
+            <Chip tone={isPaid ? "good" : "gold"}>{isPaid ? "Paid" : "Payment pending"}</Chip>
           </div>
-          <div className="space-y-3">
+          <div className="space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-medium tracking-[0.08em] uppercase" style={{ color: T.faint }}>Method</span>
+              <span className="text-[13px] font-medium" style={{ color: isPaid ? T.text : T.faint }}>{isPaid ? "Bank transfer (NEFT)" : "—"}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-medium tracking-[0.08em] uppercase" style={{ color: T.faint }}>Transaction ID</span>
+              <span className="text-[13px] font-medium tabular-nums" style={{ color: isPaid ? T.accent : T.faint }}>{isPaid ? `TXN${order.id.replace(/\D/g, "").slice(0, 8)}` : "—"}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-medium tracking-[0.08em] uppercase" style={{ color: T.faint }}>Paid at</span>
+              <span className="text-[12.5px] tabular-nums" style={{ color: isPaid ? T.muted : T.faint }}>
+                {isPaid ? new Date(new Date(order.placedAt).getTime() + 3600000).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) + " · " + new Date(new Date(order.placedAt).getTime() + 3600000).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true }) : "—"}
+              </span>
+            </div>
+          </div>
+        </Card>
+
+        {/* Shipment details */}
+        <Card>
+          <div className="flex items-center justify-between mb-3.5">
+            <h2 className="text-[15px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>Shipment details</h2>
+            <Chip tone={shipComplete ? "good" : localTracking ? "gold" : "muted"}>
+              {shipComplete ? "Delivered" : localTracking ? "In transit" : "Not shipped"}
+            </Chip>
+          </div>
+          <div className="space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-medium tracking-[0.08em] uppercase" style={{ color: T.faint }}>Shipment ID</span>
+              <span className="text-[13px] font-medium tabular-nums" style={{ color: localTracking ? T.accent : T.faint }}>{localTracking || "—"}</span>
+            </div>
             <div>
               <div className="text-[10px] font-medium tracking-[0.08em] uppercase mb-0.5" style={{ color: T.faint }}>Ship to</div>
               <div className="text-[13px] font-medium leading-relaxed" style={{ color: customer?.shippingAddress ? T.text : T.faint }}>
                 {customer ? `${customer.name}, ${customer.shippingAddress || "—"}` : "—"}
               </div>
             </div>
-            {order.affiliateCode && (
-              <div className="flex items-center justify-between pt-3" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
-                <span className="text-[10px] font-medium tracking-[0.08em] uppercase" style={{ color: T.faint }}>Affiliate</span>
-                <span className="text-[13px] font-medium" style={{ color: T.accent }}>{order.affiliateCode}</span>
-              </div>
-            )}
-            {order.placedBy && (
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-medium tracking-[0.08em] uppercase" style={{ color: T.faint }}>Placed by</span>
-                <span className="text-[13px] font-medium" style={{ color: T.text }}>{order.placedBy}</span>
-              </div>
-            )}
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-medium tracking-[0.08em] uppercase" style={{ color: T.faint }}>Shipped date</span>
+              <span className="text-[12.5px] tabular-nums" style={{ color: localTracking ? T.muted : T.faint }}>
+                {localTracking ? new Date(new Date(order.placedAt).getTime() + 5 * 86400000).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—"}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-medium tracking-[0.08em] uppercase" style={{ color: T.faint }}>Delivery date</span>
+              <span className="text-[12.5px] tabular-nums" style={{ color: shipComplete ? T.good : T.faint }}>
+                {shipComplete ? new Date(new Date(order.placedAt).getTime() + 9 * 86400000).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—"}
+              </span>
+            </div>
           </div>
         </Card>
+
+        {/* Other details */}
+        {(order.affiliateCode || order.placedBy) && (
+          <Card>
+            <h2 className="text-[15px] font-semibold tracking-[-0.01em] mb-3.5" style={{ color: T.text }}>Other details</h2>
+            <div className="space-y-2.5">
+              {order.affiliateCode && (
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-medium tracking-[0.08em] uppercase" style={{ color: T.faint }}>Affiliate</span>
+                  <span className="text-[13px] font-medium" style={{ color: T.accent }}>{order.affiliateCode}</span>
+                </div>
+              )}
+              {order.placedBy && (
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-medium tracking-[0.08em] uppercase" style={{ color: T.faint }}>Placed by</span>
+                  <span className="text-[13px] font-medium" style={{ color: T.text }}>{order.placedBy}</span>
+                </div>
+              )}
+            </div>
+          </Card>
+        )}
         </aside>
       </div>
 
