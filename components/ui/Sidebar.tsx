@@ -141,22 +141,6 @@ export function Sidebar({ groups, orgName, orgSub, userLabel, userSub, onUserCli
         </button>
       )}
 
-      {/* Global search trigger */}
-      <button
-        onClick={() => window.dispatchEvent(new Event("open-command-palette"))}
-        title={collapsed ? "Search (⌘K)" : undefined}
-        className={`mb-4 flex items-center rounded-[10px] cursor-pointer transition-colors hover:bg-[rgba(244,241,229,0.09)] ${collapsed ? "justify-center h-10 mx-auto w-10" : "gap-2.5 h-9 px-2.5"}`}
-        style={{ border: "1px solid rgba(244,241,229,0.14)", color: T.sidebarFaint }}
-      >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" className="w-4 h-4 shrink-0"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
-        {!collapsed && (
-          <>
-            <span className="text-[13px]">Search</span>
-            <kbd className="ml-auto text-[10px] font-medium px-1.5 py-0.5 rounded-[5px]" style={{ background: "rgba(244,241,229,0.10)", color: T.sidebarFaint }}>⌘K</kbd>
-          </>
-        )}
-      </button>
-
       {/* Notifications */}
       {notifications && notifications.length > 0 && (
         <div className="relative mb-4">

@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, Select, Pagination, GoldBtn, fmtChipDate, ToolbarSearch, FiltersPopover, FilterField, FilterChip, DateRangeFields, ColumnStatusFilter, EmptyState, TableSkeleton, Toast } from "@/components/ui";
+import { PageHeader, Card, Chip, Select, Pagination, fmtChipDate, ToolbarSearch, FiltersPopover, FilterField, FilterChip, DateRangeFields, ColumnStatusFilter, EmptyState, TableSkeleton, Toast } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { useSimulatedLoad } from "@/lib/useSimulatedLoad";
 import { MOCK_PAYMENTS } from "@/lib/mock";
@@ -131,7 +131,6 @@ export default function PaymentsPage() {
       <div className="md:h-[calc(100dvh-78px)] md:flex md:flex-col md:min-h-0">
       <PageHeader
         title="Payments"
-        action={<Link href="/payments/create"><GoldBtn>+ New payment link</GoldBtn></Link>}
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">

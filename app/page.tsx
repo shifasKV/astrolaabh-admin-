@@ -15,8 +15,8 @@ export default function LoginPage() {
   const [showDemo, setShowDemo] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
 
-  const inputCls =
-    "w-full h-11 px-3.5 rounded-[10px] text-[14px] outline-none transition-shadow duration-200 focus:shadow-[0_0_0_3px_rgba(119,123,98,0.16)]";
+  const canSubmit = Boolean(email.trim() && password);
+  const inputCls = "w-full h-11 px-3.5 rounded-[10px] text-[14px] outline-none transition-shadow duration-200 focus:shadow-[0_0_0_3px_rgba(119,123,98,0.16)]";
   const inputStyle = { background: "#fbf8f1", border: `1px solid ${T.border}`, color: T.text, boxShadow: "inset 0 1px 2px rgba(43,42,34,0.03)" };
 
   const handleSubmit = (e?: React.FormEvent) => {
@@ -127,7 +127,8 @@ export default function LoginPage() {
 
               <button
                 type="submit"
-                className="w-full h-11 rounded-[10px] text-[14px] font-semibold cursor-pointer transition-all duration-200 hover:brightness-110 hover:-translate-y-px hover:shadow-[0_1px_2px_rgba(43,42,34,0.08),0_14px_30px_-14px_rgba(160,125,56,0.55)] active:scale-[0.99]"
+                disabled={!canSubmit}
+                className="w-full h-11 rounded-[10px] text-[14px] font-semibold transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none disabled:hover:brightness-100 hover:brightness-110 hover:-translate-y-px hover:shadow-[0_1px_2px_rgba(43,42,34,0.08),0_14px_30px_-14px_rgba(160,125,56,0.55)] active:scale-[0.99] cursor-pointer"
                 style={{ background: T.primary, color: T.primaryInk, boxShadow: "inset 0 1px 0 rgba(244,241,229,0.12), 0 1px 2px rgba(43,42,34,0.1)" }}
               >
                 Sign in
@@ -151,7 +152,7 @@ export default function LoginPage() {
                   {DEMO_ACCOUNTS.map((a) => (
                     <button
                       key={a.email}
-                      onClick={() => { setEmail(a.email); setPassword(DEMO_PASSWORD); setError(""); }}
+                      onClick={() => { setEmail(a.email); setPassword(DEMO_PASSWORD); setError(""); setShowDemo(false); }}
                       className="w-full flex items-center justify-between gap-3 px-2.5 py-2 rounded-[8px] text-left cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.08)]"
                     >
                       <span className="text-[12.5px] font-medium" style={{ color: T.text }}>{a.label}</span>
