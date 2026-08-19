@@ -1,7 +1,7 @@
 "use client";
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { PageHeader, Card, StatCard, ToolbarSearch, SortMenu, InlineFilter, MultiCheck, GoldBtn, Chip, Pagination, EmptyState, TableSkeleton } from "@/components/ui";
+import { PageHeader, Card, StatCard, ToolbarSearch, SortMenu, InlineFilter, MultiCheck, GoldBtn, Chip, Pagination, EmptyState, TableSkeleton, MobileListCard } from "@/components/ui";
 
 const STATUS_ICON = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className="w-3.5 h-3.5"><circle cx="12" cy="12" r="10" /><path d="m9 12 2 2 4-4" /></svg>;
 const STATUS_OPTIONS = [{ value: "active", label: "Active" }, { value: "deactivated", label: "Deactivated" }];
@@ -123,10 +123,19 @@ export default function CustomersPage() {
         {paginated.map((c, i, arr) => {
           const a = activity[c.id] ?? { orders: 0, consults: 0, spent: 0 };
           return (
-            <Link
-              key={c.id}
+            <div key={c.id}>
+            <MobileListCard
+              className="md:hidden"
               href={`/customers/${c.id}`}
-              className="group grid md:grid-cols-[minmax(240px,1.4fr)_150px_minmax(140px,1fr)_90px_90px_120px_24px] grid-cols-1 gap-x-4 gap-y-1 items-center px-4 py-2.5 transition-colors last:rounded-b-[15px] even:bg-[rgba(89,82,54,0.025)] hover:!bg-[rgba(119,123,98,0.08)]"
+              title={c.name}
+              right={a.spent ? inr(a.spent) : undefined}
+              sub={c.email}
+              chips={customerStatus(c.id) === "deactivated" ? <Chip tone="muted">Deactivated</Chip> : undefined}
+              facts={[{ label: "Phone", value: c.phone }, { label: "Orders", value: a.orders || "—" }]}
+            />
+            <Link
+              href={`/customers/${c.id}`}
+              className="group hidden md:grid md:grid-cols-[minmax(240px,1.4fr)_150px_minmax(140px,1fr)_90px_90px_120px_24px] gap-x-4 gap-y-1 items-center px-4 py-2.5 transition-colors last:rounded-b-[15px] even:bg-[rgba(89,82,54,0.025)] hover:!bg-[rgba(119,123,98,0.08)]"
               style={{ borderBottom: i < arr.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
             >
               <span className="flex items-center gap-3 min-w-0">
@@ -153,6 +162,7 @@ export default function CustomersPage() {
               </span>
               <span className="hidden md:block" />
             </Link>
+            </div>
           );
         })}
         {filtered.length === 0 && (

@@ -638,6 +638,17 @@ export function OrderCreateFlow({ headerTitle = "Create order", submitLabel, suc
         </aside>
       </div>
 
+      {/* Mobile sticky bar — running total + primary CTA, sits above the tab bar */}
+      <div className="lg:hidden fixed inset-x-0 z-30 flex items-center gap-3 px-4 py-2.5" style={{ bottom: "calc(60px + env(safe-area-inset-bottom))", background: "rgba(255,254,250,0.94)", backdropFilter: "blur(8px)", borderTop: `1px solid ${T.border}` }}>
+        <div className="min-w-0">
+          <div className="text-[10px] tracking-[0.07em] uppercase" style={{ color: T.faint }}>Total</div>
+          <div className="text-[16px] font-semibold tabular-nums leading-tight" style={{ color: T.text }}>{inr(total)}</div>
+        </div>
+        <button onClick={attemptCreate} aria-disabled={!canCreate} className="ml-auto inline-flex items-center justify-center h-10 px-5 rounded-[10px] text-[13px] font-semibold cursor-pointer transition-all active:scale-[0.98]" style={canCreate ? { background: T.accent, color: T.accentInk } : { background: "rgba(89,82,54,0.13)", color: T.faint }}>
+          {submitLabel}
+        </button>
+      </div>
+
       {/* Custom stone modal */}
       <Modal open={stoneModalOpen} onClose={() => setStoneModalOpen(false)} title="Add a custom stone">
         <div className="space-y-4">

@@ -1,6 +1,6 @@
 "use client";
 import { useState, useMemo } from "react";
-import { PageHeader, Card, Chip, Tabs, ToolbarSearch, FiltersPopover, FilterField, SortMenu, Select, Pagination, TableSkeleton } from "@/components/ui";
+import { PageHeader, Card, Chip, Tabs, ToolbarSearch, FiltersPopover, FilterField, SortMenu, Select, Pagination, TableSkeleton, MobileListCard } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { useSimulatedLoad } from "@/lib/useSimulatedLoad";
 import { MOCK_REFERRAL_EVENTS } from "@/lib/mock";
@@ -124,9 +124,18 @@ export default function ReferralsPage() {
           </div>
           {paged.length === 0 && <div className="text-center py-8 text-[13px]" style={{ color: T.muted }}>No orders found.</div>}
           {paged.map((r) => (
+            <div key={r.id}>
+            <MobileListCard
+              className="sm:hidden"
+              title={r.maskedCustomer}
+              right={r.commissionAmount ? inr(r.commissionAmount) : "—"}
+              sub={`${r.id.toUpperCase()} · ${r.campaign || "Direct referral"}`}
+              rightSub={fmtDate(r.eventDate)}
+              chips={<Chip tone={r.commissionStatus === "paid" ? "good" : r.commissionStatus === "approved" ? "gold" : "muted"}>{r.commissionStatus ?? "—"}</Chip>}
+              facts={r.orderValue ? [{ label: "Order value", value: inr(r.orderValue) }] : undefined}
+            />
             <div
-              key={r.id}
-              className="grid grid-cols-1 sm:grid-cols-[minmax(120px,1fr)_110px_120px_120px_100px_100px] gap-2 sm:gap-3 items-center px-3 py-3 transition-all duration-150 rounded-[8px] hover:bg-[rgba(119,123,98,0.07)]"
+              className="hidden sm:grid sm:grid-cols-[minmax(120px,1fr)_110px_120px_120px_100px_100px] gap-2 sm:gap-3 items-center px-3 py-3 transition-all duration-150 rounded-[8px] hover:bg-[rgba(119,123,98,0.07)]"
               style={{ borderBottom: `1px solid ${T.borderSoft}` }}
             >
               <div className="min-w-0">
@@ -142,6 +151,7 @@ export default function ReferralsPage() {
                   {r.commissionStatus ?? "—"}
                 </Chip>
               </div>
+            </div>
             </div>
           ))}
           </>}
@@ -163,9 +173,18 @@ export default function ReferralsPage() {
           </div>
           {paged.length === 0 && <div className="text-center py-8 text-[13px]" style={{ color: T.muted }}>No bookings found.</div>}
           {paged.map((r) => (
+            <div key={r.id}>
+            <MobileListCard
+              className="sm:hidden"
+              title={r.maskedCustomer}
+              right={r.commissionAmount ? inr(r.commissionAmount) : "—"}
+              sub={`${r.id.toUpperCase()} · ${r.campaign || "Consultation booking"}`}
+              rightSub={fmtDate(r.eventDate)}
+              chips={<Chip tone={r.commissionStatus === "paid" ? "good" : r.commissionStatus === "approved" ? "gold" : "muted"}>{r.commissionStatus ?? "—"}</Chip>}
+              facts={r.orderValue ? [{ label: "Order value", value: inr(r.orderValue) }] : undefined}
+            />
             <div
-              key={r.id}
-              className="grid grid-cols-1 sm:grid-cols-[minmax(120px,1fr)_110px_120px_120px_100px_100px] gap-2 sm:gap-3 items-center px-3 py-3 transition-all duration-150 rounded-[8px] hover:bg-[rgba(119,123,98,0.07)]"
+              className="hidden sm:grid sm:grid-cols-[minmax(120px,1fr)_110px_120px_120px_100px_100px] gap-2 sm:gap-3 items-center px-3 py-3 transition-all duration-150 rounded-[8px] hover:bg-[rgba(119,123,98,0.07)]"
               style={{ borderBottom: `1px solid ${T.borderSoft}` }}
             >
               <div className="min-w-0">
@@ -181,6 +200,7 @@ export default function ReferralsPage() {
                   {r.commissionStatus ?? "—"}
                 </Chip>
               </div>
+            </div>
             </div>
           ))}
           </>}

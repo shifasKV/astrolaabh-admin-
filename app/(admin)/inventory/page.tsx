@@ -2,7 +2,7 @@
 import { Suspense, useState, useMemo, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { PageHeader, Card, Chip, Modal, Input, GoldBtn, GhostBtn, ShopifyIcon, ShopifyButton, SHOPIFY_GREEN_DARK, SHOPIFY_TINT, SHOPIFY_BORDER, Pagination, ToolbarSearch, InlineFilter, MultiCheck, SortMenu, EmptyState, TableSkeleton, Toast } from "@/components/ui";
+import { PageHeader, Card, Chip, Modal, Input, GoldBtn, GhostBtn, ShopifyIcon, ShopifyButton, SHOPIFY_GREEN_DARK, SHOPIFY_TINT, SHOPIFY_BORDER, Pagination, ToolbarSearch, InlineFilter, MultiCheck, SortMenu, EmptyState, TableSkeleton, Toast, MobileListCard } from "@/components/ui";
 
 const INV_ICONS = {
   stone: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className="w-3.5 h-3.5"><path d="M12 2 2 7l10 5 10-5-10-5ZM2 17l10 5 10-5M2 12l10 5 10-5" /></svg>,
@@ -534,9 +534,33 @@ function InventoryPageInner() {
           </div>
           <div className="md:flex-1 md:min-h-0 overflow-y-auto max-h-[560px] md:max-h-none">
           {stonePaginated.map((s, i, arr) => (
+            <div key={s.sku}>
+            <MobileListCard
+              className="md:hidden"
+              leading={
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={`/gems/${s.gem}.png`}
+                  alt={s.gemName}
+                  className="w-9 h-9 rounded-[8px] object-cover shrink-0"
+                  style={{ border: `1px solid ${T.borderSoft}` }}
+                  loading="lazy"
+                />
+              }
+              title={s.gemName}
+              right={catalogInr(s.price)}
+              sub={`${s.ratti} r · ${s.shade || s.colour || "—"} · ${s.sku}`}
+              chips={(disabledStones.has(s.sku) || outOfStockStones.has(s.sku) || sellingFastStones.has(s.sku)) ? (
+                <>
+                  {disabledStones.has(s.sku) && <span className="shrink-0 text-[10px] font-semibold px-1.5 py-[1px] rounded-[4px]" style={{ background: "rgba(163,73,63,0.1)", color: T.danger }}>Disabled</span>}
+                  {outOfStockStones.has(s.sku) && <span className="shrink-0 text-[10px] font-semibold px-1.5 py-[1px] rounded-[4px]" style={{ background: "rgba(163,73,63,0.1)", color: T.danger }}>Out of Stock</span>}
+                  {sellingFastStones.has(s.sku) && !outOfStockStones.has(s.sku) && !disabledStones.has(s.sku) && <span className="shrink-0 text-[10px] font-semibold px-1.5 py-[1px] rounded-[4px]" style={{ background: "rgba(197,123,26,0.1)", color: "#c57b1a" }}>Selling Fast</span>}
+                </>
+              ) : undefined}
+              facts={[{ label: "Intent", value: s.purpose?.[0] || "—" }, { label: "Zodiac", value: `${s.planetGlyph} ${s.planet}` }]}
+            />
             <div
-              key={s.sku}
-              className="grid md:grid-cols-[minmax(220px,1.4fr)_130px_130px_100px_80px_120px_48px] grid-cols-1 gap-x-4 gap-y-1.5 items-center px-4 py-2.5 text-[13px] even:bg-[rgba(89,82,54,0.025)] last:rounded-b-[15px]"
+              className="hidden md:grid md:grid-cols-[minmax(220px,1.4fr)_130px_130px_100px_80px_120px_48px] gap-x-4 gap-y-1.5 items-center px-4 py-2.5 text-[13px] even:bg-[rgba(89,82,54,0.025)] last:rounded-b-[15px]"
               style={{ borderBottom: i < arr.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
             >
               <span className="flex items-center gap-3 min-w-0">
@@ -576,6 +600,7 @@ function InventoryPageInner() {
                 />
               </span>
             </div>
+            </div>
           ))}
           {filteredStones.length === 0 && (
             <EmptyState inline icon="gem" title="No stones" description="No stones match these filters." />
@@ -609,9 +634,33 @@ function InventoryPageInner() {
           </div>
           <div className="md:flex-1 md:min-h-0 overflow-y-auto max-h-[560px] md:max-h-none">
           {designPaginated.map((d, i, arr) => (
+            <div key={d.slug}>
+            <MobileListCard
+              className="md:hidden"
+              leading={
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={designThumb(d)}
+                  alt={d.name}
+                  className="w-9 h-9 rounded-[8px] object-cover shrink-0"
+                  style={{ border: `1px solid ${T.borderSoft}`, background: "#fffdf5" }}
+                  loading="lazy"
+                />
+              }
+              title={d.name}
+              right={<span style={{ color: d.remaining === 0 ? T.danger : T.text }}>{d.remaining}</span>}
+              rightSub="remaining"
+              sub={`${d.form} · ${d.metal}`}
+              chips={(disabledDesigns.has(d.slug) || outOfStockDesigns.has(d.slug) || sellingFastDesigns.has(d.slug)) ? (
+                <>
+                  {disabledDesigns.has(d.slug) && <span className="shrink-0 text-[10px] font-semibold px-1.5 py-[1px] rounded-[4px]" style={{ background: "rgba(163,73,63,0.1)", color: T.danger }}>Disabled</span>}
+                  {outOfStockDesigns.has(d.slug) && <span className="shrink-0 text-[10px] font-semibold px-1.5 py-[1px] rounded-[4px]" style={{ background: "rgba(163,73,63,0.1)", color: T.danger }}>Out of Stock</span>}
+                  {sellingFastDesigns.has(d.slug) && !outOfStockDesigns.has(d.slug) && !disabledDesigns.has(d.slug) && <span className="shrink-0 text-[10px] font-semibold px-1.5 py-[1px] rounded-[4px]" style={{ background: "rgba(197,123,26,0.1)", color: "#c57b1a" }}>Selling Fast</span>}
+                </>
+              ) : undefined}
+            />
             <div
-              key={d.slug}
-              className="grid md:grid-cols-[minmax(200px,1.2fr)_120px_120px_120px_48px] grid-cols-1 gap-x-4 gap-y-1.5 items-center px-4 py-2.5 text-[13px] even:bg-[rgba(89,82,54,0.025)] last:rounded-b-[15px]"
+              className="hidden md:grid md:grid-cols-[minmax(200px,1.2fr)_120px_120px_120px_48px] gap-x-4 gap-y-1.5 items-center px-4 py-2.5 text-[13px] even:bg-[rgba(89,82,54,0.025)] last:rounded-b-[15px]"
               style={{ borderBottom: i < arr.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
             >
               <span className="flex items-center gap-3 min-w-0">
@@ -648,6 +697,7 @@ function InventoryPageInner() {
                   onSellingFast={() => toggleDesignSellingFast(d.slug)}
                 />
               </span>
+            </div>
             </div>
           ))}
           {filteredDesigns.length === 0 && (
@@ -780,9 +830,17 @@ function InventoryPageInner() {
             {GURUJIS.map((g, i) => {
               const enabled = !disabledGurujis.has(g.id);
               return (
+                <div key={g.id}>
+                <MobileListCard
+                  className="md:hidden"
+                  title={g.name}
+                  sub={g.speciality}
+                  right={<ToggleSwitch enabled={enabled} onToggle={() => toggleGuruji(g.id)} />}
+                  rightSub={enabled ? "Active" : "Inactive"}
+                  facts={[{ label: "Location", value: g.location }, { label: "Phone", value: g.phone }]}
+                />
                 <div
-                  key={g.id}
-                  className="grid md:grid-cols-[minmax(220px,1.3fr)_1fr_130px_150px_130px] grid-cols-1 gap-x-4 gap-y-1 items-center px-4 py-2.5 transition-opacity even:bg-[rgba(89,82,54,0.025)] last:rounded-b-[15px]"
+                  className="hidden md:grid md:grid-cols-[minmax(220px,1.3fr)_1fr_130px_150px_130px] gap-x-4 gap-y-1 items-center px-4 py-2.5 transition-opacity even:bg-[rgba(89,82,54,0.025)] last:rounded-b-[15px]"
                   style={{ borderBottom: i < GURUJIS.length - 1 ? `1px solid ${T.borderSoft}` : "none", opacity: enabled ? 1 : 0.55 }}
                 >
                   <div className="flex items-center gap-3 min-w-0">
@@ -803,6 +861,7 @@ function InventoryPageInner() {
                     </span>
                     <ToggleSwitch enabled={enabled} onToggle={() => toggleGuruji(g.id)} />
                   </div>
+                </div>
                 </div>
               );
             })}

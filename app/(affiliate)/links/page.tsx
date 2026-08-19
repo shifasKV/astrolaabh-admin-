@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { PageHeader, Card, GoldBtn, EmptyState, TableSkeleton } from "@/components/ui";
+import { PageHeader, Card, Chip, GoldBtn, EmptyState, TableSkeleton, MobileListCard } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { useSimulatedLoad } from "@/lib/useSimulatedLoad";
 import { MOCK_AFFILIATE_LINKS, MOCK_REFERRAL_EVENTS, MOCK_AFFILIATES } from "@/lib/mock";
@@ -61,7 +61,7 @@ export default function LinksPage() {
       <Card className="!p-0">
         {loading ? <TableSkeleton cols={7} rows={8} /> : <>
         {/* Header */}
-        <div className={`grid ${cols} gap-3 px-4 h-10 items-center rounded-t-[15px]`} style={{ background: T.card, borderBottom: `1px solid ${T.borderSoft}` }}>
+        <div className={`hidden sm:grid ${cols} gap-3 px-4 h-10 items-center rounded-t-[15px]`} style={{ background: T.card, borderBottom: `1px solid ${T.borderSoft}` }}>
           {["Product", "Campaign", "Type", "Orders", "Commission", "", "Active"].map((h, i) => (
             <div key={i} className={`text-[11px] font-medium tracking-[0.06em] uppercase ${i === 6 ? "text-right" : ""}`} style={{ color: T.faint }}>{h}</div>
           ))}
@@ -73,9 +73,20 @@ export default function LinksPage() {
           const orders = ordersByLink(link.id);
           const commission = commissionByLink(link.id);
           return (
+            <div key={link.id}>
+            <MobileListCard
+              className="sm:hidden"
+              onClick={() => copyLink(link.id, link.shortUrl)}
+              chevron={false}
+              title={link.productName || "—"}
+              right={inr(commission)}
+              sub={link.shortUrl}
+              rightSub={copiedId === link.id ? <span style={{ color: T.good }}>Copied</span> : "Tap to copy"}
+              chips={<><Chip tone={isActive ? "good" : "muted"}>{isActive ? "Active" : "Inactive"}</Chip><Chip tone="muted">{link.destinationType === "stone" ? "Stone" : "Consultation"}</Chip></>}
+              facts={[{ label: "Orders", value: orders }, { label: "Campaign", value: link.campaign || "—" }]}
+            />
             <div
-              key={link.id}
-              className={`grid ${cols} gap-3 px-4 py-2.5 items-center even:bg-[rgba(89,82,54,0.025)] hover:!bg-[rgba(119,123,98,0.08)] transition-colors ${idx === arr.length - 1 ? "rounded-b-[15px]" : ""}`}
+              className={`hidden sm:grid ${cols} gap-3 px-4 py-2.5 items-center ${idx % 2 === 0 ? "bg-[rgba(89,82,54,0.025)]" : ""} hover:!bg-[rgba(119,123,98,0.08)] transition-colors ${idx === arr.length - 1 ? "rounded-b-[15px]" : ""}`}
               style={{ borderBottom: idx < arr.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
             >
               {/* Product name */}
@@ -128,6 +139,7 @@ export default function LinksPage() {
                   />
                 </button>
               </div>
+            </div>
             </div>
           );
         })}

@@ -3,7 +3,7 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
 import {
   PageHeader, Card, Chip, Tabs, GoldBtn, Pagination,
-  Tooltip, ToolbarSearch, ExportBtn, downloadXLS, downloadPDF, InlineFilter, MultiCheck, SortMenu, DateRangePanel, EmptyState, TableSkeleton } from "@/components/ui";
+  Tooltip, ToolbarSearch, ExportBtn, downloadXLS, downloadPDF, InlineFilter, MultiCheck, SortMenu, DateRangePanel, EmptyState, TableSkeleton, MobileListCard } from "@/components/ui";
 
 const C_ICONS = {
   expert: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className="w-3.5 h-3.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>,
@@ -340,10 +340,18 @@ export default function ConsultationsPage() {
               const st = rowStatus(c);
               const dt = new Date(c.scheduledAt);
               return (
-                <Link
-                  key={c.id}
+                <div key={c.id}>
+                <MobileListCard
+                  className="sm:hidden"
                   href={`/consultations/${c.id}`}
-                  className="group grid grid-cols-1 sm:grid-cols-[64px_1fr_150px_170px] gap-2 sm:gap-3 items-center px-4 py-2.5 transition-colors duration-150 last:rounded-b-[15px] even:bg-[rgba(89,82,54,0.025)] hover:!bg-[rgba(119,123,98,0.08)]"
+                  title={c.customerName}
+                  sub={`${c.expertName} · ${c.type.replace(/_/g, " ")}`}
+                  rightSub={<>{dt.toLocaleDateString("en-IN", { day: "numeric", month: "short" })} · {dt.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true })}</>}
+                  chips={<Chip tone={st.tone}>{st.label}</Chip>}
+                />
+                <Link
+                  href={`/consultations/${c.id}`}
+                  className="group hidden sm:grid sm:grid-cols-[64px_1fr_150px_170px] gap-2 sm:gap-3 items-center px-4 py-2.5 transition-colors duration-150 last:rounded-b-[15px] even:bg-[rgba(89,82,54,0.025)] hover:!bg-[rgba(119,123,98,0.08)]"
                   style={{ borderBottom: idx < paginated.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
                 >
                   <span className="text-[11.5px] tabular-nums" style={{ color: T.faint }}>#{c.id.replace(/\D/g, "")}</span>
@@ -357,6 +365,7 @@ export default function ConsultationsPage() {
                   </span>
                   <div><Chip tone={st.tone}>{st.label}</Chip></div>
                 </Link>
+                </div>
               );
             })
           )}
@@ -390,10 +399,19 @@ export default function ConsultationsPage() {
                 <EmptyState inline icon="check" title="No incomplete bookings" description="Nothing needs recovery right now." />
               ) : (
                 incPaginated.map((c, idx) => (
-                  <Link
-                    key={c.id}
+                  <div key={c.id}>
+                  <MobileListCard
+                    className="sm:hidden"
                     href={`/consultations/incomplete/${c.id}`}
-                    className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_100px_100px_140px] gap-2 sm:gap-3 items-center px-4 py-2.5 transition-colors duration-150 last:rounded-b-[15px] even:bg-[rgba(89,82,54,0.025)] hover:!bg-[rgba(119,123,98,0.08)]"
+                    title={c.customerName}
+                    sub={c.expertName}
+                    rightSub={new Date(c.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                    chips={<Chip tone={INC_REASON_TONE[c.reason] || "muted"}>{INC_REASON_LABEL[c.reason] || c.reason}</Chip>}
+                    facts={c.assignedTo ? [{ label: "Assignee", value: c.assignedTo }] : undefined}
+                  />
+                  <Link
+                    href={`/consultations/incomplete/${c.id}`}
+                    className="hidden sm:grid sm:grid-cols-[1fr_1fr_100px_100px_140px] gap-2 sm:gap-3 items-center px-4 py-2.5 transition-colors duration-150 last:rounded-b-[15px] even:bg-[rgba(89,82,54,0.025)] hover:!bg-[rgba(119,123,98,0.08)]"
                     style={{ borderBottom: idx < incPaginated.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
                   >
                     <span className="text-[13px] font-semibold truncate block" style={{ color: T.text }}>{c.customerName}</span>
@@ -402,6 +420,7 @@ export default function ConsultationsPage() {
                     <span className="text-[12px] truncate" style={{ color: c.assignedTo ? T.text : T.faint }}>{c.assignedTo || "—"}</span>
                     <div><Chip tone={INC_REASON_TONE[c.reason] || "muted"}>{INC_REASON_LABEL[c.reason] || c.reason}</Chip></div>
                   </Link>
+                  </div>
                 ))
               )}
             </div>

@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, Tabs, GoldBtn, ShopifyButton, Pagination, downloadXLS, downloadPDF, ExportBtn, DateRangePanel, ToolbarSearch, InlineFilter, MultiCheck, SortMenu, EmptyState, TableSkeleton } from "@/components/ui";
+import { PageHeader, Card, Chip, Tabs, GoldBtn, ShopifyButton, Pagination, downloadXLS, downloadPDF, ExportBtn, DateRangePanel, ToolbarSearch, InlineFilter, MultiCheck, SortMenu, EmptyState, TableSkeleton, MobileListCard } from "@/components/ui";
 import { useSimulatedLoad } from "@/lib/useSimulatedLoad";
 import { T } from "@/lib/theme";
 import { MOCK_ORDERS, MOCK_INCOMPLETE_ORDERS } from "@/lib/mock";
@@ -355,10 +355,19 @@ export default function OrdersPage() {
                         ? { tone: "info" as const, label: "In transit" }
                         : { tone: "muted" as const, label: "Not shipped" };
             return (
-              <Link
-                key={o.id}
+              <div key={o.id}>
+              <MobileListCard
+                className="sm:hidden"
                 href={`/orders/${o.id}`}
-                className="group grid grid-cols-1 sm:grid-cols-[64px_1fr_110px_120px_150px_110px] gap-2 sm:gap-3 items-center px-4 py-2.5 transition-colors duration-150 last:rounded-b-[15px] even:bg-[rgba(89,82,54,0.025)] hover:!bg-[rgba(119,123,98,0.08)]"
+                title={o.customerName}
+                right={inr(o.total)}
+                sub={o.items.length > 1 ? `${o.items[0]?.name} +${o.items.length - 1}` : o.items[0]?.name}
+                rightSub={new Date(o.placedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                chips={<Chip tone={st.tone}>{st.label}</Chip>}
+              />
+              <Link
+                href={`/orders/${o.id}`}
+                className="group hidden sm:grid sm:grid-cols-[64px_1fr_110px_120px_150px_110px] gap-2 sm:gap-3 items-center px-4 py-2.5 transition-colors duration-150 last:rounded-b-[15px] even:bg-[rgba(89,82,54,0.025)] hover:!bg-[rgba(119,123,98,0.08)]"
                 style={{ borderBottom: idx < paginated.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
               >
                 <span className="text-[11.5px] tabular-nums" style={{ color: T.faint }}>#{o.id.replace("AL-ORD-", "")}</span>
@@ -378,6 +387,7 @@ export default function OrdersPage() {
                 <div><Chip tone={st.tone}>{st.label}</Chip></div>
                 <span className="text-[13px] font-semibold tabular-nums text-right" style={{ color: T.text }}>{inr(o.total)}</span>
               </Link>
+              </div>
             );
           })
         )}
@@ -413,10 +423,19 @@ export default function OrdersPage() {
                 <EmptyState inline icon="check" title="No incomplete orders" description="Nothing needs recovery right now." />
               ) : (
                 incPaginated.map((o, idx) => (
-                  <Link
-                    key={o.id}
+                  <div key={o.id}>
+                  <MobileListCard
+                    className="sm:hidden"
                     href={`/orders/incomplete/${o.id}`}
-                    className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_100px_140px_100px_110px] gap-2 sm:gap-3 items-center px-4 py-2.5 transition-colors duration-150 last:rounded-b-[15px] even:bg-[rgba(89,82,54,0.025)] hover:!bg-[rgba(119,123,98,0.08)]"
+                    title={o.customerName}
+                    right={inr(o.amount)}
+                    sub={o.itemName}
+                    rightSub={new Date(o.failedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                    chips={<Chip tone={INCOMPLETE_REASON_TONE[o.reason] || "muted"}>{INCOMPLETE_REASON_LABEL[o.reason] || o.reason}</Chip>}
+                  />
+                  <Link
+                    href={`/orders/incomplete/${o.id}`}
+                    className="hidden sm:grid sm:grid-cols-[1fr_1fr_100px_140px_100px_110px] gap-2 sm:gap-3 items-center px-4 py-2.5 transition-colors duration-150 last:rounded-b-[15px] even:bg-[rgba(89,82,54,0.025)] hover:!bg-[rgba(119,123,98,0.08)]"
                     style={{ borderBottom: idx < incPaginated.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
                   >
                     <div className="min-w-0">
@@ -438,6 +457,7 @@ export default function OrdersPage() {
                       <span className="text-[14px] font-semibold tabular-nums" style={{ color: T.text }}>{inr(o.amount)}</span>
                     </div>
                   </Link>
+                  </div>
                 ))
               )}
             </div>

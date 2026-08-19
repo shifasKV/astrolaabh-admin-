@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, Select, Pagination, fmtChipDate, ToolbarSearch, FiltersPopover, FilterField, FilterChip, DateRangeFields, ColumnStatusFilter, EmptyState, TableSkeleton, Toast } from "@/components/ui";
+import { PageHeader, Card, Chip, Select, Pagination, fmtChipDate, ToolbarSearch, FiltersPopover, FilterField, FilterChip, DateRangeFields, ColumnStatusFilter, EmptyState, TableSkeleton, Toast, MobileListCard } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { useSimulatedLoad } from "@/lib/useSimulatedLoad";
 import { MOCK_PAYMENTS } from "@/lib/mock";
@@ -265,10 +265,19 @@ export default function PaymentsPage() {
             const dateStr = p.paidAt || p.createdAt;
 
             return (
-              <Link
-                key={p.id}
+              <div key={p.id}>
+              <MobileListCard
+                className="sm:hidden"
                 href={href || "#"}
-                className="group grid grid-cols-1 sm:grid-cols-[1fr_110px_140px_140px_130px_120px] gap-2 sm:gap-3 items-center px-4 py-2.5 transition-colors duration-150 last:rounded-b-[15px] even:bg-[rgba(89,82,54,0.025)] hover:!bg-[rgba(119,123,98,0.08)]"
+                title={p.customerName}
+                right={inr(p.amount)}
+                sub={itemName}
+                rightSub={formatDate(dateStr)}
+                chips={<><Chip tone={getStatusTone(p.status)}>{displayStatus}</Chip><Chip tone={typeTone}>{type}</Chip></>}
+              />
+              <Link
+                href={href || "#"}
+                className="group hidden sm:grid sm:grid-cols-[1fr_110px_140px_140px_130px_120px] gap-2 sm:gap-3 items-center px-4 py-2.5 transition-colors duration-150 last:rounded-b-[15px] even:bg-[rgba(89,82,54,0.025)] hover:!bg-[rgba(119,123,98,0.08)]"
                 style={{ borderBottom: idx < paginated.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
               >
                 {/* Details: ID first, then item name + customer */}
@@ -321,6 +330,7 @@ export default function PaymentsPage() {
                   <div className="text-[14px] font-semibold tabular-nums" style={{ color: T.text }}>{inr(p.amount)}</div>
                 </div>
               </Link>
+              </div>
             );
           })
         )}

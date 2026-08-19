@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { PageHeader, Card, Chip, Tabs, ToolbarSearch, GoldBtn, GhostBtn, Modal, Input, FileInput, Pagination, EmptyState, TableSkeleton } from "@/components/ui";
+import { PageHeader, Card, Chip, Tabs, ToolbarSearch, GoldBtn, GhostBtn, Modal, Input, FileInput, Pagination, EmptyState, TableSkeleton, MobileListCard } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { useSimulatedLoad } from "@/lib/useSimulatedLoad";
 import { MOCK_CERTIFICATES } from "@/lib/mock";
@@ -101,10 +101,18 @@ export default function CertificatesPage() {
           paginated.map((c, i, arr) => {
             const isLab = c.type === "lab_authenticity";
             return (
+              <div key={c.id}>
+              <MobileListCard
+                className="sm:hidden"
+                onClick={c.status !== "missing" ? () => setViewId(c.id) : () => setUploadId(c.id)}
+                title={c.certificateNumber ?? "No certificate yet"}
+                sub={`${c.orderNumber} · ${isLab ? "Lab" : "Energisation"}`}
+                rightSub={c.uploadedAt ? new Date(c.uploadedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : undefined}
+                chips={c.status === "missing" ? <Chip tone="danger">Missing</Chip> : <Chip tone={statusTone(c.status)}>Uploaded</Chip>}
+              />
               <div
-                key={c.id}
                 onClick={c.status !== "missing" ? () => setViewId(c.id) : undefined}
-                className={`grid grid-cols-1 sm:grid-cols-[1fr_130px_110px_140px] gap-2 sm:gap-3 items-center px-4 py-2.5 even:bg-[rgba(89,82,54,0.025)] last:rounded-b-[15px] ${c.status !== "missing" ? "cursor-pointer hover:!bg-[rgba(119,123,98,0.08)] transition-colors" : ""}`}
+                className={`hidden sm:grid sm:grid-cols-[1fr_130px_110px_140px] gap-2 sm:gap-3 items-center px-4 py-2.5 even:bg-[rgba(89,82,54,0.025)] last:rounded-b-[15px] ${c.status !== "missing" ? "cursor-pointer hover:!bg-[rgba(119,123,98,0.08)] transition-colors" : ""}`}
                 style={{ borderBottom: i < arr.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
               >
                 {/* Certificate — file icon + number over filename */}
@@ -150,6 +158,7 @@ export default function CertificatesPage() {
                     </>
                   )}
                 </div>
+              </div>
               </div>
             );
           })

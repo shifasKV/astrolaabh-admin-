@@ -1,7 +1,7 @@
 "use client";
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, GoldBtn, ToolbarSearch, InlineFilter, MultiCheck, SortMenu, Pagination, EmptyState, TableSkeleton } from "@/components/ui";
+import { PageHeader, Card, Chip, GoldBtn, ToolbarSearch, InlineFilter, MultiCheck, SortMenu, Pagination, EmptyState, TableSkeleton, MobileListCard } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { useSimulatedLoad } from "@/lib/useSimulatedLoad";
 import { useAuth } from "@/lib/store/auth";
@@ -95,8 +95,18 @@ export default function StoneLeadsPage() {
                 <EmptyState inline icon="search" title="No stone leads" description="Try a different search or clear the filters." />
               ) : (
                 paged.map((o, i, arr) => (
-                  <Link key={o.id} href={`/stone-leads/${o.id}`}
-                    className={`grid grid-cols-1 ${isAdmin ? "sm:grid-cols-[1fr_1fr_90px_120px_100px_100px_100px]" : "sm:grid-cols-[1fr_1fr_90px_120px_100px_100px]"} gap-3 items-center px-4 py-2.5 transition-colors even:bg-[rgba(89,82,54,0.025)] hover:!bg-[rgba(119,123,98,0.08)] ${i === arr.length - 1 ? "rounded-b-[15px]" : ""}`}
+                  <div key={o.id}>
+                  <MobileListCard
+                    className="sm:hidden"
+                    href={`/stone-leads/${o.id}`}
+                    title={<span className="flex items-center gap-1.5 min-w-0">{rowUnseen(o) && <span className="w-2 h-2 rounded-full shrink-0" style={{ background: T.gold }} title="Approval updated" />}<span className="truncate">{o.customerName}</span></span>}
+                    right={inr(o.amount)}
+                    sub={o.itemName}
+                    rightSub={fmtDate(o.failedAt)}
+                    chips={<><Chip tone={STATUS_TONE[o.leadStatus] || "muted"}>{STATUS_LABEL[o.leadStatus]}</Chip><Chip tone={REASON_TONE[o.reason] || "muted"}>{REASON_LABEL[o.reason]}</Chip></>}
+                  />
+                  <Link href={`/stone-leads/${o.id}`}
+                    className={`hidden ${isAdmin ? "sm:grid-cols-[1fr_1fr_90px_120px_100px_100px_100px]" : "sm:grid-cols-[1fr_1fr_90px_120px_100px_100px]"} sm:grid gap-3 items-center px-4 py-2.5 transition-colors ${i % 2 === 0 ? "bg-[rgba(89,82,54,0.025)]" : ""} hover:!bg-[rgba(119,123,98,0.08)] ${i === arr.length - 1 ? "rounded-b-[15px]" : ""}`}
                     style={{ borderBottom: i < arr.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
                   >
                     <div className="min-w-0">
@@ -113,6 +123,7 @@ export default function StoneLeadsPage() {
                     {isAdmin && <div className="text-[12px] truncate" style={{ color: T.muted }}>{salesMemberName(o.assignedTo)}</div>}
                     <div className="text-[13px] text-right font-medium tabular-nums" style={{ color: T.text }}>{inr(o.amount)}</div>
                   </Link>
+                  </div>
                 ))
               )}
             </>}

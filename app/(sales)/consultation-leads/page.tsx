@@ -1,7 +1,7 @@
 "use client";
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, GoldBtn, ToolbarSearch, InlineFilter, MultiCheck, SortMenu, Pagination, EmptyState } from "@/components/ui";
+import { PageHeader, Card, Chip, GoldBtn, ToolbarSearch, InlineFilter, MultiCheck, SortMenu, Pagination, EmptyState, MobileListCard } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { useAuth } from "@/lib/store/auth";
 import { MOCK_SALES_MEMBERS } from "@/lib/mock";
@@ -89,8 +89,17 @@ export default function ConsultationLeadsPage() {
               <EmptyState inline icon="search" title="No consultation leads" description="Try a different search or clear the filters." />
             ) : (
               paged.map((c, i, arr) => (
-                <Link key={c.id} href={`/consultation-leads/${c.id}`}
-                  className={`grid grid-cols-1 ${isAdmin ? "sm:grid-cols-[1fr_1fr_90px_120px_100px_100px]" : "sm:grid-cols-[1fr_1fr_90px_120px_100px]"} gap-3 items-center px-4 py-2.5 transition-colors even:bg-[rgba(89,82,54,0.025)] hover:!bg-[rgba(119,123,98,0.08)] ${i === arr.length - 1 ? "rounded-b-[15px]" : ""}`}
+                <div key={c.id}>
+                <MobileListCard
+                  className="sm:hidden"
+                  href={`/consultation-leads/${c.id}`}
+                  title={<span className="flex items-center gap-1.5 min-w-0">{rowUnseen(c) && <span className="w-2 h-2 rounded-full shrink-0" style={{ background: T.gold }} title="Approval updated" />}<span className="truncate">{c.customerName}</span></span>}
+                  sub={`${c.expertName} · ${c.consultationType}`}
+                  rightSub={fmtDate(c.date)}
+                  chips={<><Chip tone={STATUS_TONE[c.leadStatus] || "muted"}>{STATUS_LABEL[c.leadStatus]}</Chip><Chip tone={REASON_TONE[c.reason] || "muted"}>{REASON_LABEL[c.reason]}</Chip></>}
+                />
+                <Link href={`/consultation-leads/${c.id}`}
+                  className={`hidden ${isAdmin ? "sm:grid-cols-[1fr_1fr_90px_120px_100px_100px]" : "sm:grid-cols-[1fr_1fr_90px_120px_100px]"} sm:grid gap-3 items-center px-4 py-2.5 transition-colors ${i % 2 === 0 ? "bg-[rgba(89,82,54,0.025)]" : ""} hover:!bg-[rgba(119,123,98,0.08)] ${i === arr.length - 1 ? "rounded-b-[15px]" : ""}`}
                   style={{ borderBottom: i < arr.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
                 >
                   <div className="min-w-0">
@@ -109,6 +118,7 @@ export default function ConsultationLeadsPage() {
                   <div><Chip tone={STATUS_TONE[c.leadStatus] || "muted"}>{STATUS_LABEL[c.leadStatus]}</Chip></div>
                   {isAdmin && <div className="text-[12px] truncate" style={{ color: T.muted }}>{salesMemberName(c.assignedTo)}</div>}
                 </Link>
+                </div>
               ))
             )}
           </div>

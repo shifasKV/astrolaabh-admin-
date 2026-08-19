@@ -1,7 +1,7 @@
 "use client";
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, Select, Pagination, ToolbarSearch, FiltersPopover, FilterField, SortMenu, TableSkeleton } from "@/components/ui";
+import { PageHeader, Card, Chip, Select, Pagination, ToolbarSearch, FiltersPopover, FilterField, SortMenu, TableSkeleton, MobileListCard } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { useSimulatedLoad } from "@/lib/useSimulatedLoad";
 import { MOCK_STONE_RECOMMENDATIONS, MOCK_CONSULTATIONS, MOCK_ORDERS } from "@/lib/mock";
@@ -155,15 +155,24 @@ export default function RecommendationsPage() {
         {paginated.length === 0 ? (
           <p className="text-[13.5px] text-center py-6" style={{ color: T.muted }}>No recommendations match your filters.</p>
         ) : (
-          paginated.map((r) => {
+          paginated.map((r, i) => {
             const appointmentDate = consultationMap.get(r.consultationId);
             const order = orderMap.get(r.id);
 
             return (
-              <Link
-                key={r.id}
+              <div key={r.id} className="group">
+              <MobileListCard
+                className="sm:hidden"
                 href={`/appointments/${r.consultationId}`}
-                className="grid items-center gap-4 px-4 py-2.5 transition-colors cursor-pointer even:bg-[rgba(89,82,54,0.025)] hover:!bg-[rgba(119,123,98,0.08)] last:rounded-b-[15px]"
+                title={r.customerName}
+                sub={r.gemstone}
+                rightSub={appointmentDate ? fmtDate(appointmentDate) : undefined}
+                chips={<Chip tone={statusTone(r.status)}>{r.status.replace(/_/g, " ")}</Chip>}
+                facts={order ? [{ label: "Order", value: order.id }] : undefined}
+              />
+              <Link
+                href={`/appointments/${r.consultationId}`}
+                className={`hidden sm:grid items-center gap-4 px-4 py-2.5 transition-colors cursor-pointer ${i % 2 === 0 ? "bg-[rgba(89,82,54,0.025)]" : ""} hover:!bg-[rgba(119,123,98,0.08)] group-last:rounded-b-[15px]`}
                 style={{ borderBottom: `1px solid ${T.borderSoft}`, gridTemplateColumns: "1.4fr 1fr 0.9fr 0.9fr 1fr", textDecoration: "none" }}
               >
                 {/* Stone details */}
@@ -204,6 +213,7 @@ export default function RecommendationsPage() {
                   )}
                 </div>
               </Link>
+              </div>
             );
           })
         )}

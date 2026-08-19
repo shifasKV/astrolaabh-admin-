@@ -2,7 +2,7 @@
 import { Suspense, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { PageHeader, Card, Chip, Tabs, Select, InlineFilter, MultiCheck, ToolbarSearch, SortMenu, EmptyState, Toast } from "@/components/ui";
+import { PageHeader, Card, Chip, Tabs, Select, InlineFilter, MultiCheck, ToolbarSearch, SortMenu, EmptyState, Toast, MobileListCard } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { inr } from "@/lib/types";
 import { MOCK_SALES_MEMBERS } from "@/lib/mock";
@@ -132,13 +132,25 @@ function LeadsPageInner() {
           </div>
           <div className="max-h-[calc(100vh-300px)] overflow-y-auto">
             {stoneRows.map((o) => (
-              <div key={o.id} className="grid grid-cols-1 lg:grid-cols-[1.3fr_1.6fr_120px_180px_110px_120px] gap-2 lg:gap-3 px-4 py-3 lg:items-center transition-colors even:bg-[rgba(89,82,54,0.02)] hover:bg-[rgba(119,123,98,0.05)]" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
-                <Link href={`/orders/incomplete/${o.id}`} className="min-w-0"><span className="block text-[13.5px] font-medium truncate hover:underline underline-offset-2" style={{ color: T.text }}>{o.customerName}</span><span className="block text-[11.5px] truncate" style={{ color: T.faint }}>{fmtDate(o.failedAt)} · {o.customerPhone}</span></Link>
-                <Link href={`/orders/incomplete/${o.id}`} className="min-w-0"><span className="block text-[13px] truncate" style={{ color: T.muted }}>{o.itemName}</span></Link>
-                <span><Chip tone={REASON_TONE[o.reason]}>{REASON_LABEL[o.reason]}</Chip></span>
-                <AssigneeCell id={o.id} value={o.assignedTo} />
-                <span><Chip tone={STATUS_TONE[o.leadStatus]}>{STATUS_LABEL[o.leadStatus]}</Chip></span>
-                <span className="text-[13.5px] font-semibold tabular-nums lg:text-right" style={{ color: T.text }}>{inr(o.amount)}</span>
+              <div key={o.id}>
+                <MobileListCard
+                  className="lg:hidden"
+                  href={`/orders/incomplete/${o.id}`}
+                  title={o.customerName}
+                  right={inr(o.amount)}
+                  sub={o.itemName}
+                  rightSub={fmtDate(o.failedAt)}
+                  chips={<><Chip tone={STATUS_TONE[o.leadStatus]}>{STATUS_LABEL[o.leadStatus]}</Chip><Chip tone={REASON_TONE[o.reason]}>{REASON_LABEL[o.reason]}</Chip></>}
+                  facts={[{ label: "Assignee", value: salesMemberName(o.assignedTo) }, { label: "Phone", value: o.customerPhone }]}
+                />
+                <div className="hidden lg:grid lg:grid-cols-[1.3fr_1.6fr_120px_180px_110px_120px] gap-3 px-4 py-3 lg:items-center transition-colors even:bg-[rgba(89,82,54,0.02)] hover:bg-[rgba(119,123,98,0.05)]" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
+                  <Link href={`/orders/incomplete/${o.id}`} className="min-w-0"><span className="block text-[13.5px] font-medium truncate hover:underline underline-offset-2" style={{ color: T.text }}>{o.customerName}</span><span className="block text-[11.5px] truncate" style={{ color: T.faint }}>{fmtDate(o.failedAt)} · {o.customerPhone}</span></Link>
+                  <Link href={`/orders/incomplete/${o.id}`} className="min-w-0"><span className="block text-[13px] truncate" style={{ color: T.muted }}>{o.itemName}</span></Link>
+                  <span><Chip tone={REASON_TONE[o.reason]}>{REASON_LABEL[o.reason]}</Chip></span>
+                  <AssigneeCell id={o.id} value={o.assignedTo} />
+                  <span><Chip tone={STATUS_TONE[o.leadStatus]}>{STATUS_LABEL[o.leadStatus]}</Chip></span>
+                  <span className="text-[13.5px] font-semibold tabular-nums lg:text-right" style={{ color: T.text }}>{inr(o.amount)}</span>
+                </div>
               </div>
             ))}
             {stoneRows.length === 0 && <EmptyState inline icon="search" title="No leads found" description="Try clearing filters or search." />}
@@ -154,12 +166,23 @@ function LeadsPageInner() {
           </div>
           <div className="max-h-[calc(100vh-300px)] overflow-y-auto">
             {consultRows.map((c) => (
-              <div key={c.id} className="grid grid-cols-1 lg:grid-cols-[1.3fr_1.6fr_120px_180px_110px] gap-2 lg:gap-3 px-4 py-3 lg:items-center transition-colors even:bg-[rgba(89,82,54,0.02)] hover:bg-[rgba(119,123,98,0.05)]" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
-                <Link href={`/consultations/incomplete/${c.id}`} className="min-w-0"><span className="block text-[13.5px] font-medium truncate hover:underline underline-offset-2" style={{ color: T.text }}>{c.customerName}</span><span className="block text-[11.5px] truncate" style={{ color: T.faint }}>{fmtDate(c.date)} · {c.customerPhone}</span></Link>
-                <Link href={`/consultations/incomplete/${c.id}`} className="min-w-0"><span className="block text-[13px] truncate" style={{ color: T.muted }}>{c.expertName}</span><span className="block text-[11.5px] truncate" style={{ color: T.faint }}>{c.consultationType}</span></Link>
-                <span><Chip tone={REASON_TONE[c.reason]}>{REASON_LABEL[c.reason]}</Chip></span>
-                <AssigneeCell id={c.id} value={c.assignedTo} />
-                <span><Chip tone={STATUS_TONE[c.leadStatus]}>{STATUS_LABEL[c.leadStatus]}</Chip></span>
+              <div key={c.id}>
+                <MobileListCard
+                  className="lg:hidden"
+                  href={`/consultations/incomplete/${c.id}`}
+                  title={c.customerName}
+                  sub={`${c.expertName} · ${c.consultationType}`}
+                  rightSub={fmtDate(c.date)}
+                  chips={<><Chip tone={STATUS_TONE[c.leadStatus]}>{STATUS_LABEL[c.leadStatus]}</Chip><Chip tone={REASON_TONE[c.reason]}>{REASON_LABEL[c.reason]}</Chip></>}
+                  facts={[{ label: "Assignee", value: salesMemberName(c.assignedTo) }, { label: "Phone", value: c.customerPhone }]}
+                />
+                <div className="hidden lg:grid lg:grid-cols-[1.3fr_1.6fr_120px_180px_110px] gap-3 px-4 py-3 lg:items-center transition-colors even:bg-[rgba(89,82,54,0.02)] hover:bg-[rgba(119,123,98,0.05)]" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
+                  <Link href={`/consultations/incomplete/${c.id}`} className="min-w-0"><span className="block text-[13.5px] font-medium truncate hover:underline underline-offset-2" style={{ color: T.text }}>{c.customerName}</span><span className="block text-[11.5px] truncate" style={{ color: T.faint }}>{fmtDate(c.date)} · {c.customerPhone}</span></Link>
+                  <Link href={`/consultations/incomplete/${c.id}`} className="min-w-0"><span className="block text-[13px] truncate" style={{ color: T.muted }}>{c.expertName}</span><span className="block text-[11.5px] truncate" style={{ color: T.faint }}>{c.consultationType}</span></Link>
+                  <span><Chip tone={REASON_TONE[c.reason]}>{REASON_LABEL[c.reason]}</Chip></span>
+                  <AssigneeCell id={c.id} value={c.assignedTo} />
+                  <span><Chip tone={STATUS_TONE[c.leadStatus]}>{STATUS_LABEL[c.leadStatus]}</Chip></span>
+                </div>
               </div>
             ))}
             {consultRows.length === 0 && <EmptyState inline icon="search" title="No leads found" description="Try clearing filters or search." />}
@@ -193,7 +216,18 @@ function LeadsPageInner() {
               const f = r.fulfillment;
               const p = f.approval;
               return (
-                <div key={r.id} onClick={() => router.push(`/leads/approvals/${r.id}`)} className="grid grid-cols-1 lg:grid-cols-[150px_minmax(0,1.5fr)_112px_96px_110px_110px_104px_120px] gap-2 lg:gap-3 px-4 py-3 lg:items-center cursor-pointer transition-colors even:bg-[rgba(89,82,54,0.02)] hover:bg-[rgba(119,123,98,0.05)]" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
+                <div key={r.id}>
+                <MobileListCard
+                  className="lg:hidden"
+                  href={`/leads/approvals/${r.id}`}
+                  title={r.customerName}
+                  right={inr(f.total)}
+                  sub={f.summary}
+                  rightSub={f.discount > 0 ? `−${inr(f.discount)} off` : undefined}
+                  chips={<><Chip tone={p === "pending" ? "gold" : p === "approved" || p === "completed" ? "good" : p === "on_hold" ? "info" : "danger"}>{p === "pending" ? "Pending" : p === "approved" ? "Approved" : p === "completed" ? "Completed" : p === "on_hold" ? "On hold" : "Rejected"}</Chip><Chip tone={f.kind === "order" ? "info" : "muted"}>{f.kind === "order" ? "Stone order" : "Consultation"}</Chip></>}
+                  facts={[{ label: "Sales exec", value: salesMemberName(f.submittedBy) }, { label: "Submitted", value: new Date(f.submittedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) }]}
+                />
+                <div onClick={() => router.push(`/leads/approvals/${r.id}`)} className="hidden lg:grid lg:grid-cols-[150px_minmax(0,1.5fr)_112px_96px_110px_110px_104px_120px] gap-3 px-4 py-3 lg:items-center cursor-pointer transition-colors even:bg-[rgba(89,82,54,0.02)] hover:bg-[rgba(119,123,98,0.05)]" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
                   <span className="flex items-center gap-2 min-w-0"><span className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold shrink-0" style={{ background: T.accentFaint, border: `1px solid ${T.accentBorder}`, color: T.accent }}>{salesMemberName(f.submittedBy).split(" ").map((w) => w[0]).slice(0, 2).join("")}</span><span className="text-[12.5px] font-medium truncate" style={{ color: T.text }}>{salesMemberName(f.submittedBy)}</span></span>
                   <span className="min-w-0"><span className="block text-[13.5px] font-medium truncate" style={{ color: T.text }}>{r.customerName}</span><span className="block text-[11.5px] truncate" style={{ color: T.faint }}>{f.summary}</span></span>
                   <span><Chip tone={f.kind === "order" ? "info" : "muted"}>{f.kind === "order" ? "Stone order" : "Consultation"}</Chip></span>
@@ -211,6 +245,7 @@ function LeadsPageInner() {
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4" style={{ color: T.faint }}><path d="M9 6l6 6-6 6" /></svg>
                     )}
                   </span>
+                </div>
                 </div>
               );
             })}

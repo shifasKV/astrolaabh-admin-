@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, GoldBtn, GhostBtn, Modal, Input, Select, Tabs, ToolbarSearch, Pagination, EmptyState } from "@/components/ui";
+import { PageHeader, Card, Chip, GoldBtn, GhostBtn, Modal, Input, Select, Tabs, ToolbarSearch, Pagination, EmptyState, MobileListCard } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_CUSTOMERS, MOCK_AFFILIATES, EXPERT_PROFILES } from "@/lib/mock";
 import type { User } from "@/lib/types";
@@ -168,9 +168,16 @@ export default function UsersPage() {
           <EmptyState inline icon="search" title="No users found" description="No users match your search." />
         ) : (
           paginated.map((u, i, arr) => (
+            <div key={u.id}>
+            <MobileListCard
+              className="sm:hidden"
+              href={u.href}
+              title={u.name}
+              sub={u.email}
+              chips={<><Chip tone={roleTone(u.role)}>{roleLabel(u.role)}</Chip><Chip tone={u.status === "active" ? "good" : u.status === "suspended" ? "danger" : "muted"}>{u.status}</Chip></>}
+            />
             <div
-              key={u.id}
-              className="grid grid-cols-1 sm:grid-cols-[1fr_150px_100px_150px_44px] gap-2 sm:gap-3 items-center px-4 py-2.5 even:bg-[rgba(89,82,54,0.025)] last:rounded-b-[15px]"
+              className="hidden sm:grid sm:grid-cols-[1fr_150px_100px_150px_44px] gap-2 sm:gap-3 items-center px-4 py-2.5 even:bg-[rgba(89,82,54,0.025)] last:rounded-b-[15px]"
               style={{ borderBottom: i < arr.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
             >
               <div className="flex items-center gap-3 min-w-0">
@@ -217,6 +224,7 @@ export default function UsersPage() {
                   </>
                 )}
               </div>
+            </div>
             </div>
           ))
         )}

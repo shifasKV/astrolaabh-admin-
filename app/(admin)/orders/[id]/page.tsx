@@ -228,7 +228,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
         </div>
 
         {order.items.map((item, i) => (
-          <div key={item.sku} className="grid grid-cols-[auto_1fr_100px_120px] gap-3 items-center px-3 py-3 text-[13px]" style={{ borderBottom: i < order.items.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}>
+          <div key={item.sku} className="grid grid-cols-[auto_1fr_auto] sm:grid-cols-[auto_1fr_100px_120px] gap-3 items-center px-3 py-3 text-[13px]" style={{ borderBottom: i < order.items.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}>
             <div className="w-6 h-6 rounded-[5px] flex items-center justify-center text-[10px] font-semibold shrink-0" style={{ background: "rgba(119,123,98,0.12)", color: T.accent }}>
               {i + 1}
             </div>
@@ -247,7 +247,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                 {item.caratWeight && ` · ${item.caratWeight}`}
               </div>
             </div>
-            <div className="text-right tabular-nums" style={{ color: T.muted }}>{item.qty}</div>
+            <div className="hidden sm:block text-right tabular-nums" style={{ color: T.muted }}>{item.qty}</div>
             <div className="text-right tabular-nums font-semibold" style={{ color: T.text }}>{inr(item.price)}</div>
           </div>
         ))}

@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { PageHeader, Card, Chip, StatCard, GoldBtn, ToolbarSearch, SortMenu, InlineFilter, MultiCheck, EmptyState, TableSkeleton } from "@/components/ui";
+import { PageHeader, Card, Chip, StatCard, GoldBtn, ToolbarSearch, SortMenu, InlineFilter, MultiCheck, EmptyState, TableSkeleton, MobileListCard } from "@/components/ui";
 
 const STATUS_ICON = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className="w-3.5 h-3.5"><circle cx="12" cy="12" r="10" /><path d="m9 12 2 2 4-4" /></svg>;
 const STATUS_OPTIONS = [{ value: "active", label: "Active" }, { value: "deactivated", label: "Deactivated" }];
@@ -106,10 +106,22 @@ export default function AstroGemologistsPage() {
             sorted.map((expert, idx) => {
               const stats = getExpertStats(expert.id);
               return (
-                <Link
-                  key={expert.id}
+                <div key={expert.id}>
+                <MobileListCard
+                  className="md:hidden"
                   href={`/astro-gemologists/${expert.id}`}
-                  className="group grid grid-cols-1 md:grid-cols-[minmax(240px,1.4fr)_120px_150px_90px_90px_100px_110px_130px] gap-2 md:gap-x-4 items-center px-4 py-2.5 transition-colors duration-150 last:rounded-b-[15px] even:bg-[rgba(89,82,54,0.025)] hover:!bg-[rgba(119,123,98,0.08)]"
+                  title={expert.name}
+                  sub={expert.specialization}
+                  chips={expert.status === "active" && expert.calendlyStatus === "pending" ? (
+                    <Chip tone="gold">Calendly pending</Chip>
+                  ) : (
+                    <Chip tone={expert.status === "active" ? "good" : "muted"}>{expert.status === "active" ? "Active" : "Deactivated"}</Chip>
+                  )}
+                  facts={[{ label: "Sessions", value: stats.completed }, { label: "Fee", value: inr(expert.fee) }]}
+                />
+                <Link
+                  href={`/astro-gemologists/${expert.id}`}
+                  className="group hidden md:grid md:grid-cols-[minmax(240px,1.4fr)_120px_150px_90px_90px_100px_110px_130px] gap-2 md:gap-x-4 items-center px-4 py-2.5 transition-colors duration-150 last:rounded-b-[15px] even:bg-[rgba(89,82,54,0.025)] hover:!bg-[rgba(119,123,98,0.08)]"
                   style={{ borderBottom: idx < sorted.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
                 >
                   <div className="flex items-center gap-3 min-w-0">
@@ -149,6 +161,7 @@ export default function AstroGemologistsPage() {
                     )}
                   </div>
                 </Link>
+                </div>
               );
             })
           )}

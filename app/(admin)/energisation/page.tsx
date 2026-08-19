@@ -3,7 +3,7 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
 import {
   PageHeader, Card, Chip, Tabs, Pagination,
-  Tooltip, ToolbarSearch, ExportBtn, downloadXLS, downloadPDF, InlineFilter, MultiCheck, SortMenu, DateRangePanel, EmptyState, TableSkeleton } from "@/components/ui";
+  Tooltip, ToolbarSearch, ExportBtn, downloadXLS, downloadPDF, InlineFilter, MultiCheck, SortMenu, DateRangePanel, EmptyState, TableSkeleton, MobileListCard } from "@/components/ui";
 
 const E_ICONS = {
   expert: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className="w-3.5 h-3.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>,
@@ -291,10 +291,18 @@ export default function EnergisationPage() {
                     ? { tone: "gold" as const, label: "Scheduled" }
                     : { tone: "good" as const, label: "Done" };
             return (
-              <Link
-                key={e.id}
+              <div key={e.id}>
+              <MobileListCard
+                className="sm:hidden"
                 href={`/energisation/${e.id}`}
-                className="group grid grid-cols-1 sm:grid-cols-[64px_1fr_130px_150px] gap-2 sm:gap-3 items-center px-4 py-2.5 transition-colors duration-150 last:rounded-b-[15px] even:bg-[rgba(89,82,54,0.025)] hover:!bg-[rgba(119,123,98,0.08)]"
+                title={e.customerName}
+                sub={e.stoneDescription}
+                rightSub={e.scheduledAt ? new Date(e.scheduledAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—"}
+                chips={<Chip tone={st.tone}>{st.label}</Chip>}
+              />
+              <Link
+                href={`/energisation/${e.id}`}
+                className="group hidden sm:grid sm:grid-cols-[64px_1fr_130px_150px] gap-2 sm:gap-3 items-center px-4 py-2.5 transition-colors duration-150 last:rounded-b-[15px] even:bg-[rgba(89,82,54,0.025)] hover:!bg-[rgba(119,123,98,0.08)]"
                 style={{ borderBottom: idx < paginated.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
               >
                 <span className="text-[11.5px] tabular-nums" style={{ color: T.faint }}>#{e.orderNumber.replace("AL-ORD-", "")}</span>
@@ -312,6 +320,7 @@ export default function EnergisationPage() {
                 </span>
                 <div><Chip tone={st.tone}>{st.label}</Chip></div>
               </Link>
+              </div>
             );
           })
         )}

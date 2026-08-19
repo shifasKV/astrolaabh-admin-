@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { PageHeader, Card, Chip, StatCard, GoldBtn, ToolbarSearch, SortMenu, InlineFilter, MultiCheck, EmptyState, TableSkeleton } from "@/components/ui";
+import { PageHeader, Card, Chip, StatCard, GoldBtn, ToolbarSearch, SortMenu, InlineFilter, MultiCheck, EmptyState, TableSkeleton, MobileListCard } from "@/components/ui";
 
 const STATUS_ICON = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className="w-3.5 h-3.5"><circle cx="12" cy="12" r="10" /><path d="m9 12 2 2 4-4" /></svg>;
 const STATUS_OPTIONS = [{ value: "active", label: "Active" }, { value: "deactivated", label: "Deactivated" }];
@@ -100,10 +100,18 @@ export default function SalesPage() {
             sorted.map((member, idx) => {
               const stats = getMemberStats(member.id);
               return (
-                <Link
-                  key={member.id}
+                <div key={member.id}>
+                <MobileListCard
+                  className="md:hidden"
                   href={`/sales/${member.id}`}
-                  className="group grid grid-cols-1 md:grid-cols-[minmax(220px,1.3fr)_1fr_100px_90px_110px_140px_110px] gap-2 md:gap-x-4 items-center px-4 py-2.5 transition-colors duration-150 last:rounded-b-[15px] even:bg-[rgba(89,82,54,0.025)] hover:!bg-[rgba(119,123,98,0.08)]"
+                  title={member.name}
+                  sub={`${member.role} · ${member.email}`}
+                  chips={<Chip tone={member.status === "active" ? "good" : "muted"}>{member.status === "active" ? "Active" : "Deactivated"}</Chip>}
+                  facts={[{ label: "Total leads", value: stats.totalLeads }, { label: "Active leads", value: stats.activeLeads }]}
+                />
+                <Link
+                  href={`/sales/${member.id}`}
+                  className="group hidden md:grid md:grid-cols-[minmax(220px,1.3fr)_1fr_100px_90px_110px_140px_110px] gap-2 md:gap-x-4 items-center px-4 py-2.5 transition-colors duration-150 last:rounded-b-[15px] even:bg-[rgba(89,82,54,0.025)] hover:!bg-[rgba(119,123,98,0.08)]"
                   style={{ borderBottom: idx < sorted.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
                 >
                   <div className="flex items-center gap-3 min-w-0">
@@ -131,6 +139,7 @@ export default function SalesPage() {
                     <Chip tone={member.status === "active" ? "good" : "muted"}>{member.status === "active" ? "Active" : "Deactivated"}</Chip>
                   </div>
                 </Link>
+                </div>
               );
             })
           )}

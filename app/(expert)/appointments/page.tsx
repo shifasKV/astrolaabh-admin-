@@ -1,7 +1,7 @@
 "use client";
 import { useState, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, Tabs, ToolbarSearch, SortMenu, Select, Pagination, Tooltip, TableSkeleton } from "@/components/ui";
+import { PageHeader, Card, Chip, Tabs, ToolbarSearch, SortMenu, Select, Pagination, Tooltip, TableSkeleton, MobileListCard } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { usePersistentState } from "@/lib/usePersistentState";
 import { useSimulatedLoad } from "@/lib/useSimulatedLoad";
@@ -300,13 +300,23 @@ export default function AppointmentsPage() {
         {paginated.length === 0 ? (
           <p className="text-[13.5px] text-center py-6" style={{ color: T.muted }}>No appointments match your filters.</p>
         ) : (
-          paginated.map((c) => {
+          paginated.map((c, i) => {
             const dt = new Date(c.scheduledAt);
             const es = expertStatus(c);
             const commEarned = es === "done" ? Math.round((c.fee ?? 0) * 0.15) : 0;
             return (
-              <Link key={c.id} href={`/appointments/${c.id}`}
-                className="grid items-center gap-4 px-4 py-3.5 transition-colors duration-150 last:rounded-b-[15px] even:bg-[rgba(89,82,54,0.025)] hover:!bg-[rgba(119,123,98,0.08)]"
+              <div key={c.id} className="group">
+              <MobileListCard
+                className="sm:hidden"
+                href={`/appointments/${c.id}`}
+                title={c.customerName}
+                sub={c.problemStatement || c.type.replace(/_/g, " ")}
+                right={commEarned > 0 ? inr(commEarned) : undefined}
+                rightSub={`${dt.toLocaleDateString("en-IN", { day: "numeric", month: "short" })} · ${dt.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true })}`}
+                chips={<Chip tone={expertStatusTone(es)}>{expertStatusLabel(es)}</Chip>}
+              />
+              <Link href={`/appointments/${c.id}`}
+                className={`hidden sm:grid items-center gap-4 px-4 py-3.5 transition-colors duration-150 group-last:rounded-b-[15px] ${i % 2 === 0 ? "bg-[rgba(89,82,54,0.025)]" : ""} hover:!bg-[rgba(119,123,98,0.08)]`}
                 style={{ borderBottom: `1px solid ${T.borderSoft}`, gridTemplateColumns: "1fr 150px 100px 130px" }}
               >
                 <div className="min-w-0">
@@ -332,6 +342,7 @@ export default function AppointmentsPage() {
                   <Chip tone={expertStatusTone(es)}>{expertStatusLabel(es)}</Chip>
                 </div>
               </Link>
+              </div>
             );
           })
         )}

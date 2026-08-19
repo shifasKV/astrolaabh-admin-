@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { PageHeader, Card, StatCard, Chip, GoldBtn, ToolbarSearch, SortMenu, InlineFilter, MultiCheck, EmptyState, TableSkeleton } from "@/components/ui";
+import { PageHeader, Card, StatCard, Chip, GoldBtn, ToolbarSearch, SortMenu, InlineFilter, MultiCheck, EmptyState, TableSkeleton, MobileListCard } from "@/components/ui";
 
 const STATUS_ICON = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className="w-3.5 h-3.5"><circle cx="12" cy="12" r="10" /><path d="m9 12 2 2 4-4" /></svg>;
 const AFF_STATUS_OPTIONS = [{ value: "active", label: "Active" }, { value: "under_review", label: "Under review" }, { value: "deactivated", label: "Deactivated" }];
@@ -133,10 +133,24 @@ export default function AffiliatesPage() {
             sorted.map((a, idx) => {
               const stats = getAffiliateStats(a);
               return (
-                <Link
-                  key={a.id}
+                <div key={a.id}>
+                <MobileListCard
+                  className="md:hidden"
                   href={`/affiliates/${a.id}`}
-                  className="group grid grid-cols-1 md:grid-cols-[minmax(220px,1.3fr)_120px_70px_120px_110px_110px_130px_140px] gap-2 md:gap-x-4 items-center px-4 py-2.5 transition-colors duration-150 last:rounded-b-[15px] even:bg-[rgba(89,82,54,0.025)] hover:!bg-[rgba(119,123,98,0.08)]"
+                  title={a.name}
+                  right={stats.pendingCommission > 0 ? inr(stats.pendingCommission) : undefined}
+                  rightSub={stats.pendingCommission > 0 ? "Commission" : undefined}
+                  sub={`${a.code} · ${a.email}`}
+                  chips={
+                    <Chip tone={a.status === "active" ? "good" : a.status === "under_review" ? "gold" : "danger"}>
+                      {a.status.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase())}
+                    </Chip>
+                  }
+                  facts={[{ label: "Rate", value: `${a.commissionRate}%` }, { label: "Registrations", value: stats.registrations }]}
+                />
+                <Link
+                  href={`/affiliates/${a.id}`}
+                  className="group hidden md:grid md:grid-cols-[minmax(220px,1.3fr)_120px_70px_120px_110px_110px_130px_140px] gap-2 md:gap-x-4 items-center px-4 py-2.5 transition-colors duration-150 last:rounded-b-[15px] even:bg-[rgba(89,82,54,0.025)] hover:!bg-[rgba(119,123,98,0.08)]"
                   style={{ borderBottom: idx < sorted.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
                 >
                   <div className="flex items-center gap-3 min-w-0">
@@ -174,6 +188,7 @@ export default function AffiliatesPage() {
                     </Chip>
                   </div>
                 </Link>
+                </div>
               );
             })
           )}
