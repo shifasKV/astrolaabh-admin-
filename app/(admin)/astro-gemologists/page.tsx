@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { PageHeader, Card, Chip, StatCard, GoldBtn, ToolbarSearch, SortMenu, InlineFilter, MultiCheck, EmptyState, TableSkeleton, MobileListCard } from "@/components/ui";
+import { PageHeader, Card, Chip, StatCard, GoldBtn, ToolbarSearch, SortMenu, InlineFilter, MultiCheck, EmptyState, TableSkeleton, MobileListCard, Monogram } from "@/components/ui";
 
 const STATUS_ICON = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className="w-3.5 h-3.5"><circle cx="12" cy="12" r="10" /><path d="m9 12 2 2 4-4" /></svg>;
 const STATUS_OPTIONS = [{ value: "active", label: "Active" }, { value: "deactivated", label: "Deactivated" }];
@@ -110,14 +110,13 @@ export default function AstroGemologistsPage() {
                 <MobileListCard
                   className="md:hidden"
                   href={`/astro-gemologists/${expert.id}`}
+                  leading={<Monogram name={expert.name} />}
                   title={expert.name}
                   sub={expert.specialization}
-                  chips={expert.status === "active" && expert.calendlyStatus === "pending" ? (
-                    <Chip tone="gold">Calendly pending</Chip>
-                  ) : (
-                    <Chip tone={expert.status === "active" ? "good" : "muted"}>{expert.status === "active" ? "Active" : "Deactivated"}</Chip>
-                  )}
-                  facts={[{ label: "Sessions", value: stats.completed }, { label: "Fee", value: inr(expert.fee) }]}
+                  status={expert.status === "active" && expert.calendlyStatus === "pending"
+                    ? { label: "Calendly pending", tone: "gold" }
+                    : { label: expert.status === "active" ? "Active" : "Deactivated", tone: expert.status === "active" ? "good" : "muted" }}
+                  facts={[{ label: "sessions", value: stats.completed }, { label: "fee", value: inr(expert.fee) }]}
                 />
                 <Link
                   href={`/astro-gemologists/${expert.id}`}

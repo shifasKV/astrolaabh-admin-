@@ -106,9 +106,9 @@ export default function CertificatesPage() {
                 className="sm:hidden"
                 onClick={c.status !== "missing" ? () => setViewId(c.id) : () => setUploadId(c.id)}
                 title={c.certificateNumber ?? "No certificate yet"}
-                sub={`${c.orderNumber} · ${isLab ? "Lab" : "Energisation"}`}
-                rightSub={c.uploadedAt ? new Date(c.uploadedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : undefined}
-                chips={c.status === "missing" ? <Chip tone="danger">Missing</Chip> : <Chip tone={statusTone(c.status)}>Uploaded</Chip>}
+                sub={`${isLab ? "Lab certificate" : "Energisation certificate"} · ${c.orderNumber}`}
+                status={c.status === "missing" ? { label: "Missing", tone: "danger" } : { label: "Uploaded", tone: statusTone(c.status) }}
+                time={c.uploadedAt ?? undefined}
               />
               <div
                 onClick={c.status !== "missing" ? () => setViewId(c.id) : undefined}

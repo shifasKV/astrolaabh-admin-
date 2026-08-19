@@ -1,7 +1,7 @@
 "use client";
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, Select, Pagination, ToolbarSearch, FiltersPopover, FilterField, SortMenu, TableSkeleton, MobileListCard } from "@/components/ui";
+import { PageHeader, Card, Chip, Select, Pagination, ToolbarSearch, FiltersPopover, FilterField, SortMenu, TableSkeleton, MobileListCard, Monogram } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { useSimulatedLoad } from "@/lib/useSimulatedLoad";
 import { MOCK_STONE_RECOMMENDATIONS, MOCK_CONSULTATIONS, MOCK_ORDERS } from "@/lib/mock";
@@ -164,11 +164,15 @@ export default function RecommendationsPage() {
               <MobileListCard
                 className="sm:hidden"
                 href={`/appointments/${r.consultationId}`}
+                leading={<Monogram name={r.customerName} />}
                 title={r.customerName}
                 sub={r.gemstone}
-                rightSub={appointmentDate ? fmtDate(appointmentDate) : undefined}
-                chips={<Chip tone={statusTone(r.status)}>{r.status.replace(/_/g, " ")}</Chip>}
-                facts={order ? [{ label: "Order", value: order.id }] : undefined}
+                status={{
+                  label: r.status.charAt(0).toUpperCase() + r.status.slice(1).replace(/_/g, " "),
+                  tone: statusTone(r.status),
+                  extra: order ? order.id : undefined,
+                }}
+                time={appointmentDate}
               />
               <Link
                 href={`/appointments/${r.consultationId}`}

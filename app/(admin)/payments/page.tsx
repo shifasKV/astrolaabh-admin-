@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, Select, Pagination, fmtChipDate, ToolbarSearch, FiltersPopover, FilterField, FilterChip, DateRangeFields, ColumnStatusFilter, EmptyState, TableSkeleton, Toast, MobileListCard } from "@/components/ui";
+import { PageHeader, Card, Chip, Select, Pagination, fmtChipDate, ToolbarSearch, FiltersPopover, FilterField, FilterChip, DateRangeFields, ColumnStatusFilter, EmptyState, TableSkeleton, Toast, MobileListCard, Monogram } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { useSimulatedLoad } from "@/lib/useSimulatedLoad";
 import { MOCK_PAYMENTS } from "@/lib/mock";
@@ -269,11 +269,12 @@ export default function PaymentsPage() {
               <MobileListCard
                 className="sm:hidden"
                 href={href || "#"}
+                leading={<Monogram name={p.customerName} />}
                 title={p.customerName}
                 right={inr(p.amount)}
                 sub={itemName}
-                rightSub={formatDate(dateStr)}
-                chips={<><Chip tone={getStatusTone(p.status)}>{displayStatus}</Chip><Chip tone={typeTone}>{type}</Chip></>}
+                status={{ label: displayStatus, tone: getStatusTone(p.status), extra: type }}
+                time={dateStr}
               />
               <Link
                 href={href || "#"}

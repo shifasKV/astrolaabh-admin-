@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { PageHeader, Card, Chip, StatCard, GoldBtn, ToolbarSearch, SortMenu, InlineFilter, MultiCheck, EmptyState, TableSkeleton, MobileListCard } from "@/components/ui";
+import { PageHeader, Card, Chip, StatCard, GoldBtn, ToolbarSearch, SortMenu, InlineFilter, MultiCheck, EmptyState, TableSkeleton, MobileListCard, Monogram } from "@/components/ui";
 
 const STATUS_ICON = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className="w-3.5 h-3.5"><circle cx="12" cy="12" r="10" /><path d="m9 12 2 2 4-4" /></svg>;
 const STATUS_OPTIONS = [{ value: "active", label: "Active" }, { value: "deactivated", label: "Deactivated" }];
@@ -104,10 +104,11 @@ export default function SalesPage() {
                 <MobileListCard
                   className="md:hidden"
                   href={`/sales/${member.id}`}
+                  leading={<Monogram name={member.name} />}
                   title={member.name}
                   sub={`${member.role} · ${member.email}`}
-                  chips={<Chip tone={member.status === "active" ? "good" : "muted"}>{member.status === "active" ? "Active" : "Deactivated"}</Chip>}
-                  facts={[{ label: "Total leads", value: stats.totalLeads }, { label: "Active leads", value: stats.activeLeads }]}
+                  status={{ label: member.status === "active" ? "Active" : "Deactivated", tone: member.status === "active" ? "good" : "muted" }}
+                  facts={[{ label: "leads", value: stats.totalLeads }, { label: "active", value: stats.activeLeads }]}
                 />
                 <Link
                   href={`/sales/${member.id}`}

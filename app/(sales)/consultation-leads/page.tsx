@@ -1,7 +1,7 @@
 "use client";
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, GoldBtn, ToolbarSearch, InlineFilter, MultiCheck, SortMenu, Pagination, EmptyState, MobileListCard } from "@/components/ui";
+import { PageHeader, Card, Chip, GoldBtn, ToolbarSearch, InlineFilter, MultiCheck, SortMenu, Pagination, EmptyState, MobileListCard, Monogram } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { useAuth } from "@/lib/store/auth";
 import { MOCK_SALES_MEMBERS } from "@/lib/mock";
@@ -66,14 +66,14 @@ export default function ConsultationLeadsPage() {
       <div className="md:h-[calc(100dvh-78px)] md:flex md:flex-col md:min-h-0">
         <PageHeader title="Consultation Leads" action={<Link href="/consultation-leads/create"><GoldBtn>+ Create consultation</GoldBtn></Link>} />
 
-        <div className="flex items-center justify-between gap-2 flex-wrap mb-4">
-          <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2.5 sm:gap-2 mb-4">
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar -mx-5 px-5 sm:mx-0 sm:px-0 sm:flex-wrap">
             <InlineFilter label="Status" icon={FunnelIcon} count={statusF.length}><MultiCheck options={STATUS_OPTIONS} value={statusF} onChange={(v) => { setStatusF(v); setPage(0); }} /></InlineFilter>
             <InlineFilter label="Reason" icon={TagIcon} count={reasonF.length}><MultiCheck options={REASON_OPTIONS} value={reasonF} onChange={(v) => { setReasonF(v); setPage(0); }} /></InlineFilter>
             {isAdmin && <InlineFilter label="Assignee" icon={UserIcon} count={assigneeF.length}><MultiCheck options={assigneeOptions} value={assigneeF} onChange={(v) => { setAssigneeF(v); setPage(0); }} /></InlineFilter>}
-            {filterCount > 0 && <button onClick={() => { setStatusF([]); setReasonF([]); setAssigneeF([]); setPage(0); }} className="text-[12px] font-medium h-8 px-2.5 rounded-[8px] cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.08)]" style={{ color: T.muted }}>Clear all</button>}
+            {filterCount > 0 && <button onClick={() => { setStatusF([]); setReasonF([]); setAssigneeF([]); setPage(0); }} className="shrink-0 text-[12px] font-medium h-8 px-2.5 rounded-[8px] cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.08)]" style={{ color: T.muted }}>Clear all</button>}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
             <ToolbarSearch value={search} onChange={(v) => { setSearch(v); setPage(0); }} placeholder="Search customer, astrologer, phone…" />
             <SortMenu value={sort} onChange={setSort} options={SORT_OPTIONS} />
           </div>
@@ -93,10 +93,11 @@ export default function ConsultationLeadsPage() {
                 <MobileListCard
                   className="sm:hidden"
                   href={`/consultation-leads/${c.id}`}
+                  leading={<Monogram name={c.customerName} />}
                   title={<span className="flex items-center gap-1.5 min-w-0">{rowUnseen(c) && <span className="w-2 h-2 rounded-full shrink-0" style={{ background: T.gold }} title="Approval updated" />}<span className="truncate">{c.customerName}</span></span>}
-                  sub={`${c.expertName} · ${c.consultationType}`}
-                  rightSub={fmtDate(c.date)}
-                  chips={<><Chip tone={STATUS_TONE[c.leadStatus] || "muted"}>{STATUS_LABEL[c.leadStatus]}</Chip><Chip tone={REASON_TONE[c.reason] || "muted"}>{REASON_LABEL[c.reason]}</Chip></>}
+                  sub={`${c.consultationType} with ${c.expertName}`}
+                  status={{ label: STATUS_LABEL[c.leadStatus], tone: STATUS_TONE[c.leadStatus] || "muted", extra: REASON_LABEL[c.reason] }}
+                  time={c.date}
                 />
                 <Link href={`/consultation-leads/${c.id}`}
                   className={`hidden ${isAdmin ? "sm:grid-cols-[1fr_1fr_90px_120px_100px_100px]" : "sm:grid-cols-[1fr_1fr_90px_120px_100px]"} sm:grid gap-3 items-center px-4 py-2.5 transition-colors ${i % 2 === 0 ? "bg-[rgba(89,82,54,0.025)]" : ""} hover:!bg-[rgba(119,123,98,0.08)] ${i === arr.length - 1 ? "rounded-b-[15px]" : ""}`}

@@ -82,8 +82,8 @@ export default function LinksPage() {
               right={inr(commission)}
               sub={link.shortUrl}
               rightSub={copiedId === link.id ? <span style={{ color: T.good }}>Copied</span> : "Tap to copy"}
-              chips={<><Chip tone={isActive ? "good" : "muted"}>{isActive ? "Active" : "Inactive"}</Chip><Chip tone="muted">{link.destinationType === "stone" ? "Stone" : "Consultation"}</Chip></>}
-              facts={[{ label: "Orders", value: orders }, { label: "Campaign", value: link.campaign || "—" }]}
+              status={{ label: isActive ? "Active" : "Inactive", tone: isActive ? "good" : "muted", extra: link.destinationType === "stone" ? "Stone" : "Consultation" }}
+              facts={[{ label: "orders", value: orders }, ...(link.campaign ? [{ label: "campaign", value: link.campaign }] : [])]}
             />
             <div
               className={`hidden sm:grid ${cols} gap-3 px-4 py-2.5 items-center ${idx % 2 === 0 ? "bg-[rgba(89,82,54,0.025)]" : ""} hover:!bg-[rgba(119,123,98,0.08)] transition-colors ${idx === arr.length - 1 ? "rounded-b-[15px]" : ""}`}

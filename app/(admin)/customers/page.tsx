@@ -1,7 +1,7 @@
 "use client";
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { PageHeader, Card, StatCard, ToolbarSearch, SortMenu, InlineFilter, MultiCheck, GoldBtn, Chip, Pagination, EmptyState, TableSkeleton, MobileListCard } from "@/components/ui";
+import { PageHeader, Card, StatCard, ToolbarSearch, SortMenu, InlineFilter, MultiCheck, GoldBtn, Chip, Pagination, EmptyState, TableSkeleton, MobileListCard, Monogram } from "@/components/ui";
 
 const STATUS_ICON = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className="w-3.5 h-3.5"><circle cx="12" cy="12" r="10" /><path d="m9 12 2 2 4-4" /></svg>;
 const STATUS_OPTIONS = [{ value: "active", label: "Active" }, { value: "deactivated", label: "Deactivated" }];
@@ -127,11 +127,12 @@ export default function CustomersPage() {
             <MobileListCard
               className="md:hidden"
               href={`/customers/${c.id}`}
+              leading={<Monogram name={c.name} />}
               title={c.name}
               right={a.spent ? inr(a.spent) : undefined}
               sub={c.email}
-              chips={customerStatus(c.id) === "deactivated" ? <Chip tone="muted">Deactivated</Chip> : undefined}
-              facts={[{ label: "Phone", value: c.phone }, { label: "Orders", value: a.orders || "—" }]}
+              status={customerStatus(c.id) === "deactivated" ? { label: "Deactivated", tone: "muted" } : undefined}
+              facts={a.orders || a.consults ? [{ label: "orders", value: a.orders || "—" }, { label: "consults", value: a.consults || "—" }] : undefined}
             />
             <Link
               href={`/customers/${c.id}`}

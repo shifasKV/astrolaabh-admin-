@@ -1,6 +1,6 @@
 "use client";
 import { useState, useMemo } from "react";
-import { PageHeader, Card, Chip, Tabs, ToolbarSearch, FiltersPopover, FilterField, SortMenu, Select, Pagination, TableSkeleton, MobileListCard } from "@/components/ui";
+import { PageHeader, Card, Chip, Tabs, ToolbarSearch, FiltersPopover, FilterField, SortMenu, Select, Pagination, TableSkeleton, MobileListCard, Monogram } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { useSimulatedLoad } from "@/lib/useSimulatedLoad";
 import { MOCK_REFERRAL_EVENTS } from "@/lib/mock";
@@ -17,6 +17,12 @@ type SortKey = "date_desc" | "date_asc" | "amount_high" | "amount_low";
 
 function fmtDate(d: string) {
   return new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+}
+
+function commissionStatusMeta(s?: string): { label: string; tone: "good" | "gold" | "muted" } {
+  if (s === "paid") return { label: "Paid", tone: "good" };
+  if (s === "approved") return { label: "Approved", tone: "gold" };
+  return { label: "Pending", tone: "muted" };
 }
 
 export default function ReferralsPage() {
@@ -127,12 +133,12 @@ export default function ReferralsPage() {
             <div key={r.id}>
             <MobileListCard
               className="sm:hidden"
+              leading={<Monogram name={r.maskedCustomer || "?"} />}
               title={r.maskedCustomer}
               right={r.commissionAmount ? inr(r.commissionAmount) : "—"}
-              sub={`${r.id.toUpperCase()} · ${r.campaign || "Direct referral"}`}
-              rightSub={fmtDate(r.eventDate)}
-              chips={<Chip tone={r.commissionStatus === "paid" ? "good" : r.commissionStatus === "approved" ? "gold" : "muted"}>{r.commissionStatus ?? "—"}</Chip>}
-              facts={r.orderValue ? [{ label: "Order value", value: inr(r.orderValue) }] : undefined}
+              sub={r.campaign || "Direct referral"}
+              status={{ ...commissionStatusMeta(r.commissionStatus), extra: r.orderValue ? `${inr(r.orderValue)} order` : undefined }}
+              time={r.eventDate}
             />
             <div
               className="hidden sm:grid sm:grid-cols-[minmax(120px,1fr)_110px_120px_120px_100px_100px] gap-2 sm:gap-3 items-center px-3 py-3 transition-all duration-150 rounded-[8px] hover:bg-[rgba(119,123,98,0.07)]"
@@ -176,12 +182,12 @@ export default function ReferralsPage() {
             <div key={r.id}>
             <MobileListCard
               className="sm:hidden"
+              leading={<Monogram name={r.maskedCustomer || "?"} />}
               title={r.maskedCustomer}
               right={r.commissionAmount ? inr(r.commissionAmount) : "—"}
-              sub={`${r.id.toUpperCase()} · ${r.campaign || "Consultation booking"}`}
-              rightSub={fmtDate(r.eventDate)}
-              chips={<Chip tone={r.commissionStatus === "paid" ? "good" : r.commissionStatus === "approved" ? "gold" : "muted"}>{r.commissionStatus ?? "—"}</Chip>}
-              facts={r.orderValue ? [{ label: "Order value", value: inr(r.orderValue) }] : undefined}
+              sub={r.campaign || "Consultation booking"}
+              status={{ ...commissionStatusMeta(r.commissionStatus), extra: r.orderValue ? `${inr(r.orderValue)} booking` : undefined }}
+              time={r.eventDate}
             />
             <div
               className="hidden sm:grid sm:grid-cols-[minmax(120px,1fr)_110px_120px_120px_100px_100px] gap-2 sm:gap-3 items-center px-3 py-3 transition-all duration-150 rounded-[8px] hover:bg-[rgba(119,123,98,0.07)]"

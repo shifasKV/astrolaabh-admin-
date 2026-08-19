@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, Tabs, GoldBtn, ShopifyButton, Pagination, downloadXLS, downloadPDF, ExportBtn, DateRangePanel, ToolbarSearch, InlineFilter, MultiCheck, SortMenu, EmptyState, TableSkeleton, MobileListCard } from "@/components/ui";
+import { PageHeader, Card, Chip, Tabs, GoldBtn, ShopifyButton, Pagination, downloadXLS, downloadPDF, ExportBtn, DateRangePanel, ToolbarSearch, InlineFilter, MultiCheck, SortMenu, EmptyState, TableSkeleton, MobileListCard, Monogram } from "@/components/ui";
 import { useSimulatedLoad } from "@/lib/useSimulatedLoad";
 import { T } from "@/lib/theme";
 import { MOCK_ORDERS, MOCK_INCOMPLETE_ORDERS } from "@/lib/mock";
@@ -359,11 +359,12 @@ export default function OrdersPage() {
               <MobileListCard
                 className="sm:hidden"
                 href={`/orders/${o.id}`}
+                leading={<Monogram name={o.customerName} />}
                 title={o.customerName}
                 right={inr(o.total)}
-                sub={o.items.length > 1 ? `${o.items[0]?.name} +${o.items.length - 1}` : o.items[0]?.name}
-                rightSub={new Date(o.placedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-                chips={<Chip tone={st.tone}>{st.label}</Chip>}
+                sub={o.items.length > 1 ? `${o.items[0]?.name} + ${o.items.length - 1} more` : o.items[0]?.name}
+                status={{ label: st.label, tone: st.tone === "muted" ? "muted" : st.tone, extra: o.id }}
+                time={o.placedAt}
               />
               <Link
                 href={`/orders/${o.id}`}
@@ -427,11 +428,12 @@ export default function OrdersPage() {
                   <MobileListCard
                     className="sm:hidden"
                     href={`/orders/incomplete/${o.id}`}
+                    leading={<Monogram name={o.customerName} tone="muted" />}
                     title={o.customerName}
                     right={inr(o.amount)}
                     sub={o.itemName}
-                    rightSub={new Date(o.failedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
-                    chips={<Chip tone={INCOMPLETE_REASON_TONE[o.reason] || "muted"}>{INCOMPLETE_REASON_LABEL[o.reason] || o.reason}</Chip>}
+                    status={{ label: "Didn't complete", tone: INCOMPLETE_REASON_TONE[o.reason] || "muted", extra: INCOMPLETE_REASON_LABEL[o.reason] || o.reason }}
+                    time={o.failedAt}
                   />
                   <Link
                     href={`/orders/incomplete/${o.id}`}

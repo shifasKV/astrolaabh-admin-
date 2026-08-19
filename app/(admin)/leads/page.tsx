@@ -2,7 +2,7 @@
 import { Suspense, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { PageHeader, Card, Chip, Tabs, Select, InlineFilter, MultiCheck, ToolbarSearch, SortMenu, EmptyState, Toast, MobileListCard } from "@/components/ui";
+import { PageHeader, Card, Chip, Tabs, Select, InlineFilter, MultiCheck, ToolbarSearch, SortMenu, EmptyState, Toast, MobileListCard, Monogram } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { inr } from "@/lib/types";
 import { MOCK_SALES_MEMBERS } from "@/lib/mock";
@@ -108,16 +108,16 @@ function LeadsPageInner() {
 
       <div className="mb-4"><Tabs tabs={TABS} active={tab} onChange={(k) => setTab(k as typeof tab)} /></div>
 
-      {/* Toolbar (leads tabs only) */}
+      {/* Toolbar (leads tabs only) — mobile: search first, filters scroll on one line */}
       {tab !== "approvals" && (
-        <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
-          <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2.5 sm:gap-3 mb-3">
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar -mx-5 px-5 sm:mx-0 sm:px-0 sm:flex-wrap">
             <InlineFilter label="Status" icon={FunnelIcon} count={statusF.length}><MultiCheck options={STATUS_OPTIONS} value={statusF} onChange={setStatusF} /></InlineFilter>
             <InlineFilter label="Reason" icon={TagIcon} count={reasonF.length}><MultiCheck options={reasonOptions} value={reasonF} onChange={setReasonF} /></InlineFilter>
             <InlineFilter label="Assignee" icon={UserIcon} count={assigneeF.length}><MultiCheck options={assigneeOptions} value={assigneeF} onChange={setAssigneeF} /></InlineFilter>
-            {filterCount > 0 && <button onClick={clearAll} className="text-[12px] font-medium h-8 px-2.5 rounded-[8px] cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.08)]" style={{ color: T.muted }}>Clear all</button>}
+            {filterCount > 0 && <button onClick={clearAll} className="shrink-0 text-[12px] font-medium h-8 px-2.5 rounded-[8px] cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.08)]" style={{ color: T.muted }}>Clear all</button>}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
             <ToolbarSearch value={search} onChange={setSearch} placeholder="Search customer, item, phone…" />
             <SortMenu value={sort} onChange={setSort} options={SORTS} />
           </div>
@@ -136,12 +136,13 @@ function LeadsPageInner() {
                 <MobileListCard
                   className="lg:hidden"
                   href={`/orders/incomplete/${o.id}`}
+                  leading={<Monogram name={o.customerName} />}
                   title={o.customerName}
                   right={inr(o.amount)}
                   sub={o.itemName}
-                  rightSub={fmtDate(o.failedAt)}
-                  chips={<><Chip tone={STATUS_TONE[o.leadStatus]}>{STATUS_LABEL[o.leadStatus]}</Chip><Chip tone={REASON_TONE[o.reason]}>{REASON_LABEL[o.reason]}</Chip></>}
-                  facts={[{ label: "Assignee", value: salesMemberName(o.assignedTo) }, { label: "Phone", value: o.customerPhone }]}
+                  status={{ label: STATUS_LABEL[o.leadStatus], tone: STATUS_TONE[o.leadStatus], extra: REASON_LABEL[o.reason] }}
+                  time={o.failedAt}
+                  facts={[{ label: "with", value: salesMemberName(o.assignedTo) }]}
                 />
                 <div className="hidden lg:grid lg:grid-cols-[1.3fr_1.6fr_120px_180px_110px_120px] gap-3 px-4 py-3 lg:items-center transition-colors even:bg-[rgba(89,82,54,0.02)] hover:bg-[rgba(119,123,98,0.05)]" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
                   <Link href={`/orders/incomplete/${o.id}`} className="min-w-0"><span className="block text-[13.5px] font-medium truncate hover:underline underline-offset-2" style={{ color: T.text }}>{o.customerName}</span><span className="block text-[11.5px] truncate" style={{ color: T.faint }}>{fmtDate(o.failedAt)} · {o.customerPhone}</span></Link>
@@ -170,11 +171,12 @@ function LeadsPageInner() {
                 <MobileListCard
                   className="lg:hidden"
                   href={`/consultations/incomplete/${c.id}`}
+                  leading={<Monogram name={c.customerName} />}
                   title={c.customerName}
-                  sub={`${c.expertName} · ${c.consultationType}`}
-                  rightSub={fmtDate(c.date)}
-                  chips={<><Chip tone={STATUS_TONE[c.leadStatus]}>{STATUS_LABEL[c.leadStatus]}</Chip><Chip tone={REASON_TONE[c.reason]}>{REASON_LABEL[c.reason]}</Chip></>}
-                  facts={[{ label: "Assignee", value: salesMemberName(c.assignedTo) }, { label: "Phone", value: c.customerPhone }]}
+                  sub={`${c.consultationType} with ${c.expertName}`}
+                  status={{ label: STATUS_LABEL[c.leadStatus], tone: STATUS_TONE[c.leadStatus], extra: REASON_LABEL[c.reason] }}
+                  time={c.date}
+                  facts={[{ label: "with", value: salesMemberName(c.assignedTo) }]}
                 />
                 <div className="hidden lg:grid lg:grid-cols-[1.3fr_1.6fr_120px_180px_110px] gap-3 px-4 py-3 lg:items-center transition-colors even:bg-[rgba(89,82,54,0.02)] hover:bg-[rgba(119,123,98,0.05)]" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
                   <Link href={`/consultations/incomplete/${c.id}`} className="min-w-0"><span className="block text-[13.5px] font-medium truncate hover:underline underline-offset-2" style={{ color: T.text }}>{c.customerName}</span><span className="block text-[11.5px] truncate" style={{ color: T.faint }}>{fmtDate(c.date)} · {c.customerPhone}</span></Link>
@@ -190,15 +192,15 @@ function LeadsPageInner() {
         </Card>
       )}
 
-      {/* APPROVALS TOOLBAR */}
+      {/* APPROVALS TOOLBAR — mobile: search first, filters scroll on one line */}
       {tab === "approvals" && (
-        <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
-          <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2.5 sm:gap-3 mb-3">
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar -mx-5 px-5 sm:mx-0 sm:px-0 sm:flex-wrap">
             <InlineFilter label="Type" icon={TagIcon} count={apprTypeF.length}><MultiCheck options={[{ value: "order", label: "Stone order" }, { value: "consultation", label: "Consultation" }]} value={apprTypeF} onChange={setApprTypeF} /></InlineFilter>
             <InlineFilter label="Status" icon={FunnelIcon} count={apprStatusF.length}><MultiCheck options={[{ value: "pending", label: "Admin approval pending" }, { value: "approved", label: "Admin approved" }, { value: "on_hold", label: "On hold" }, { value: "completed", label: "Completed" }, { value: "rejected", label: "Rejected" }]} value={apprStatusF} onChange={setApprStatusF} /></InlineFilter>
-            {apprFilterCount > 0 && <button onClick={() => { setApprTypeF([]); setApprStatusF([]); }} className="text-[12px] font-medium h-8 px-2.5 rounded-[8px] cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.08)]" style={{ color: T.muted }}>Clear all</button>}
+            {apprFilterCount > 0 && <button onClick={() => { setApprTypeF([]); setApprStatusF([]); }} className="shrink-0 text-[12px] font-medium h-8 px-2.5 rounded-[8px] cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.08)]" style={{ color: T.muted }}>Clear all</button>}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
             <ToolbarSearch value={apprSearch} onChange={setApprSearch} placeholder="Search customer, exec, item…" />
             <SortMenu value={apprSort} onChange={setApprSort} options={SORTS} />
           </div>
@@ -220,12 +222,17 @@ function LeadsPageInner() {
                 <MobileListCard
                   className="lg:hidden"
                   href={`/leads/approvals/${r.id}`}
+                  leading={<Monogram name={salesMemberName(f.submittedBy)} tone="muted" />}
                   title={r.customerName}
                   right={inr(f.total)}
                   sub={f.summary}
                   rightSub={f.discount > 0 ? `−${inr(f.discount)} off` : undefined}
-                  chips={<><Chip tone={p === "pending" ? "gold" : p === "approved" || p === "completed" ? "good" : p === "on_hold" ? "info" : "danger"}>{p === "pending" ? "Pending" : p === "approved" ? "Approved" : p === "completed" ? "Completed" : p === "on_hold" ? "On hold" : "Rejected"}</Chip><Chip tone={f.kind === "order" ? "info" : "muted"}>{f.kind === "order" ? "Stone order" : "Consultation"}</Chip></>}
-                  facts={[{ label: "Sales exec", value: salesMemberName(f.submittedBy) }, { label: "Submitted", value: new Date(f.submittedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) }]}
+                  status={{
+                    label: p === "pending" ? "Needs your review" : p === "approved" ? "Approved" : p === "completed" ? "Completed" : p === "on_hold" ? "On hold" : "Rejected",
+                    tone: p === "pending" ? "gold" : p === "approved" || p === "completed" ? "good" : p === "on_hold" ? "info" : "danger",
+                    extra: `by ${salesMemberName(f.submittedBy).split(" ")[0]}`,
+                  }}
+                  time={f.submittedAt}
                 />
                 <div onClick={() => router.push(`/leads/approvals/${r.id}`)} className="hidden lg:grid lg:grid-cols-[150px_minmax(0,1.5fr)_112px_96px_110px_110px_104px_120px] gap-3 px-4 py-3 lg:items-center cursor-pointer transition-colors even:bg-[rgba(89,82,54,0.02)] hover:bg-[rgba(119,123,98,0.05)]" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
                   <span className="flex items-center gap-2 min-w-0"><span className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold shrink-0" style={{ background: T.accentFaint, border: `1px solid ${T.accentBorder}`, color: T.accent }}>{salesMemberName(f.submittedBy).split(" ").map((w) => w[0]).slice(0, 2).join("")}</span><span className="text-[12.5px] font-medium truncate" style={{ color: T.text }}>{salesMemberName(f.submittedBy)}</span></span>

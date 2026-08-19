@@ -3,7 +3,7 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
 import {
   PageHeader, Card, Chip, Tabs, Pagination,
-  Tooltip, ToolbarSearch, ExportBtn, downloadXLS, downloadPDF, InlineFilter, MultiCheck, SortMenu, DateRangePanel, EmptyState, TableSkeleton, MobileListCard } from "@/components/ui";
+  Tooltip, ToolbarSearch, ExportBtn, downloadXLS, downloadPDF, InlineFilter, MultiCheck, SortMenu, DateRangePanel, EmptyState, TableSkeleton, MobileListCard, Monogram } from "@/components/ui";
 
 const E_ICONS = {
   expert: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className="w-3.5 h-3.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>,
@@ -295,10 +295,11 @@ export default function EnergisationPage() {
               <MobileListCard
                 className="sm:hidden"
                 href={`/energisation/${e.id}`}
+                leading={<Monogram name={e.customerName} />}
                 title={e.customerName}
                 sub={e.stoneDescription}
-                rightSub={e.scheduledAt ? new Date(e.scheduledAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—"}
-                chips={<Chip tone={st.tone}>{st.label}</Chip>}
+                status={{ label: st.label, tone: st.tone }}
+                time={e.scheduledAt || undefined}
               />
               <Link
                 href={`/energisation/${e.id}`}

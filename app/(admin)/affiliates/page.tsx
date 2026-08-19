@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { PageHeader, Card, StatCard, Chip, GoldBtn, ToolbarSearch, SortMenu, InlineFilter, MultiCheck, EmptyState, TableSkeleton, MobileListCard } from "@/components/ui";
+import { PageHeader, Card, StatCard, Chip, GoldBtn, ToolbarSearch, SortMenu, InlineFilter, MultiCheck, EmptyState, TableSkeleton, MobileListCard, Monogram } from "@/components/ui";
 
 const STATUS_ICON = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className="w-3.5 h-3.5"><circle cx="12" cy="12" r="10" /><path d="m9 12 2 2 4-4" /></svg>;
 const AFF_STATUS_OPTIONS = [{ value: "active", label: "Active" }, { value: "under_review", label: "Under review" }, { value: "deactivated", label: "Deactivated" }];
@@ -137,16 +137,17 @@ export default function AffiliatesPage() {
                 <MobileListCard
                   className="md:hidden"
                   href={`/affiliates/${a.id}`}
+                  leading={<Monogram name={a.name} />}
                   title={a.name}
                   right={stats.pendingCommission > 0 ? inr(stats.pendingCommission) : undefined}
-                  rightSub={stats.pendingCommission > 0 ? "Commission" : undefined}
+                  rightSub={stats.pendingCommission > 0 ? "commission due" : undefined}
                   sub={`${a.code} · ${a.email}`}
-                  chips={
-                    <Chip tone={a.status === "active" ? "good" : a.status === "under_review" ? "gold" : "danger"}>
-                      {a.status.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase())}
-                    </Chip>
-                  }
-                  facts={[{ label: "Rate", value: `${a.commissionRate}%` }, { label: "Registrations", value: stats.registrations }]}
+                  status={{
+                    label: a.status.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase()),
+                    tone: a.status === "active" ? "good" : a.status === "under_review" ? "gold" : "danger",
+                    extra: `${a.commissionRate}%`,
+                  }}
+                  facts={[{ label: "registrations", value: stats.registrations }]}
                 />
                 <Link
                   href={`/affiliates/${a.id}`}
