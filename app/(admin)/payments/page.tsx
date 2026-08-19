@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, Select, Pagination, fmtChipDate, ToolbarSearch, FiltersPopover, FilterField, FilterChip, DateRangeFields, ColumnStatusFilter, EmptyState, TableSkeleton, Toast, MobileListCard, Monogram } from "@/components/ui";
+import { PageHeader, Card, Chip, Select, Pagination, fmtChipDate, ToolbarSearch, FiltersPopover, FilterField, FilterChip, DateRangeFields, ColumnStatusFilter, EmptyState, TableSkeleton, Toast, MobileListCard, Monogram, MobileToolbar, SheetSection } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { useSimulatedLoad } from "@/lib/useSimulatedLoad";
 import { MOCK_PAYMENTS } from "@/lib/mock";
@@ -155,8 +155,73 @@ export default function PaymentsPage() {
         ))}
       </div>
 
+      {/* Mobile: single collapsed toolbar row (filters sheet + expanding search + sort) */}
+      <MobileToolbar
+        className="sm:hidden"
+        filterCount={activeFilterCount}
+        onClearAll={() => { setFilterCustomer(""); setFilterType(""); setFilterStatus(""); setFilterDateFrom(""); setFilterDateTo(""); setPage(1); }}
+        search={search}
+        onSearch={(v) => { setSearch(v); setPage(1); }}
+        searchPlaceholder="Search customer, purpose, transaction ref…"
+        sort={
+          <div className="w-[170px]">
+            <Select
+              value={sortBy}
+              onChange={(v) => { setSortBy(v as typeof sortBy); setPage(1); }}
+              compact
+              prefix="Sort: "
+              options={[
+                { value: "newest", label: "Newest first" },
+                { value: "oldest", label: "Oldest first" },
+                { value: "amount_high", label: "Amount: high to low" },
+                { value: "amount_low", label: "Amount: low to high" },
+              ]}
+            />
+          </div>
+        }
+        filters={
+          <>
+            <SheetSection label="Customer">
+              <Select
+                value={filterCustomer}
+                onChange={(v) => { setFilterCustomer(v); setPage(1); }}
+                compact
+                searchable
+                placeholder="All customers"
+                options={[{ value: "", label: "All customers" }, ...uniqueCustomers.map((name) => ({ value: name, label: name }))]}
+              />
+            </SheetSection>
+            <SheetSection label="Type">
+              <Select
+                value={filterType}
+                onChange={(v) => { setFilterType(v as typeof filterType); setPage(1); }}
+                compact
+                placeholder="All types"
+                options={[
+                  { value: "", label: "All types" },
+                  { value: "order", label: "Orders" },
+                  { value: "consultation", label: "Consultations" },
+                ]}
+              />
+            </SheetSection>
+            <SheetSection label="Status">
+              <Select
+                value={filterStatus}
+                onChange={(v) => { setFilterStatus(v); setPage(1); }}
+                compact
+                placeholder="All statuses"
+                options={[{ value: "", label: "All statuses" }, ...Object.entries(STATUS_FILTER_LABEL).map(([k, v]) => ({ value: k, label: v }))]}
+              />
+            </SheetSection>
+            <SheetSection label="Date between">
+              <DateRangeFields from={filterDateFrom} to={filterDateTo} onChange={(f, t) => { setFilterDateFrom(f); setFilterDateTo(t); setPage(1); }} />
+            </SheetSection>
+          </>
+        }
+      />
+
       {/* Pinned controls — search, filters, sort */}
-      <div className="flex flex-wrap items-center gap-2 mb-3">
+      <div className="hidden sm:flex flex-wrap items-center gap-2 mb-3">
         <ToolbarSearch value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search customer, purpose, transaction ref…" />
         <div className="ml-auto flex items-center gap-2">
           <FiltersPopover count={activeFilterCount} open={showFilters} onToggle={() => setShowFilters(!showFilters)}>
@@ -215,7 +280,7 @@ export default function PaymentsPage() {
 
       {/* Active filters — removable chips */}
       {hasActiveFilters && (
-        <div className="flex flex-wrap items-center gap-1.5 mb-3">
+        <div className="hidden sm:flex flex-wrap items-center gap-1.5 mb-3">
           {filterCustomer && <FilterChip label={`Customer: ${filterCustomer}`} onClear={() => { setFilterCustomer(""); setPage(1); }} />}
           {filterType && <FilterChip label={`Type: ${filterType === "order" ? "Orders" : "Consultations"}`} onClear={() => { setFilterType(""); setPage(1); }} />}
           {filterStatus && <FilterChip label={`Status: ${STATUS_FILTER_LABEL[filterStatus]}`} onClear={() => { setFilterStatus(""); setPage(1); }} />}

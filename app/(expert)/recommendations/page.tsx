@@ -1,7 +1,7 @@
 "use client";
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, Select, Pagination, ToolbarSearch, FiltersPopover, FilterField, SortMenu, TableSkeleton, MobileListCard, Monogram } from "@/components/ui";
+import { PageHeader, Card, Chip, Select, Pagination, ToolbarSearch, FiltersPopover, FilterField, SortMenu, TableSkeleton, MobileListCard, Monogram, MobileToolbar, SheetSection } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { useSimulatedLoad } from "@/lib/useSimulatedLoad";
 import { MOCK_STONE_RECOMMENDATIONS, MOCK_CONSULTATIONS, MOCK_ORDERS } from "@/lib/mock";
@@ -101,8 +101,39 @@ export default function RecommendationsPage() {
       <div className="md:h-[calc(100dvh-78px)] md:flex md:flex-col md:min-h-0">
       <PageHeader title="Recommendations" />
 
+      {/* Mobile: collapsed toolbar (filters sheet + expanding search + sort) */}
+      <MobileToolbar
+        className="sm:hidden mb-3"
+        filterCount={[filterCustomer, filterStone, filterStatus].filter(Boolean).length}
+        onClearAll={() => { setFilterCustomer(""); setFilterStone(""); setFilterStatus(""); setPage(1); }}
+        search={search}
+        onSearch={(v) => { setSearch(v); setPage(1); }}
+        searchPlaceholder="Search customer, gemstone, ID…"
+        sort={<SortMenu
+          value={sort}
+          onChange={(v) => { setSort(v as SortKey); setPage(1); }}
+          options={[
+            { value: "newest", label: "Newest scheduled" },
+            { value: "oldest", label: "Oldest scheduled" },
+          ]}
+        />}
+        filters={
+          <>
+            <SheetSection label="Customer">
+              <Select value={filterCustomer} onChange={(v) => { setFilterCustomer(v); setPage(1); }} searchable compact placeholder="All customers" options={[{ value: "", label: "All customers" }, ...uniqueCustomers.map((n) => ({ value: n, label: n }))]} />
+            </SheetSection>
+            <SheetSection label="Stone">
+              <Select value={filterStone} onChange={(v) => { setFilterStone(v); setPage(1); }} searchable compact placeholder="All stones" options={[{ value: "", label: "All stones" }, ...uniqueStones.map((n) => ({ value: n, label: n }))]} />
+            </SheetSection>
+            <SheetSection label="Status">
+              <Select value={filterStatus} onChange={(v) => { setFilterStatus(v); setPage(1); }} compact placeholder="All statuses" options={STATUS_OPTIONS} />
+            </SheetSection>
+          </>
+        }
+      />
+
       {/* Toolbar — filters left, search + sort right */}
-      <div className="flex flex-wrap items-center gap-2 mb-3">
+      <div className="hidden sm:flex flex-wrap items-center gap-2 mb-3">
         <FiltersPopover
           align="left"
           count={[filterCustomer, filterStone, filterStatus].filter(Boolean).length}

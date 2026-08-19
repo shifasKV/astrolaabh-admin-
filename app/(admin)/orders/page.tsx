@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, Tabs, GoldBtn, ShopifyButton, Pagination, downloadXLS, downloadPDF, ExportBtn, DateRangePanel, ToolbarSearch, InlineFilter, MultiCheck, SortMenu, EmptyState, TableSkeleton, MobileListCard, Monogram } from "@/components/ui";
+import { PageHeader, Card, Chip, Tabs, GoldBtn, ShopifyButton, Pagination, downloadXLS, downloadPDF, ExportBtn, DateRangePanel, ToolbarSearch, InlineFilter, MultiCheck, SortMenu, EmptyState, TableSkeleton, MobileListCard, Monogram, MobileToolbar, SheetSection, MobileFab } from "@/components/ui";
 import { useSimulatedLoad } from "@/lib/useSimulatedLoad";
 import { T } from "@/lib/theme";
 import { MOCK_ORDERS, MOCK_INCOMPLETE_ORDERS } from "@/lib/mock";
@@ -163,6 +163,7 @@ export default function OrdersPage() {
   const paginated = filtered.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE);
 
   const hasActiveFilters = !!filterCustomer || filterStatus.length > 0 || !!filterDateFrom || !!filterDateTo || filterPlacedBy.length > 0 || filterStoneType.length > 0;
+  const activeFilterCount = [filterCustomer, filterStatus.length > 0 ? "1" : "", filterStoneType.length > 0 ? "1" : "", filterPlacedBy.length > 0 ? "1" : "", filterDateFrom || filterDateTo].filter(Boolean).length;
   const statusCounts = Object.fromEntries(
     Object.keys(STATUS_FILTER_LABEL).map((k) => [k, MOCK_ORDERS.filter((o) => matchesStatus(o, k)).length]),
   );
@@ -170,6 +171,7 @@ export default function OrdersPage() {
   // Incomplete tab — computed at component scope so global export can reach it
   const incStones = [...new Set(MOCK_INCOMPLETE_ORDERS.map((o) => o.itemName))].sort();
   const hasIncFilters = !!incFilterCustomer || incFilterStone.length > 0 || incFilterReason.length > 0 || !!incFilterDateFrom || !!incFilterDateTo;
+  const incFilterCount = [incFilterCustomer, incFilterReason.length > 0 ? "1" : "", incFilterStone.length > 0 ? "1" : "", incFilterDateFrom || incFilterDateTo].filter(Boolean).length;
 
   const incFiltered = MOCK_INCOMPLETE_ORDERS
     .filter((o) => {
@@ -230,7 +232,7 @@ export default function OrdersPage() {
           <div className="flex flex-wrap items-center gap-2.5">
             <ExportBtn onExport={handleExport} />
             <ShopifyButton href="https://admin.shopify.com/orders">Open Shopify</ShopifyButton>
-            <Link href="/orders/create"><GoldBtn>+ Create order</GoldBtn></Link>
+            <span className="hidden sm:block"><Link href="/orders/create"><GoldBtn>+ Create order</GoldBtn></Link></span>
           </div>
         }
       />
@@ -254,8 +256,60 @@ export default function OrdersPage() {
         />
       </div>
 
+      {/* Mobile: single collapsed toolbar row (filters sheet + expanding search + sort) */}
+      {tab !== "incomplete" ? (
+        <MobileToolbar
+          className="sm:hidden pt-3"
+          filterCount={activeFilterCount}
+          onClearAll={() => { setFilterCustomer(""); setFilterStatus([]); setFilterPlacedBy([]); setFilterDateFrom(""); setFilterDateTo(""); setFilterStoneType([]); setPage(1); }}
+          search={search}
+          onSearch={setSearch}
+          searchPlaceholder="Search orders, customers…"
+          sort={<SortMenu value={sort} onChange={(v) => setSortBy(v)} options={SORT_OPTIONS} />}
+          filters={
+            <>
+              <SheetSection label="Status">
+                <MultiCheck options={Object.entries(STATUS_FILTER_LABEL).map(([k, v]) => ({ value: k, label: v }))} value={filterStatus} onChange={setFilterStatus} onAfter={() => setPage(1)} />
+              </SheetSection>
+              <SheetSection label="Date">
+                <DateRangePanel from={filterDateFrom} to={filterDateTo} onChange={(f, t) => { setFilterDateFrom(f); setFilterDateTo(t); setPage(1); }} />
+              </SheetSection>
+              <SheetSection label="Stone type">
+                <MultiCheck options={STONE_TYPE_OPTIONS.filter((o) => o.value !== "")} value={filterStoneType} onChange={setFilterStoneType} onAfter={() => setPage(1)} />
+              </SheetSection>
+              <SheetSection label="Placed by">
+                <MultiCheck options={ORDER_BY_OPTIONS} value={filterPlacedBy} onChange={setFilterPlacedBy} onAfter={() => setPage(1)} />
+              </SheetSection>
+            </>
+          }
+        />
+      ) : (
+        <MobileToolbar
+          className="sm:hidden pt-3"
+          filterCount={incFilterCount}
+          onClearAll={() => { setIncFilterCustomer(""); setIncFilterStone([]); setIncFilterReason([]); setIncFilterDateFrom(""); setIncFilterDateTo(""); setIncPage(1); }}
+          search={search}
+          onSearch={setSearch}
+          searchPlaceholder="Search orders, customers…"
+          sort={<SortMenu value={incSort} onChange={(v) => { setIncSort(v as SortKey); setIncPage(1); }} options={SORT_OPTIONS} />}
+          filters={
+            <>
+              <SheetSection label="Status">
+                <MultiCheck options={Object.entries(INCOMPLETE_REASON_LABEL).map(([k, v]) => ({ value: k, label: v }))} value={incFilterReason} onChange={setIncFilterReason} onAfter={() => setIncPage(1)} />
+              </SheetSection>
+              <SheetSection label="Stone">
+                <MultiCheck options={incStones.map((s) => ({ value: s, label: s }))} value={incFilterStone} onChange={setIncFilterStone} onAfter={() => setIncPage(1)} />
+              </SheetSection>
+              <SheetSection label="Date">
+                <DateRangePanel from={incFilterDateFrom} to={incFilterDateTo} onChange={(f, t) => { setIncFilterDateFrom(f); setIncFilterDateTo(t); setIncPage(1); }} />
+              </SheetSection>
+            </>
+          }
+        />
+      )}
+
       {/* Filter strip — subtle band below the divider: filters left, search + sort right */}
-      <div className="flex flex-wrap items-center gap-2 pt-4" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+      <div className="hidden sm:flex flex-wrap items-center gap-2 pt-4" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
         <div className="flex flex-wrap items-center gap-2">
           {tab !== "incomplete" ? (
             <>
@@ -470,6 +524,7 @@ export default function OrdersPage() {
         </>
       )}
       </div>
+      <MobileFab href="/orders/create" label="New order" />
     </>
   );
 

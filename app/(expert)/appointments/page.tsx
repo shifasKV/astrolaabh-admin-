@@ -1,7 +1,7 @@
 "use client";
 import { useState, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, Tabs, ToolbarSearch, SortMenu, Select, Pagination, Tooltip, TableSkeleton, MobileListCard, Monogram, MobileAgenda } from "@/components/ui";
+import { PageHeader, Card, Chip, Tabs, ToolbarSearch, SortMenu, Select, Pagination, Tooltip, TableSkeleton, MobileListCard, Monogram, MobileAgenda, MobileToolbar, SheetSection, DateRangePanel } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { usePersistentState } from "@/lib/usePersistentState";
 import { useSimulatedLoad } from "@/lib/useSimulatedLoad";
@@ -194,8 +194,38 @@ export default function AppointmentsPage() {
       {/* ============ List view ============ */}
       {viewMode === "list" && <>
 
+      {/* Mobile: collapsed toolbar (filters sheet + expanding search + sort) */}
+      <MobileToolbar
+        className="sm:hidden mb-3"
+        filterCount={(filterCustomer ? 1 : 0) + (filterStatus ? 1 : 0) + (filterDateFrom || filterDateTo ? 1 : 0)}
+        onClearAll={() => { setFilterCustomer(""); setFilterStatus(""); setFilterDateFrom(""); setFilterDateTo(""); setPage(1); }}
+        search={search}
+        onSearch={(v) => { setSearch(v); setPage(1); }}
+        searchPlaceholder="Search customer, consultation ID…"
+        sort={<SortMenu value={sort} onChange={(v) => { setSort(v as SortKey); setPage(1); }} options={[{ value: "newest", label: "Newest first" }, { value: "oldest", label: "Oldest first" }]} />}
+        filters={
+          <>
+            <SheetSection label="Customer">
+              <Select value={filterCustomer} onChange={(v) => { setFilterCustomer(v); setPage(1); }} searchable compact placeholder="All customers" options={[{ value: "", label: "All customers" }, ...uniqueCustomers.map((name) => ({ value: name, label: name }))]} />
+            </SheetSection>
+            <SheetSection label="Status">
+              <Select value={filterStatus} onChange={(v) => { setFilterStatus(v); setPage(1); }} compact placeholder="All statuses" options={[
+                { value: "", label: "All statuses" },
+                { value: "scheduled", label: "Scheduled" },
+                { value: "recommendation_pending", label: "Recommendation due" },
+                { value: "no_show", label: "No show" },
+                { value: "done", label: "Done" },
+              ]} />
+            </SheetSection>
+            <SheetSection label="Scheduled between">
+              <DateRangePanel from={filterDateFrom} to={filterDateTo} onChange={(f, t) => { setFilterDateFrom(f); setFilterDateTo(t); setPage(1); }} />
+            </SheetSection>
+          </>
+        }
+      />
+
       {/* Filters & Sort */}
-      <div className="flex flex-wrap items-center gap-2.5 mb-4">
+      <div className="hidden sm:flex flex-wrap items-center gap-2.5 mb-4">
         <div className="w-[200px]">
           <Select value={filterCustomer} onChange={(v) => { setFilterCustomer(v); setPage(1); }} searchable compact placeholder="All customers" options={[{ value: "", label: "All customers" }, ...uniqueCustomers.map((name) => ({ value: name, label: name }))]} />
         </div>

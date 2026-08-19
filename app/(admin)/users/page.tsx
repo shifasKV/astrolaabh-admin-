@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, GoldBtn, GhostBtn, Modal, Input, Select, Tabs, ToolbarSearch, Pagination, EmptyState, MobileListCard, Monogram } from "@/components/ui";
+import { PageHeader, Card, Chip, GoldBtn, GhostBtn, Modal, Input, Select, Tabs, ToolbarSearch, Pagination, EmptyState, MobileListCard, Monogram, MobileToolbar, MobileFab } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_CUSTOMERS, MOCK_AFFILIATES, EXPERT_PROFILES } from "@/lib/mock";
 import type { User } from "@/lib/types";
@@ -134,7 +134,7 @@ export default function UsersPage() {
       <div className="md:h-[calc(100dvh-78px)] md:flex md:flex-col md:min-h-0">
       <PageHeader
         title="User management"
-        action={<GoldBtn onClick={() => setShowModal(true)}>+ Invite user</GoldBtn>}
+        action={<span className="hidden sm:block"><GoldBtn onClick={() => setShowModal(true)}>+ Invite user</GoldBtn></span>}
       />
 
       <div className="mb-4">
@@ -148,7 +148,16 @@ export default function UsersPage() {
         />
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 mb-3">
+      {/* Mobile: collapsed toolbar row (expanding search) */}
+      <MobileToolbar
+        className="sm:hidden"
+        filterCount={0}
+        search={search}
+        onSearch={setSearch}
+        searchPlaceholder="Search name or email…"
+      />
+
+      <div className="hidden sm:flex flex-wrap items-center gap-2 mb-3">
         <ToolbarSearch value={search} onChange={setSearch} placeholder="Search name or email…" />
       </div>
 
@@ -323,6 +332,7 @@ export default function UsersPage() {
         </div>
       )}
       </div>
+      <MobileFab onClick={() => setShowModal(true)} label="Invite" />
     </>
   );
 }

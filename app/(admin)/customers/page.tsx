@@ -1,7 +1,7 @@
 "use client";
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { PageHeader, Card, StatCard, ToolbarSearch, SortMenu, InlineFilter, MultiCheck, GoldBtn, Chip, Pagination, EmptyState, TableSkeleton, MobileListCard, Monogram } from "@/components/ui";
+import { PageHeader, Card, StatCard, ToolbarSearch, SortMenu, InlineFilter, MultiCheck, GoldBtn, Chip, Pagination, EmptyState, TableSkeleton, MobileListCard, Monogram, MobileToolbar, SheetSection, MobileFab } from "@/components/ui";
 
 const STATUS_ICON = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className="w-3.5 h-3.5"><circle cx="12" cy="12" r="10" /><path d="m9 12 2 2 4-4" /></svg>;
 const STATUS_OPTIONS = [{ value: "active", label: "Active" }, { value: "deactivated", label: "Deactivated" }];
@@ -77,7 +77,7 @@ export default function CustomersPage() {
       <PageHeader
         title="Customer records"
         action={
-          <Link href="/customers/create"><GoldBtn>+ Add customer</GoldBtn></Link>
+          <span className="hidden sm:block"><Link href="/customers/create"><GoldBtn>+ Add customer</GoldBtn></Link></span>
         }
       />
 
@@ -89,7 +89,23 @@ export default function CustomersPage() {
         <StatCard label="Affiliate referred" value={stats.withAffiliate} />
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 mb-3">
+      {/* Mobile: single collapsed toolbar row (filters sheet + expanding search + sort) */}
+      <MobileToolbar
+        className="sm:hidden"
+        filterCount={filterStatus.length}
+        onClearAll={() => { setFilterStatus([]); setPage(1); }}
+        search={search}
+        onSearch={setSearch}
+        searchPlaceholder="Search name, email, phone, location…"
+        sort={<SortMenu value={sort} onChange={setSort} options={CUSTOMER_SORT} />}
+        filters={
+          <SheetSection label="Status">
+            <MultiCheck options={STATUS_OPTIONS} value={filterStatus} onChange={setFilterStatus} onAfter={() => setPage(1)} />
+          </SheetSection>
+        }
+      />
+
+      <div className="hidden sm:flex flex-wrap items-center gap-2 mb-3">
         <InlineFilter label="Status" icon={STATUS_ICON} count={filterStatus.length} width={200}>
           <MultiCheck options={STATUS_OPTIONS} value={filterStatus} onChange={setFilterStatus} onAfter={() => setPage(1)} />
         </InlineFilter>
@@ -175,6 +191,7 @@ export default function CustomersPage() {
       </Card>
       <Pagination page={currentPage - 1} totalPages={totalPages} totalItems={filtered.length} perPage={PER_PAGE} onPageChange={(p) => setPage(p + 1)} />
       </div>
+      <MobileFab href="/customers/create" label="Add" />
     </>
   );
 }

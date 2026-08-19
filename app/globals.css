@@ -372,3 +372,9 @@ input:-webkit-autofill:focus {
   caret-color: #292617;
   transition: background-color 9999s ease-in-out 0s;
 }
+
+/* Bottom sheet slide-up (mobile filter sheet) */
+@keyframes sheet-up {
+  from { transform: translateY(24%); opacity: 0.6; }
+  to { transform: translateY(0); opacity: 1; }
+}

@@ -22,7 +22,7 @@ export function ShopifyButton({ href, children }: { href: string; children: Reac
       href={href}
       target="_blank"
       rel="noopener"
-      className="group inline-flex items-center gap-2 h-10 text-[13px] font-medium px-4 rounded-[9px] transition-all duration-200 hover:-translate-y-px"
+      className="group inline-flex items-center gap-2 h-10 text-[13px] font-medium px-3 sm:px-4 rounded-[9px] transition-all duration-200 hover:-translate-y-px"
       style={{
         background: "#fffdf5",
         border: "1px solid rgba(89, 82, 54, 0.16)",
@@ -31,8 +31,8 @@ export function ShopifyButton({ href, children }: { href: string; children: Reac
       }}
     >
       <ShopifyIcon />
-      {children}
-      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3 shrink-0 transition-transform duration-200 group-hover:translate-x-px group-hover:-translate-y-px" style={{ color: "#98907a" }}>
+      <span className="hidden sm:inline">{children}</span>
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="hidden sm:block w-3 h-3 shrink-0 transition-transform duration-200 group-hover:translate-x-px group-hover:-translate-y-px" style={{ color: "#98907a" }}>
         <path d="M6.5 3.5h6v6M12.5 3.5 7 9M6 4H4.5A1.5 1.5 0 0 0 3 5.5v6A1.5 1.5 0 0 0 4.5 13h6a1.5 1.5 0 0 0 1.5-1.5V10" />
       </svg>
     </a>

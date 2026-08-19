@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { PageHeader, Card, Chip, Tabs, ToolbarSearch, GoldBtn, GhostBtn, Modal, Input, FileInput, Pagination, EmptyState, TableSkeleton, MobileListCard } from "@/components/ui";
+import { PageHeader, Card, Chip, Tabs, ToolbarSearch, GoldBtn, GhostBtn, Modal, Input, FileInput, Pagination, EmptyState, TableSkeleton, MobileListCard, MobileToolbar } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { useSimulatedLoad } from "@/lib/useSimulatedLoad";
 import { MOCK_CERTIFICATES } from "@/lib/mock";
@@ -76,7 +76,16 @@ export default function CertificatesPage() {
         />
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 mb-3">
+      {/* Mobile: collapsed toolbar row (expanding search) */}
+      <MobileToolbar
+        className="sm:hidden"
+        filterCount={0}
+        search={search}
+        onSearch={setSearch}
+        searchPlaceholder="Search order, certificate number…"
+      />
+
+      <div className="hidden sm:flex flex-wrap items-center gap-2 mb-3">
         <ToolbarSearch value={search} onChange={setSearch} placeholder="Search order, certificate number…" />
       </div>
 

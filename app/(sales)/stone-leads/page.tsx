@@ -1,7 +1,7 @@
 "use client";
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, GoldBtn, ToolbarSearch, InlineFilter, MultiCheck, SortMenu, Pagination, EmptyState, TableSkeleton, MobileListCard, Monogram } from "@/components/ui";
+import { PageHeader, Card, Chip, GoldBtn, ToolbarSearch, InlineFilter, MultiCheck, SortMenu, Pagination, EmptyState, TableSkeleton, MobileListCard, Monogram, MobileToolbar, SheetSection, MobileFab } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { useSimulatedLoad } from "@/lib/useSimulatedLoad";
 import { useAuth } from "@/lib/store/auth";
@@ -69,20 +69,45 @@ export default function StoneLeadsPage() {
   return (
     <>
       <div className="md:h-[calc(100dvh-78px)] md:flex md:flex-col md:min-h-0">
-        <PageHeader title="Stone Leads" action={<Link href="/stone-leads/create"><GoldBtn>+ Create order</GoldBtn></Link>} />
+        <PageHeader title="Stone Leads" action={<span className="hidden sm:block"><Link href="/stone-leads/create"><GoldBtn>+ Create order</GoldBtn></Link></span>} />
 
-        <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2.5 sm:gap-2 mb-4">
-          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar -mx-5 px-5 sm:mx-0 sm:px-0 sm:flex-wrap">
+        <div className="hidden sm:flex items-center justify-between gap-2 mb-4">
+          <div className="flex items-center gap-2 flex-wrap">
             <InlineFilter label="Status" icon={FunnelIcon} count={statusF.length}><MultiCheck options={STATUS_OPTIONS} value={statusF} onChange={(v) => { setStatusF(v); setPage(0); }} /></InlineFilter>
             <InlineFilter label="Reason" icon={TagIcon} count={reasonF.length}><MultiCheck options={REASON_OPTIONS} value={reasonF} onChange={(v) => { setReasonF(v); setPage(0); }} /></InlineFilter>
             {isAdmin && <InlineFilter label="Assignee" icon={UserIcon} count={assigneeF.length}><MultiCheck options={assigneeOptions} value={assigneeF} onChange={(v) => { setAssigneeF(v); setPage(0); }} /></InlineFilter>}
             {filterCount > 0 && <button onClick={() => { setStatusF([]); setReasonF([]); setAssigneeF([]); setPage(0); }} className="shrink-0 text-[12px] font-medium h-8 px-2.5 rounded-[8px] cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.08)]" style={{ color: T.muted }}>Clear all</button>}
           </div>
-          <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="flex items-center gap-2">
             <ToolbarSearch value={search} onChange={(v) => { setSearch(v); setPage(0); }} placeholder="Search customer, item, phone…" />
             <SortMenu value={sort} onChange={setSort} options={SORT_OPTIONS} />
           </div>
         </div>
+
+        <MobileToolbar
+          className="sm:hidden mb-3"
+          filterCount={filterCount}
+          onClearAll={() => { setStatusF([]); setReasonF([]); setAssigneeF([]); setPage(0); }}
+          search={search}
+          onSearch={(v) => { setSearch(v); setPage(0); }}
+          searchPlaceholder="Search customer, item, phone…"
+          sort={<SortMenu value={sort} onChange={setSort} options={SORT_OPTIONS} />}
+          filters={
+            <>
+              <SheetSection label="Status">
+                <MultiCheck options={STATUS_OPTIONS} value={statusF} onChange={(v) => { setStatusF(v); setPage(0); }} />
+              </SheetSection>
+              <SheetSection label="Reason">
+                <MultiCheck options={REASON_OPTIONS} value={reasonF} onChange={(v) => { setReasonF(v); setPage(0); }} />
+              </SheetSection>
+              {isAdmin && (
+                <SheetSection label="Assignee">
+                  <MultiCheck options={assigneeOptions} value={assigneeF} onChange={(v) => { setAssigneeF(v); setPage(0); }} />
+                </SheetSection>
+              )}
+            </>
+          }
+        />
 
         <Card className="!p-0 md:flex md:flex-col md:min-h-0">
           <div className="md:min-h-0 overflow-y-auto max-h-[560px] md:max-h-none flex-1">
@@ -132,6 +157,7 @@ export default function StoneLeadsPage() {
         </Card>
         <Pagination page={page} totalPages={totalPages} onPageChange={setPage} perPage={PAGE_SIZE} totalItems={filtered.length} />
       </div>
+      <MobileFab href="/stone-leads/create" label="New order" />
     </>
   );
 }

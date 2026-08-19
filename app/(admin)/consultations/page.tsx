@@ -3,7 +3,7 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
 import {
   PageHeader, Card, Chip, Tabs, GoldBtn, Pagination,
-  Tooltip, ToolbarSearch, ExportBtn, downloadXLS, downloadPDF, InlineFilter, MultiCheck, SortMenu, DateRangePanel, EmptyState, TableSkeleton, MobileListCard, Monogram, MobileAgenda } from "@/components/ui";
+  Tooltip, ToolbarSearch, ExportBtn, downloadXLS, downloadPDF, InlineFilter, MultiCheck, SortMenu, DateRangePanel, EmptyState, TableSkeleton, MobileListCard, Monogram, MobileAgenda, MobileToolbar, SheetSection, MobileFab } from "@/components/ui";
 
 const C_ICONS = {
   expert: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className="w-3.5 h-3.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>,
@@ -155,6 +155,7 @@ export default function ConsultationsPage() {
   const paginated = filtered.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE);
 
   const hasActiveFilters = !!filterCustomer || filterExpert.length > 0 || filterStatus.length > 0 || !!filterDateFrom || !!filterDateTo;
+  const activeFilterCount = [filterCustomer, filterExpert.length > 0 ? "1" : "", filterStatus.length > 0 ? "1" : "", filterDateFrom || filterDateTo].filter(Boolean).length;
   const tabCounts: Record<string, number> = {
     all: MOCK_CONSULTATIONS.length,
     reschedule: MOCK_CONSULTATIONS.filter(c => matchesStatus(c, "reschedule")).length,
@@ -249,7 +250,7 @@ export default function ConsultationsPage() {
         action={
           <div className="flex items-center gap-2.5">
             <ExportBtn onExport={handleExport} dateLabel="Select consultation date range" />
-            <Link href="/consultations/create"><GoldBtn>+ New consultation</GoldBtn></Link>
+            <span className="hidden sm:block"><Link href="/consultations/create"><GoldBtn>+ New consultation</GoldBtn></Link></span>
           </div>
         }
       />
@@ -287,8 +288,34 @@ export default function ConsultationsPage() {
           )}
         </div>
 
+        {/* Mobile: single collapsed toolbar row (filters sheet + expanding search + sort) */}
+        {viewMode === "list" && (
+          <MobileToolbar
+            className="sm:hidden pt-3"
+            filterCount={activeFilterCount}
+            onClearAll={() => { setFilterCustomer(""); setFilterExpert([]); setFilterStatus([]); setFilterDateFrom(""); setFilterDateTo(""); setPage(1); }}
+            search={search}
+            onSearch={setSearch}
+            searchPlaceholder="Search customer, expert, ID…"
+            sort={<SortMenu value={sort} onChange={(v) => { setSort(v as SortKey); setPage(1); }} options={C_SORT_OPTIONS} />}
+            filters={
+              <>
+                <SheetSection label="Expert">
+                  <MultiCheck options={uniqueExperts.map((e) => ({ value: e, label: e }))} value={filterExpert} onChange={setFilterExpert} onAfter={() => setPage(1)} />
+                </SheetSection>
+                <SheetSection label="Status">
+                  <MultiCheck options={Object.entries(STATUS_FILTER_LABEL).map(([k, v]) => ({ value: k, label: v }))} value={filterStatus} onChange={setFilterStatus} onAfter={() => setPage(1)} />
+                </SheetSection>
+                <SheetSection label="Date">
+                  <DateRangePanel from={filterDateFrom} to={filterDateTo} onChange={(f, t) => { setFilterDateFrom(f); setFilterDateTo(t); setPage(1); }} />
+                </SheetSection>
+              </>
+            }
+          />
+        )}
+
         {/* Filter strip — filters left, search + sort right */}
-        <div className="flex flex-wrap items-center gap-2 pt-4" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+        <div className="hidden sm:flex flex-wrap items-center gap-2 pt-4" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
           <div className="flex flex-wrap items-center gap-2">
             <InlineFilter label="Expert" icon={C_ICONS.expert} count={filterExpert.length} width={240}>
               <MultiCheck options={uniqueExperts.map((e) => ({ value: e, label: e }))} value={filterExpert} onChange={setFilterExpert} onAfter={() => setPage(1)} />
@@ -725,6 +752,7 @@ export default function ConsultationsPage() {
         );
       })()}
       </div>
+      <MobileFab href="/consultations/create" label="Book" />
     </>
   );
 }

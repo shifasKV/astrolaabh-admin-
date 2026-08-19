@@ -2,7 +2,7 @@
 import { Suspense, useState, useMemo, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { PageHeader, Card, Chip, Modal, Input, GoldBtn, GhostBtn, ShopifyIcon, ShopifyButton, SHOPIFY_GREEN_DARK, SHOPIFY_TINT, SHOPIFY_BORDER, Pagination, ToolbarSearch, InlineFilter, MultiCheck, SortMenu, EmptyState, TableSkeleton, Toast, MobileListCard, Monogram } from "@/components/ui";
+import { PageHeader, Card, Chip, Modal, Input, GoldBtn, GhostBtn, ShopifyIcon, ShopifyButton, SHOPIFY_GREEN_DARK, SHOPIFY_TINT, SHOPIFY_BORDER, Pagination, ToolbarSearch, InlineFilter, MultiCheck, SortMenu, EmptyState, TableSkeleton, Toast, MobileListCard, Monogram, MobileToolbar, SheetSection } from "@/components/ui";
 
 const INV_ICONS = {
   stone: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className="w-3.5 h-3.5"><path d="M12 2 2 7l10 5 10-5-10-5ZM2 17l10 5 10-5M2 12l10 5 10-5" /></svg>,
@@ -442,7 +442,75 @@ function InventoryPageInner() {
           className="sticky top-0 z-30 -mx-5 md:-mx-10 px-5 md:px-10 pt-1 pb-1 mb-1"
           style={{ background: "transparent" }}
         >
-          <div className="flex flex-wrap items-center gap-2">
+          {/* Mobile: single collapsed toolbar row (filters sheet + expanding search + sort) */}
+          {tab === "stones" ? (
+            <MobileToolbar
+              className="sm:hidden"
+              filterCount={stoneFilterCount}
+              onClearAll={clearStoneFilters}
+              search={search}
+              onSearch={(v) => { setSearch(v); setStonePage(1); setDesignPage(1); }}
+              searchPlaceholder="Search SKU, gemstone…"
+              sort={
+                <SortMenu
+                  value={stoneSort}
+                  onChange={(v) => { setStoneSort(v); setStonePage(1); }}
+                  options={[
+                    { value: "", label: "Featured" },
+                    { value: "price_asc", label: "Price low to high" },
+                    { value: "price_desc", label: "Price high to low" },
+                    { value: "ratti_asc", label: "Weight low to high" },
+                    { value: "ratti_desc", label: "Weight high to low" },
+                  ]}
+                />
+              }
+              filters={
+                <>
+                  <SheetSection label="Stone type">
+                    <MultiCheck options={STONE_TYPES.filter((o) => o.value)} value={stoneType} onChange={setStoneType} onAfter={() => setStonePage(1)} />
+                  </SheetSection>
+                  <SheetSection label="Colour">
+                    <MultiCheck options={COLOR_OPTIONS.filter((o) => o.value)} value={color} onChange={setColor} onAfter={() => setStonePage(1)} />
+                  </SheetSection>
+                  <SheetSection label="Zodiac">
+                    <MultiCheck options={ZODIAC_OPTIONS.filter((o) => o.value)} value={zodiac} onChange={setZodiac} onAfter={() => setStonePage(1)} />
+                  </SheetSection>
+                </>
+              }
+            />
+          ) : (
+            <MobileToolbar
+              className="sm:hidden"
+              filterCount={designFilterCount}
+              onClearAll={clearDesignFilters}
+              search={search}
+              onSearch={(v) => { setSearch(v); setStonePage(1); setDesignPage(1); }}
+              searchPlaceholder="Search design name…"
+              sort={
+                <SortMenu
+                  value={designSort}
+                  onChange={(v) => { setDesignSort(v); setDesignPage(1); }}
+                  options={[
+                    { value: "", label: "Featured" },
+                    { value: "name_asc", label: "Name A to Z" },
+                    { value: "stock_asc", label: "Stock low to high" },
+                    { value: "stock_desc", label: "Stock high to low" },
+                  ]}
+                />
+              }
+              filters={
+                <>
+                  <SheetSection label="Design type">
+                    <MultiCheck options={FORM_OPTIONS.filter((o) => o.value)} value={form} onChange={setForm} onAfter={() => setDesignPage(1)} />
+                  </SheetSection>
+                  <SheetSection label="Metal">
+                    <MultiCheck options={METAL_OPTIONS.filter((o) => o.value)} value={metal} onChange={setMetal} onAfter={() => setDesignPage(1)} />
+                  </SheetSection>
+                </>
+              }
+            />
+          )}
+          <div className="hidden sm:flex flex-wrap items-center gap-2">
             {/* Filters — open inline pills */}
             <div className="flex flex-wrap items-center gap-2">
               {tab === "stones" ? (

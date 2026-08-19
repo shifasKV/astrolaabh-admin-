@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { PageHeader, Card, Chip, StatCard, GoldBtn, ToolbarSearch, SortMenu, InlineFilter, MultiCheck, EmptyState, TableSkeleton, MobileListCard, Monogram } from "@/components/ui";
+import { PageHeader, Card, Chip, StatCard, GoldBtn, ToolbarSearch, SortMenu, InlineFilter, MultiCheck, EmptyState, TableSkeleton, MobileListCard, Monogram, MobileToolbar, SheetSection, MobileFab } from "@/components/ui";
 
 const STATUS_ICON = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className="w-3.5 h-3.5"><circle cx="12" cy="12" r="10" /><path d="m9 12 2 2 4-4" /></svg>;
 const STATUS_OPTIONS = [{ value: "active", label: "Active" }, { value: "deactivated", label: "Deactivated" }];
@@ -53,7 +53,7 @@ export default function AstroGemologistsPage() {
       <div className="md:h-[calc(100dvh-78px)] md:flex md:flex-col md:min-h-0">
       <PageHeader
         title="Astro-Gemologists"
-        action={<GoldBtn onClick={() => router.push("/astro-gemologists/create")}>+ New Astro-Gemologist</GoldBtn>}
+        action={<span className="hidden sm:block"><GoldBtn onClick={() => router.push("/astro-gemologists/create")}>+ New Astro-Gemologist</GoldBtn></span>}
       />
 
 
@@ -66,8 +66,24 @@ export default function AstroGemologistsPage() {
         <StatCard label="Recommendations" value={totalRecommendations} onClick={() => router.push(`/astro-gemologists/${EXPERT_PROFILES[0]?.id}/recommendations`)} />
       </div>
 
+      {/* Mobile: single collapsed toolbar row (filters sheet + expanding search + sort) */}
+      <MobileToolbar
+        className="sm:hidden mb-1"
+        filterCount={filterStatus.length}
+        onClearAll={() => setFilterStatus([])}
+        search={search}
+        onSearch={setSearch}
+        searchPlaceholder="Search name, specialization…"
+        sort={<SortMenu value={sort} onChange={setSort} options={NAME_SORT} />}
+        filters={
+          <SheetSection label="Status">
+            <MultiCheck options={STATUS_OPTIONS} value={filterStatus} onChange={setFilterStatus} />
+          </SheetSection>
+        }
+      />
+
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-2 mb-4">
+      <div className="hidden sm:flex flex-wrap items-center gap-2 mb-4">
         <InlineFilter label="Status" icon={STATUS_ICON} count={filterStatus.length} width={200}>
           <MultiCheck options={STATUS_OPTIONS} value={filterStatus} onChange={setFilterStatus} />
         </InlineFilter>
@@ -169,6 +185,7 @@ export default function AstroGemologistsPage() {
         )}
       </Card>
       </div>
+      <MobileFab href="/astro-gemologists/create" label="Add" />
     </>
   );
 }

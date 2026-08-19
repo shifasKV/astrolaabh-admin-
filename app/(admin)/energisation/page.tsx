@@ -3,7 +3,7 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
 import {
   PageHeader, Card, Chip, Tabs, Pagination,
-  Tooltip, ToolbarSearch, ExportBtn, downloadXLS, downloadPDF, InlineFilter, MultiCheck, SortMenu, DateRangePanel, EmptyState, TableSkeleton, MobileListCard, Monogram, MobileAgenda } from "@/components/ui";
+  Tooltip, ToolbarSearch, ExportBtn, downloadXLS, downloadPDF, InlineFilter, MultiCheck, SortMenu, DateRangePanel, EmptyState, TableSkeleton, MobileListCard, Monogram, MobileAgenda, MobileToolbar, SheetSection } from "@/components/ui";
 
 const E_ICONS = {
   expert: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className="w-3.5 h-3.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>,
@@ -201,13 +201,15 @@ export default function EnergisationPage() {
         className="sticky top-0 z-30 -mx-5 md:-mx-10 px-5 md:px-10 pt-1 pb-1 mb-1"
         style={{ background: "transparent" }}
       >
-        {/* Tabs row + view toggle */}
-        <div className="flex flex-wrap items-center gap-2 pb-2.5">
+        {/* Tabs row + view toggle — single line on mobile, tabs scroll */}
+        <div className="flex flex-nowrap sm:flex-wrap items-center gap-2 pb-2.5">
+          <div className="min-w-0 flex-1 sm:flex-initial overflow-x-auto no-scrollbar">
           <Tabs
             tabs={TABS.map((t) => ({ ...t, count: tabCounts[t.key] ?? 0 }))}
             active={tab}
             onChange={(k) => { setTab(k); setPage(1); }}
           />
+          </div>
           {tab === "all" && (
             <div className="ml-auto inline-flex items-center gap-1 p-1 rounded-full shrink-0" style={{ background: "rgba(89,82,54,0.07)", border: `1px solid ${T.borderSoft}` }}>
               {(["list", "calendar"] as const).map((mode) => (
@@ -227,8 +229,34 @@ export default function EnergisationPage() {
           )}
         </div>
 
-        {/* Filter strip — filters left, search + sort right */}
-        <div className="flex flex-wrap items-center gap-2 pt-4" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+        {/* Mobile: single collapsed toolbar row (filters sheet + expanding search + sort) */}
+        {viewMode === "list" && (
+          <MobileToolbar
+            className="sm:hidden pt-3"
+            filterCount={activeFilterCount}
+            onClearAll={() => { setFilterCustomer(""); setFilterStatus([]); setFilterExpert([]); setFilterDateFrom(""); setFilterDateTo(""); setPage(1); }}
+            search={search}
+            onSearch={(v) => { setSearch(v); setPage(1); }}
+            searchPlaceholder="Search customer, order, stone…"
+            sort={<SortMenu value={sort} onChange={(val) => { setSort(val as SortKey); setPage(1); }} options={E_SORT_OPTIONS} />}
+            filters={
+              <>
+                <SheetSection label="Expert">
+                  <MultiCheck options={uniqueExperts.map((e) => ({ value: e, label: e }))} value={filterExpert} onChange={setFilterExpert} onAfter={() => setPage(1)} />
+                </SheetSection>
+                <SheetSection label="Status">
+                  <MultiCheck options={Object.entries(STATUS_FILTER_LABEL).map(([k, v]) => ({ value: k, label: v }))} value={filterStatus} onChange={setFilterStatus} onAfter={() => setPage(1)} />
+                </SheetSection>
+                <SheetSection label="Scheduled between">
+                  <DateRangePanel from={filterDateFrom} to={filterDateTo} onChange={(f, t) => { setFilterDateFrom(f); setFilterDateTo(t); setPage(1); }} />
+                </SheetSection>
+              </>
+            }
+          />
+        )}
+
+        {/* Filter strip — filters left, search + sort right (desktop) */}
+        <div className="hidden sm:flex flex-wrap items-center gap-2 pt-4" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
           <div className="flex flex-wrap items-center gap-2">
             {viewMode === "list" && (
               <>

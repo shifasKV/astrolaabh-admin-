@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { PageHeader, Card, Chip, GoldBtn, EmptyState, TableSkeleton, MobileListCard } from "@/components/ui";
+import { PageHeader, Card, Chip, GoldBtn, EmptyState, TableSkeleton, MobileListCard, MobileFab } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { useSimulatedLoad } from "@/lib/useSimulatedLoad";
 import { MOCK_AFFILIATE_LINKS, MOCK_REFERRAL_EVENTS, MOCK_AFFILIATES } from "@/lib/mock";
@@ -55,7 +55,7 @@ export default function LinksPage() {
             </span>
           </span>
         }
-        action={<GoldBtn onClick={() => router.push("/links/create")}>+ New link</GoldBtn>}
+        action={<span className="hidden sm:block"><GoldBtn onClick={() => router.push("/links/create")}>+ New link</GoldBtn></span>}
       />
 
       <Card className="!p-0">
@@ -149,6 +149,7 @@ export default function LinksPage() {
         )}
         </>}
       </Card>
+      <MobileFab href="/links/create" label="New link" />
     </>
   );
 }

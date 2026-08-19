@@ -1,6 +1,6 @@
 "use client";
 import { useState, useMemo } from "react";
-import { PageHeader, Card, Chip, Tabs, ToolbarSearch, FiltersPopover, FilterField, SortMenu, Select, Pagination, TableSkeleton, MobileListCard, Monogram } from "@/components/ui";
+import { PageHeader, Card, Chip, Tabs, ToolbarSearch, FiltersPopover, FilterField, SortMenu, Select, Pagination, TableSkeleton, MobileListCard, Monogram, MobileToolbar, SheetSection } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { useSimulatedLoad } from "@/lib/useSimulatedLoad";
 import { MOCK_REFERRAL_EVENTS } from "@/lib/mock";
@@ -99,7 +99,22 @@ export default function ReferralsPage() {
         />
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 mb-4">
+      <MobileToolbar
+        className="sm:hidden mb-3"
+        filterCount={statusFilter ? 1 : 0}
+        onClearAll={() => { setStatusFilter(""); setPage(0); }}
+        search={search}
+        onSearch={(v) => { setSearch(v); setPage(0); }}
+        searchPlaceholder="Search customer, campaign…"
+        sort={<SortMenu value={sort} onChange={(v) => { setSort(v as SortKey); setPage(0); }} options={orderSortOptions} />}
+        filters={
+          <SheetSection label="Status">
+            <Select value={statusFilter} onChange={(v) => { setStatusFilter(v); setPage(0); }} compact placeholder="All status" options={[{ value: "", label: "All status" }, { value: "paid", label: "Paid" }, { value: "pending", label: "Pending" }, { value: "approved", label: "Approved" }]} />
+          </SheetSection>
+        }
+      />
+
+      <div className="hidden sm:flex flex-wrap items-center gap-2 mb-4">
         <FiltersPopover align="left" count={statusFilter ? 1 : 0} open={showFilters} onToggle={() => setShowFilters(!showFilters)}>
           <FilterField label="Status">
             <Select value={statusFilter} onChange={(v) => { setStatusFilter(v); setPage(0); }} compact placeholder="All status" options={[{ value: "", label: "All status" }, { value: "paid", label: "Paid" }, { value: "pending", label: "Pending" }, { value: "approved", label: "Approved" }]} />

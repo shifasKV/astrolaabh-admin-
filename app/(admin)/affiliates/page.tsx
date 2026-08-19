@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { PageHeader, Card, StatCard, Chip, GoldBtn, ToolbarSearch, SortMenu, InlineFilter, MultiCheck, EmptyState, TableSkeleton, MobileListCard, Monogram } from "@/components/ui";
+import { PageHeader, Card, StatCard, Chip, GoldBtn, ToolbarSearch, SortMenu, InlineFilter, MultiCheck, EmptyState, TableSkeleton, MobileListCard, Monogram, MobileToolbar, SheetSection, MobileFab } from "@/components/ui";
 
 const STATUS_ICON = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className="w-3.5 h-3.5"><circle cx="12" cy="12" r="10" /><path d="m9 12 2 2 4-4" /></svg>;
 const AFF_STATUS_OPTIONS = [{ value: "active", label: "Active" }, { value: "under_review", label: "Under review" }, { value: "deactivated", label: "Deactivated" }];
@@ -63,7 +63,7 @@ export default function AffiliatesPage() {
       <div className="md:h-[calc(100dvh-78px)] md:flex md:flex-col md:min-h-0">
       <PageHeader
         title="Affiliate operations"
-        action={<GoldBtn onClick={() => router.push("/affiliates/create")}>+ New Affiliate</GoldBtn>}
+        action={<span className="hidden sm:block"><GoldBtn onClick={() => router.push("/affiliates/create")}>+ New Affiliate</GoldBtn></span>}
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
@@ -95,7 +95,23 @@ export default function AffiliatesPage() {
         <StatCard label="Referred purchases" value={totalPurchases} />
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 mb-4">
+      {/* Mobile: single collapsed toolbar row (filters sheet + expanding search + sort) */}
+      <MobileToolbar
+        className="sm:hidden mb-1"
+        filterCount={filterStatusToolbar.length}
+        onClearAll={() => setFilterStatusToolbar([])}
+        search={search}
+        onSearch={setSearch}
+        searchPlaceholder="Search name, code, email…"
+        sort={<SortMenu value={sort} onChange={setSort} options={NAME_SORT} />}
+        filters={
+          <SheetSection label="Status">
+            <MultiCheck options={AFF_STATUS_OPTIONS} value={filterStatusToolbar} onChange={setFilterStatusToolbar} />
+          </SheetSection>
+        }
+      />
+
+      <div className="hidden sm:flex flex-wrap items-center gap-2 mb-4">
         <InlineFilter label="Status" icon={STATUS_ICON} count={filterStatusToolbar.length} width={210}>
           <MultiCheck options={AFF_STATUS_OPTIONS} value={filterStatusToolbar} onChange={setFilterStatusToolbar} />
         </InlineFilter>
@@ -198,6 +214,7 @@ export default function AffiliatesPage() {
         )}
       </Card>
       </div>
+      <MobileFab href="/affiliates/create" label="Add" />
     </>
   );
 }
