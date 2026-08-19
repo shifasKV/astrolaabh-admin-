@@ -227,7 +227,7 @@ export default function OrdersPage() {
       <PageHeader
         title="Orders & fulfilment"
         action={
-          <div className="flex items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-2.5">
             <ExportBtn onExport={handleExport} />
             <ShopifyButton href="https://admin.shopify.com/orders">Open Shopify</ShopifyButton>
             <Link href="/orders/create"><GoldBtn>+ Create order</GoldBtn></Link>

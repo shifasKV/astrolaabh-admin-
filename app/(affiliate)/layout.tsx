@@ -2,7 +2,7 @@
 import { useEffect, useMemo } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/lib/store/auth";
-import { Sidebar, TopBar, useSidebar, CommandPalette } from "@/components/ui";
+import { Sidebar, TopBar, MobileTabBar, useSidebar, CommandPalette } from "@/components/ui";
 import { AFFILIATE_NAV } from "@/lib/nav";
 import { usePersistentState } from "@/lib/usePersistentState";
 import { T } from "@/lib/theme";
@@ -65,7 +65,7 @@ export default function AffiliateLayout({ children }: { children: React.ReactNod
         className={`min-w-0 min-h-dvh md:min-h-0 md:h-full md:overflow-y-auto md:rounded-[20px] transition-[margin-left] duration-300 ${collapsed ? "md:ml-[76px]" : "md:ml-[280px]"}`}
         style={{ backgroundColor: T.bg, backgroundImage: "linear-gradient(rgba(248,245,238,0.22), rgba(248,245,238,0.22)), url(/pattern/damask.png)", backgroundSize: "cover", backgroundRepeat: "no-repeat", backgroundPosition: "center", boxShadow: "0 0 0 1px rgba(244,241,229,0.07), 0 24px 60px -30px rgba(0,0,0,0.5)" }}
       >
-        <div className="px-5 md:px-10 py-7 max-w-[1400px] mx-auto">
+        <div className="px-5 md:px-10 pt-7 pb-[84px] md:pb-7 max-w-[1400px] mx-auto">
           {pending && (
             <div className="flex flex-wrap items-start gap-3 rounded-[14px] px-4 py-3.5 mb-6" style={{ background: "linear-gradient(180deg, rgba(200,150,50,0.16), rgba(200,150,50,0.08))", border: "1px solid rgba(184,138,62,0.42)", borderLeft: "3px solid #b08a3e" }}>
               <span className="w-8 h-8 rounded-[10px] flex items-center justify-center shrink-0" style={{ background: "rgba(160,125,56,0.16)", color: "#8a6a2f" }}>
@@ -93,6 +93,7 @@ export default function AffiliateLayout({ children }: { children: React.ReactNod
           {children}
         </div>
       </main>
+      <MobileTabBar groups={navForState} userLabel={user.name} onSignOut={() => { logout(); router.push("/"); }} />
       <CommandPalette groups={navForState} indexRecords={false} />
 
       {/* Prototype controller — flip between the pending and approved states */}

@@ -213,7 +213,7 @@ export function ExportBtn({ onExport, dateLabel }: { onExport: (opts: ExportOpti
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
           <div
-            className="absolute right-0 top-full mt-1.5 z-50 w-[540px] rounded-[16px] p-4"
+            className="absolute right-0 top-full mt-1.5 z-50 w-[min(540px,calc(100vw-2rem))] rounded-[16px] p-4"
             style={{ background: T.popover, border: `1px solid ${T.border}`, boxShadow: `${T.shadowLift}, inset 0 0 0 1px rgba(160,125,56,0.16)` }}
           >
             <div className="flex items-center gap-2 pb-3 mb-3" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
@@ -516,7 +516,7 @@ export function InlineFilter({ label, icon, count, width = 232, children }: { la
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 top-full mt-1.5 z-50 rounded-[14px] p-3" style={{ width, background: T.popover, border: `1px solid ${T.border}`, boxShadow: `${T.shadowLift}, inset 0 0 0 1px rgba(160,125,56,0.16)` }}>
+          <div className="absolute left-0 top-full mt-1.5 z-50 rounded-[14px] p-3 max-w-[calc(100vw-2rem)]" style={{ width, background: T.popover, border: `1px solid ${T.border}`, boxShadow: `${T.shadowLift}, inset 0 0 0 1px rgba(160,125,56,0.16)` }}>
             {children}
           </div>
         </>

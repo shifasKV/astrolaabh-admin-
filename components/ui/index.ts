@@ -19,6 +19,7 @@ export { PageHeader } from "./PageHeader";
 export { Sidebar } from "./Sidebar";
 export type { NavGroup, NavItem } from "./Sidebar";
 export { TopBar } from "./TopBar";
+export { MobileTabBar } from "./MobileTabBar";
 export { NotificationItem } from "./Notification";
 export { SectionLink } from "./SectionLink";
 export { Pagination } from "./Pagination";

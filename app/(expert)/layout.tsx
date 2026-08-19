@@ -2,7 +2,7 @@
 import { useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/store/auth";
-import { Sidebar, TopBar, useSidebar, CommandPalette } from "@/components/ui";
+import { Sidebar, TopBar, MobileTabBar, useSidebar, CommandPalette } from "@/components/ui";
 import { EXPERT_NAV } from "@/lib/nav";
 import { getExpertNotifications } from "@/lib/expertNotifications";
 import { T } from "@/lib/theme";
@@ -53,10 +53,11 @@ export default function ExpertLayout({ children }: { children: React.ReactNode }
         className={`min-w-0 min-h-dvh md:min-h-0 md:h-full md:overflow-y-auto md:rounded-[20px] transition-[margin-left] duration-300 ${collapsed ? "md:ml-[76px]" : "md:ml-[280px]"}`}
         style={{ backgroundColor: T.bg, backgroundImage: "linear-gradient(rgba(248,245,238,0.22), rgba(248,245,238,0.22)), url(/pattern/damask.png)", backgroundSize: "cover", backgroundRepeat: "no-repeat", backgroundPosition: "center", boxShadow: "0 0 0 1px rgba(244,241,229,0.07), 0 24px 60px -30px rgba(0,0,0,0.5)" }}
       >
-        <div className="px-5 md:px-10 py-7 max-w-[1400px] mx-auto">
+        <div className="px-5 md:px-10 pt-7 pb-[84px] md:pb-7 max-w-[1400px] mx-auto">
           {children}
         </div>
       </main>
+      <MobileTabBar groups={navWithBadge} userLabel={user.name} onSignOut={() => { logout(); router.push("/"); }} />
       <CommandPalette groups={EXPERT_NAV} indexRecords={false} />
     </div>
   );
