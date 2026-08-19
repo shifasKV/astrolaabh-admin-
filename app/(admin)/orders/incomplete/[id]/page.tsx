@@ -106,7 +106,7 @@ export default function IncompleteOrderDetailPage({ params }: { params: Promise<
 
       {/* Header */}
       <Card className="mb-5">
-        <div className="flex items-center justify-between gap-4 mb-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
           <div className="min-w-0">
             <div className="flex items-center gap-2.5 flex-wrap">
               <Link href={`/customers/${order.customerId}`} className="text-[18px] font-semibold hover:underline" style={{ color: T.text }}>{order.customerName}</Link>
@@ -116,7 +116,7 @@ export default function IncompleteOrderDetailPage({ params }: { params: Promise<
               <a href={`mailto:${order.customerEmail}`} className="text-[13px] hover:underline" style={{ color: T.accent }}>{order.customerEmail}</a>
             </div>
           </div>
-          <Link href="/orders/create" className="shrink-0">
+          <Link href={`/orders/create?customerId=${order.customerId}&sku=${encodeURIComponent(order.itemSku)}`} className="shrink-0">
             <GoldBtn>Create order</GoldBtn>
           </Link>
         </div>
@@ -191,7 +191,7 @@ export default function IncompleteOrderDetailPage({ params }: { params: Promise<
               <span className="text-[18px] font-semibold tabular-nums" style={{ color: T.text }}>{inr(order.amount)}</span>
               <Link href={`/inventory?q=${encodeURIComponent(order.itemSku)}`} className="text-[12px] font-medium hover:underline" style={{ color: T.accent }}>Inventory ↗</Link>
             </div>
-            <Link href="/orders/create" className="block mt-3"><GoldBtn className="w-full">Create order for customer</GoldBtn></Link>
+            <Link href={`/orders/create?customerId=${order.customerId}&sku=${encodeURIComponent(order.itemSku)}`} className="block mt-3"><GoldBtn className="w-full">Create order for customer</GoldBtn></Link>
           </Card>
         </aside>
       </div>

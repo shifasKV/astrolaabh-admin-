@@ -107,7 +107,7 @@ export default function IncompleteConsultationDetailPage({ params }: { params: P
 
       {/* Header */}
       <Card className="mb-5">
-        <div className="flex items-center justify-between gap-4 mb-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
           <div className="min-w-0">
             <div className="flex items-center gap-2.5 flex-wrap">
               <Link href={`/customers/${consultation.customerId}`} className="text-[18px] font-semibold hover:underline" style={{ color: T.text }}>{consultation.customerName}</Link>
@@ -117,7 +117,7 @@ export default function IncompleteConsultationDetailPage({ params }: { params: P
               <a href={`mailto:${consultation.customerEmail}`} className="text-[13px] hover:underline" style={{ color: T.accent }}>{consultation.customerEmail}</a>
             </div>
           </div>
-          <Link href="/consultations/create" className="shrink-0">
+          <Link href={`/consultations/create?customerId=${consultation.customerId}&expertId=${consultation.expertId}`} className="shrink-0">
             <GoldBtn>Book consultation</GoldBtn>
           </Link>
         </div>
@@ -191,7 +191,7 @@ export default function IncompleteConsultationDetailPage({ params }: { params: P
               <div className="flex justify-between gap-3"><span style={{ color: T.faint }}>Type</span><span className="text-right font-medium" style={{ color: T.text }}>{consultation.consultationType}</span></div>
               <div className="flex justify-between gap-3"><span style={{ color: T.faint }}>Requested</span><span className="text-right font-medium" style={{ color: T.text }}>{fmtDate(consultation.date)}</span></div>
             </div>
-            <Link href="/consultations/create" className="block mt-4"><GoldBtn className="w-full">Book consultation</GoldBtn></Link>
+            <Link href={`/consultations/create?customerId=${consultation.customerId}&expertId=${consultation.expertId}`} className="block mt-4"><GoldBtn className="w-full">Book consultation</GoldBtn></Link>
           </Card>
         </aside>
       </div>

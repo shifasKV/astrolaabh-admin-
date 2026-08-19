@@ -3,7 +3,7 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
 import {
   PageHeader, Card, Chip, Tabs, GoldBtn, Pagination,
-  Tooltip, ToolbarSearch, ExportBtn, downloadXLS, downloadPDF, InlineFilter, MultiCheck, SortMenu, DateRangePanel, EmptyState, TableSkeleton, MobileListCard, Monogram } from "@/components/ui";
+  Tooltip, ToolbarSearch, ExportBtn, downloadXLS, downloadPDF, InlineFilter, MultiCheck, SortMenu, DateRangePanel, EmptyState, TableSkeleton, MobileListCard, Monogram, MobileAgenda } from "@/components/ui";
 
 const C_ICONS = {
   expert: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className="w-3.5 h-3.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>,
@@ -445,8 +445,24 @@ export default function ConsultationsPage() {
         const selISO = toISODate(calWeekBase);
         return (
           <div className="flex items-start gap-4 md:flex-1 md:min-h-0">
-            {/* Main timeline */}
-            <div className="flex-1 min-w-0 h-full flex flex-col">
+            {/* ——— Mobile: Apple-style infinite agenda ——— */}
+            <Card className="md:hidden !p-0 overflow-hidden w-full">
+              <MobileAgenda
+                className=""
+                events={MOCK_CONSULTATIONS.filter((c) => c.scheduledAt).map((c) => ({
+                  id: c.id,
+                  dateISO: c.scheduledAt.slice(0, 10),
+                  timeLabel: new Date(c.scheduledAt).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true }),
+                  title: c.customerName,
+                  sub: `${c.expertName} · ${c.type.replace(/_/g, " ").replace(/^./, (ch) => ch.toUpperCase())}`,
+                  color: eventTone(c),
+                  href: `/consultations/${c.id}`,
+                }))}
+              />
+            </Card>
+
+            {/* Main timeline (desktop) */}
+            <div className="flex-1 min-w-0 h-full hidden md:flex flex-col">
               <div className="flex flex-wrap items-end justify-between gap-3 mb-3">
                 <div>
                   <h2 className="font-title text-[26px] leading-tight tracking-[-0.02em]">

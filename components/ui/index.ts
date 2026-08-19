@@ -21,6 +21,8 @@ export type { NavGroup, NavItem } from "./Sidebar";
 export { TopBar } from "./TopBar";
 export { MobileTabBar } from "./MobileTabBar";
 export { MobileListCard, Monogram, timeAgo } from "./MobileListCard";
+export { MobileAgenda } from "./MobileAgenda";
+export type { AgendaEvent } from "./MobileAgenda";
 export type { MobileFact, MobileStatus } from "./MobileListCard";
 export { NotificationItem } from "./Notification";
 export { SectionLink } from "./SectionLink";

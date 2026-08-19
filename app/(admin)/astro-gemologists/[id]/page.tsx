@@ -2,7 +2,7 @@
 import { useCallback, useMemo, useState, useRef, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Card, Chip, StatCard, GhostBtn, GoldBtn, SectionLink, BackLink, Tabs, Tooltip, Pagination, Select, Modal, Input, ToolbarSearch, FiltersPopover, FilterField, FilterChip, DateRangeFields, EmptyState, Toast, ConfirmDialog } from "@/components/ui";
+import { Card, Chip, StatCard, GhostBtn, GoldBtn, SectionLink, BackLink, Tabs, Tooltip, Pagination, Select, Modal, Input, ToolbarSearch, FiltersPopover, FilterField, FilterChip, DateRangeFields, EmptyState, Toast, ConfirmDialog, MobileAgenda } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { usePersistentState } from "@/lib/usePersistentState";
 import { EXPERT_PROFILES, EXPERT_AVAILABILITY, MOCK_CONSULTATIONS, MOCK_STONE_RECOMMENDATIONS, MOCK_ORDERS, MOCK_PAYMENTS } from "@/lib/mock";
@@ -630,8 +630,24 @@ export default function AstroGemologistDetailPage() {
             const selISO = toISODate(calWeekBase);
             return (
               <div className="flex items-start gap-4 md:flex-1 md:min-h-0">
-                {/* Main timeline */}
-                <div className="flex-1 min-w-0 h-full flex flex-col">
+                {/* ——— Mobile: Apple-style infinite agenda ——— */}
+                <Card className="md:hidden !p-0 overflow-hidden w-full">
+                  <MobileAgenda
+                    className=""
+                    events={consultations.filter((c) => c.scheduledAt).map((c) => ({
+                      id: c.id,
+                      dateISO: c.scheduledAt.slice(0, 10),
+                      timeLabel: new Date(c.scheduledAt).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true }),
+                      title: c.customerName,
+                      sub: c.type.replace(/_/g, " ").replace(/^./, (ch) => ch.toUpperCase()),
+                      color: eventTone(c),
+                      href: `/consultations/${c.id}`,
+                    }))}
+                  />
+                </Card>
+
+                {/* Main timeline (desktop) */}
+                <div className="flex-1 min-w-0 h-full hidden md:flex flex-col">
                   <div className="flex flex-wrap items-end justify-between gap-3 mb-3">
                     <div className="flex items-center gap-2">
                       <div className="inline-flex rounded-[9px] overflow-hidden" style={{ border: `1px solid ${T.border}`, background: T.bg }}>

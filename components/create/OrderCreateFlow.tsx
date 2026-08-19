@@ -107,7 +107,7 @@ export function OrderCreateFlow({ headerTitle = "Create order", submitLabel, suc
 
   // Stone
   const [stoneQuery, setStoneQuery] = useState("");
-  const [stoneSku, setStoneSku] = useState("");
+  const [stoneSku, setStoneSku] = useState(() => (prefill?.stoneSku && STONES.some((s) => s.sku === prefill.stoneSku) ? prefill.stoneSku : ""));
   const [customStone, setCustomStone] = useState<CustomStone | null>(null);
   const [stoneModalOpen, setStoneModalOpen] = useState(false);
   const [draftStone, setDraftStone] = useState<CustomStone>({ gem: "pukhraj", gemName: "Pukhraj", english: "Yellow Sapphire", ratti: "", carat: "", origin: "", shade: "", shadeHex: SHADE_SWATCHES[0], treatment: "Natural · Unheated", price: "" });
