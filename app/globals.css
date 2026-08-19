@@ -72,15 +72,18 @@ html, body {
 h1, h2, h3 { text-wrap: balance; }
 .tabular-nums, [class*="tabular"] { font-variant-numeric: tabular-nums; }
 
-/* Sage focus ring — visible for keyboard users, in the house's primary tone */
+/* Sage focus ring — visible for keyboard users, in the house's primary tone.
+   No border-radius here: the outline already follows each element's own corners,
+   and setting it would reshape the focused element. */
 :focus-visible {
   outline: 2px solid rgba(119, 123, 98, 0.6);
   outline-offset: 2px;
-  border-radius: 6px;
 }
 
 /* Text fields carry their own soft focus treatment (inner sage shadow / border),
-   so skip the offset outline box — it reads as a stray stroke around the field. */
+   so skip the offset outline box — it reads as a stray stroke around the field.
+   Do NOT touch border-radius: `inherit` would pull the parent's square corners
+   onto the field and make its rounded corners snap sharp on focus. */
 input:focus,
 input:focus-visible,
 textarea:focus,
@@ -89,7 +92,6 @@ select:focus,
 select:focus-visible {
   outline: none;
   outline-offset: 0;
-  border-radius: inherit;
 }
 
 /* Portal modal animation */
@@ -104,6 +106,44 @@ select:focus-visible {
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(-4px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+/* Alert entrance — fade-rise then a single settle nudge, draws the eye once */
+@keyframes alert-in {
+  0% { opacity: 0; transform: translateY(-6px) scale(0.99); }
+  60% { opacity: 1; transform: translateY(1px) scale(1); }
+  100% { transform: translateY(0) scale(1); }
+}
+.alert-in { animation: alert-in 0.34s var(--ease-spring) both; }
+@media (prefers-reduced-motion: reduce) {
+  .alert-in { animation: none; }
+}
+
+/* Marketing reveal — entrance rise, opt-in via .rise, stagger via inline --d */
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.rise { animation: rise-in 0.7s var(--ease-luxe) both; animation-delay: var(--d, 0ms); }
+@media (prefers-reduced-motion: reduce) {
+  .rise { animation: none; }
+}
+
+/* Attention pulse — a soft sage halo that breathes to draw the eye to a key CTA */
+@keyframes cta-pulse {
+  0%, 100% { box-shadow: 0 1px 2px rgba(43,42,34,0.10), 0 4px 12px -4px rgba(160,125,56,0.30), 0 0 0 0 rgba(119,123,98,0.0); }
+  50% { box-shadow: 0 2px 4px rgba(43,42,34,0.12), 0 12px 28px -8px rgba(160,125,56,0.45), 0 0 0 6px rgba(119,123,98,0.14); }
+}
+.cta-pulse { animation: cta-pulse 2.4s var(--ease-luxe) infinite; }
+.cta-pulse:hover { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) {
+  .cta-pulse { animation: none; }
+}
+
+/* Subtle damask — faint quatrefoil motif for the warm paper surface (recreated from the Figma pattern) */
+.paper-damask {
+  background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%2748%27%20height%3D%2748%27%20viewBox%3D%270%200%2048%2048%27%3E%3Cg%20fill%3D%27none%27%20stroke%3D%27rgba%28101%2C105%2C79%2C0.10%29%27%20stroke-width%3D%271%27%3E%3Ccircle%20cx%3D%2724%27%20cy%3D%2715%27%20r%3D%275%27%2F%3E%3Ccircle%20cx%3D%2724%27%20cy%3D%2733%27%20r%3D%275%27%2F%3E%3Ccircle%20cx%3D%2715%27%20cy%3D%2724%27%20r%3D%275%27%2F%3E%3Ccircle%20cx%3D%2733%27%20cy%3D%2724%27%20r%3D%275%27%2F%3E%3Ccircle%20cx%3D%2724%27%20cy%3D%2724%27%20r%3D%272%27%2F%3E%3C%2Fg%3E%3Cg%20fill%3D%27rgba%28160%2C125%2C56%2C0.07%29%27%3E%3Cpath%20d%3D%27M0%200%20L5%200%20L0%205%20Z%27%2F%3E%3Cpath%20d%3D%27M48%200%20L43%200%20L48%205%20Z%27%2F%3E%3Cpath%20d%3D%27M0%2048%20L5%2048%20L0%2043%20Z%27%2F%3E%3Cpath%20d%3D%27M48%2048%20L43%2048%20L48%2043%20Z%27%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E");
+  background-size: 48px 48px;
 }
 
 /* Physical press — interactive elements dip slightly under the finger */
@@ -201,7 +241,7 @@ button:active:not(:disabled), a:active, [role="button"]:active { transform: tran
 
 /* Toast entrance */
 @keyframes toast-in {
-  from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 

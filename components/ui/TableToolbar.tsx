@@ -2,6 +2,9 @@
 import { useState } from "react";
 import { T } from "@/lib/theme";
 
+/* Translucent "glass" fill so toolbar controls blend with the page's damask pattern */
+const GLASS = "rgba(255,253,247,0.5)";
+
 /* Shared data-table toolbar kit — search, filter popover, chips, export, CSV. */
 
 export function downloadCSV(header: string[], rows: (string | number)[][], filename: string) {
@@ -25,7 +28,7 @@ export function Tooltip({ label, children }: { label: string; children: React.Re
       {children}
       <span
         className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-full mt-1.5 px-2 py-1 rounded-[7px] text-[11px] font-medium whitespace-nowrap opacity-0 translate-y-0.5 group-hover/tt:opacity-100 group-hover/tt:translate-y-0 transition-all duration-150 z-[60]"
-        style={{ background: T.primary, color: T.primaryInk, boxShadow: T.shadowLift }}
+        style={{ background: T.accent, color: T.accentInk, boxShadow: `${T.shadowLift}, inset 0 0 0 1px rgba(160,125,56,0.16)` }}
       >
         {label}
       </span>
@@ -104,7 +107,7 @@ function periodRange(key: string, customFrom: string, customTo: string): { from:
   return { from: customFrom, to: customTo };
 }
 
-function ExportCalendar({ value, onChange, label }: { value: string; onChange: (v: string) => void; label: string }) {
+function ExportCalendar({ value, onChange, label, rangeStart, rangeEnd }: { value: string; onChange: (v: string) => void; label: string; rangeStart?: string; rangeEnd?: string }) {
   const [viewDate, setViewDate] = useState(() => value ? new Date(value + "T00:00") : new Date());
   const year = viewDate.getFullYear();
   const month = viewDate.getMonth();
@@ -133,17 +136,19 @@ function ExportCalendar({ value, onChange, label }: { value: string; onChange: (
         {days.map((day, i) => {
           if (day === null) return <span key={`e-${i}`} />;
           const dateStr = iso(day);
-          const isSelected = dateStr === value;
+          const isEndpoint = dateStr === rangeStart || dateStr === rangeEnd || dateStr === value;
+          const inRange = !!rangeStart && !!rangeEnd && rangeStart < rangeEnd && dateStr > rangeStart && dateStr < rangeEnd;
           const isToday = dateStr === new Date().toISOString().slice(0, 10);
           return (
             <button
               key={i}
               onClick={() => onChange(dateStr)}
-              className="w-7 h-7 rounded-[6px] text-[11px] flex items-center justify-center cursor-pointer transition-colors"
+              className={`w-7 h-7 rounded-full text-[11px] flex items-center justify-center cursor-pointer transition-colors ${isEndpoint ? "" : "hover:bg-[rgba(119,123,98,0.12)]"}`}
               style={{
-                background: isSelected ? T.primary : "transparent",
-                color: isSelected ? T.primaryInk : isToday ? T.accent : T.text,
-                fontWeight: isSelected || isToday ? 600 : 400,
+                background: isEndpoint ? T.primary : inRange ? T.accentFaint : "transparent",
+                color: isEndpoint ? T.primaryInk : inRange || isToday ? T.accent : T.text,
+                fontWeight: isEndpoint || isToday ? 600 : 400,
+                boxShadow: isToday && !isEndpoint ? `inset 0 0 0 1px ${T.accentBorder}` : "none",
               }}
             >
               {day}
@@ -174,6 +179,14 @@ export function ExportBtn({ onExport, dateLabel }: { onExport: (opts: ExportOpti
     }
   };
 
+  // Single-calendar range: 1st click sets start, 2nd sets end, 3rd starts over.
+  const pickExportDay = (d: string) => {
+    setPeriod("custom");
+    if (!customFrom || (customFrom && customTo)) { setCustomFrom(d); setCustomTo(""); return; }
+    if (d < customFrom) { setCustomTo(customFrom); setCustomFrom(d); }
+    else setCustomTo(d);
+  };
+
   const fire = (format: "pdf" | "xls") => {
     const from = customFrom;
     const to = customTo;
@@ -189,7 +202,7 @@ export function ExportBtn({ onExport, dateLabel }: { onExport: (opts: ExportOpti
           onClick={() => setOpen((v) => !v)}
           aria-label="Export"
           className="h-9 w-9 rounded-[9px] inline-flex items-center justify-center shrink-0 cursor-pointer transition-all duration-200"
-          style={{ background: open ? T.accentFaint : T.bg, border: `1px solid ${open ? T.accentBorder : T.border}`, color: T.text }}
+          style={{ background: open ? T.accentFaint : GLASS, border: `1px solid ${open ? T.accentBorder : T.border}`, color: T.text }}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
             <path d="M12 3v11M7.5 10.5 12 15l4.5-4.5M4.5 20h15" />
@@ -200,10 +213,15 @@ export function ExportBtn({ onExport, dateLabel }: { onExport: (opts: ExportOpti
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
           <div
-            className="absolute right-0 top-full mt-1.5 z-50 w-[540px] rounded-[14px] p-4"
-            style={{ background: T.popover, border: `1px solid ${T.border}`, boxShadow: T.shadowLift }}
+            className="absolute right-0 top-full mt-1.5 z-50 w-[540px] rounded-[16px] p-4"
+            style={{ background: T.popover, border: `1px solid ${T.border}`, boxShadow: `${T.shadowLift}, inset 0 0 0 1px rgba(160,125,56,0.16)` }}
           >
-            <div className="px-0.5 pb-3 text-[11px] font-medium tracking-[0.06em] uppercase" style={{ color: T.faint }}>{dateLabel || "Select order date range"}</div>
+            <div className="flex items-center gap-2 pb-3 mb-3" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
+              <span className="w-7 h-7 rounded-[9px] flex items-center justify-center shrink-0" style={{ background: T.accentFaint, color: T.accent }}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
+              </span>
+              <span className="text-[13px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>{dateLabel || "Select date range"}</span>
+            </div>
             <div className="flex gap-4">
               {/* Left: presets */}
               <div className="w-[148px] shrink-0 space-y-0.5">
@@ -227,10 +245,18 @@ export function ExportBtn({ onExport, dateLabel }: { onExport: (opts: ExportOpti
               </div>
               {/* Right: calendars */}
               <div className="flex-1 min-w-0" style={{ borderLeft: `1px solid ${T.borderSoft}`, paddingLeft: "16px" }}>
-                <div className="grid grid-cols-2 gap-3">
-                  <ExportCalendar value={customFrom} onChange={(v) => { setCustomFrom(v); setPeriod("custom"); }} label="From" />
-                  <ExportCalendar value={customTo} onChange={(v) => { setCustomTo(v); setPeriod("custom"); }} label="To" />
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="flex-1 rounded-[9px] px-3 py-1.5" style={{ background: customFrom ? T.accentFaint : T.bg, border: `1px solid ${customFrom ? T.accentBorder : T.borderSoft}` }}>
+                    <div className="text-[9px] font-medium tracking-[0.08em] uppercase" style={{ color: T.faint }}>Start</div>
+                    <div className="text-[12.5px] font-medium tabular-nums" style={{ color: customFrom ? T.text : T.faint }}>{customFrom ? new Date(customFrom + "T00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—"}</div>
+                  </div>
+                  <span style={{ color: T.faint }}>→</span>
+                  <div className="flex-1 rounded-[9px] px-3 py-1.5" style={{ background: customTo ? T.accentFaint : T.bg, border: `1px solid ${customTo ? T.accentBorder : T.borderSoft}` }}>
+                    <div className="text-[9px] font-medium tracking-[0.08em] uppercase" style={{ color: T.faint }}>End</div>
+                    <div className="text-[12.5px] font-medium tabular-nums" style={{ color: customTo ? T.text : T.faint }}>{customTo ? new Date(customTo + "T00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—"}</div>
+                  </div>
                 </div>
+                <ExportCalendar value="" rangeStart={customFrom} rangeEnd={customTo} onChange={pickExportDay} label={!customFrom ? "Pick a start date" : !customTo ? "Pick an end date" : "Range selected"} />
                 {(customFrom || customTo) && (
                   <div className="mt-3 pt-2.5 text-[11px] flex items-center gap-2" style={{ borderTop: `1px solid ${T.borderSoft}`, color: T.muted }}>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-3.5 h-3.5 shrink-0" style={{ color: T.accent }}><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
@@ -248,9 +274,12 @@ export function ExportBtn({ onExport, dateLabel }: { onExport: (opts: ExportOpti
                   key={fmt}
                   onClick={() => fire(fmt)}
                   disabled={customIncomplete}
-                  className="flex-1 h-9 rounded-[8px] text-[12px] font-semibold uppercase tracking-[0.04em] cursor-pointer transition-all hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed"
-                  style={fmt === "pdf" ? { background: T.primary, color: T.primaryInk } : { background: T.accentMuted, color: T.accent }}
+                  className="flex-1 h-10 rounded-[9px] text-[12.5px] font-semibold inline-flex items-center justify-center gap-2 cursor-pointer transition-all duration-200 hover:brightness-110 hover:-translate-y-px active:translate-y-0 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:brightness-100"
+                  style={fmt === "pdf"
+                    ? { background: T.accent, color: T.accentInk, boxShadow: "0 1px 2px rgba(43,42,34,0.12), 0 8px 20px -10px rgba(43,42,34,0.4)" }
+                    : { background: T.accentFaint, color: T.accent, border: `1px solid ${T.accentBorder}` }}
                 >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="w-[15px] h-[15px]"><path d="M12 3v11M8 10.5l4 4 4-4M5 20h14" /></svg>
                   {fmt === "pdf" ? "Download PDF" : "Download XLS"}
                 </button>
               ))}
@@ -280,7 +309,7 @@ export function ToolbarSearch({ value, onChange, placeholder }: { value: string;
         placeholder={placeholder}
         className="w-full h-9 pl-9 pr-8 rounded-[9px] text-[13px] outline-none transition-all duration-200"
         style={{
-          background: focused ? T.card : T.bg,
+          background: focused ? T.card : GLASS,
           border: `1px solid ${focused ? T.accentBorder : hasValue ? T.accentBorder : T.border}`,
           color: T.text,
           boxShadow: focused ? `0 0 0 3px ${T.accentFaint}` : "none",
@@ -300,14 +329,14 @@ export function ToolbarSearch({ value, onChange, placeholder }: { value: string;
   );
 }
 
-export function FiltersPopover({ count, open, onToggle, children }: { count: number; open: boolean; onToggle: () => void; children: React.ReactNode }) {
+export function FiltersPopover({ count, open, onToggle, children, align = "right" }: { count: number; open: boolean; onToggle: () => void; children: React.ReactNode; align?: "left" | "right" }) {
   return (
     <div className="relative">
       <button
         onClick={onToggle}
         className="h-9 px-3.5 rounded-[9px] text-[13px] font-medium inline-flex items-center gap-1.5 cursor-pointer transition-all duration-200"
         style={{
-          background: open ? T.accentFaint : T.bg,
+          background: open ? T.accentFaint : GLASS,
           border: `1px solid ${count > 0 || open ? T.accentBorder : T.border}`,
           color: T.text,
         }}
@@ -326,8 +355,8 @@ export function FiltersPopover({ count, open, onToggle, children }: { count: num
         <>
           <div className="fixed inset-0 z-40" onClick={onToggle} />
           <div
-            className="absolute right-0 top-full mt-1.5 z-50 w-[320px] rounded-[14px] p-4 space-y-4"
-            style={{ background: T.popover, border: `1px solid ${T.border}`, boxShadow: T.shadowLift }}
+            className={`absolute ${align === "left" ? "left-0" : "right-0"} top-full mt-1.5 z-50 w-[320px] rounded-[14px] p-4 space-y-4`}
+            style={{ background: T.popover, border: `1px solid ${T.border}`, boxShadow: `${T.shadowLift}, inset 0 0 0 1px rgba(160,125,56,0.16)` }}
           >
             {children}
           </div>
@@ -442,7 +471,7 @@ export function ColumnStatusFilter({
           <div className="fixed inset-0 z-40" onClick={onToggle} />
           <div
             className="absolute left-0 top-full mt-1.5 z-50 w-[200px] rounded-[12px] p-1.5 normal-case tracking-normal"
-            style={{ background: T.popover, border: `1px solid ${T.border}`, boxShadow: T.shadowLift }}
+            style={{ background: T.popover, border: `1px solid ${T.border}`, boxShadow: `${T.shadowLift}, inset 0 0 0 1px rgba(160,125,56,0.16)` }}
           >
             {options.map((opt) => {
               const active = value === opt.value;
@@ -461,6 +490,188 @@ export function ColumnStatusFilter({
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+/* ─── Inline filter pill + popover (shared toolbar filter) ─── */
+export function InlineFilter({ label, icon, count, width = 232, children }: { label: string; icon: React.ReactNode; count: number; width?: number; children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+  const active = count > 0;
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="h-9 pl-2.5 pr-2 rounded-[9px] text-[13px] font-medium inline-flex items-center gap-1.5 cursor-pointer transition-all duration-200"
+        style={{ background: open || active ? T.accentFaint : GLASS, border: `1px solid ${open || active ? T.accentBorder : T.border}`, color: T.text }}
+      >
+        <span style={{ color: active ? T.accent : T.faint }}>{icon}</span>
+        {label}
+        {active && (
+          <span className="text-[11px] font-semibold tabular-nums min-w-[17px] h-[17px] px-1 rounded-full inline-flex items-center justify-center" style={{ background: T.accent, color: T.accentInk }}>{count}</span>
+        )}
+        <svg viewBox="0 0 12 12" fill="none" className={`w-3 h-3 transition-transform duration-200 ${open ? "rotate-180" : ""}`} style={{ color: T.faint }}><path d="M3 4.5 6 7.5 9 4.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute left-0 top-full mt-1.5 z-50 rounded-[14px] p-3" style={{ width, background: T.popover, border: `1px solid ${T.border}`, boxShadow: `${T.shadowLift}, inset 0 0 0 1px rgba(160,125,56,0.16)` }}>
+            {children}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/* ─── Compact multi-select checklist for use inside InlineFilter ─── */
+export function MultiCheck({ options, value, onChange, onAfter }: { options: { value: string; label: string }[]; value: string[]; onChange: (v: string[]) => void; onAfter?: () => void }) {
+  const toggle = (v: string) => {
+    onChange(value.includes(v) ? value.filter((x) => x !== v) : [...value, v]);
+    onAfter?.();
+  };
+  return (
+    <div className="space-y-0.5 max-h-[220px] overflow-y-auto -mx-1 px-1">
+      {options.map((opt) => {
+        const active = value.includes(opt.value);
+        return (
+          <button
+            key={opt.value}
+            type="button"
+            onClick={() => toggle(opt.value)}
+            className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-[8px] text-[12.5px] text-left cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.08)]"
+            style={{ color: active ? T.accent : T.text, fontWeight: active ? 600 : 400, background: active ? T.accentFaint : "transparent" }}
+          >
+            <span className="w-3.5 h-3.5 rounded-[3px] flex items-center justify-center shrink-0" style={{ border: `1.5px solid ${active ? T.accent : "rgba(89,82,54,0.25)"}`, background: active ? T.accent : "transparent" }}>
+              {active && <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke={T.accentInk} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>}
+            </span>
+            {opt.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ─── Icon-only sort with a compact single-select menu ─── */
+export function SortMenu({ value, onChange, options }: { value: string; onChange: (v: string) => void; options: { value: string; label: string }[] }) {
+  const [open, setOpen] = useState(false);
+  const current = options.find((o) => o.value === value);
+  const isDefault = value === options[0]?.value;
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        aria-label={`Sort: ${current?.label ?? ""}`}
+        title={`Sort: ${current?.label ?? ""}`}
+        onClick={() => setOpen((v) => !v)}
+        className="h-9 w-9 flex items-center justify-center rounded-[9px] cursor-pointer transition-all duration-200 shrink-0"
+        style={{ background: open ? T.accentFaint : GLASS, border: `1px solid ${open || !isDefault ? T.accentBorder : T.border}`, color: !isDefault ? T.accent : T.muted }}
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M8 4v16M8 4 4 8M8 4l4 4M16 20V4M16 20l-4-4M16 20l4-4" /></svg>
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-full mt-1.5 z-50 w-[190px] rounded-[12px] p-1.5" style={{ background: T.popover, border: `1px solid ${T.border}`, boxShadow: `${T.shadowLift}, inset 0 0 0 1px rgba(160,125,56,0.16)` }}>
+            <div className="text-[10px] font-medium tracking-[0.08em] uppercase px-2.5 pt-1 pb-1.5" style={{ color: T.faint }}>Sort by</div>
+            {options.map((o) => {
+              const on = o.value === value;
+              return (
+                <button
+                  key={o.value}
+                  onClick={() => { onChange(o.value); setOpen(false); }}
+                  className="w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-[8px] text-[12.5px] text-left cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.08)]"
+                  style={{ color: on ? T.accent : T.text, fontWeight: on ? 600 : 400, background: on ? T.accentFaint : "transparent" }}
+                >
+                  {o.label}
+                  {on && <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>}
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/* ─── Rich date-range panel — quick-select presets + dual calendar, for use inside InlineFilter ─── */
+const RANGE_PRESETS: { key: string; label: string }[] = [
+  { key: "today", label: "Today" },
+  { key: "yesterday", label: "Yesterday" },
+  { key: "last_7", label: "Last 7 days" },
+  { key: "last_30", label: "Last 30 days" },
+  { key: "last_90", label: "Last 90 days" },
+  { key: "this_month", label: "This month" },
+  { key: "last_month", label: "Last month" },
+  { key: "custom", label: "Custom range" },
+];
+
+function rangePreset(key: string): { from: string; to: string } {
+  const today = new Date();
+  const d0 = localISO(today);
+  if (key === "today") return { from: d0, to: d0 };
+  if (key === "yesterday") { const y = new Date(today); y.setDate(today.getDate() - 1); const s = localISO(y); return { from: s, to: s }; }
+  if (key === "last_7") { const f = new Date(today); f.setDate(today.getDate() - 6); return { from: localISO(f), to: d0 }; }
+  if (key === "last_30") { const f = new Date(today); f.setDate(today.getDate() - 29); return { from: localISO(f), to: d0 }; }
+  if (key === "last_90") { const f = new Date(today); f.setDate(today.getDate() - 89); return { from: localISO(f), to: d0 }; }
+  if (key === "this_month") return { from: localISO(new Date(today.getFullYear(), today.getMonth(), 1)), to: d0 };
+  if (key === "last_month") return { from: localISO(new Date(today.getFullYear(), today.getMonth() - 1, 1)), to: localISO(new Date(today.getFullYear(), today.getMonth(), 0)) };
+  return { from: "", to: "" };
+}
+
+const fmtLong = (iso: string) => new Date(iso + "T00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+
+export function DateRangePanel({ from, to, onChange }: { from: string; to: string; onChange: (from: string, to: string) => void }) {
+  const [preset, setPreset] = useState("");
+  const hasValue = !!(from || to);
+  const pick = (key: string) => { setPreset(key); if (key !== "custom") { const r = rangePreset(key); onChange(r.from, r.to); } };
+
+  // Single-calendar range: 1st click sets start, 2nd sets end; a 3rd starts over.
+  const pickDay = (d: string) => {
+    setPreset("custom");
+    if (!from || (from && to)) { onChange(d, ""); return; }
+    if (d < from) onChange(d, from);
+    else onChange(from, d);
+  };
+
+  return (
+    <div className="flex gap-4">
+      <div className="w-[132px] shrink-0 space-y-0.5">
+        <div className="text-[10px] font-medium tracking-[0.06em] uppercase mb-2" style={{ color: T.faint }}>Quick select</div>
+        {RANGE_PRESETS.map((p) => {
+          const active = preset === p.key;
+          return (
+            <button key={p.key} onClick={() => pick(p.key)} className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-[7px] text-[11.5px] text-left cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.08)]"
+              style={{ color: active ? T.accent : T.text, fontWeight: active ? 600 : 400, background: active ? T.accentFaint : "transparent" }}>
+              <span className="w-[13px] h-[13px] rounded-full flex items-center justify-center shrink-0" style={{ border: `1.5px solid ${active ? T.accent : "rgba(89,82,54,0.3)"}` }}>{active && <span className="w-[5px] h-[5px] rounded-full" style={{ background: T.accent }} />}</span>
+              {p.label}
+            </button>
+          );
+        })}
+      </div>
+      <div className="flex-1 min-w-0" style={{ borderLeft: `1px solid ${T.borderSoft}`, paddingLeft: "16px" }}>
+        {/* Range summary pills */}
+        <div className="flex items-center gap-2 mb-3">
+          <div className="flex-1 rounded-[9px] px-3 py-1.5" style={{ background: from ? T.accentFaint : T.bg, border: `1px solid ${from ? T.accentBorder : T.borderSoft}` }}>
+            <div className="text-[9px] font-medium tracking-[0.08em] uppercase" style={{ color: T.faint }}>Start</div>
+            <div className="text-[12.5px] font-medium tabular-nums" style={{ color: from ? T.text : T.faint }}>{from ? fmtLong(from) : "—"}</div>
+          </div>
+          <span style={{ color: T.faint }}>→</span>
+          <div className="flex-1 rounded-[9px] px-3 py-1.5" style={{ background: to ? T.accentFaint : T.bg, border: `1px solid ${to ? T.accentBorder : T.borderSoft}` }}>
+            <div className="text-[9px] font-medium tracking-[0.08em] uppercase" style={{ color: T.faint }}>End</div>
+            <div className="text-[12.5px] font-medium tabular-nums" style={{ color: to ? T.text : T.faint }}>{to ? fmtLong(to) : "—"}</div>
+          </div>
+        </div>
+        <ExportCalendar value="" rangeStart={from} rangeEnd={to} onChange={pickDay} label={!from ? "Pick a start date" : !to ? "Pick an end date" : "Range selected"} />
+        {hasValue && (
+          <div className="mt-3 pt-2.5 flex justify-end" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+            <button onClick={() => { onChange("", ""); setPreset(""); }} className="text-[11.5px] font-medium cursor-pointer hover:underline underline-offset-4" style={{ color: T.danger }}>Clear dates</button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

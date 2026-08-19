@@ -2,7 +2,15 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { PageHeader, Card, Chip, StatCard, GoldBtn, ToolbarSearch, EmptyState, TableSkeleton } from "@/components/ui";
+import { PageHeader, Card, Chip, StatCard, GoldBtn, ToolbarSearch, SortMenu, InlineFilter, MultiCheck, EmptyState, TableSkeleton } from "@/components/ui";
+
+const STATUS_ICON = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className="w-3.5 h-3.5"><circle cx="12" cy="12" r="10" /><path d="m9 12 2 2 4-4" /></svg>;
+const STATUS_OPTIONS = [{ value: "active", label: "Active" }, { value: "deactivated", label: "Deactivated" }];
+
+const NAME_SORT = [
+  { value: "name_asc", label: "Name A to Z" },
+  { value: "name_desc", label: "Name Z to A" },
+];
 import { T } from "@/lib/theme";
 import { useSimulatedLoad } from "@/lib/useSimulatedLoad";
 import { MOCK_SALES_MEMBERS, MOCK_INCOMPLETE_ORDERS, MOCK_INCOMPLETE_CONSULTATIONS } from "@/lib/mock";
@@ -19,6 +27,8 @@ function getMemberStats(memberId: string) {
 export default function SalesPage() {
   const router = useRouter();
   const [search, setSearch] = useState("");
+  const [sort, setSort] = useState("name_asc");
+  const [filterStatus, setFilterStatus] = useState<string[]>([]);
   const loading = useSimulatedLoad();
 
   const totalActiveLeads = [...MOCK_INCOMPLETE_ORDERS, ...MOCK_INCOMPLETE_CONSULTATIONS].filter(
@@ -30,10 +40,13 @@ export default function SalesPage() {
   const unassigned = [...MOCK_INCOMPLETE_ORDERS, ...MOCK_INCOMPLETE_CONSULTATIONS].filter((l) => !l.assignedTo).length;
 
   const filtered = MOCK_SALES_MEMBERS.filter((m) => {
+    if (filterStatus.length && !filterStatus.includes(m.status === "active" ? "active" : "deactivated")) return false;
     if (!search) return true;
     const q = search.toLowerCase();
     return m.name.toLowerCase().includes(q) || m.role.toLowerCase().includes(q) || m.email.toLowerCase().includes(q);
   });
+
+  const sorted = [...filtered].sort((a, b) => sort === "name_desc" ? b.name.localeCompare(a.name) : a.name.localeCompare(b.name));
 
   return (
     <>
@@ -51,7 +64,16 @@ export default function SalesPage() {
       </div>
 
       <div className="flex flex-wrap items-center gap-2 mb-4">
-        <ToolbarSearch value={search} onChange={setSearch} placeholder="Search name, role…" />
+        <InlineFilter label="Status" icon={STATUS_ICON} count={filterStatus.length} width={200}>
+          <MultiCheck options={STATUS_OPTIONS} value={filterStatus} onChange={setFilterStatus} />
+        </InlineFilter>
+        {filterStatus.length > 0 && (
+          <button onClick={() => setFilterStatus([])} className="text-[12px] font-medium px-1.5 cursor-pointer hover:underline underline-offset-4 whitespace-nowrap" style={{ color: T.danger }}>Clear all</button>
+        )}
+        <div className="ml-auto flex items-center gap-2">
+          <ToolbarSearch value={search} onChange={setSearch} placeholder="Search name, role…" />
+          <SortMenu value={sort} onChange={setSort} options={NAME_SORT} />
+        </div>
       </div>
 
       <Card className="!p-0 md:flex md:flex-col md:min-h-0">
@@ -72,17 +94,17 @@ export default function SalesPage() {
           <span>Status</span>
         </div>
         <div className="md:min-h-0 overflow-y-auto max-h-[560px] md:max-h-none">
-          {filtered.length === 0 ? (
+          {sorted.length === 0 ? (
             <EmptyState inline icon="search" title="No sales members" description="No members match your search." />
           ) : (
-            filtered.map((member, idx) => {
+            sorted.map((member, idx) => {
               const stats = getMemberStats(member.id);
               return (
                 <Link
                   key={member.id}
                   href={`/sales/${member.id}`}
                   className="group grid grid-cols-1 md:grid-cols-[minmax(220px,1.3fr)_1fr_100px_90px_110px_140px_110px] gap-2 md:gap-x-4 items-center px-4 py-2.5 transition-colors duration-150 last:rounded-b-[15px] even:bg-[rgba(89,82,54,0.025)] hover:!bg-[rgba(119,123,98,0.08)]"
-                  style={{ borderBottom: idx < filtered.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
+                  style={{ borderBottom: idx < sorted.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <span
@@ -106,7 +128,7 @@ export default function SalesPage() {
                   <span className="text-[12.5px] tabular-nums md:text-right md:pl-0 pl-12" style={{ color: T.text }}>{stats.stoneLeads}</span>
                   <span className="text-[12.5px] tabular-nums md:text-right md:pl-0 pl-12" style={{ color: T.text }}>{stats.consultationLeads}</span>
                   <div className="md:pl-0 pl-12">
-                    <Chip tone={member.status === "active" ? "good" : "muted"}>{member.status}</Chip>
+                    <Chip tone={member.status === "active" ? "good" : "muted"}>{member.status === "active" ? "Active" : "Deactivated"}</Chip>
                   </div>
                 </Link>
               );

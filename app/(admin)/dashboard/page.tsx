@@ -124,14 +124,14 @@ export default function AdminDashboard() {
                       <div
                         className="pointer-events-none absolute bottom-full mb-2 left-1/2 -translate-x-1/2 opacity-0 group-hover/bar:opacity-100 transition-opacity duration-150 z-10"
                       >
-                        <div className="rounded-[10px] px-3 py-2.5 min-w-[90px] text-center" style={{ background: "rgba(41,38,23,0.92)", backdropFilter: "blur(8px)", boxShadow: "0 4px 16px rgba(0,0,0,0.18)" }}>
-                          <div className="text-[10px] mb-1" style={{ color: "rgba(250,246,236,0.55)" }}>
+                        <div className="rounded-[12px] px-3.5 py-2.5 min-w-[94px] text-center" style={{ background: "rgba(41,38,23,0.94)", backdropFilter: "blur(10px)", border: "1px solid rgba(250,246,236,0.10)", boxShadow: "0 10px 26px -8px rgba(0,0,0,0.5), inset 0 1px 0 rgba(250,246,236,0.09)" }}>
+                          <div className="text-[9.5px] font-medium tracking-[0.10em] uppercase" style={{ color: "rgba(250,246,236,0.5)" }}>
                             {months[i].toLocaleDateString("en-IN", { month: "short", year: "numeric" })}
                           </div>
-                          <div className="text-[18px] font-bold tabular-nums leading-none" style={{ color: "#faf6ec" }}>{b.total}</div>
-                          <div className="text-[10px] mt-0.5" style={{ color: "rgba(250,246,236,0.5)" }}>orders</div>
+                          <div className="text-[20px] font-bold tabular-nums leading-none mt-1" style={{ color: "#e6cf8e" }}>{b.total}</div>
+                          <div className="text-[10px] mt-1" style={{ color: "rgba(250,246,236,0.5)" }}>orders</div>
                         </div>
-                        <div className="w-2 h-2 rotate-45 mx-auto -mt-1" style={{ background: "rgba(41,38,23,0.92)" }} />
+                        <div className="w-2 h-2 rotate-45 mx-auto -mt-1" style={{ background: "rgba(41,38,23,0.94)", borderRight: "1px solid rgba(250,246,236,0.10)", borderBottom: "1px solid rgba(250,246,236,0.10)" }} />
                       </div>
                       {/* Bar — single solid color */}
                       <div

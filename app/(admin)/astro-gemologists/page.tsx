@@ -2,7 +2,15 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { PageHeader, Card, Chip, StatCard, GoldBtn, ToolbarSearch, EmptyState, TableSkeleton } from "@/components/ui";
+import { PageHeader, Card, Chip, StatCard, GoldBtn, ToolbarSearch, SortMenu, InlineFilter, MultiCheck, EmptyState, TableSkeleton } from "@/components/ui";
+
+const STATUS_ICON = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className="w-3.5 h-3.5"><circle cx="12" cy="12" r="10" /><path d="m9 12 2 2 4-4" /></svg>;
+const STATUS_OPTIONS = [{ value: "active", label: "Active" }, { value: "deactivated", label: "Deactivated" }];
+
+const NAME_SORT = [
+  { value: "name_asc", label: "Name A to Z" },
+  { value: "name_desc", label: "Name Z to A" },
+];
 import { T } from "@/lib/theme";
 import { useSimulatedLoad } from "@/lib/useSimulatedLoad";
 import { EXPERT_PROFILES, MOCK_CONSULTATIONS, MOCK_STONE_RECOMMENDATIONS } from "@/lib/mock";
@@ -22,6 +30,8 @@ function getExpertStats(expertId: string) {
 export default function AstroGemologistsPage() {
   const router = useRouter();
   const [search, setSearch] = useState("");
+  const [sort, setSort] = useState("name_asc");
+  const [filterStatus, setFilterStatus] = useState<string[]>([]);
   const loading = useSimulatedLoad();
 
   const totalUpcoming = MOCK_CONSULTATIONS.filter((c) => c.status === "scheduled").length;
@@ -30,10 +40,13 @@ export default function AstroGemologistsPage() {
   const totalRecommendations = MOCK_STONE_RECOMMENDATIONS.length;
 
   const filtered = EXPERT_PROFILES.filter((ep) => {
+    if (filterStatus.length && !filterStatus.includes(ep.status === "active" ? "active" : "deactivated")) return false;
     if (!search) return true;
     const q = search.toLowerCase();
     return ep.name.toLowerCase().includes(q) || ep.specialization.toLowerCase().includes(q);
   });
+
+  const sorted = [...filtered].sort((a, b) => sort === "name_desc" ? b.name.localeCompare(a.name) : a.name.localeCompare(b.name));
 
   return (
     <>
@@ -55,7 +68,16 @@ export default function AstroGemologistsPage() {
 
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-2 mb-4">
-        <ToolbarSearch value={search} onChange={setSearch} placeholder="Search name, specialization…" />
+        <InlineFilter label="Status" icon={STATUS_ICON} count={filterStatus.length} width={200}>
+          <MultiCheck options={STATUS_OPTIONS} value={filterStatus} onChange={setFilterStatus} />
+        </InlineFilter>
+        {filterStatus.length > 0 && (
+          <button onClick={() => setFilterStatus([])} className="text-[12px] font-medium px-1.5 cursor-pointer hover:underline underline-offset-4 whitespace-nowrap" style={{ color: T.danger }}>Clear all</button>
+        )}
+        <div className="ml-auto flex items-center gap-2">
+          <ToolbarSearch value={search} onChange={setSearch} placeholder="Search name, specialization…" />
+          <SortMenu value={sort} onChange={setSort} options={NAME_SORT} />
+        </div>
       </div>
 
       {/* Experts table */}
@@ -78,17 +100,17 @@ export default function AstroGemologistsPage() {
           <span>Status</span>
         </div>
         <div className="md:flex-1 md:min-h-0 overflow-y-auto max-h-[560px] md:max-h-none">
-          {filtered.length === 0 ? (
+          {sorted.length === 0 ? (
             <EmptyState inline icon="search" title="No astro-gemologists" description="No experts match your search." />
           ) : (
-            filtered.map((expert, idx) => {
+            sorted.map((expert, idx) => {
               const stats = getExpertStats(expert.id);
               return (
                 <Link
                   key={expert.id}
                   href={`/astro-gemologists/${expert.id}`}
                   className="group grid grid-cols-1 md:grid-cols-[minmax(240px,1.4fr)_120px_150px_90px_90px_100px_110px_130px] gap-2 md:gap-x-4 items-center px-4 py-2.5 transition-colors duration-150 last:rounded-b-[15px] even:bg-[rgba(89,82,54,0.025)] hover:!bg-[rgba(119,123,98,0.08)]"
-                  style={{ borderBottom: idx < filtered.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
+                  style={{ borderBottom: idx < sorted.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <span
@@ -123,7 +145,7 @@ export default function AstroGemologistsPage() {
                     {expert.status === "active" && expert.calendlyStatus === "pending" ? (
                       <Chip tone="gold">Calendly pending</Chip>
                     ) : (
-                      <Chip tone={expert.status === "active" ? "good" : "muted"}>{expert.status}</Chip>
+                      <Chip tone={expert.status === "active" ? "good" : "muted"}>{expert.status === "active" ? "Active" : "Deactivated"}</Chip>
                     )}
                   </div>
                 </Link>

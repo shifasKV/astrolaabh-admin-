@@ -2,8 +2,21 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
 import {
-  PageHeader, Card, Chip, Tabs, Select, Pagination,
-  Tooltip, ToolbarSearch, ExportBtn, downloadXLS, downloadPDF, EmptyState, TableSkeleton } from "@/components/ui";
+  PageHeader, Card, Chip, Tabs, Pagination,
+  Tooltip, ToolbarSearch, ExportBtn, downloadXLS, downloadPDF, InlineFilter, MultiCheck, SortMenu, DateRangePanel, EmptyState, TableSkeleton } from "@/components/ui";
+
+const E_ICONS = {
+  expert: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className="w-3.5 h-3.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>,
+  date: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className="w-3.5 h-3.5"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>,
+  status: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className="w-3.5 h-3.5"><circle cx="12" cy="12" r="10" /><path d="m9 12 2 2 4-4" /></svg>,
+};
+const E_SORT_OPTIONS = [
+  { value: "newest", label: "Newest" },
+  { value: "oldest", label: "Oldest" },
+  { value: "upcoming", label: "Upcoming" },
+  { value: "order_desc", label: "Order: Newest" },
+  { value: "order_asc", label: "Order: Oldest" },
+];
 import { T } from "@/lib/theme";
 import { useSimulatedLoad } from "@/lib/useSimulatedLoad";
 import { MOCK_ENERGISATION } from "@/lib/mock";
@@ -26,205 +39,6 @@ const STATUS_FILTER_LABEL: Record<string, string> = {
   scheduled: "Scheduled",
   completed: "Done",
 };
-
-const DATE_PRESETS = [
-  { key: "today", label: "Today" },
-  { key: "yesterday", label: "Yesterday" },
-  { key: "last_7", label: "Last 7 days" },
-  { key: "last_30", label: "Last 30 days" },
-  { key: "last_90", label: "Last 90 days" },
-  { key: "this_month", label: "This month" },
-  { key: "last_month", label: "Last month" },
-  { key: "custom", label: "Custom range" },
-];
-
-function getPresetDates(key: string): { from: string; to: string } {
-  const today = new Date();
-  const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  if (key === "today") return { from: iso(today), to: iso(today) };
-  if (key === "yesterday") { const y = new Date(today); y.setDate(today.getDate() - 1); return { from: iso(y), to: iso(y) }; }
-  if (key === "last_7") { const f = new Date(today); f.setDate(today.getDate() - 7); return { from: iso(f), to: iso(today) }; }
-  if (key === "last_30") { const f = new Date(today); f.setDate(today.getDate() - 30); return { from: iso(f), to: iso(today) }; }
-  if (key === "last_90") { const f = new Date(today); f.setDate(today.getDate() - 90); return { from: iso(f), to: iso(today) }; }
-  if (key === "this_month") return { from: iso(new Date(today.getFullYear(), today.getMonth(), 1)), to: iso(today) };
-  if (key === "last_month") return { from: iso(new Date(today.getFullYear(), today.getMonth() - 1, 1)), to: iso(new Date(today.getFullYear(), today.getMonth(), 0)) };
-  return { from: "", to: "" };
-}
-
-function EnergMiniCalendar({ value, onChange, label }: { value: string; onChange: (v: string) => void; label: string }) {
-  const [viewDate, setViewDate] = useState(() => value ? new Date(value + "T00:00") : new Date());
-  const year = viewDate.getFullYear();
-  const month = viewDate.getMonth();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const firstDayOfWeek = (new Date(year, month, 1).getDay() + 6) % 7;
-  const days: (number | null)[] = [...Array(firstDayOfWeek).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)];
-  const monthName = viewDate.toLocaleDateString("en-IN", { month: "long", year: "numeric" });
-  const iso = (d: number) => `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-  return (
-    <div>
-      <div className="text-[10px] font-medium tracking-[0.06em] uppercase mb-1.5" style={{ color: T.faint }}>{label}</div>
-      <div className="flex items-center justify-between mb-2">
-        <button onClick={() => setViewDate(new Date(year, month - 1, 1))} className="w-6 h-6 rounded-[6px] flex items-center justify-center cursor-pointer hover:bg-[rgba(89,82,54,0.08)]" style={{ color: T.muted }}>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="m15 18-6-6 6-6" /></svg>
-        </button>
-        <span className="text-[12px] font-medium" style={{ color: T.text }}>{monthName}</span>
-        <button onClick={() => setViewDate(new Date(year, month + 1, 1))} className="w-6 h-6 rounded-[6px] flex items-center justify-center cursor-pointer hover:bg-[rgba(89,82,54,0.08)]" style={{ color: T.muted }}>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="m9 18 6-6-6-6" /></svg>
-        </button>
-      </div>
-      <div className="grid grid-cols-7 gap-0.5 text-center">
-        {["M", "T", "W", "T", "F", "S", "S"].map((d, i) => (
-          <span key={i} className="text-[9px] font-medium py-1" style={{ color: T.faint }}>{d}</span>
-        ))}
-        {days.map((day, i) => {
-          if (day === null) return <span key={`e-${i}`} />;
-          const dateStr = iso(day);
-          const isSelected = dateStr === value;
-          const isToday = dateStr === new Date().toISOString().slice(0, 10);
-          return (
-            <button key={i} onClick={() => onChange(dateStr)} className="w-7 h-7 rounded-[6px] text-[11px] flex items-center justify-center cursor-pointer transition-colors"
-              style={{ background: isSelected ? T.primary : "transparent", color: isSelected ? T.primaryInk : isToday ? T.accent : T.text, fontWeight: isSelected || isToday ? 600 : 400 }}>
-              {day}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function EnergFilterButton({ label, active, open, onClick, icon }: { label: string; active: boolean; open: boolean; onClick: () => void; icon: React.ReactNode }) {
-  return (
-    <button onClick={onClick}
-      className="h-9 px-3 rounded-[9px] text-[12.5px] font-medium inline-flex items-center gap-1.5 cursor-pointer transition-all duration-200 whitespace-nowrap"
-      style={{ background: active ? T.accentFaint : open ? T.accentFaint : T.bg, border: `1px solid ${active ? T.accentBorder : open ? T.accentBorder : T.border}`, color: active ? T.accent : T.text }}>
-      {icon}
-      {label}
-      {active && <span className="w-1.5 h-1.5 rounded-full" style={{ background: T.accent }} />}
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="w-3 h-3" style={{ color: T.faint }}><path d="m6 9 6 6 6-6" /></svg>
-    </button>
-  );
-}
-
-function EnergExpertFilter({ value, onChange, experts, open, onToggle, resetPage }: { value: string[]; onChange: (v: string[]) => void; experts: string[]; open: boolean; onToggle: () => void; resetPage: () => void }) {
-  const toggle = (v: string) => { const next = value.includes(v) ? value.filter(x => x !== v) : [...value, v]; onChange(next); resetPage(); };
-  const label = value.length === 0 ? "Expert" : value.length === 1 ? value[0].split(" ").slice(-1)[0] : `${value.length} experts`;
-  return (
-    <div className="relative">
-      <EnergFilterButton label={label} active={value.length > 0} open={open} onClick={onToggle}
-        icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className="w-3.5 h-3.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>} />
-      {open && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={onToggle} />
-          <div className="absolute left-0 top-full mt-1.5 z-50 w-[240px] rounded-[12px] p-1.5" style={{ background: T.popover, border: `1px solid ${T.border}`, boxShadow: T.shadowLift }}>
-            {experts.map((exp) => {
-              const isActive = value.includes(exp);
-              return (
-                <button key={exp} onClick={() => toggle(exp)}
-                  className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-[8px] text-[12.5px] text-left cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.08)]"
-                  style={{ color: isActive ? T.accent : T.text, fontWeight: isActive ? 600 : 400, background: isActive ? T.accentFaint : "transparent" }}>
-                  <span className="w-3.5 h-3.5 rounded-[3px] flex items-center justify-center shrink-0" style={{ border: `1.5px solid ${isActive ? T.accent : "rgba(89,82,54,0.25)"}`, background: isActive ? T.accent : "transparent" }}>
-                    {isActive && <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke={T.accentInk} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>}
-                  </span>
-                  {exp}
-                </button>
-              );
-            })}
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-function EnergDateFilter({ from, to, onChangeFrom, onChangeTo, open, onToggle, resetPage }: { from: string; to: string; onChangeFrom: (v: string) => void; onChangeTo: (v: string) => void; open: boolean; onToggle: () => void; resetPage: () => void }) {
-  const [datePreset, setDatePreset] = useState<string>("");
-  const hasValue = !!(from || to);
-  const handlePreset = (key: string) => { setDatePreset(key); if (key !== "custom") { const d = getPresetDates(key); onChangeFrom(d.from); onChangeTo(d.to); resetPage(); } };
-  const dateLabel = hasValue
-    ? `${from ? new Date(from + "T00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "…"} – ${to ? new Date(to + "T00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "…"}`
-    : "Scheduled Date";
-  return (
-    <div className="relative">
-      <EnergFilterButton label={dateLabel} active={hasValue} open={open} onClick={onToggle}
-        icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className="w-3.5 h-3.5"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>} />
-      {open && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={onToggle} />
-          <div className="absolute left-0 top-full mt-1.5 z-50 w-[520px] rounded-[12px] p-4" style={{ background: T.popover, border: `1px solid ${T.border}`, boxShadow: T.shadowLift }}>
-            <div className="flex gap-4">
-              <div className="w-[148px] shrink-0 space-y-0.5">
-                <div className="text-[10px] font-medium tracking-[0.06em] uppercase mb-2" style={{ color: T.faint }}>Quick select</div>
-                {DATE_PRESETS.map((p) => {
-                  const isActive = datePreset === p.key;
-                  return (
-                    <button key={p.key} onClick={() => handlePreset(p.key)}
-                      className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-[7px] text-[11.5px] text-left cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.08)]"
-                      style={{ color: isActive ? T.accent : T.text, fontWeight: isActive ? 600 : 400, background: isActive ? T.accentFaint : "transparent" }}>
-                      <span className="w-[13px] h-[13px] rounded-full flex items-center justify-center shrink-0" style={{ border: `1.5px solid ${isActive ? T.accent : "rgba(89,82,54,0.3)"}` }}>
-                        {isActive && <span className="w-[5px] h-[5px] rounded-full" style={{ background: T.accent }} />}
-                      </span>
-                      {p.label}
-                    </button>
-                  );
-                })}
-                {hasValue && (
-                  <button onClick={() => { onChangeFrom(""); onChangeTo(""); setDatePreset(""); resetPage(); }}
-                    className="w-full mt-2 text-[11px] text-left px-2.5 py-1 cursor-pointer hover:underline underline-offset-4" style={{ color: T.danger }}>Clear dates</button>
-                )}
-              </div>
-              <div className="flex-1 min-w-0" style={{ borderLeft: `1px solid ${T.borderSoft}`, paddingLeft: "16px" }}>
-                <div className="grid grid-cols-2 gap-3">
-                  <EnergMiniCalendar value={from} onChange={(v) => { onChangeFrom(v); setDatePreset("custom"); resetPage(); }} label="From" />
-                  <EnergMiniCalendar value={to} onChange={(v) => { onChangeTo(v); setDatePreset("custom"); resetPage(); }} label="To" />
-                </div>
-                {hasValue && (
-                  <div className="mt-3 pt-2.5 text-[11px] flex items-center gap-2" style={{ borderTop: `1px solid ${T.borderSoft}`, color: T.muted }}>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-3.5 h-3.5 shrink-0" style={{ color: T.accent }}><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
-                    <span>{from ? new Date(from + "T00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "Start"}</span>
-                    <span style={{ color: T.faint }}>→</span>
-                    <span>{to ? new Date(to + "T00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "End"}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-function EnergStatusFilter({ value, onChange, open, onToggle, resetPage }: { value: string[]; onChange: (v: string[]) => void; open: boolean; onToggle: () => void; resetPage: () => void }) {
-  const toggle = (v: string) => { if (!v) { onChange([]); resetPage(); return; } const next = value.includes(v) ? value.filter(x => x !== v) : [...value, v]; onChange(next); resetPage(); };
-  const label = value.length === 0 ? "Status" : value.length === 1 ? STATUS_FILTER_LABEL[value[0]] : `${value.length} statuses`;
-  return (
-    <div className="relative">
-      <EnergFilterButton label={label} active={value.length > 0} open={open} onClick={onToggle}
-        icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className="w-3.5 h-3.5"><circle cx="12" cy="12" r="10" /><path d="m9 12 2 2 4-4" /></svg>} />
-      {open && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={onToggle} />
-          <div className="absolute left-0 top-full mt-1.5 z-50 w-[200px] rounded-[12px] p-1.5" style={{ background: T.popover, border: `1px solid ${T.border}`, boxShadow: T.shadowLift }}>
-            {[{ value: "", label: "All" }, ...Object.entries(STATUS_FILTER_LABEL).map(([k, v]) => ({ value: k, label: v }))].map((opt) => {
-              const isActive = opt.value === "" ? value.length === 0 : value.includes(opt.value);
-              return (
-                <button key={opt.value} onClick={() => toggle(opt.value)}
-                  className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-[8px] text-[12.5px] text-left cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.08)]"
-                  style={{ color: isActive ? T.accent : T.text, fontWeight: isActive ? 600 : 400, background: isActive ? T.accentFaint : "transparent" }}>
-                  <span className="w-3.5 h-3.5 rounded-[3px] flex items-center justify-center shrink-0" style={{ border: `1.5px solid ${isActive ? T.accent : "rgba(89,82,54,0.25)"}`, background: isActive ? T.accent : "transparent" }}>
-                    {isActive && <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke={T.accentInk} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>}
-                  </span>
-                  {opt.label}
-                </button>
-              );
-            })}
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
 
 function toISODate(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -260,7 +74,6 @@ export default function EnergisationPage() {
   const [filterDateFrom, setFilterDateFrom] = useState("");
   const [filterDateTo, setFilterDateTo] = useState("");
   const [showFilters, setShowFilters] = useState(false);
-  const [openFilter, setOpenFilter] = useState<"expert" | "date" | "status" | null>(null);
   const [page, setPage] = useState(1);
   const [calWeekBase, setCalWeekBase] = useState(() => new Date());
   const [calScope, setCalScope] = useState<"day" | "week">("week");
@@ -385,11 +198,11 @@ export default function EnergisationPage() {
 
       {/* Pinned controls */}
       <div
-        className="sticky top-0 z-30 -mx-5 md:-mx-10 px-5 md:px-10 pt-1 pb-0.5 mb-4"
-        style={{ background: T.bg, boxShadow: `0 1px 0 ${T.borderSoft}` }}
+        className="sticky top-0 z-30 -mx-5 md:-mx-10 px-5 md:px-10 pt-1 pb-1 mb-1"
+        style={{ background: "transparent" }}
       >
-        {/* Row 1: Tabs + view toggle (right-aligned) */}
-        <div className="flex flex-wrap items-center gap-2 mb-3">
+        {/* Tabs row + view toggle */}
+        <div className="flex flex-wrap items-center gap-2 pb-2.5">
           <Tabs
             tabs={TABS.map((t) => ({ ...t, count: tabCounts[t.key] ?? 0 }))}
             active={tab}
@@ -414,43 +227,35 @@ export default function EnergisationPage() {
           )}
         </div>
 
-        {/* Row 2: Search + filters + sort + clear */}
-        <div className="flex flex-wrap items-center gap-2 mb-3">
-          <ToolbarSearch value={search} onChange={setSearch} placeholder="Search customer, order, stone…" />
-          <div className="ml-auto flex items-center gap-2">
+        {/* Filter strip — filters left, search + sort right */}
+        <div className="flex flex-wrap items-center gap-2 pt-4" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+          <div className="flex flex-wrap items-center gap-2">
             {viewMode === "list" && (
               <>
-                <EnergExpertFilter value={filterExpert} onChange={setFilterExpert} experts={uniqueExperts} open={openFilter === "expert"} onToggle={() => setOpenFilter(openFilter === "expert" ? null : "expert")} resetPage={() => setPage(1)} />
-                <EnergDateFilter from={filterDateFrom} to={filterDateTo} onChangeFrom={setFilterDateFrom} onChangeTo={setFilterDateTo} open={openFilter === "date"} onToggle={() => setOpenFilter(openFilter === "date" ? null : "date")} resetPage={() => setPage(1)} />
-                <EnergStatusFilter value={filterStatus} onChange={setFilterStatus} open={openFilter === "status"} onToggle={() => setOpenFilter(openFilter === "status" ? null : "status")} resetPage={() => setPage(1)} />
+                <InlineFilter label="Expert" icon={E_ICONS.expert} count={filterExpert.length} width={240}>
+                  <MultiCheck options={uniqueExperts.map((e) => ({ value: e, label: e }))} value={filterExpert} onChange={setFilterExpert} onAfter={() => setPage(1)} />
+                </InlineFilter>
+                <InlineFilter label="Date" icon={E_ICONS.date} count={filterDateFrom || filterDateTo ? 1 : 0} width={440}>
+                  <DateRangePanel from={filterDateFrom} to={filterDateTo} onChange={(f, t) => { setFilterDateFrom(f); setFilterDateTo(t); setPage(1); }} />
+                </InlineFilter>
+                <InlineFilter label="Status" icon={E_ICONS.status} count={filterStatus.length}>
+                  <MultiCheck options={Object.entries(STATUS_FILTER_LABEL).map(([k, v]) => ({ value: k, label: v }))} value={filterStatus} onChange={setFilterStatus} onAfter={() => setPage(1)} />
+                </InlineFilter>
+                {hasActiveFilters && (
+                  <button
+                    onClick={() => { setFilterCustomer(""); setFilterStatus([]); setFilterExpert([]); setFilterDateFrom(""); setFilterDateTo(""); setPage(1); }}
+                    className="text-[12px] font-medium px-1.5 cursor-pointer hover:underline underline-offset-4 whitespace-nowrap"
+                    style={{ color: T.danger }}
+                  >
+                    Clear all
+                  </button>
+                )}
               </>
             )}
-            <div className="w-[170px]">
-              <Select
-                value={sort}
-                onChange={(val) => { setSort(val as SortKey); setPage(1); }}
-                compact
-                prefix="Sort: "
-                options={[
-                  { value: "newest", label: "Newest" },
-                  { value: "oldest", label: "Oldest" },
-                  { value: "upcoming", label: "Upcoming" },
-                  { value: "order_desc", label: "Order: Newest" },
-                  { value: "order_asc", label: "Order: Oldest" },
-                ]}
-              />
-            </div>
-            <div className="w-[57px] flex items-center justify-center">
-              {viewMode === "list" && hasActiveFilters && (
-                <button
-                  onClick={() => { setFilterCustomer(""); setFilterStatus([]); setFilterExpert([]); setFilterDateFrom(""); setFilterDateTo(""); setPage(1); }}
-                  className="text-[12px] px-1.5 cursor-pointer hover:underline underline-offset-4 whitespace-nowrap"
-                  style={{ color: T.danger }}
-                >
-                  Clear all
-                </button>
-              )}
-            </div>
+          </div>
+          <div className="ml-auto flex items-center gap-2">
+            <ToolbarSearch value={search} onChange={setSearch} placeholder="Search customer, order, stone…" />
+            <SortMenu value={sort} onChange={(val) => { setSort(val as SortKey); setPage(1); }} options={E_SORT_OPTIONS} />
           </div>
         </div>
       </div>
@@ -801,7 +606,7 @@ export default function EnergisationPage() {
                     <Link
                       href={`/energisation/${ev.id}`}
                       className="mt-4 h-9 w-full rounded-[9px] text-[13px] font-semibold inline-flex items-center justify-center transition-all duration-200 hover:brightness-110"
-                      style={{ background: T.primary, color: T.primaryInk }}
+                      style={{ background: T.accent, color: T.accentInk }}
                     >
                       Open details
                     </Link>

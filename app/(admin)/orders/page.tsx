@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, Tabs, GoldBtn, Select, ShopifyButton, Pagination, downloadXLS, downloadPDF, fmtChipDate, ExportBtn, ToolbarSearch, FiltersPopover, FilterField, FilterChip, DateRangeFields, EmptyState, TableSkeleton } from "@/components/ui";
+import { PageHeader, Card, Chip, Tabs, GoldBtn, ShopifyButton, Pagination, downloadXLS, downloadPDF, ExportBtn, DateRangePanel, ToolbarSearch, InlineFilter, MultiCheck, SortMenu, EmptyState, TableSkeleton } from "@/components/ui";
 import { useSimulatedLoad } from "@/lib/useSimulatedLoad";
 import { T } from "@/lib/theme";
 import { MOCK_ORDERS, MOCK_INCOMPLETE_ORDERS } from "@/lib/mock";
@@ -68,445 +68,23 @@ const STONE_TYPE_MATCH: Record<string, string[]> = {
   lehsunia: ["lehsunia", "cat's eye"],
 };
 
-const DATE_PRESETS = [
-  { key: "today", label: "Today" },
-  { key: "yesterday", label: "Yesterday" },
-  { key: "last_7", label: "Last 7 days" },
-  { key: "last_30", label: "Last 30 days" },
-  { key: "last_90", label: "Last 90 days" },
-  { key: "this_month", label: "This month" },
-  { key: "last_month", label: "Last month" },
-  { key: "custom", label: "Custom range" },
-] as const;
+const ORDER_BY_OPTIONS = [
+  { value: "customer", label: "Customer" },
+  { value: "ops", label: "Ops" },
+];
+const SORT_OPTIONS = [
+  { value: "date_desc", label: "Newest first" },
+  { value: "date_asc", label: "Oldest first" },
+  { value: "amount_high", label: "Amount: high to low" },
+  { value: "amount_low", label: "Amount: low to high" },
+];
 
-function getPresetDates(key: string): { from: string; to: string } {
-  const today = new Date();
-  const iso = (d: Date) => d.toISOString().slice(0, 10);
-  switch (key) {
-    case "today": return { from: iso(today), to: iso(today) };
-    case "yesterday": { const y = new Date(today); y.setDate(y.getDate() - 1); return { from: iso(y), to: iso(y) }; }
-    case "last_7": { const d = new Date(today); d.setDate(d.getDate() - 7); return { from: iso(d), to: iso(today) }; }
-    case "last_30": { const d = new Date(today); d.setDate(d.getDate() - 30); return { from: iso(d), to: iso(today) }; }
-    case "last_90": { const d = new Date(today); d.setDate(d.getDate() - 90); return { from: iso(d), to: iso(today) }; }
-    case "this_month": return { from: iso(new Date(today.getFullYear(), today.getMonth(), 1)), to: iso(today) };
-    case "last_month": return { from: iso(new Date(today.getFullYear(), today.getMonth() - 1, 1)), to: iso(new Date(today.getFullYear(), today.getMonth(), 0)) };
-    default: return { from: "", to: "" };
-  }
-}
-
-function MiniCalendar({ value, onChange, label }: { value: string; onChange: (v: string) => void; label: string }) {
-  const [viewDate, setViewDate] = useState(() => value ? new Date(value + "T00:00") : new Date());
-  const year = viewDate.getFullYear();
-  const month = viewDate.getMonth();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const firstDayOfWeek = (new Date(year, month, 1).getDay() + 6) % 7;
-  const days: (number | null)[] = [...Array(firstDayOfWeek).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)];
-  const monthName = viewDate.toLocaleDateString("en-IN", { month: "long", year: "numeric" });
-  const iso = (d: number) => `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-  const selectedDate = value;
-
-  return (
-    <div>
-      <div className="text-[10px] font-medium tracking-[0.06em] uppercase mb-1.5" style={{ color: T.faint }}>{label}</div>
-      <div className="flex items-center justify-between mb-2">
-        <button onClick={() => setViewDate(new Date(year, month - 1, 1))} className="w-6 h-6 rounded-[6px] flex items-center justify-center cursor-pointer hover:bg-[rgba(89,82,54,0.08)]" style={{ color: T.muted }}>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="m15 18-6-6 6-6" /></svg>
-        </button>
-        <span className="text-[12px] font-medium" style={{ color: T.text }}>{monthName}</span>
-        <button onClick={() => setViewDate(new Date(year, month + 1, 1))} className="w-6 h-6 rounded-[6px] flex items-center justify-center cursor-pointer hover:bg-[rgba(89,82,54,0.08)]" style={{ color: T.muted }}>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="m9 18 6-6-6-6" /></svg>
-        </button>
-      </div>
-      <div className="grid grid-cols-7 gap-0.5 text-center">
-        {["M", "T", "W", "T", "F", "S", "S"].map((d, i) => (
-          <span key={i} className="text-[9px] font-medium py-1" style={{ color: T.faint }}>{d}</span>
-        ))}
-        {days.map((day, i) => {
-          if (day === null) return <span key={`e-${i}`} />;
-          const dateStr = iso(day);
-          const isSelected = dateStr === selectedDate;
-          const isToday = dateStr === new Date().toISOString().slice(0, 10);
-          return (
-            <button
-              key={i}
-              onClick={() => onChange(dateStr)}
-              className="w-7 h-7 rounded-[6px] text-[11px] flex items-center justify-center cursor-pointer transition-colors"
-              style={{
-                background: isSelected ? T.primary : "transparent",
-                color: isSelected ? T.primaryInk : isToday ? T.accent : T.text,
-                fontWeight: isSelected || isToday ? 600 : 400,
-              }}
-            >
-              {day}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function FilterButton({ label, active, open, onClick, icon }: { label: string; active: boolean; open: boolean; onClick: () => void; icon: React.ReactNode }) {
-  return (
-    <button
-      onClick={onClick}
-      className="h-9 px-3 rounded-[9px] text-[12.5px] font-medium inline-flex items-center gap-1.5 cursor-pointer transition-all duration-200 whitespace-nowrap"
-      style={{
-        background: active ? T.accentFaint : open ? T.accentFaint : T.bg,
-        border: `1px solid ${active ? T.accentBorder : open ? T.accentBorder : T.border}`,
-        color: active ? T.accent : T.text,
-      }}
-    >
-      {icon}
-      {label}
-      {active && (
-        <span className="w-1.5 h-1.5 rounded-full" style={{ background: T.accent }} />
-      )}
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="w-3 h-3" style={{ color: T.faint }}>
-        <path d="m6 9 6 6 6-6" />
-      </svg>
-    </button>
-  );
-}
-
-function StatusFilterDropdown({ value, onChange, open, onToggle, resetPage }: { value: string[]; onChange: (v: string[]) => void; open: boolean; onToggle: () => void; resetPage: () => void }) {
-  const toggle = (v: string) => {
-    if (!v) { onChange([]); resetPage(); return; }
-    const next = value.includes(v) ? value.filter((x) => x !== v) : [...value, v];
-    onChange(next);
-    resetPage();
-  };
-  const label = value.length === 0 ? "Status" : value.length === 1 ? STATUS_FILTER_LABEL[value[0]] : `${value.length} statuses`;
-  return (
-    <div className="relative">
-      <FilterButton
-        label={label}
-        active={value.length > 0}
-        open={open}
-        onClick={onToggle}
-        icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className="w-3.5 h-3.5"><circle cx="12" cy="12" r="10" /><path d="m9 12 2 2 4-4" /></svg>}
-      />
-      {open && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={onToggle} />
-          <div className="absolute left-0 top-full mt-1.5 z-50 w-[220px] rounded-[12px] p-1.5" style={{ background: T.popover, border: `1px solid ${T.border}`, boxShadow: T.shadowLift }}>
-            {[{ value: "", label: "All statuses" }, ...Object.entries(STATUS_FILTER_LABEL).map(([k, v]) => ({ value: k, label: v }))].map((opt) => {
-              const isActive = opt.value === "" ? value.length === 0 : value.includes(opt.value);
-              return (
-                <button
-                  key={opt.value}
-                  onClick={() => toggle(opt.value)}
-                  className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-[8px] text-[12.5px] text-left cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.08)]"
-                  style={{ color: isActive ? T.accent : T.text, fontWeight: isActive ? 600 : 400, background: isActive ? T.accentFaint : "transparent" }}
-                >
-                  <span className="w-3.5 h-3.5 rounded-[3px] flex items-center justify-center shrink-0" style={{ border: `1.5px solid ${isActive ? T.accent : "rgba(89,82,54,0.25)"}`, background: isActive ? T.accent : "transparent" }}>
-                    {isActive && <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke={T.accentInk} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>}
-                  </span>
-                  {opt.label}
-                </button>
-              );
-            })}
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-function DateFilterDropdown({ from, to, onChangeFrom, onChangeTo, open, onToggle, resetPage }: { from: string; to: string; onChangeFrom: (v: string) => void; onChangeTo: (v: string) => void; open: boolean; onToggle: () => void; resetPage: () => void }) {
-  const [datePreset, setDatePreset] = useState<string>("");
-  const hasValue = !!(from || to);
-
-  const handlePreset = (key: string) => {
-    setDatePreset(key);
-    if (key !== "custom") {
-      const dates = getPresetDates(key);
-      onChangeFrom(dates.from);
-      onChangeTo(dates.to);
-      resetPage();
-    }
-  };
-
-  const dateLabel = hasValue
-    ? `${from ? new Date(from + "T00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "…"} – ${to ? new Date(to + "T00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "…"}`
-    : "Order Date";
-
-  return (
-    <div className="relative">
-      <FilterButton
-        label={dateLabel}
-        active={hasValue}
-        open={open}
-        onClick={onToggle}
-        icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className="w-3.5 h-3.5"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>}
-      />
-      {open && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={onToggle} />
-          <div className="absolute left-0 top-full mt-1.5 z-50 w-[520px] rounded-[12px] p-4" style={{ background: T.popover, border: `1px solid ${T.border}`, boxShadow: T.shadowLift }}>
-            <div className="flex gap-4">
-              {/* Left: presets */}
-              <div className="w-[148px] shrink-0 space-y-0.5">
-                <div className="text-[10px] font-medium tracking-[0.06em] uppercase mb-2" style={{ color: T.faint }}>Quick select</div>
-                {DATE_PRESETS.map((p) => {
-                  const isActive = datePreset === p.key;
-                  return (
-                    <button
-                      key={p.key}
-                      onClick={() => handlePreset(p.key)}
-                      className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-[7px] text-[11.5px] text-left cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.08)]"
-                      style={{ color: isActive ? T.accent : T.text, fontWeight: isActive ? 600 : 400, background: isActive ? T.accentFaint : "transparent" }}
-                    >
-                      <span className="w-[13px] h-[13px] rounded-full flex items-center justify-center shrink-0" style={{ border: `1.5px solid ${isActive ? T.accent : "rgba(89,82,54,0.3)"}` }}>
-                        {isActive && <span className="w-[5px] h-[5px] rounded-full" style={{ background: T.accent }} />}
-                      </span>
-                      {p.label}
-                    </button>
-                  );
-                })}
-                {hasValue && (
-                  <button
-                    onClick={() => { onChangeFrom(""); onChangeTo(""); setDatePreset(""); resetPage(); }}
-                    className="w-full mt-2 text-[11px] text-left px-2.5 py-1 cursor-pointer hover:underline underline-offset-4"
-                    style={{ color: T.danger }}
-                  >
-                    Clear dates
-                  </button>
-                )}
-              </div>
-              {/* Right: calendars */}
-              <div className="flex-1 min-w-0" style={{ borderLeft: `1px solid ${T.borderSoft}`, paddingLeft: "16px" }}>
-                <div className="grid grid-cols-2 gap-3">
-                  <MiniCalendar value={from} onChange={(v) => { onChangeFrom(v); setDatePreset("custom"); resetPage(); }} label="From" />
-                  <MiniCalendar value={to} onChange={(v) => { onChangeTo(v); setDatePreset("custom"); resetPage(); }} label="To" />
-                </div>
-                {hasValue && (
-                  <div className="mt-3 pt-2.5 text-[11px] flex items-center gap-2" style={{ borderTop: `1px solid ${T.borderSoft}`, color: T.muted }}>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-3.5 h-3.5 shrink-0" style={{ color: T.accent }}><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
-                    <span>{from ? new Date(from + "T00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "Start"}</span>
-                    <span style={{ color: T.faint }}>→</span>
-                    <span>{to ? new Date(to + "T00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "End"}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-function StoneTypeFilterDropdown({ value, onChange, open, onToggle, resetPage }: { value: string[]; onChange: (v: string[]) => void; open: boolean; onToggle: () => void; resetPage: () => void }) {
-  const toggle = (v: string) => {
-    if (!v) { onChange([]); resetPage(); return; }
-    const next = value.includes(v) ? value.filter((x) => x !== v) : [...value, v];
-    onChange(next);
-    resetPage();
-  };
-  const label = value.length === 0 ? "Stone Type" : value.length === 1 ? (STONE_TYPE_OPTIONS.find(s => s.value === value[0])?.label.split(" (")[0] || "Stone") : `${value.length} stones`;
-  return (
-    <div className="relative">
-      <FilterButton
-        label={label}
-        active={value.length > 0}
-        open={open}
-        onClick={onToggle}
-        icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className="w-3.5 h-3.5"><path d="M12 2 2 7l10 5 10-5-10-5ZM2 17l10 5 10-5M2 12l10 5 10-5" /></svg>}
-      />
-      {open && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={onToggle} />
-          <div className="absolute left-0 top-full mt-1.5 z-50 w-[240px] rounded-[12px] p-1.5" style={{ background: T.popover, border: `1px solid ${T.border}`, boxShadow: T.shadowLift }}>
-            {STONE_TYPE_OPTIONS.filter(o => o.value !== "").map((opt) => {
-              const isActive = value.includes(opt.value);
-              return (
-                <button
-                  key={opt.value}
-                  onClick={() => toggle(opt.value)}
-                  className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-[8px] text-[12.5px] text-left cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.08)]"
-                  style={{ color: isActive ? T.accent : T.text, fontWeight: isActive ? 600 : 400, background: isActive ? T.accentFaint : "transparent" }}
-                >
-                  <span className="w-3.5 h-3.5 rounded-[3px] flex items-center justify-center shrink-0" style={{ border: `1.5px solid ${isActive ? T.accent : "rgba(89,82,54,0.25)"}`, background: isActive ? T.accent : "transparent" }}>
-                    {isActive && <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke={T.accentInk} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>}
-                  </span>
-                  {opt.label}
-                </button>
-              );
-            })}
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-function OrderByFilterDropdown({ value, onChange, open, onToggle, resetPage }: { value: string[]; onChange: (v: string[]) => void; open: boolean; onToggle: () => void; resetPage: () => void }) {
-  const options = [
-    { value: "customer", label: "Customer" },
-    { value: "ops", label: "Ops" },
-  ];
-  const toggle = (v: string) => {
-    const next = value.includes(v) ? value.filter((x) => x !== v) : [...value, v];
-    onChange(next);
-    resetPage();
-  };
-  const label = value.length === 0 ? "Order By" : value.length === 2 ? "All" : value.includes("customer") ? "Customer" : "Ops";
-  return (
-    <div className="relative">
-      <FilterButton
-        label={label}
-        active={value.length > 0}
-        open={open}
-        onClick={onToggle}
-        icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className="w-3.5 h-3.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>}
-      />
-      {open && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={onToggle} />
-          <div className="absolute left-0 top-full mt-1.5 z-50 w-[200px] rounded-[12px] p-1.5" style={{ background: T.popover, border: `1px solid ${T.border}`, boxShadow: T.shadowLift }}>
-            {options.map((opt) => {
-              const isActive = value.includes(opt.value);
-              return (
-                <button
-                  key={opt.value}
-                  onClick={() => toggle(opt.value)}
-                  className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-[8px] text-[12.5px] text-left cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.08)]"
-                  style={{ color: isActive ? T.accent : T.text, fontWeight: isActive ? 600 : 400, background: isActive ? T.accentFaint : "transparent" }}
-                >
-                  <span className="w-3.5 h-3.5 rounded-[3px] flex items-center justify-center shrink-0" style={{ border: `1.5px solid ${isActive ? T.accent : "rgba(89,82,54,0.25)"}`, background: isActive ? T.accent : "transparent" }}>
-                    {isActive && <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke={T.accentInk} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>}
-                  </span>
-                  {opt.label}
-                </button>
-              );
-            })}
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-function IncReasonFilter({ value, onChange, open, onToggle, resetPage }: { value: string[]; onChange: (v: string[]) => void; open: boolean; onToggle: () => void; resetPage: () => void }) {
-  const toggle = (v: string) => { const next = value.includes(v) ? value.filter(x => x !== v) : [...value, v]; onChange(next); resetPage(); };
-  const label = value.length === 0 ? "Status" : value.length === 1 ? (INCOMPLETE_REASON_LABEL[value[0]] || value[0]) : `${value.length} reasons`;
-  return (
-    <div className="relative">
-      <FilterButton label={label} active={value.length > 0} open={open} onClick={onToggle}
-        icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className="w-3.5 h-3.5"><circle cx="12" cy="12" r="10" /><path d="m9 12 2 2 4-4" /></svg>} />
-      {open && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={onToggle} />
-          <div className="absolute left-0 top-full mt-1.5 z-50 w-[220px] rounded-[12px] p-1.5" style={{ background: T.popover, border: `1px solid ${T.border}`, boxShadow: T.shadowLift }}>
-            {Object.entries(INCOMPLETE_REASON_LABEL).map(([k, v]) => {
-              const isActive = value.includes(k);
-              return (
-                <button key={k} onClick={() => toggle(k)}
-                  className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-[8px] text-[12.5px] text-left cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.08)]"
-                  style={{ color: isActive ? T.accent : T.text, fontWeight: isActive ? 600 : 400, background: isActive ? T.accentFaint : "transparent" }}>
-                  <span className="w-3.5 h-3.5 rounded-[3px] flex items-center justify-center shrink-0" style={{ border: `1.5px solid ${isActive ? T.accent : "rgba(89,82,54,0.25)"}`, background: isActive ? T.accent : "transparent" }}>
-                    {isActive && <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke={T.accentInk} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>}
-                  </span>
-                  {v}
-                </button>
-              );
-            })}
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-function IncStoneFilter({ value, onChange, stones, open, onToggle, resetPage }: { value: string[]; onChange: (v: string[]) => void; stones: string[]; open: boolean; onToggle: () => void; resetPage: () => void }) {
-  const toggle = (v: string) => { const next = value.includes(v) ? value.filter(x => x !== v) : [...value, v]; onChange(next); resetPage(); };
-  const label = value.length === 0 ? "Stone" : value.length === 1 ? value[0].split(" ")[0] : `${value.length} stones`;
-  return (
-    <div className="relative">
-      <FilterButton label={label} active={value.length > 0} open={open} onClick={onToggle}
-        icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className="w-3.5 h-3.5"><path d="M12 2 2 7l10 5 10-5-10-5ZM2 17l10 5 10-5M2 12l10 5 10-5" /></svg>} />
-      {open && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={onToggle} />
-          <div className="absolute left-0 top-full mt-1.5 z-50 w-[260px] max-h-[300px] overflow-y-auto rounded-[12px] p-1.5" style={{ background: T.popover, border: `1px solid ${T.border}`, boxShadow: T.shadowLift }}>
-            {stones.map((s) => {
-              const isActive = value.includes(s);
-              return (
-                <button key={s} onClick={() => toggle(s)}
-                  className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-[8px] text-[12.5px] text-left cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.08)]"
-                  style={{ color: isActive ? T.accent : T.text, fontWeight: isActive ? 600 : 400, background: isActive ? T.accentFaint : "transparent" }}>
-                  <span className="w-3.5 h-3.5 rounded-[3px] flex items-center justify-center shrink-0" style={{ border: `1.5px solid ${isActive ? T.accent : "rgba(89,82,54,0.25)"}`, background: isActive ? T.accent : "transparent" }}>
-                    {isActive && <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke={T.accentInk} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>}
-                  </span>
-                  {s}
-                </button>
-              );
-            })}
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-function IncDateFilter({ from, to, onChangeFrom, onChangeTo, open, onToggle, resetPage }: { from: string; to: string; onChangeFrom: (v: string) => void; onChangeTo: (v: string) => void; open: boolean; onToggle: () => void; resetPage: () => void }) {
-  const [datePreset, setDatePreset] = useState<string>("");
-  const hasValue = !!(from || to);
-  const handlePreset = (key: string) => { setDatePreset(key); if (key !== "custom") { const d = getPresetDates(key); onChangeFrom(d.from); onChangeTo(d.to); resetPage(); } };
-  const dateLabel = hasValue
-    ? `${from ? new Date(from + "T00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "…"} – ${to ? new Date(to + "T00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "…"}`
-    : "Failed Date";
-  return (
-    <div className="relative">
-      <FilterButton label={dateLabel} active={hasValue} open={open} onClick={onToggle}
-        icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className="w-3.5 h-3.5"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>} />
-      {open && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={onToggle} />
-          <div className="absolute left-0 top-full mt-1.5 z-50 w-[520px] rounded-[12px] p-4" style={{ background: T.popover, border: `1px solid ${T.border}`, boxShadow: T.shadowLift }}>
-            <div className="flex gap-4">
-              <div className="w-[148px] shrink-0 space-y-0.5">
-                <div className="text-[10px] font-medium tracking-[0.06em] uppercase mb-2" style={{ color: T.faint }}>Quick select</div>
-                {DATE_PRESETS.map((p) => {
-                  const isActive = datePreset === p.key;
-                  return (
-                    <button key={p.key} onClick={() => handlePreset(p.key)}
-                      className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-[7px] text-[11.5px] text-left cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.08)]"
-                      style={{ color: isActive ? T.accent : T.text, fontWeight: isActive ? 600 : 400, background: isActive ? T.accentFaint : "transparent" }}>
-                      <span className="w-[13px] h-[13px] rounded-full flex items-center justify-center shrink-0" style={{ border: `1.5px solid ${isActive ? T.accent : "rgba(89,82,54,0.3)"}` }}>
-                        {isActive && <span className="w-[5px] h-[5px] rounded-full" style={{ background: T.accent }} />}
-                      </span>
-                      {p.label}
-                    </button>
-                  );
-                })}
-                {hasValue && (
-                  <button onClick={() => { onChangeFrom(""); onChangeTo(""); setDatePreset(""); resetPage(); }}
-                    className="w-full mt-2 text-[11px] text-left px-2.5 py-1 cursor-pointer hover:underline underline-offset-4" style={{ color: T.danger }}>Clear dates</button>
-                )}
-              </div>
-              <div className="flex-1 min-w-0" style={{ borderLeft: `1px solid ${T.borderSoft}`, paddingLeft: "16px" }}>
-                <div className="grid grid-cols-2 gap-3">
-                  <MiniCalendar value={from} onChange={(v) => { onChangeFrom(v); setDatePreset("custom"); resetPage(); }} label="From" />
-                  <MiniCalendar value={to} onChange={(v) => { onChangeTo(v); setDatePreset("custom"); resetPage(); }} label="To" />
-                </div>
-                {hasValue && (
-                  <div className="mt-3 pt-2.5 text-[11px] flex items-center gap-2" style={{ borderTop: `1px solid ${T.borderSoft}`, color: T.muted }}>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-3.5 h-3.5 shrink-0" style={{ color: T.accent }}><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
-                    <span>{from ? new Date(from + "T00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "Start"}</span>
-                    <span style={{ color: T.faint }}>→</span>
-                    <span>{to ? new Date(to + "T00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "End"}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
+const F_ICONS = {
+  status: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className="w-3.5 h-3.5"><circle cx="12" cy="12" r="10" /><path d="m9 12 2 2 4-4" /></svg>,
+  date: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className="w-3.5 h-3.5"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>,
+  stone: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className="w-3.5 h-3.5"><path d="M12 2 2 7l10 5 10-5-10-5ZM2 17l10 5 10-5M2 12l10 5 10-5" /></svg>,
+  user: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className="w-3.5 h-3.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>,
+};
 
 export default function OrdersPage() {
   const [search, setSearch] = useState("");
@@ -518,7 +96,6 @@ export default function OrdersPage() {
   const [filterDateFrom, setFilterDateFrom] = useState("");
   const [filterDateTo, setFilterDateTo] = useState("");
   const [filterStoneType, setFilterStoneType] = useState<string[]>([]);
-  const [openFilter, setOpenFilter] = useState<"status" | "date" | "stone" | "placedBy" | null>(null);
   const [page, setPage] = useState(1);
 
   // Incomplete tab filters
@@ -527,8 +104,6 @@ export default function OrdersPage() {
   const [incFilterReason, setIncFilterReason] = useState<string[]>([]);
   const [incFilterDateFrom, setIncFilterDateFrom] = useState("");
   const [incFilterDateTo, setIncFilterDateTo] = useState("");
-  const [incOpenFilter, setIncOpenFilter] = useState<"reason" | "stone" | "date" | null>(null);
-  const [incShowFilters, setIncShowFilters] = useState(false);
   const [incSort, setIncSort] = useState<SortKey>("date_desc");
   const [incPage, setIncPage] = useState(1);
 
@@ -587,18 +162,14 @@ export default function OrdersPage() {
   const currentPage = page > totalPages && totalPages > 0 ? totalPages : page;
   const paginated = filtered.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE);
 
-  const uniqueCustomers = [...new Set(MOCK_ORDERS.map((o) => o.customerName))].sort();
   const hasActiveFilters = !!filterCustomer || filterStatus.length > 0 || !!filterDateFrom || !!filterDateTo || filterPlacedBy.length > 0 || filterStoneType.length > 0;
-  const activeFilterCount = [filterCustomer, filterStatus.length > 0 ? "1" : "", filterPlacedBy.length > 0 ? "1" : "", filterStoneType.length > 0 ? "1" : "", (filterDateFrom || filterDateTo) ? "1" : ""].filter(Boolean).length;
   const statusCounts = Object.fromEntries(
     Object.keys(STATUS_FILTER_LABEL).map((k) => [k, MOCK_ORDERS.filter((o) => matchesStatus(o, k)).length]),
   );
 
   // Incomplete tab — computed at component scope so global export can reach it
-  const incCustomers = [...new Set(MOCK_INCOMPLETE_ORDERS.map((o) => o.customerName))].sort();
   const incStones = [...new Set(MOCK_INCOMPLETE_ORDERS.map((o) => o.itemName))].sort();
   const hasIncFilters = !!incFilterCustomer || incFilterStone.length > 0 || incFilterReason.length > 0 || !!incFilterDateFrom || !!incFilterDateTo;
-  const incFilterCount = [incFilterCustomer, incFilterStone.length > 0 ? "1" : "", incFilterReason.length > 0 ? "1" : "", incFilterDateFrom || incFilterDateTo].filter(Boolean).length;
 
   const incFiltered = MOCK_INCOMPLETE_ORDERS
     .filter((o) => {
@@ -668,11 +239,11 @@ export default function OrdersPage() {
 
       {/* Pinned controls — tabs, search, and filters stay visible while the table scrolls */}
       <div
-        className="sticky top-0 z-30 -mx-5 md:-mx-10 px-5 md:px-10 pt-1 pb-0.5 mb-4"
-        style={{ background: T.bg, boxShadow: `0 1px 0 ${T.borderSoft}` }}
+        className="sticky top-0 z-30 -mx-5 md:-mx-10 px-5 md:px-10 pt-1 pb-1 mb-1"
+        style={{ background: "transparent" }}
       >
-      {/* Row 1: Tabs (pill style) — always same structure */}
-      <div className="flex flex-wrap items-center gap-2 mb-3">
+      {/* Tabs row */}
+      <div className="flex flex-wrap items-center gap-2 pb-2.5">
         <Tabs
           tabs={TABS.map((t) => ({
             ...t,
@@ -683,62 +254,62 @@ export default function OrdersPage() {
         />
       </div>
 
-      {/* Row 2: Search + filters + sort */}
-      <div className="flex flex-wrap items-center gap-2 mb-3">
-        <ToolbarSearch value={search} onChange={setSearch} placeholder="Search orders, customers…" />
-        <div className="ml-auto flex items-center gap-2">
+      {/* Filter strip — subtle band below the divider: filters left, search + sort right */}
+      <div className="flex flex-wrap items-center gap-2 pt-4" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+        <div className="flex flex-wrap items-center gap-2">
           {tab !== "incomplete" ? (
             <>
-              <StatusFilterDropdown value={filterStatus} onChange={setFilterStatus} open={openFilter === "status"} onToggle={() => setOpenFilter(openFilter === "status" ? null : "status")} resetPage={() => setPage(1)} />
-              <DateFilterDropdown from={filterDateFrom} to={filterDateTo} onChangeFrom={setFilterDateFrom} onChangeTo={setFilterDateTo} open={openFilter === "date"} onToggle={() => setOpenFilter(openFilter === "date" ? null : "date")} resetPage={() => setPage(1)} />
-              <StoneTypeFilterDropdown value={filterStoneType} onChange={setFilterStoneType} open={openFilter === "stone"} onToggle={() => setOpenFilter(openFilter === "stone" ? null : "stone")} resetPage={() => setPage(1)} />
-              <OrderByFilterDropdown value={filterPlacedBy} onChange={setFilterPlacedBy} open={openFilter === "placedBy"} onToggle={() => setOpenFilter(openFilter === "placedBy" ? null : "placedBy")} resetPage={() => setPage(1)} />
-              <div className="w-[160px]">
-                <Select
-                  value={sort}
-                  onChange={(val) => setSortBy(val)}
-                  compact
-                  prefix="Sort: "
-                  options={[
-                    { value: "date_desc", label: "Newest first" },
-                    { value: "date_asc", label: "Oldest first" },
-                    { value: "amount_high", label: "Amount: high" },
-                    { value: "amount_low", label: "Amount: low" },
-                  ]}
-                />
-              </div>
-              <div className="w-[57px] flex items-center justify-center">
-                {hasActiveFilters && (
-                  <button
-                    onClick={() => { setFilterCustomer(""); setFilterStatus([]); setFilterPlacedBy([]); setFilterDateFrom(""); setFilterDateTo(""); setFilterStoneType([]); setPage(1); }}
-                    className="text-[12px] px-1.5 cursor-pointer hover:underline underline-offset-4 whitespace-nowrap"
-                    style={{ color: T.danger }}
-                  >
-                    Clear all
-                  </button>
-                )}
-              </div>
+              <InlineFilter label="Status" icon={F_ICONS.status} count={filterStatus.length}>
+                <MultiCheck options={Object.entries(STATUS_FILTER_LABEL).map(([k, v]) => ({ value: k, label: v }))} value={filterStatus} onChange={setFilterStatus} onAfter={() => setPage(1)} />
+              </InlineFilter>
+              <InlineFilter label="Date" icon={F_ICONS.date} count={filterDateFrom || filterDateTo ? 1 : 0} width={440}>
+                <DateRangePanel from={filterDateFrom} to={filterDateTo} onChange={(f, t) => { setFilterDateFrom(f); setFilterDateTo(t); setPage(1); }} />
+              </InlineFilter>
+              <InlineFilter label="Stone type" icon={F_ICONS.stone} count={filterStoneType.length}>
+                <MultiCheck options={STONE_TYPE_OPTIONS.filter((o) => o.value !== "")} value={filterStoneType} onChange={setFilterStoneType} onAfter={() => setPage(1)} />
+              </InlineFilter>
+              <InlineFilter label="Placed by" icon={F_ICONS.user} count={filterPlacedBy.length} width={190}>
+                <MultiCheck options={ORDER_BY_OPTIONS} value={filterPlacedBy} onChange={setFilterPlacedBy} onAfter={() => setPage(1)} />
+              </InlineFilter>
+              {hasActiveFilters && (
+                <button
+                  onClick={() => { setFilterCustomer(""); setFilterStatus([]); setFilterPlacedBy([]); setFilterDateFrom(""); setFilterDateTo(""); setFilterStoneType([]); setPage(1); }}
+                  className="text-[12px] font-medium px-1.5 cursor-pointer hover:underline underline-offset-4 whitespace-nowrap"
+                  style={{ color: T.danger }}
+                >
+                  Clear all
+                </button>
+              )}
             </>
           ) : (
             <>
-              <IncReasonFilter value={incFilterReason} onChange={setIncFilterReason} open={incOpenFilter === "reason"} onToggle={() => setIncOpenFilter(incOpenFilter === "reason" ? null : "reason")} resetPage={() => setIncPage(1)} />
-              <IncStoneFilter value={incFilterStone} onChange={setIncFilterStone} stones={incStones} open={incOpenFilter === "stone"} onToggle={() => setIncOpenFilter(incOpenFilter === "stone" ? null : "stone")} resetPage={() => setIncPage(1)} />
-              <IncDateFilter from={incFilterDateFrom} to={incFilterDateTo} onChangeFrom={setIncFilterDateFrom} onChangeTo={setIncFilterDateTo} open={incOpenFilter === "date"} onToggle={() => setIncOpenFilter(incOpenFilter === "date" ? null : "date")} resetPage={() => setIncPage(1)} />
-              <div className="w-[160px]">
-                <Select value={incSort} onChange={(v) => { setIncSort(v as SortKey); setIncPage(1); }} compact prefix="Sort: " options={[{ value: "date_desc", label: "Newest first" }, { value: "date_asc", label: "Oldest first" }, { value: "amount_high", label: "Amount: high" }, { value: "amount_low", label: "Amount: low" }]} />
-              </div>
-              <div className="w-[57px] flex items-center justify-center">
-                {hasIncFilters && (
-                  <button
-                    onClick={() => { setIncFilterCustomer(""); setIncFilterStone([]); setIncFilterReason([]); setIncFilterDateFrom(""); setIncFilterDateTo(""); setIncPage(1); }}
-                    className="text-[12px] px-1.5 cursor-pointer hover:underline underline-offset-4 whitespace-nowrap"
-                    style={{ color: T.danger }}
-                  >
-                    Clear all
-                  </button>
-                )}
-              </div>
+              <InlineFilter label="Status" icon={F_ICONS.status} count={incFilterReason.length}>
+                <MultiCheck options={Object.entries(INCOMPLETE_REASON_LABEL).map(([k, v]) => ({ value: k, label: v }))} value={incFilterReason} onChange={setIncFilterReason} onAfter={() => setIncPage(1)} />
+              </InlineFilter>
+              <InlineFilter label="Stone" icon={F_ICONS.stone} count={incFilterStone.length}>
+                <MultiCheck options={incStones.map((s) => ({ value: s, label: s }))} value={incFilterStone} onChange={setIncFilterStone} onAfter={() => setIncPage(1)} />
+              </InlineFilter>
+              <InlineFilter label="Date" icon={F_ICONS.date} count={incFilterDateFrom || incFilterDateTo ? 1 : 0} width={440}>
+                <DateRangePanel from={incFilterDateFrom} to={incFilterDateTo} onChange={(f, t) => { setIncFilterDateFrom(f); setIncFilterDateTo(t); setIncPage(1); }} />
+              </InlineFilter>
+              {hasIncFilters && (
+                <button
+                  onClick={() => { setIncFilterCustomer(""); setIncFilterStone([]); setIncFilterReason([]); setIncFilterDateFrom(""); setIncFilterDateTo(""); setIncPage(1); }}
+                  className="text-[12px] font-medium px-1.5 cursor-pointer hover:underline underline-offset-4 whitespace-nowrap"
+                  style={{ color: T.danger }}
+                >
+                  Clear all
+                </button>
+              )}
             </>
+          )}
+        </div>
+        <div className="ml-auto flex items-center gap-2">
+          <ToolbarSearch value={search} onChange={setSearch} placeholder="Search orders, customers…" />
+          {tab !== "incomplete" ? (
+            <SortMenu value={sort} onChange={(v) => setSortBy(v)} options={SORT_OPTIONS} />
+          ) : (
+            <SortMenu value={incSort} onChange={(v) => { setIncSort(v as SortKey); setIncPage(1); }} options={SORT_OPTIONS} />
           )}
         </div>
       </div>

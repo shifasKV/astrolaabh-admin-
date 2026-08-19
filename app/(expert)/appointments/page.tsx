@@ -1,7 +1,7 @@
 "use client";
 import { useState, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, Tabs, SearchFilter, Select, Pagination, Tooltip, TableSkeleton } from "@/components/ui";
+import { PageHeader, Card, Chip, Tabs, ToolbarSearch, SortMenu, Select, Pagination, Tooltip, TableSkeleton } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { usePersistentState } from "@/lib/usePersistentState";
 import { useSimulatedLoad } from "@/lib/useSimulatedLoad";
@@ -156,7 +156,8 @@ export default function AppointmentsPage() {
       <div className="md:h-[calc(100dvh-78px)] md:flex md:flex-col md:min-h-0">
       <PageHeader title="Appointments" />
 
-      <div className="mb-4">
+      {/* Tabs + view toggle */}
+      <div className="flex flex-wrap items-center gap-2 mb-3">
         <Tabs
           tabs={TABS.map((t) => ({
             ...t,
@@ -171,43 +172,22 @@ export default function AppointmentsPage() {
           active={tab}
           onChange={(key) => { setTab(key); if (key !== "all") setViewMode("list"); }}
         />
-      </div>
-
-      {/* Search / View toggle — fixed height row */}
-      <div className="flex items-center gap-3 mb-3 h-10">
-        <div className="flex-1 min-w-0">
-          {viewMode === "list" && (
-            <div className="w-1/2">
-              <SearchFilter search={search} onSearchChange={setSearch} placeholder="Search customer, consultation ID…" />
-            </div>
-          )}
-        </div>
         {tab === "all" && (
-          <div
-              className="inline-flex items-center gap-1 p-[3px] rounded-full shrink-0"
-              style={{ background: "rgba(89,82,54,0.055)" }}
-            >
-              {(["list", "calendar"] as const).map((mode) => (
-                <Tooltip key={mode} label={mode === "list" ? "List view" : "Calendar view"}>
-                <button
-                  onClick={() => setViewMode(mode)}
-                  aria-label={mode === "list" ? "List view" : "Calendar view"}
-                  className="h-8 w-11 rounded-full inline-flex items-center justify-center shrink-0 transition-all duration-200 cursor-pointer"
-                  style={
-                    viewMode === mode
-                      ? { background: T.card, color: T.text, border: `1px solid ${T.borderSoft}`, boxShadow: "0 1px 2px rgba(43,42,34,0.08)" }
-                      : { color: T.muted, border: "1px solid transparent" }
-                  }
-                >
-                  {mode === "list" ? (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-                  ) : (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 9h18"/></svg>
-                  )}
-                </button>
-                </Tooltip>
-              ))}
-            </div>
+          <div className="ml-auto inline-flex items-center gap-1 p-[3px] rounded-full shrink-0" style={{ background: "rgba(89,82,54,0.055)" }}>
+            {(["list", "calendar"] as const).map((mode) => (
+              <Tooltip key={mode} label={mode === "list" ? "List view" : "Calendar view"}>
+              <button onClick={() => setViewMode(mode)} aria-label={mode === "list" ? "List view" : "Calendar view"}
+                className="h-8 w-11 rounded-full inline-flex items-center justify-center shrink-0 transition-all duration-200 cursor-pointer"
+                style={viewMode === mode ? { background: T.card, color: T.text, border: `1px solid ${T.borderSoft}`, boxShadow: "0 1px 2px rgba(43,42,34,0.08)" } : { color: T.muted, border: "1px solid transparent" }}>
+                {mode === "list" ? (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                ) : (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 9h18"/></svg>
+                )}
+              </button>
+              </Tooltip>
+            ))}
+          </div>
         )}
       </div>
 
@@ -300,18 +280,17 @@ export default function AppointmentsPage() {
 
         <div className="ml-auto flex items-center gap-2">
           {hasActiveFilters && (
-            <button onClick={() => { setFilterCustomer(""); setFilterStatus(""); setFilterDateFrom(""); setFilterDateTo(""); setPage(1); }} className="text-[11px] px-2.5 py-1.5 rounded-[7px] cursor-pointer transition-opacity hover:opacity-80" style={{ color: T.danger, background: "rgba(176,84,84,0.08)", border: "1px solid rgba(176,84,84,0.15)" }}>Clear filters</button>
+            <button onClick={() => { setFilterCustomer(""); setFilterStatus(""); setFilterDateFrom(""); setFilterDateTo(""); setPage(1); }} className="text-[12px] font-medium px-1.5 cursor-pointer hover:underline underline-offset-4 whitespace-nowrap" style={{ color: T.danger }}>Clear all</button>
           )}
-          <div className="w-[170px]">
-            <Select value={sort} onChange={(v) => { setSort(v as SortKey); setPage(1); }} compact prefix="Sort: " options={[{ value: "newest", label: "Newest first" }, { value: "oldest", label: "Oldest first" }]} />
-          </div>
+          <ToolbarSearch value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search customer, consultation ID…" />
+          <SortMenu value={sort} onChange={(v) => { setSort(v as SortKey); setPage(1); }} options={[{ value: "newest", label: "Newest first" }, { value: "oldest", label: "Oldest first" }]} />
         </div>
       </div>
 
       {/* Table */}
       <Card className="!p-0 md:min-h-0 md:overflow-y-auto">
         {loading ? <TableSkeleton cols={4} rows={8} /> : <>
-        <div className="hidden sm:grid items-center gap-4 pb-3 mb-1" style={{ gridTemplateColumns: "1fr 150px 100px 130px", borderBottom: `1px solid ${T.border}` }}>
+        <div className="hidden sm:grid items-center gap-4 px-4 pt-4 pb-3" style={{ gridTemplateColumns: "1fr 150px 100px 130px", borderBottom: `1px solid ${T.border}` }}>
           <div className="text-[11px] tracking-[0.08em] uppercase" style={{ color: T.faint }}>Booking details</div>
           <div className="text-[11px] tracking-[0.08em] uppercase" style={{ color: T.faint }}>Scheduled time</div>
           <div className="text-[11px] tracking-[0.08em] uppercase text-right" style={{ color: T.faint }}>Commission</div>
@@ -327,7 +306,7 @@ export default function AppointmentsPage() {
             const commEarned = es === "done" ? Math.round((c.fee ?? 0) * 0.15) : 0;
             return (
               <Link key={c.id} href={`/appointments/${c.id}`}
-                className="grid items-center gap-4 py-3.5 transition-all duration-150 rounded-[8px] hover:bg-[rgba(119,123,98,0.07)]"
+                className="grid items-center gap-4 px-4 py-3.5 transition-colors duration-150 last:rounded-b-[15px] even:bg-[rgba(89,82,54,0.025)] hover:!bg-[rgba(119,123,98,0.08)]"
                 style={{ borderBottom: `1px solid ${T.borderSoft}`, gridTemplateColumns: "1fr 150px 100px 130px" }}
               >
                 <div className="min-w-0">
@@ -566,7 +545,7 @@ export default function AppointmentsPage() {
                         </div>
                       ))}
                     </div>
-                    <Link href={`/appointments/${ev.id}`} className="mt-4 h-9 w-full rounded-[9px] text-[13px] font-semibold inline-flex items-center justify-center transition-all duration-200 hover:brightness-110" style={{ background: T.primary, color: T.primaryInk }}>
+                    <Link href={`/appointments/${ev.id}`} className="mt-4 h-9 w-full rounded-[9px] text-[13px] font-semibold inline-flex items-center justify-center transition-all duration-200 hover:brightness-110" style={{ background: T.accent, color: T.accentInk }}>
                       Open details
                     </Link>
                   </div>

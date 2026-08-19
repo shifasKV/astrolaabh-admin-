@@ -3,6 +3,7 @@ import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth, INVITE_ACCOUNTS, ROLE_ROUTES } from "@/lib/store/auth";
 import { T } from "@/lib/theme";
+import { Alert } from "@/components/ui";
 
 function SetPasswordInner() {
   const router = useRouter();
@@ -99,14 +100,9 @@ function SetPasswordInner() {
                 </span>
               </div>
 
-              {error && (
-                <div className="flex items-start gap-2 text-[12.5px] px-3 py-2.5 rounded-[9px]" style={{ background: "rgba(163,73,63,0.08)", border: "1px solid rgba(163,73,63,0.22)", color: T.danger }}>
-                  <span className="mt-[5px] w-1.5 h-1.5 rounded-full shrink-0" style={{ background: T.danger }} />
-                  {error}
-                </div>
-              )}
+              {error && <Alert tone="error">{error}</Alert>}
 
-              <button type="submit" disabled={!canSubmit} className="h-11 w-full rounded-[10px] text-[14px] font-semibold transition-all duration-200 hover:brightness-110 cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed" style={{ background: T.primary, color: T.primaryInk }}>
+              <button type="submit" disabled={!canSubmit} className="h-11 w-full rounded-[10px] text-[14px] font-semibold transition-all duration-200 hover:brightness-110 cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed" style={{ background: T.accent, color: T.accentInk }}>
                 Set password &amp; continue →
               </button>
               <button type="button" onClick={() => router.push("/")} className="w-full text-center text-[12.5px] font-medium cursor-pointer transition-opacity hover:opacity-80" style={{ color: T.accent }}>

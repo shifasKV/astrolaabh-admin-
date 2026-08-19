@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { T } from "@/lib/theme";
+import { Alert } from "@/components/ui";
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
@@ -55,7 +56,7 @@ export default function ForgotPasswordPage() {
                 <p className="text-[13px] mt-1.5 leading-relaxed" style={{ color: T.muted }}>
                   If an account exists for <span className="font-medium" style={{ color: T.text }}>{email.trim()}</span>, we&apos;ve sent a link to reset your password.
                 </p>
-                <button onClick={() => router.push("/")} className="mt-6 h-11 w-full rounded-[10px] text-[14px] font-semibold cursor-pointer transition-all duration-200 hover:brightness-110" style={{ background: T.primary, color: T.primaryInk }}>
+                <button onClick={() => router.push("/")} className="mt-6 h-11 w-full rounded-[10px] text-[14px] font-semibold cursor-pointer transition-all duration-200 hover:brightness-110" style={{ background: T.accent, color: T.accentInk }}>
                   Back to sign in
                 </button>
               </div>
@@ -68,13 +69,8 @@ export default function ForgotPasswordPage() {
                   <label className="block text-[11px] font-medium tracking-[0.08em] uppercase mb-1.5" style={{ color: T.faint }}>Work email</label>
                   <input type="email" autoComplete="email" value={email} onChange={(e) => { setEmail(e.target.value); setError(""); }} placeholder="you@astrolaabh.house" className={inputCls} style={inputStyle} />
                 </div>
-                {error && (
-                  <div className="flex items-start gap-2 text-[12.5px] px-3 py-2.5 rounded-[9px]" style={{ background: "rgba(163,73,63,0.08)", border: "1px solid rgba(163,73,63,0.22)", color: T.danger }}>
-                    <span className="mt-[5px] w-1.5 h-1.5 rounded-full shrink-0" style={{ background: T.danger }} />
-                    {error}
-                  </div>
-                )}
-                <button type="submit" className="h-11 w-full rounded-[10px] text-[14px] font-semibold cursor-pointer transition-all duration-200 hover:brightness-110" style={{ background: T.primary, color: T.primaryInk }}>
+                {error && <Alert tone="error">{error}</Alert>}
+                <button type="submit" className="h-11 w-full rounded-[10px] text-[14px] font-semibold cursor-pointer transition-all duration-200 hover:brightness-110" style={{ background: T.accent, color: T.accentInk }}>
                   Send reset link
                 </button>
                 <button type="button" onClick={() => router.push("/")} className="w-full text-center text-[12.5px] font-medium cursor-pointer transition-opacity hover:opacity-80" style={{ color: T.accent }}>

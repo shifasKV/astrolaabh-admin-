@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/store/auth";
-import { OtpVerifyForm, applyOtpInput } from "@/components/ui";
+import { OtpVerifyForm, applyOtpInput, Alert } from "@/components/ui";
 import { T } from "@/lib/theme";
 
 type Step = "email" | "otp";
@@ -146,18 +146,13 @@ export default function AffiliateSignupPage() {
                   />
                 </div>
 
-                {error && (
-                  <div className="flex items-start gap-2 text-[12.5px] px-3 py-2.5 rounded-[9px]" style={{ background: "rgba(163,73,63,0.08)", border: "1px solid rgba(163,73,63,0.22)", color: T.danger }}>
-                    <span className="mt-[5px] w-1.5 h-1.5 rounded-full shrink-0" style={{ background: T.danger }} />
-                    {error}
-                  </div>
-                )}
+                {error && <Alert tone="error">{error}</Alert>}
 
                 <button
                   type="submit"
                   disabled={!email.trim() || sending}
                   className="w-full h-11 rounded-[10px] text-[14px] font-semibold transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed hover:brightness-110 hover:-translate-y-px active:scale-[0.99] cursor-pointer"
-                  style={{ background: T.primary, color: T.primaryInk, boxShadow: "inset 0 1px 0 rgba(244,241,229,0.12), 0 1px 2px rgba(43,42,34,0.1)" }}
+                  style={{ background: T.accent, color: T.accentInk, boxShadow: "inset 0 1px 0 rgba(244,241,229,0.12), 0 1px 2px rgba(43,42,34,0.1)" }}
                 >
                   {sending ? "Sending…" : "Continue with email"}
                 </button>
@@ -191,7 +186,6 @@ export default function AffiliateSignupPage() {
                 error={error}
                 resendIn={resendIn}
                 submitLabel="Verify & continue"
-                backLabel="Use a different email"
                 onOtpChange={handleOtpChange}
                 onOtpKeyDown={handleOtpKeyDown}
                 onSubmit={handleVerify}

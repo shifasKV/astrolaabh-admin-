@@ -195,7 +195,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <button onClick={() => flash("Payment link sent to customer")} className="text-[12.5px] font-medium h-8 px-3 rounded-[8px] cursor-pointer transition-colors hover:bg-[rgba(160,125,56,0.12)]" style={{ color: T.gold }}>Resend link</button>
-            <button onClick={() => setShowMarkPaid(true)} className="text-[12.5px] font-semibold h-8 px-3.5 rounded-[8px] cursor-pointer hover:brightness-110 transition-all" style={{ background: T.primary, color: T.primaryInk }}>Mark as paid</button>
+            <button onClick={() => setShowMarkPaid(true)} className="text-[12.5px] font-semibold h-8 px-3.5 rounded-[8px] cursor-pointer hover:brightness-110 transition-all" style={{ background: T.accent, color: T.accentInk }}>Mark as paid</button>
           </div>
         </div>
       )}

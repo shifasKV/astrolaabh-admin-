@@ -63,11 +63,11 @@ export default function AffiliateLayout({ children }: { children: React.ReactNod
       <TopBar items={allItems} userLabel={user.name} onUserClick={() => { logout(); router.push("/"); }} />
       <main
         className={`min-w-0 min-h-dvh md:min-h-0 md:h-full md:overflow-y-auto md:rounded-[20px] transition-[margin-left] duration-300 ${collapsed ? "md:ml-[76px]" : "md:ml-[280px]"}`}
-        style={{ background: T.bg, boxShadow: "0 0 0 1px rgba(244,241,229,0.07), 0 24px 60px -30px rgba(0,0,0,0.5)" }}
+        style={{ backgroundColor: T.bg, backgroundImage: "linear-gradient(rgba(248,245,238,0.22), rgba(248,245,238,0.22)), url(/pattern/damask.png)", backgroundSize: "cover", backgroundRepeat: "no-repeat", backgroundPosition: "center", boxShadow: "0 0 0 1px rgba(244,241,229,0.07), 0 24px 60px -30px rgba(0,0,0,0.5)" }}
       >
         <div className="px-5 md:px-10 py-7 max-w-[1400px] mx-auto">
           {pending && (
-            <div className="flex flex-wrap items-start gap-3 rounded-[14px] px-4 py-3.5 mb-6" style={{ background: "linear-gradient(160deg, #faf0d8 0%, #efdfb8 100%)", border: "1px solid rgba(160,125,56,0.35)" }}>
+            <div className="flex flex-wrap items-start gap-3 rounded-[14px] px-4 py-3.5 mb-6" style={{ background: "linear-gradient(180deg, rgba(200,150,50,0.16), rgba(200,150,50,0.08))", border: "1px solid rgba(184,138,62,0.42)", borderLeft: "3px solid #b08a3e" }}>
               <span className="w-8 h-8 rounded-[10px] flex items-center justify-center shrink-0" style={{ background: "rgba(160,125,56,0.16)", color: "#8a6a2f" }}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><circle cx="12" cy="12" r="10" /><path d="M12 8v4l3 2" /></svg>
               </span>
@@ -76,6 +76,17 @@ export default function AffiliateLayout({ children }: { children: React.ReactNod
                 <p className="text-[12.5px] mt-0.5 leading-relaxed" style={{ color: "#8a6a2f" }}>
                   Links, referrals, and earnings unlock once the AstroLaabh team approves your account. Typical review time is 1–2 business days.
                 </p>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 mt-2.5">
+                  <a href="mailto:support@astrolaabh.house" className="inline-flex items-center gap-1.5 text-[12px] font-medium transition-opacity hover:opacity-70" style={{ color: "#7a5c26" }}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M4 4h16v12H5.2L4 17.2z" /><path d="M8 9h8M8 12h5" /></svg>
+                    Contact support
+                  </a>
+                  <span className="w-1 h-1 rounded-full" style={{ background: "rgba(138,106,47,0.4)" }} />
+                  <button onClick={() => { logout(); router.push("/"); }} className="inline-flex items-center gap-1.5 text-[12px] font-medium cursor-pointer transition-opacity hover:opacity-70" style={{ color: "#7a5c26" }}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="M16 17l5-5-5-5M21 12H9" /></svg>
+                    Log out
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -93,7 +104,7 @@ export default function AffiliateLayout({ children }: { children: React.ReactNod
               key={s}
               onClick={() => setApproval(s)}
               className="h-7 px-3 rounded-full text-[11.5px] font-medium capitalize cursor-pointer transition-all duration-200"
-              style={approval === s ? { background: T.primary, color: T.primaryInk } : { color: T.muted }}
+              style={approval === s ? { background: T.accent, color: T.accentInk } : { color: T.muted }}
             >
               {s}
             </button>

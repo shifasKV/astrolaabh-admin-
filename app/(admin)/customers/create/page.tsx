@@ -1,227 +1,118 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { PageHeader, Card, GoldBtn, GhostBtn, SearchFilter, Chip, Input, StepIndicator } from "@/components/ui";
+import { PageHeader, Card, GoldBtn, GhostBtn, Input } from "@/components/ui";
 import { T } from "@/lib/theme";
-import { MOCK_CUSTOMERS } from "@/lib/mock";
 import * as V from "@/lib/validators";
 
-type Step = "customer" | "address";
-const STEPS: { key: Step; label: string }[] = [
-  { key: "customer", label: "Customer" },
-  { key: "address", label: "Address" },
-];
+function Section({ title, sub, children, first }: { title: string; sub?: string; children: React.ReactNode; first?: boolean }) {
+  return (
+    <div className="p-6" style={first ? undefined : { borderTop: `1px solid ${T.borderSoft}` }}>
+      <h2 className="text-[15px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>{title}</h2>
+      {sub && <p className="text-[12.5px] mt-1" style={{ color: T.muted }}>{sub}</p>}
+      <div className="mt-5 space-y-5">{children}</div>
+    </div>
+  );
+}
 
 export default function CreateCustomerPage() {
   const router = useRouter();
-  const [step, setStep] = useState<Step>("customer");
-  const [animating, setAnimating] = useState(false);
-  const [toast, setToast] = useState("");
 
-  const [newCustomer, setNewCustomer] = useState({ name: "", email: "", phone: "" });
-  const [createdCustomer, setCreatedCustomer] = useState<{ id: string; name: string; email: string; phone: string } | null>(null);
-
-  const [selectedAddress, setSelectedAddress] = useState("");
-  const [showNewAddress, setShowNewAddress] = useState(false);
-  const [newAddress, setNewAddress] = useState({ line1: "", line2: "", city: "", state: "", pincode: "" });
-
-  const stepIndex = STEPS.findIndex((s) => s.key === step);
-
-  const canNavigateTo = (targetIndex: number) => {
-    if (targetIndex === 0) return true;
-    if (targetIndex === 1) return !!createdCustomer;
-    return false;
-  };
-
-  const goTo = (target: Step) => {
-    setAnimating(true);
-    setTimeout(() => { setStep(target); setAnimating(false); }, 180);
-  };
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [line1, setLine1] = useState("");
+  const [line2, setLine2] = useState("");
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("");
+  const [pincode, setPincode] = useState("");
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const clearErr = (k: string) => setErrors((p) => (p[k] ? { ...p, [k]: "" } : p));
-  const validateCustomer = () => {
+  const [toast, setToast] = useState("");
+
+  const location = [city, state].filter(Boolean).join(", ");
+
+  const handleCreate = () => {
     const e: Record<string, string> = {
-      name: V.required(newCustomer.name, "Full name"),
-      email: V.email(newCustomer.email),
-      phone: V.phone(newCustomer.phone),
+      name: V.required(name, "Full name"),
+      email: V.email(email),
+      phone: V.phone(phone),
     };
     setErrors(e);
-    return V.isClean(e);
-  };
-
-  const handleCreateCustomer = () => {
-    if (!validateCustomer()) return;
-    const id = `cust_new_${Date.now()}`;
-    setCreatedCustomer({ id, ...newCustomer });
-    goTo("address");
-  };
-
-  const selectAddress = (addr: string) => {
-    setSelectedAddress(addr);
-  };
-
-  const handleSaveNewAddress = () => {
-    if (!newAddress.line1 || !newAddress.city || !newAddress.pincode) return;
-    const formatted = `${newAddress.line1}${newAddress.line2 ? ", " + newAddress.line2 : ""}, ${newAddress.city}, ${newAddress.state} ${newAddress.pincode}`;
-    setSelectedAddress(formatted);
-    setShowNewAddress(false);
-  };
-
-  const handleSave = () => {
-    setToast("Customer saved successfully");
-    setTimeout(() => {
-      setToast("");
-      router.push("/customers");
-    }, 1500);
+    if (!V.isClean(e)) return;
+    setToast("Customer created successfully");
+    setTimeout(() => { setToast(""); router.push("/customers"); }, 1500);
   };
 
   return (
     <>
       <PageHeader
         title="Add customer"
-        back={{ label: "Customers", onClick: () => router.push("/customers") }}
+        back={{ label: "Customers", href: "/customers" }}
       />
 
-      <StepIndicator
-        steps={STEPS}
-        currentIndex={stepIndex}
-        onNavigate={(i) => goTo(STEPS[i].key)}
-        canNavigateTo={canNavigateTo}
-      />
-
-      <div
-        className="transition-all duration-200"
-        style={{
-          opacity: animating ? 0 : 1,
-          transform: animating ? "translateY(8px)" : "translateY(0)",
-        }}
-      >
-        {/* STEP: Customer */}
-        {step === "customer" && (
-          <Card>
-            <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.faint }}>Customer details</div>
-
+      <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-5 items-start pb-24">
+        {/* Live preview rail */}
+        <aside className="lg:sticky lg:top-4">
+          <Card className="!p-5">
+            <div className="flex flex-col items-center text-center pb-4 mb-4" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
+              <div className="w-[72px] h-[72px] rounded-[20px] flex items-center justify-center text-[24px] font-semibold" style={{ background: T.accentFaint, border: `1px solid ${T.accentBorder}`, color: T.accent }}>{(name || "N")[0].toUpperCase()}</div>
+              <div className="text-[15px] font-semibold mt-3 leading-tight" style={{ color: T.text }}>{name || "New customer"}</div>
+              <div className="text-[12px] mt-0.5 truncate max-w-full" style={{ color: T.muted }}>{email || "—"}</div>
+            </div>
             <div className="space-y-3">
-              <Input
-                value={newCustomer.name}
-                onChange={(v) => { setNewCustomer((p) => ({ ...p, name: v })); clearErr("name"); }}
-                onBlur={() => setErrors((p) => ({ ...p, name: V.required(newCustomer.name, "Full name") }))}
-                error={errors.name}
-                label="Full name"
-                placeholder="e.g. Priya Sharma"
-              />
-              <Input
-                value={newCustomer.email}
-                onChange={(v) => { setNewCustomer((p) => ({ ...p, email: v })); clearErr("email"); }}
-                onBlur={() => setErrors((p) => ({ ...p, email: V.email(newCustomer.email) }))}
-                error={errors.email}
-                label="Email"
-                placeholder="e.g. priya@example.com"
-              />
-              <Input
-                value={newCustomer.phone}
-                onChange={(v) => { setNewCustomer((p) => ({ ...p, phone: v })); clearErr("phone"); }}
-                onBlur={() => setErrors((p) => ({ ...p, phone: V.phone(newCustomer.phone) }))}
-                error={errors.phone}
-                label="Mobile number"
-                placeholder="e.g. +91 98765 43210"
-              />
-            </div>
-
-            <div className="mt-4 pt-3 flex justify-end" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
-              <GoldBtn onClick={handleCreateCustomer}>Next →</GoldBtn>
+              <div className="flex items-center justify-between text-[12.5px]">
+                <span style={{ color: T.faint }}>Mobile</span>
+                <span className="font-medium tabular-nums" style={{ color: T.text }}>{phone || "—"}</span>
+              </div>
+              <div className="flex items-center justify-between gap-3 text-[12.5px]">
+                <span style={{ color: T.faint }}>Location</span>
+                <span className="font-medium truncate text-right" style={{ color: T.text }}>{location || "—"}</span>
+              </div>
             </div>
           </Card>
-        )}
+        </aside>
 
-        {/* STEP: Address */}
-        {step === "address" && (
-          <Card>
-            <div className="flex items-center justify-between mb-3">
-              <div className="text-[11px] tracking-[0.08em] uppercase" style={{ color: T.faint }}>Shipping address</div>
-              {!showNewAddress && (
-                <button
-                  onClick={() => setShowNewAddress(true)}
-                  className="text-[12px] font-medium cursor-pointer transition-opacity hover:opacity-80"
-                  style={{ color: T.accent }}
-                >
-                  + New address
-                </button>
-              )}
+        {/* Seamless form */}
+        <Card className="!p-0 overflow-hidden">
+          <Section title="Identity & contact" sub="Name and how you'll reach this customer." first>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input value={name} onChange={(v) => { setName(v); clearErr("name"); }} onBlur={() => setErrors((p) => ({ ...p, name: V.required(name, "Full name") }))} error={errors.name} label="Full name" placeholder="e.g. Priya Sharma" />
+              <Input value={email} onChange={(v) => { setEmail(v); clearErr("email"); }} onBlur={() => setErrors((p) => ({ ...p, email: V.email(email) }))} error={errors.email} label="Email" type="email" placeholder="e.g. priya@example.com" />
             </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input value={phone} onChange={(v) => { setPhone(v); clearErr("phone"); }} onBlur={() => setErrors((p) => ({ ...p, phone: V.phone(phone) }))} error={errors.phone} label="Mobile number" type="tel" placeholder="e.g. +91 98765 43210" />
+            </div>
+          </Section>
 
-            {createdCustomer && (
-              <div className="text-[12px] mb-4 px-3 py-2 rounded-[8px]" style={{ background: "rgba(119,123,98,0.10)", color: T.muted }}>
-                Adding address for <span style={{ color: T.text }}>{createdCustomer.name}</span>
-              </div>
-            )}
+          <Section title="Shipping address" sub="Where the customer's orders are delivered.">
+            <Input value={line1} onChange={setLine1} label="Address line 1" placeholder="House/flat no., building, street" />
+            <Input value={line2} onChange={setLine2} label="Address line 2 (optional)" placeholder="Landmark, area" />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <Input value={city} onChange={setCity} label="City" placeholder="e.g. Mumbai" />
+              <Input value={state} onChange={setState} label="State" placeholder="e.g. Maharashtra" />
+              <Input value={pincode} onChange={setPincode} label="Pincode" type="number" placeholder="e.g. 400001" />
+            </div>
+          </Section>
+        </Card>
+      </div>
 
-            {showNewAddress ? (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[12px] font-medium" style={{ color: T.accent }}>Add new address</span>
-                  <button onClick={() => setShowNewAddress(false)} className="text-[11px] cursor-pointer" style={{ color: T.muted }}>← Back</button>
-                </div>
-                <Input
-                  value={newAddress.line1}
-                  onChange={(v) => setNewAddress((p) => ({ ...p, line1: v }))}
-                  label="Address line 1"
-                  placeholder="House/flat no., building, street"
-                />
-                <Input
-                  value={newAddress.line2}
-                  onChange={(v) => setNewAddress((p) => ({ ...p, line2: v }))}
-                  label="Address line 2 (optional)"
-                  placeholder="Landmark, area"
-                />
-                <div className="grid grid-cols-2 gap-3">
-                  <Input
-                    value={newAddress.city}
-                    onChange={(v) => setNewAddress((p) => ({ ...p, city: v }))}
-                    label="City"
-                    placeholder="e.g. Mumbai"
-                  />
-                  <Input
-                    value={newAddress.state}
-                    onChange={(v) => setNewAddress((p) => ({ ...p, state: v }))}
-                    label="State"
-                    placeholder="e.g. Maharashtra"
-                  />
-                </div>
-                <Input
-                  value={newAddress.pincode}
-                  onChange={(v) => setNewAddress((p) => ({ ...p, pincode: v }))}
-                  label="Pincode"
-                  placeholder="e.g. 400001"
-                />
-                <div className="flex gap-2.5 pt-2">
-                  <GoldBtn onClick={handleSaveNewAddress}>Use this address</GoldBtn>
-                  <GhostBtn onClick={() => setShowNewAddress(false)}>Cancel</GhostBtn>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <p className="text-[13.5px] mb-2" style={{ color: T.muted }}>No saved addresses</p>
-                <button onClick={() => setShowNewAddress(true)} className="text-[12px] font-medium cursor-pointer" style={{ color: T.accent }}>+ Add new address</button>
-              </div>
-            )}
-
-            {selectedAddress && (
-              <div className="mt-4 pt-3 flex items-center justify-between" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
-                <div className="text-[12px] truncate pr-4" style={{ color: T.muted }}>
-                  <span className="text-[11px] uppercase tracking-[0.06em] mr-2" style={{ color: T.faint }}>Address:</span>
-                  {selectedAddress}
-                </div>
-                <GoldBtn onClick={handleSave}>Save customer</GoldBtn>
-              </div>
-            )}
-          </Card>
-        )}
+      {/* Sticky action bar */}
+      <div className="sticky bottom-0 -mx-5 md:-mx-10 px-5 md:px-10 py-3.5 flex items-center justify-between gap-2.5" style={{ background: "rgba(248,245,238,0.9)", backdropFilter: "blur(6px)", borderTop: `1px solid ${T.borderSoft}` }}>
+        <span className="text-[12px] hidden sm:block" style={{ color: T.faint }}>Address is optional and can be added later from the customer&apos;s profile.</span>
+        <div className="flex items-center gap-2.5 ml-auto">
+          <GhostBtn onClick={() => router.push("/customers")}>Cancel</GhostBtn>
+          <GoldBtn onClick={handleCreate}>Create customer</GoldBtn>
+        </div>
       </div>
 
       {toast && (
-        <div className="fixed bottom-6 right-6 z-50 px-4 py-2.5 rounded-[9px] text-[13.5px] shadow-lg" style={{ background: T.good, color: "#fff" }}>
+        <div
+          className="fixed bottom-6 right-6 z-[100] flex items-center gap-2 px-4 py-3 rounded-[10px] shadow-lg text-[13.5px] font-medium"
+          style={{ background: T.card, border: `1px solid ${T.border}`, color: T.good }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6L9 17l-5-5" /></svg>
           {toast}
         </div>
       )}

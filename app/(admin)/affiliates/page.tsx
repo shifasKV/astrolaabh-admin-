@@ -2,7 +2,15 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { PageHeader, Card, StatCard, Chip, GoldBtn, ToolbarSearch, EmptyState, TableSkeleton } from "@/components/ui";
+import { PageHeader, Card, StatCard, Chip, GoldBtn, ToolbarSearch, SortMenu, InlineFilter, MultiCheck, EmptyState, TableSkeleton } from "@/components/ui";
+
+const STATUS_ICON = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className="w-3.5 h-3.5"><circle cx="12" cy="12" r="10" /><path d="m9 12 2 2 4-4" /></svg>;
+const AFF_STATUS_OPTIONS = [{ value: "active", label: "Active" }, { value: "under_review", label: "Under review" }, { value: "deactivated", label: "Deactivated" }];
+
+const NAME_SORT = [
+  { value: "name_asc", label: "Name A to Z" },
+  { value: "name_desc", label: "Name Z to A" },
+];
 import { T } from "@/lib/theme";
 import { useSimulatedLoad } from "@/lib/useSimulatedLoad";
 import { MOCK_AFFILIATES, MOCK_CUSTOMERS, MOCK_ORDERS, MOCK_CONSULTATIONS } from "@/lib/mock";
@@ -30,6 +38,8 @@ export default function AffiliatesPage() {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "pending">("all");
+  const [sort, setSort] = useState("name_asc");
+  const [filterStatusToolbar, setFilterStatusToolbar] = useState<string[]>([]);
   const loading = useSimulatedLoad();
 
   const totalRegs = MOCK_AFFILIATES.reduce((s, a) => s + a.totalRegistrations, 0);
@@ -40,10 +50,13 @@ export default function AffiliatesPage() {
   const filtered = MOCK_AFFILIATES.filter((a) => {
     if (statusFilter === "active" && a.status !== "active") return false;
     if (statusFilter === "pending" && a.status !== "under_review") return false;
+    if (filterStatusToolbar.length && !filterStatusToolbar.includes(a.status)) return false;
     if (!search) return true;
     const q = search.toLowerCase();
     return a.name.toLowerCase().includes(q) || a.code.toLowerCase().includes(q) || a.email.toLowerCase().includes(q);
   });
+
+  const sorted = [...filtered].sort((a, b) => sort === "name_desc" ? b.name.localeCompare(a.name) : a.name.localeCompare(b.name));
 
   return (
     <>
@@ -83,7 +96,16 @@ export default function AffiliatesPage() {
       </div>
 
       <div className="flex flex-wrap items-center gap-2 mb-4">
-        <ToolbarSearch value={search} onChange={setSearch} placeholder="Search name, code, email…" />
+        <InlineFilter label="Status" icon={STATUS_ICON} count={filterStatusToolbar.length} width={210}>
+          <MultiCheck options={AFF_STATUS_OPTIONS} value={filterStatusToolbar} onChange={setFilterStatusToolbar} />
+        </InlineFilter>
+        {filterStatusToolbar.length > 0 && (
+          <button onClick={() => setFilterStatusToolbar([])} className="text-[12px] font-medium px-1.5 cursor-pointer hover:underline underline-offset-4 whitespace-nowrap" style={{ color: T.danger }}>Clear all</button>
+        )}
+        <div className="ml-auto flex items-center gap-2">
+          <ToolbarSearch value={search} onChange={setSearch} placeholder="Search name, code, email…" />
+          <SortMenu value={sort} onChange={setSort} options={NAME_SORT} />
+        </div>
       </div>
 
       <Card className="!p-0 md:flex md:flex-col md:min-h-0">
@@ -105,17 +127,17 @@ export default function AffiliatesPage() {
           <span>Status</span>
         </div>
         <div className="md:min-h-0 overflow-y-auto max-h-[560px] md:max-h-none">
-          {filtered.length === 0 ? (
+          {sorted.length === 0 ? (
             <EmptyState inline icon="search" title="No affiliates" description="No affiliates match your search." />
           ) : (
-            filtered.map((a, idx) => {
+            sorted.map((a, idx) => {
               const stats = getAffiliateStats(a);
               return (
                 <Link
                   key={a.id}
                   href={`/affiliates/${a.id}`}
                   className="group grid grid-cols-1 md:grid-cols-[minmax(220px,1.3fr)_120px_70px_120px_110px_110px_130px_140px] gap-2 md:gap-x-4 items-center px-4 py-2.5 transition-colors duration-150 last:rounded-b-[15px] even:bg-[rgba(89,82,54,0.025)] hover:!bg-[rgba(119,123,98,0.08)]"
-                  style={{ borderBottom: idx < filtered.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
+                  style={{ borderBottom: idx < sorted.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <span
@@ -148,7 +170,7 @@ export default function AffiliatesPage() {
                   </span>
                   <div className="md:pl-0 pl-12">
                     <Chip tone={a.status === "active" ? "good" : a.status === "under_review" ? "gold" : "danger"}>
-                      {a.status.replace(/_/g, " ")}
+                      {a.status.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase())}
                     </Chip>
                   </div>
                 </Link>

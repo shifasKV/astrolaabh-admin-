@@ -1,7 +1,7 @@
 "use client";
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, SearchFilter, Pagination, Select, EmptyState, TableSkeleton } from "@/components/ui";
+import { PageHeader, Card, Chip, ToolbarSearch, FiltersPopover, FilterField, SortMenu, Pagination, Select, EmptyState, TableSkeleton } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { useSimulatedLoad } from "@/lib/useSimulatedLoad";
 import { useAuth } from "@/lib/store/auth";
@@ -67,6 +67,7 @@ export default function StoneLeadsPage() {
   const [reasonFilter, setReasonFilter] = useState("");
   const [assigneeFilter, setAssigneeFilter] = useState("");
   const [sort, setSort] = useState("newest");
+  const [showFilters, setShowFilters] = useState(false);
   const [page, setPage] = useState(0);
 
   const assigneeOptions = useMemo(() => [
@@ -112,14 +113,29 @@ export default function StoneLeadsPage() {
       <div className="md:h-[calc(100dvh-78px)] md:flex md:flex-col md:min-h-0">
       <PageHeader title="Stone Leads" />
 
-      <div className="flex flex-wrap items-center gap-3 mb-4">
-        <div className="flex-1 min-w-[200px]">
-          <SearchFilter search={search} onSearchChange={(v) => { setSearch(v); setPage(0); }} placeholder="Search customer, item, phone…" />
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        <FiltersPopover align="left" count={[statusFilter, reasonFilter, assigneeFilter].filter(Boolean).length} open={showFilters} onToggle={() => setShowFilters(!showFilters)}>
+          <FilterField label="Status">
+            <Select value={statusFilter} onChange={(v) => { setStatusFilter(v); setPage(0); }} options={STATUS_OPTIONS} compact placeholder="All statuses" />
+          </FilterField>
+          <FilterField label="Reason">
+            <Select value={reasonFilter} onChange={(v) => { setReasonFilter(v); setPage(0); }} options={REASON_OPTIONS} compact placeholder="All reasons" />
+          </FilterField>
+          {isAdmin && (
+            <FilterField label="Assignee">
+              <Select value={assigneeFilter} onChange={(v) => { setAssigneeFilter(v); setPage(0); }} options={assigneeOptions} compact searchable placeholder="All assignees" />
+            </FilterField>
+          )}
+          {(statusFilter || reasonFilter || assigneeFilter) && (
+            <div className="pt-1" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+              <button onClick={() => { setStatusFilter(""); setReasonFilter(""); setAssigneeFilter(""); setPage(0); }} className="text-[12px] font-medium cursor-pointer hover:underline underline-offset-4" style={{ color: T.danger }}>Clear all filters</button>
+            </div>
+          )}
+        </FiltersPopover>
+        <div className="ml-auto flex items-center gap-2">
+          <ToolbarSearch value={search} onChange={(v) => { setSearch(v); setPage(0); }} placeholder="Search customer, item, phone…" />
+          <SortMenu value={sort} onChange={setSort} options={SORT_OPTIONS} />
         </div>
-        <div className="w-[140px]"><Select value={statusFilter} onChange={(v) => { setStatusFilter(v); setPage(0); }} options={STATUS_OPTIONS} placeholder="Status" /></div>
-        <div className="w-[150px]"><Select value={reasonFilter} onChange={(v) => { setReasonFilter(v); setPage(0); }} options={REASON_OPTIONS} placeholder="Reason" /></div>
-        {isAdmin && <div className="w-[160px]"><Select value={assigneeFilter} onChange={(v) => { setAssigneeFilter(v); setPage(0); }} options={assigneeOptions} placeholder="Assignee" /></div>}
-        <div className="w-[150px]"><Select value={sort} onChange={setSort} options={SORT_OPTIONS} placeholder="Sort" /></div>
       </div>
 
       <Card className="!p-0 md:flex md:flex-col md:min-h-0">

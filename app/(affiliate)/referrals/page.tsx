@@ -1,6 +1,6 @@
 "use client";
 import { useState, useMemo } from "react";
-import { PageHeader, Card, Chip, Tabs, SearchFilter, Select, Pagination, TableSkeleton } from "@/components/ui";
+import { PageHeader, Card, Chip, Tabs, ToolbarSearch, FiltersPopover, FilterField, SortMenu, Select, Pagination, TableSkeleton } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { useSimulatedLoad } from "@/lib/useSimulatedLoad";
 import { MOCK_REFERRAL_EVENTS } from "@/lib/mock";
@@ -25,6 +25,7 @@ export default function ReferralsPage() {
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<SortKey>("date_desc");
   const [statusFilter, setStatusFilter] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
   const [page, setPage] = useState(0);
 
   const myReferrals = MOCK_REFERRAL_EVENTS.filter((r) => r.affiliateId === "aff_001");
@@ -92,15 +93,20 @@ export default function ReferralsPage() {
         />
       </div>
 
-      <div className="flex flex-wrap items-center gap-2.5 mb-4">
-        <div className="flex-1 min-w-[200px] max-w-[350px]">
-          <SearchFilter search={search} onSearchChange={(v) => { setSearch(v); setPage(0); }} placeholder={tab === "orders" ? "Search customer, campaign…" : "Search customer, campaign…"} />
-        </div>
-        <div className="w-[150px]">
-          <Select value={statusFilter} onChange={(v) => { setStatusFilter(v); setPage(0); }} compact placeholder="All status" options={[{ value: "", label: "All status" }, { value: "paid", label: "Paid" }, { value: "pending", label: "Pending" }, { value: "approved", label: "Approved" }]} />
-        </div>
-        <div className="ml-auto w-[170px]">
-          <Select value={sort} onChange={(v) => { setSort(v as SortKey); setPage(0); }} compact prefix="Sort: " options={orderSortOptions} />
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        <FiltersPopover align="left" count={statusFilter ? 1 : 0} open={showFilters} onToggle={() => setShowFilters(!showFilters)}>
+          <FilterField label="Status">
+            <Select value={statusFilter} onChange={(v) => { setStatusFilter(v); setPage(0); }} compact placeholder="All status" options={[{ value: "", label: "All status" }, { value: "paid", label: "Paid" }, { value: "pending", label: "Pending" }, { value: "approved", label: "Approved" }]} />
+          </FilterField>
+          {statusFilter && (
+            <div className="pt-1" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+              <button onClick={() => { setStatusFilter(""); setPage(0); }} className="text-[12px] font-medium cursor-pointer hover:underline underline-offset-4" style={{ color: T.danger }}>Clear all filters</button>
+            </div>
+          )}
+        </FiltersPopover>
+        <div className="ml-auto flex items-center gap-2">
+          <ToolbarSearch value={search} onChange={(v) => { setSearch(v); setPage(0); }} placeholder="Search customer, campaign…" />
+          <SortMenu value={sort} onChange={(v) => { setSort(v as SortKey); setPage(0); }} options={orderSortOptions} />
         </div>
       </div>
 

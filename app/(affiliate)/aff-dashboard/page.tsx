@@ -65,38 +65,61 @@ export default function AffiliateDashboard() {
     <>
       <PageHeader title="Dashboard" />
 
-      {/* Row 1: Primary stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-3">
-        <StatCard label="Total orders" value={totalOrders} featured />
-        <StatCard label="Total consultations" value={totalConsultations} />
-        <StatCard label="Commission pending" value={inr(pendingCommission)} />
-        <StatCard label="Commission paid" value={inr(paidCommission)} />
-        <StatCard label="Commission total" value={inr(totalCommission)} />
+      {/* Hero — commission earnings + rates */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-4 mb-4 items-stretch">
+        {/* Earnings hero */}
+        <div className="relative overflow-hidden rounded-[18px] p-6 md:p-7 flex flex-col justify-between" style={{ background: "linear-gradient(150deg, #faf0d8 0%, #efdfb8 100%)", border: "1px solid rgba(160,125,56,0.30)", boxShadow: T.shadow }}>
+          <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse 60% 70% at 90% 0%, rgba(160,125,56,0.18), transparent 65%)" }} />
+          <div className="relative">
+            <div className="text-[11px] font-medium tracking-[0.1em] uppercase" style={{ color: "#8a6a2f" }}>Total commission earned</div>
+            <div className="font-title text-[38px] md:text-[46px] font-bold tracking-[-0.03em] leading-none mt-2" style={{ color: "#5a441c" }}>{inr(totalCommission)}</div>
+          </div>
+          <div className="relative flex items-stretch gap-6 mt-6 pt-5" style={{ borderTop: "1px solid rgba(160,125,56,0.24)" }}>
+            <div className="flex-1">
+              <div className="flex items-center gap-1.5 text-[11px] font-medium tracking-[0.06em] uppercase" style={{ color: "#8a6a2f" }}>
+                <span className="w-1.5 h-1.5 rounded-full" style={{ background: T.gold }} /> Pending
+              </div>
+              <div className="font-title text-[22px] font-bold tabular-nums tracking-[-0.02em] mt-1" style={{ color: "#5a441c" }}>{inr(pendingCommission)}</div>
+              <div className="text-[11.5px] mt-0.5" style={{ color: "#8a6a2f" }}>in holding period</div>
+            </div>
+            <div className="w-px shrink-0" style={{ background: "rgba(160,125,56,0.22)" }} />
+            <div className="flex-1">
+              <div className="flex items-center gap-1.5 text-[11px] font-medium tracking-[0.06em] uppercase" style={{ color: "#8a6a2f" }}>
+                <span className="w-1.5 h-1.5 rounded-full" style={{ background: T.good }} /> Paid out
+              </div>
+              <div className="font-title text-[22px] font-bold tabular-nums tracking-[-0.02em] mt-1" style={{ color: "#5a441c" }}>{inr(paidCommission)}</div>
+              <div className="text-[11.5px] mt-0.5" style={{ color: "#8a6a2f" }}>lifetime</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Commission rates */}
+        <Card className="!p-6 flex flex-col">
+          <div className="text-[13px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>Your commission rates</div>
+          <p className="text-[12px] mt-0.5 mb-3" style={{ color: T.muted }}>Applied on every referred sale.</p>
+          <div className="flex-1 flex flex-col justify-center">
+            {([
+              { label: "Consultation", rate: commissionRates.consultation },
+              { label: "Stone order", rate: commissionRates.order },
+              { label: "Jewellery order", rate: commissionRates.jewellery },
+            ] as const).map((c, i) => (
+              <div key={c.label} className="flex items-center justify-between py-2.5 first:pt-0 last:pb-0" style={i > 0 ? { borderTop: `1px solid ${T.borderSoft}` } : undefined}>
+                <span className="text-[13.5px]" style={{ color: T.muted }}>{c.label}</span>
+                <span className="font-title text-[20px] font-bold tabular-nums tracking-[-0.02em]" style={{ color: T.accent }}>{c.rate}%</span>
+              </div>
+            ))}
+          </div>
+        </Card>
       </div>
 
-      {/* Row 2: Secondary stats */}
-      <div className="grid grid-cols-3 gap-3 mb-5">
+      {/* Activity stats */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
+        <StatCard label="Total orders" value={totalOrders} />
+        <StatCard label="Total consultations" value={totalConsultations} />
         <StatCard label="Pending orders" value={pendingOrders} />
         <StatCard label="Pending consultations" value={pendingConsultations} />
         <StatCard label="Links generated" value={linksGenerated} />
       </div>
-
-      {/* Row 3: Commission rates */}
-      <Card className="mb-5">
-        <div className="text-[15px] font-semibold tracking-[-0.01em] mb-3" style={{ color: T.text }}>Commission rates</div>
-        <div className="grid grid-cols-3 gap-4">
-          {([
-            { label: "Consultation", rate: commissionRates.consultation },
-            { label: "Stone order", rate: commissionRates.order },
-            { label: "Jewellery order", rate: commissionRates.jewellery },
-          ] as const).map((c) => (
-            <div key={c.label} className="rounded-[10px] p-4 text-center" style={{ background: T.panel, border: `1px solid ${T.borderSoft}` }}>
-              <div className="font-title text-[28px] font-semibold tracking-[-0.02em]" style={{ color: T.accent }}>{c.rate}%</div>
-              <div className="text-[12px] mt-1" style={{ color: T.muted }}>{c.label}</div>
-            </div>
-          ))}
-        </div>
-      </Card>
 
       {/* Row 4: Earnings chart */}
       <Card>

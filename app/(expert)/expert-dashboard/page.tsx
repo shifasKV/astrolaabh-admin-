@@ -1,7 +1,15 @@
 "use client";
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, EmptyState } from "@/components/ui";
+import { PageHeader, Card, Chip, EmptyState, TimeInput } from "@/components/ui";
+
+const parseAmPm = (s: string) => {
+  const m = s.match(/(\d+):(\d+)\s*(AM|PM)/i);
+  if (!m) return 0;
+  let h = Number(m[1]) % 12;
+  if (/PM/i.test(m[3])) h += 12;
+  return h * 60 + Number(m[2]);
+};
 import { T } from "@/lib/theme";
 import {
   MOCK_CONSULTATIONS,
@@ -75,9 +83,8 @@ export default function ExpertDashboard() {
     `${tomorrowISO}-17:00`,
   ]));
 
-  const [addStart, setAddStart] = useState("09:00");
-  const [addEnd, setAddEnd] = useState("17:00");
-  const [manageOpen, setManageOpen] = useState(true);
+  const [addStart, setAddStart] = useState("9:00 AM");
+  const [addEnd, setAddEnd] = useState("5:00 PM");
   const [toast, setToast] = useState("");
   const flash = (msg: string) => { setToast(msg); setTimeout(() => setToast(""), 2500); };
   const to12 = (hhmm: string) => {
@@ -86,8 +93,8 @@ export default function ExpertDashboard() {
     return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${ap}`;
   };
   const addHours = () => {
-    if (addEnd <= addStart) { flash("End time must be after the start time"); return; }
-    flash(`Opened ${to12(addStart)} – ${to12(addEnd)} for today`);
+    if (parseAmPm(addEnd) <= parseAmPm(addStart)) { flash("End time must be after the start time"); return; }
+    flash(`Opened ${addStart} – ${addEnd} for today`);
   };
   const toggleBlock = (time: string) => {
     const key = `${todayISO}-${time}`;
@@ -214,21 +221,10 @@ export default function ExpertDashboard() {
                     <span className="font-semibold tabular-nums" style={{ color: T.good }}>{todayCounts.open}</span> open · <span className="font-semibold tabular-nums" style={{ color: T.accent }}>{todayCounts.booked}</span> booked · <span className="font-semibold tabular-nums" style={{ color: T.faint }}>{todayCounts.blocked}</span> blocked
                   </span>
                 </div>
-                <div className="flex items-center gap-3 shrink-0">
-                  <button
-                    onClick={() => setManageOpen((v) => !v)}
-                    className="inline-flex items-center gap-1.5 h-8 pl-2.5 pr-3 rounded-[9px] text-[12.5px] font-medium cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.1)]"
-                    style={{ color: T.text, border: `1px solid ${T.border}` }}
-                  >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`w-3.5 h-3.5 transition-transform duration-200 ${manageOpen ? "rotate-180" : ""}`}><path d="m6 9 6 6 6-6" /></svg>
-                    {manageOpen ? "Done" : "Manage today"}
-                  </button>
-                  <Link href="/availability" className="text-[12.5px] font-medium transition-opacity hover:opacity-75" style={{ color: T.accent }}>Manage all →</Link>
-                </div>
+                <Link href="/availability" className="text-[12.5px] font-medium shrink-0 transition-opacity hover:opacity-75" style={{ color: T.accent }}>Manage all →</Link>
               </div>
 
-              {manageOpen && (
-                <div className="mt-3.5 p-4 rounded-[12px]" style={{ background: T.accentFaint, border: `1px solid ${T.borderSoft}` }}>
+              <div className="mt-3.5 p-4 rounded-[12px]" style={{ background: T.bg, border: `1px solid ${T.borderSoft}` }}>
                   {/* Block slots */}
                   <div className="flex items-center justify-between gap-3 mb-3">
                     <span className="text-[11px] font-medium tracking-[0.07em] uppercase" style={{ color: T.faint }}>Today&apos;s slots</span>
@@ -279,20 +275,19 @@ export default function ExpertDashboard() {
                       })}
                     </div>
                   )}
-                  <p className="text-[11.5px] mt-2.5" style={{ color: T.faint }}>Tap an open slot to block it · booked slots can&apos;t be changed.</p>
+                  <p className="text-[11.5px] mt-2.5" style={{ color: T.faint }}>Tap an open slot to block it. Booked slots can&apos;t be changed.</p>
 
                   {/* Add hours */}
                   <div className="mt-4 pt-4" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
                     <span className="text-[11px] font-medium tracking-[0.07em] uppercase" style={{ color: T.faint }}>Add hours</span>
                     <div className="flex flex-wrap items-center gap-2.5 mt-2.5">
-                      <input type="time" value={addStart} onChange={(e) => setAddStart(e.target.value)} className="h-9 px-3 rounded-[9px] text-[13px] outline-none tabular-nums" style={{ background: T.bg, border: `1px solid ${T.border}`, color: T.text }} />
+                      <div className="w-[130px]"><TimeInput value={addStart} onChange={setAddStart} /></div>
                       <span className="text-[13px]" style={{ color: T.faint }}>–</span>
-                      <input type="time" value={addEnd} onChange={(e) => setAddEnd(e.target.value)} className="h-9 px-3 rounded-[9px] text-[13px] outline-none tabular-nums" style={{ background: T.bg, border: `1px solid ${T.border}`, color: T.text }} />
-                      <button onClick={addHours} className="h-9 px-4 rounded-[9px] text-[12.5px] font-semibold cursor-pointer transition-all duration-200 hover:brightness-110" style={{ background: T.primary, color: T.primaryInk }}>Add hours</button>
+                      <div className="w-[130px]"><TimeInput value={addEnd} onChange={setAddEnd} /></div>
+                      <button onClick={addHours} className="h-9 px-4 rounded-[9px] text-[12.5px] font-semibold cursor-pointer transition-all duration-200 hover:brightness-110" style={{ background: T.accent, color: T.accentInk }}>Add hours</button>
                     </div>
                   </div>
                 </div>
-              )}
             </div>
           </Card>
         </div>
@@ -346,7 +341,7 @@ export default function ExpertDashboard() {
       </div>
 
       {toast && (
-        <div className="fixed top-6 right-6 z-[100] flex items-center gap-2 px-4 py-3 rounded-[10px] shadow-lg text-[13.5px] font-medium" style={{ background: T.card, border: `1px solid ${T.border}`, color: T.good }}>
+        <div className="fixed bottom-6 right-6 z-[100] flex items-center gap-2 px-4 py-3 rounded-[10px] shadow-lg text-[13.5px] font-medium" style={{ background: T.card, border: `1px solid ${T.border}`, color: T.good }}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6L9 17l-5-5"/></svg>
           {toast}
         </div>

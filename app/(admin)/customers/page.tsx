@@ -1,14 +1,29 @@
 "use client";
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { PageHeader, Card, StatCard, ToolbarSearch, GoldBtn, Chip, Pagination, EmptyState, TableSkeleton } from "@/components/ui";
+import { PageHeader, Card, StatCard, ToolbarSearch, SortMenu, InlineFilter, MultiCheck, GoldBtn, Chip, Pagination, EmptyState, TableSkeleton } from "@/components/ui";
+
+const STATUS_ICON = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className="w-3.5 h-3.5"><circle cx="12" cy="12" r="10" /><path d="m9 12 2 2 4-4" /></svg>;
+const STATUS_OPTIONS = [{ value: "active", label: "Active" }, { value: "deactivated", label: "Deactivated" }];
+// Demo: a couple of records shown as deactivated (customers have no status field in mock data)
+const DEACTIVATED_CUSTOMERS = new Set(["cust_003", "cust_008"]);
+const customerStatus = (id: string) => (DEACTIVATED_CUSTOMERS.has(id) ? "deactivated" : "active");
 import { T } from "@/lib/theme";
 import { useSimulatedLoad } from "@/lib/useSimulatedLoad";
 import { MOCK_CUSTOMERS, MOCK_ORDERS, MOCK_CONSULTATIONS } from "@/lib/mock";
 import { inr } from "@/lib/types";
 
+const CUSTOMER_SORT = [
+  { value: "name_asc", label: "Name A to Z" },
+  { value: "orders_desc", label: "Most orders" },
+  { value: "spent_desc", label: "Highest spend" },
+  { value: "consults_desc", label: "Most consults" },
+];
+
 export default function CustomersPage() {
   const [search, setSearch] = useState("");
+  const [sort, setSort] = useState("name_asc");
+  const [filterStatus, setFilterStatus] = useState<string[]>([]);
   const loading = useSimulatedLoad();
 
   const stats = useMemo(() => {
@@ -35,16 +50,26 @@ export default function CustomersPage() {
   }, []);
 
   const filtered = MOCK_CUSTOMERS.filter((c) => {
+    if (filterStatus.length && !filterStatus.includes(customerStatus(c.id))) return false;
     if (!search) return true;
     const q = search.toLowerCase();
     return c.name.toLowerCase().includes(q) || c.email.toLowerCase().includes(q) || c.phone.includes(q) || c.birthPlace.toLowerCase().includes(q);
   });
 
+  const sorted = [...filtered].sort((a, b) => {
+    const aa = activity[a.id] ?? { orders: 0, consults: 0, spent: 0 };
+    const ba = activity[b.id] ?? { orders: 0, consults: 0, spent: 0 };
+    if (sort === "orders_desc") return ba.orders - aa.orders;
+    if (sort === "spent_desc") return ba.spent - aa.spent;
+    if (sort === "consults_desc") return ba.consults - aa.consults;
+    return a.name.localeCompare(b.name);
+  });
+
   const PER_PAGE = 10;
   const [page, setPage] = useState(1);
-  const totalPages = Math.ceil(filtered.length / PER_PAGE);
+  const totalPages = Math.ceil(sorted.length / PER_PAGE);
   const currentPage = page > totalPages && totalPages > 0 ? totalPages : page;
-  const paginated = filtered.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE);
+  const paginated = sorted.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE);
 
   return (
     <>
@@ -65,7 +90,16 @@ export default function CustomersPage() {
       </div>
 
       <div className="flex flex-wrap items-center gap-2 mb-3">
-        <ToolbarSearch value={search} onChange={setSearch} placeholder="Search name, email, phone, location…" />
+        <InlineFilter label="Status" icon={STATUS_ICON} count={filterStatus.length} width={200}>
+          <MultiCheck options={STATUS_OPTIONS} value={filterStatus} onChange={setFilterStatus} onAfter={() => setPage(1)} />
+        </InlineFilter>
+        {filterStatus.length > 0 && (
+          <button onClick={() => { setFilterStatus([]); setPage(1); }} className="text-[12px] font-medium px-1.5 cursor-pointer hover:underline underline-offset-4 whitespace-nowrap" style={{ color: T.danger }}>Clear all</button>
+        )}
+        <div className="ml-auto flex items-center gap-2">
+          <ToolbarSearch value={search} onChange={setSearch} placeholder="Search name, email, phone, location…" />
+          <SortMenu value={sort} onChange={setSort} options={CUSTOMER_SORT} />
+        </div>
       </div>
 
       <Card className="!p-0 md:flex md:flex-col md:min-h-0">
@@ -103,7 +137,10 @@ export default function CustomersPage() {
                   {c.name[0]}
                 </span>
                 <span className="min-w-0">
-                  <span className="block text-[14px] font-medium truncate group-hover:underline" style={{ color: T.text }}>{c.name}</span>
+                  <span className="flex items-center gap-2 min-w-0">
+                    <span className="text-[14px] font-medium truncate" style={{ color: T.text }}>{c.name}</span>
+                    {customerStatus(c.id) === "deactivated" && <Chip tone="muted">Deactivated</Chip>}
+                  </span>
                   <span className="block text-[12px] truncate" style={{ color: T.muted }}>{c.email}</span>
                 </span>
               </span>
@@ -114,7 +151,7 @@ export default function CustomersPage() {
               <span className="text-[13.5px] font-semibold tabular-nums md:text-right" style={{ color: a.spent ? T.text : T.faint }}>
                 {a.spent ? inr(a.spent) : "—"}
               </span>
-              <span className="hidden md:block transition-transform duration-200 group-hover:translate-x-0.5" style={{ color: T.faint }}>→</span>
+              <span className="hidden md:block" />
             </Link>
           );
         })}

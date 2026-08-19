@@ -2,7 +2,15 @@
 import { Suspense, useState, useMemo, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { PageHeader, Card, Select, Chip, Modal, Input, GoldBtn, GhostBtn, ShopifyIcon, ShopifyButton, SHOPIFY_GREEN_DARK, SHOPIFY_TINT, SHOPIFY_BORDER, Pagination, ToolbarSearch, FiltersPopover, FilterField, FilterChip, EmptyState, TableSkeleton, Toast } from "@/components/ui";
+import { PageHeader, Card, Chip, Modal, Input, GoldBtn, GhostBtn, ShopifyIcon, ShopifyButton, SHOPIFY_GREEN_DARK, SHOPIFY_TINT, SHOPIFY_BORDER, Pagination, ToolbarSearch, InlineFilter, MultiCheck, SortMenu, EmptyState, TableSkeleton, Toast } from "@/components/ui";
+
+const INV_ICONS = {
+  stone: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className="w-3.5 h-3.5"><path d="M12 2 2 7l10 5 10-5-10-5ZM2 17l10 5 10-5M2 12l10 5 10-5" /></svg>,
+  colour: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M12 2s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z" /></svg>,
+  zodiac: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="m12 2 2.4 5.8L20 9l-4.5 3.9L17 20l-5-3-5 3 1.5-7.1L4 9l5.6-1.2z" /></svg>,
+  design: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><circle cx="12" cy="12" r="7" /><circle cx="12" cy="12" r="2.5" /></svg>,
+  metal: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M12 2 4 7v10l8 5 8-5V7z" /></svg>,
+};
 import { T } from "@/lib/theme";
 import { useSimulatedLoad } from "@/lib/useSimulatedLoad";
 import { STONES, DESIGNS, ENERGISATION, INTENTS, ZODIAC, inr as catalogInr } from "@/lib/catalog";
@@ -244,21 +252,19 @@ function InventoryPageInner() {
   const [outOfStockDesigns, setOutOfStockDesigns] = useState<Set<string>>(new Set());
   const [sellingFastDesigns, setSellingFastDesigns] = useState<Set<string>>(new Set());
 
-  const [stoneType, setStoneType] = useState("");
-  const [color, setColor] = useState("");
-  const [intent, setIntent] = useState("");
-  const [zodiac, setZodiac] = useState("");
+  const [stoneType, setStoneType] = useState<string[]>([]);
+  const [color, setColor] = useState<string[]>([]);
+  const [intent, setIntent] = useState<string[]>([]);
+  const [zodiac, setZodiac] = useState<string[]>([]);
 
-  const [form, setForm] = useState("");
-  const [metal, setMetal] = useState("");
+  const [form, setForm] = useState<string[]>([]);
+  const [metal, setMetal] = useState<string[]>([]);
 
   const [stoneSort, setStoneSort] = useState("");
   const [designSort, setDesignSort] = useState("");
   const [stonePage, setStonePage] = useState(1);
   const [designPage, setDesignPage] = useState(1);
-  const [showStoneFilters, setShowStoneFilters] = useState(false);
   const [energTab, setEnergTab] = useState<"packages" | "gurujis">("packages");
-  const [showDesignFilters, setShowDesignFilters] = useState(false);
 
   const toggleStone = (sku: string) => {
     const wasDisabled = disabledStones.has(sku);
@@ -356,11 +362,10 @@ function InventoryPageInner() {
     setTimeout(() => setToast(""), 3000);
   };
 
-  const intentGem = useMemo(() => {
-    if (!intent) return "";
-    const match = INTENTS.find((i) => i.label === intent);
-    return match?.gem ?? "";
-  }, [intent]);
+  const intentGems = useMemo(
+    () => intent.map((lbl) => INTENTS.find((i) => i.label === lbl)?.gem).filter(Boolean) as string[],
+    [intent],
+  );
 
   const filteredStones = useMemo(() => {
     return STONES.filter((s: Stone) => {
@@ -368,13 +373,10 @@ function InventoryPageInner() {
         const q = search.toLowerCase();
         if (!s.sku.toLowerCase().includes(q) && !s.gemName.toLowerCase().includes(q)) return false;
       }
-      if (stoneType && s.gem !== stoneType) return false;
-      if (color && s.shade !== color) return false;
-      if (intentGem && s.gem !== intentGem) return false;
-      if (zodiac) {
-        const match = ZODIAC.find((z) => z.planet === zodiac);
-        if (match && s.planet !== match.planet) return false;
-      }
+      if (stoneType.length && !stoneType.includes(s.gem)) return false;
+      if (color.length && !color.includes(s.shade)) return false;
+      if (intentGems.length && !intentGems.includes(s.gem)) return false;
+      if (zodiac.length && !zodiac.includes(s.planet)) return false;
       return true;
     }).sort((a, b) => {
       if (stoneSort === "price_asc") return a.price - b.price;
@@ -383,7 +385,7 @@ function InventoryPageInner() {
       if (stoneSort === "ratti_desc") return b.ratti - a.ratti;
       return 0;
     });
-  }, [search, stoneType, color, intentGem, zodiac, stoneSort]);
+  }, [search, stoneType, color, intentGems, zodiac, stoneSort]);
 
   const filteredDesigns = useMemo(() => {
     return DESIGNS.filter((d: Design) => {
@@ -391,8 +393,8 @@ function InventoryPageInner() {
         const q = search.toLowerCase();
         if (!d.name.toLowerCase().includes(q) && !d.slug.toLowerCase().includes(q) && !d.form.toLowerCase().includes(q)) return false;
       }
-      if (form && d.form !== form) return false;
-      if (metal && d.metal !== metal) return false;
+      if (form.length && !form.includes(d.form)) return false;
+      if (metal.length && !metal.includes(d.metal)) return false;
       return true;
     }).sort((a, b) => {
       if (designSort === "name_asc") return a.name.localeCompare(b.name);
@@ -410,11 +412,10 @@ function InventoryPageInner() {
   const designCurrentPage = designPage > designTotalPages && designTotalPages > 0 ? designTotalPages : designPage;
   const designPaginated = filteredDesigns.slice((designCurrentPage - 1) * PER_PAGE, designCurrentPage * PER_PAGE);
 
-  const stoneFilterCount = [stoneType, color, intent, zodiac].filter(Boolean).length;
-  const designFilterCount = [form, metal].filter(Boolean).length;
-  const hasStoneFilters = stoneFilterCount > 0;
-  const hasDesignFilters = designFilterCount > 0;
-  const optLabel = (opts: { value: string; label: string }[], v: string) => opts.find((o) => o.value === v)?.label ?? v;
+  const stoneFilterCount = stoneType.length + color.length + intent.length + zodiac.length;
+  const designFilterCount = form.length + metal.length;
+  const clearStoneFilters = () => { setStoneType([]); setColor([]); setIntent([]); setZodiac([]); setStonePage(1); };
+  const clearDesignFilters = () => { setForm([]); setMetal([]); setDesignPage(1); };
 
   const pageTitle = tab === "stones" ? "Stones" : tab === "designs" ? "Jewellery Designs" : "Energisation Packages";
   const pageSub = tab === "stones"
@@ -438,105 +439,74 @@ function InventoryPageInner() {
       {/* Pinned controls — search + filters stay visible while the table scrolls */}
       {tab !== "energisation" && (
         <div
-          className="sticky top-0 z-30 -mx-5 md:-mx-10 px-5 md:px-10 pt-1 pb-3 mb-4"
-          style={{ background: T.bg, boxShadow: `0 1px 0 ${T.borderSoft}` }}
+          className="sticky top-0 z-30 -mx-5 md:-mx-10 px-5 md:px-10 pt-1 pb-1 mb-1"
+          style={{ background: "transparent" }}
         >
           <div className="flex flex-wrap items-center gap-2">
-            <ToolbarSearch
-              value={search}
-              onChange={(v) => { setSearch(v); setStonePage(1); setDesignPage(1); }}
-              placeholder={tab === "stones" ? "Search SKU, gemstone…" : "Search design name…"}
-            />
-            <div className="ml-auto flex items-center gap-2">
+            {/* Filters — open inline pills */}
+            <div className="flex flex-wrap items-center gap-2">
               {tab === "stones" ? (
                 <>
-                  <FiltersPopover count={stoneFilterCount} open={showStoneFilters} onToggle={() => setShowStoneFilters(!showStoneFilters)}>
-                    <FilterField label="Stone type">
-                      <Select value={stoneType} onChange={(v) => { setStoneType(v); setStonePage(1); }} options={STONE_TYPES} compact />
-                    </FilterField>
-                    <FilterField label="Colour">
-                      <Select value={color} onChange={(v) => { setColor(v); setStonePage(1); }} options={COLOR_OPTIONS} compact searchable />
-                    </FilterField>
-                    <FilterField label="Intent">
-                      <Select value={intent} onChange={(v) => { setIntent(v); setStonePage(1); }} options={INTENT_OPTIONS} compact />
-                    </FilterField>
-                    <FilterField label="Zodiac">
-                      <Select value={zodiac} onChange={(v) => { setZodiac(v); setStonePage(1); }} options={ZODIAC_OPTIONS} compact searchable />
-                    </FilterField>
-                  </FiltersPopover>
-                  <div className="w-[190px]">
-                    <Select
-                      value={stoneSort}
-                      onChange={(v) => { setStoneSort(v); setStonePage(1); }}
-                      compact
-                      prefix="Sort: "
-                      options={[
-                        { value: "", label: "Featured" },
-                        { value: "price_asc", label: "Price low to high" },
-                        { value: "price_desc", label: "Price high to low" },
-                        { value: "ratti_asc", label: "Weight low to high" },
-                        { value: "ratti_desc", label: "Weight high to low" },
-                      ]}
-                    />
-                  </div>
+                  <InlineFilter label="Stone type" icon={INV_ICONS.stone} count={stoneType.length} width={240}>
+                    <MultiCheck options={STONE_TYPES.filter((o) => o.value)} value={stoneType} onChange={setStoneType} onAfter={() => setStonePage(1)} />
+                  </InlineFilter>
+                  <InlineFilter label="Colour" icon={INV_ICONS.colour} count={color.length} width={220}>
+                    <MultiCheck options={COLOR_OPTIONS.filter((o) => o.value)} value={color} onChange={setColor} onAfter={() => setStonePage(1)} />
+                  </InlineFilter>
+                  <InlineFilter label="Zodiac" icon={INV_ICONS.zodiac} count={zodiac.length} width={220}>
+                    <MultiCheck options={ZODIAC_OPTIONS.filter((o) => o.value)} value={zodiac} onChange={setZodiac} onAfter={() => setStonePage(1)} />
+                  </InlineFilter>
+                  {stoneFilterCount > 0 && (
+                    <button onClick={clearStoneFilters} className="text-[12px] font-medium px-1.5 cursor-pointer hover:underline underline-offset-4 whitespace-nowrap" style={{ color: T.danger }}>Clear all</button>
+                  )}
                 </>
               ) : (
                 <>
-                  <FiltersPopover count={designFilterCount} open={showDesignFilters} onToggle={() => setShowDesignFilters(!showDesignFilters)}>
-                    <FilterField label="Design type">
-                      <Select value={form} onChange={(v) => { setForm(v); setDesignPage(1); }} options={FORM_OPTIONS} compact />
-                    </FilterField>
-                    <FilterField label="Metal">
-                      <Select value={metal} onChange={(v) => { setMetal(v); setDesignPage(1); }} options={METAL_OPTIONS} compact />
-                    </FilterField>
-                  </FiltersPopover>
-                  <div className="w-[190px]">
-                    <Select
-                      value={designSort}
-                      onChange={(v) => { setDesignSort(v); setDesignPage(1); }}
-                      compact
-                      prefix="Sort: "
-                      options={[
-                        { value: "", label: "Featured" },
-                        { value: "name_asc", label: "Name A to Z" },
-                        { value: "stock_asc", label: "Stock low to high" },
-                        { value: "stock_desc", label: "Stock high to low" },
-                      ]}
-                    />
-                  </div>
+                  <InlineFilter label="Design type" icon={INV_ICONS.design} count={form.length} width={200}>
+                    <MultiCheck options={FORM_OPTIONS.filter((o) => o.value)} value={form} onChange={setForm} onAfter={() => setDesignPage(1)} />
+                  </InlineFilter>
+                  <InlineFilter label="Metal" icon={INV_ICONS.metal} count={metal.length} width={200}>
+                    <MultiCheck options={METAL_OPTIONS.filter((o) => o.value)} value={metal} onChange={setMetal} onAfter={() => setDesignPage(1)} />
+                  </InlineFilter>
+                  {designFilterCount > 0 && (
+                    <button onClick={clearDesignFilters} className="text-[12px] font-medium px-1.5 cursor-pointer hover:underline underline-offset-4 whitespace-nowrap" style={{ color: T.danger }}>Clear all</button>
+                  )}
                 </>
               )}
             </div>
+            {/* Search + sort — right */}
+            <div className="ml-auto flex items-center gap-2">
+              <ToolbarSearch
+                value={search}
+                onChange={(v) => { setSearch(v); setStonePage(1); setDesignPage(1); }}
+                placeholder={tab === "stones" ? "Search SKU, gemstone…" : "Search design name…"}
+              />
+              {tab === "stones" ? (
+                <SortMenu
+                  value={stoneSort}
+                  onChange={(v) => { setStoneSort(v); setStonePage(1); }}
+                  options={[
+                    { value: "", label: "Featured" },
+                    { value: "price_asc", label: "Price low to high" },
+                    { value: "price_desc", label: "Price high to low" },
+                    { value: "ratti_asc", label: "Weight low to high" },
+                    { value: "ratti_desc", label: "Weight high to low" },
+                  ]}
+                />
+              ) : (
+                <SortMenu
+                  value={designSort}
+                  onChange={(v) => { setDesignSort(v); setDesignPage(1); }}
+                  options={[
+                    { value: "", label: "Featured" },
+                    { value: "name_asc", label: "Name A to Z" },
+                    { value: "stock_asc", label: "Stock low to high" },
+                    { value: "stock_desc", label: "Stock high to low" },
+                  ]}
+                />
+              )}
+            </div>
           </div>
-
-          {tab === "stones" && hasStoneFilters && (
-            <div className="flex flex-wrap items-center gap-1.5 mt-3">
-              {stoneType && <FilterChip label={`Type: ${optLabel(STONE_TYPES, stoneType)}`} onClear={() => { setStoneType(""); setStonePage(1); }} />}
-              {color && <FilterChip label={`Colour: ${color}`} onClear={() => { setColor(""); setStonePage(1); }} />}
-              {intent && <FilterChip label={`Intent: ${intent}`} onClear={() => { setIntent(""); setStonePage(1); }} />}
-              {zodiac && <FilterChip label={`Zodiac: ${optLabel(ZODIAC_OPTIONS, zodiac)}`} onClear={() => { setZodiac(""); setStonePage(1); }} />}
-              <button
-                onClick={() => { setStoneType(""); setColor(""); setIntent(""); setZodiac(""); setStonePage(1); }}
-                className="text-[12px] px-1.5 cursor-pointer hover:underline underline-offset-4"
-                style={{ color: T.danger }}
-              >
-                Clear all
-              </button>
-            </div>
-          )}
-          {tab === "designs" && hasDesignFilters && (
-            <div className="flex flex-wrap items-center gap-1.5 mt-3">
-              {form && <FilterChip label={`Type: ${form}`} onClear={() => { setForm(""); setDesignPage(1); }} />}
-              {metal && <FilterChip label={`Metal: ${optLabel(METAL_OPTIONS, metal)}`} onClear={() => { setMetal(""); setDesignPage(1); }} />}
-              <button
-                onClick={() => { setForm(""); setMetal(""); setDesignPage(1); }}
-                className="text-[12px] px-1.5 cursor-pointer hover:underline underline-offset-4"
-                style={{ color: T.danger }}
-              >
-                Clear all
-              </button>
-            </div>
-          )}
         </div>
       )}
 
@@ -547,7 +517,7 @@ function InventoryPageInner() {
             <h2 className="text-[13.5px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>
               {filteredStones.length} stones
             </h2>
-            <span className="inline-flex items-center gap-1.5 text-[11px] tracking-[0.06em] font-medium px-2 py-[3px] rounded-[6px] whitespace-nowrap" style={{ color: SHOPIFY_GREEN_DARK, background: SHOPIFY_TINT }}><ShopifyIcon size={11} /> Synced · Shopify</span>
+            <span className="inline-flex items-center gap-1.5 text-[11px] tracking-[0.06em] font-medium px-2 py-[3px] rounded-[6px] whitespace-nowrap" style={{ color: SHOPIFY_GREEN_DARK, background: SHOPIFY_TINT }}><span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: SHOPIFY_GREEN_DARK }} /> Synced with Shopify</span>
           </div>
           {loading ? <TableSkeleton cols={7} rows={8} /> : <>
           <div
@@ -624,7 +594,7 @@ function InventoryPageInner() {
             <h2 className="text-[13.5px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>
               {filteredDesigns.length} designs
             </h2>
-            <span className="inline-flex items-center gap-1.5 text-[11px] tracking-[0.06em] font-medium px-2 py-[3px] rounded-[6px] whitespace-nowrap" style={{ color: SHOPIFY_GREEN_DARK, background: SHOPIFY_TINT }}><ShopifyIcon size={11} /> Synced · Shopify</span>
+            <span className="inline-flex items-center gap-1.5 text-[11px] tracking-[0.06em] font-medium px-2 py-[3px] rounded-[6px] whitespace-nowrap" style={{ color: SHOPIFY_GREEN_DARK, background: SHOPIFY_TINT }}><span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: SHOPIFY_GREEN_DARK }} /> Synced with Shopify</span>
           </div>
           {loading ? <TableSkeleton cols={5} rows={8} /> : <>
           <div
@@ -721,7 +691,7 @@ function InventoryPageInner() {
                 );
               })}
             </div>
-            <span className="inline-flex items-center gap-1.5 text-[11px] tracking-[0.06em] font-medium px-2 py-[3px] rounded-[6px] whitespace-nowrap" style={{ color: SHOPIFY_GREEN_DARK, background: SHOPIFY_TINT }}><ShopifyIcon size={11} /> Synced · Shopify</span>
+            <span className="inline-flex items-center gap-1.5 text-[11px] tracking-[0.06em] font-medium px-2 py-[3px] rounded-[6px] whitespace-nowrap" style={{ color: SHOPIFY_GREEN_DARK, background: SHOPIFY_TINT }}><span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: SHOPIFY_GREEN_DARK }} /> Synced with Shopify</span>
           </div>
 
           {energTab === "packages" && (

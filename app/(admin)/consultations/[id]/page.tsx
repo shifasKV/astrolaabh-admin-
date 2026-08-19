@@ -153,7 +153,7 @@ export default function ConsultationDetailPage({ params }: { params: Promise<{ i
           <div className="flex-1 min-w-0 text-[13px]"><span className="font-semibold" style={{ color: T.text }}>Payment pending</span><span style={{ color: T.muted }}> — the customer hasn't paid the consultation fee yet.</span></div>
           <div className="flex items-center gap-2 shrink-0">
             <button onClick={() => { setToast("Payment link sent to customer"); setTimeout(() => setToast(""), 3000); }} className="text-[12.5px] font-medium h-8 px-3 rounded-[8px] cursor-pointer transition-colors hover:bg-[rgba(160,125,56,0.12)]" style={{ color: T.gold }}>Resend link</button>
-            <button onClick={() => setConfirmMarkPaid(true)} className="text-[12.5px] font-semibold h-8 px-3.5 rounded-[8px] cursor-pointer hover:brightness-110 transition-all" style={{ background: T.primary, color: T.primaryInk }}>Mark as paid</button>
+            <button onClick={() => setConfirmMarkPaid(true)} className="text-[12.5px] font-semibold h-8 px-3.5 rounded-[8px] cursor-pointer hover:brightness-110 transition-all" style={{ background: T.accent, color: T.accentInk }}>Mark as paid</button>
           </div>
         </div>
       )}

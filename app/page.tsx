@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth, DEMO_ACCOUNTS, DEMO_PASSWORD, ROLE_ROUTES, INVITE_ACCOUNTS } from "@/lib/store/auth";
-import { OtpVerifyForm, applyOtpInput } from "@/components/ui";
+import { OtpVerifyForm, applyOtpInput, Alert } from "@/components/ui";
 import { T } from "@/lib/theme";
 
 const OTP_RESEND_SECONDS = 30;
@@ -129,7 +129,6 @@ export default function LoginPage() {
                 error={error}
                 resendIn={resendIn}
                 submitLabel="Verify & sign in"
-                backLabel="Back to sign in"
                 onOtpChange={handleOtpChange}
                 onOtpKeyDown={handleOtpKeyDown}
                 onSubmit={handleVerifyOtp}
@@ -187,21 +186,13 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              {error && (
-                <div
-                  className="flex items-start gap-2 text-[12.5px] px-3 py-2.5 rounded-[9px]"
-                  style={{ background: "rgba(163,73,63,0.08)", border: "1px solid rgba(163,73,63,0.22)", color: T.danger }}
-                >
-                  <span className="mt-[5px] w-1.5 h-1.5 rounded-full shrink-0" style={{ background: T.danger }} />
-                  {error}
-                </div>
-              )}
+              {error && <Alert tone="error">{error}</Alert>}
 
               <button
                 type="submit"
                 disabled={!canSubmit}
                 className="w-full h-11 rounded-[10px] text-[14px] font-semibold transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none disabled:hover:brightness-100 hover:brightness-110 hover:-translate-y-px hover:shadow-[0_1px_2px_rgba(43,42,34,0.08),0_14px_30px_-14px_rgba(160,125,56,0.55)] active:scale-[0.99] cursor-pointer"
-                style={{ background: T.primary, color: T.primaryInk, boxShadow: "inset 0 1px 0 rgba(244,241,229,0.12), 0 1px 2px rgba(43,42,34,0.1)" }}
+                style={{ background: T.accent, color: T.accentInk, boxShadow: "inset 0 1px 0 rgba(244,241,229,0.12), 0 1px 2px rgba(43,42,34,0.1)" }}
               >
                 Sign in
               </button>
@@ -262,12 +253,17 @@ export default function LoginPage() {
           {step === "credentials" && (
           <button
             onClick={() => router.push("/affiliate-program")}
-            className="group mt-5 w-full flex items-center justify-center gap-2 h-11 rounded-[10px] text-[13px] font-medium cursor-pointer transition-all duration-200 hover:bg-[rgba(119,123,98,0.06)]"
-            style={{ background: T.card, border: `1px solid ${T.border}`, color: T.text }}
+            className="group mt-5 w-full flex items-center gap-3 text-left p-3 rounded-[14px] cursor-pointer transition-all duration-200 hover:-translate-y-px"
+            style={{ background: "linear-gradient(135deg, #fffdf7 0%, #f4ecdb 100%)", border: "1px solid rgba(160,125,56,0.42)", boxShadow: "0 2px 8px -2px rgba(43,42,34,0.10), 0 12px 28px -14px rgba(160,125,56,0.4), inset 0 1px 0 rgba(255,253,247,0.8)" }}
           >
-            <span style={{ color: T.muted }}>New affiliate?</span>
-            <span className="font-semibold" style={{ color: T.accent }}>Apply to partner</span>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-0.5" style={{ color: T.accent }}><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+            <span className="w-9 h-9 rounded-[11px] flex items-center justify-center shrink-0" style={{ background: "rgba(160,125,56,0.14)", color: T.gold }}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-[18px] h-[18px]"><path d="M6 3h12l3.5 5.5L12 21 2.5 8.5z" /><path d="M2.5 8.5h19M9 3 7 8.5 12 21M15 3l2 5.5L12 21" /></svg>
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[13px] font-semibold" style={{ color: T.text }}>Earn with AstroLaabh</span>
+              <span className="block text-[12px] mt-0.5" style={{ color: T.muted }}>New affiliate? Apply to partner.</span>
+            </span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 shrink-0 transition-transform duration-200 group-hover:translate-x-0.5" style={{ color: T.gold }}><path d="M5 12h14M13 6l6 6-6 6" /></svg>
           </button>
           )}
         </div>
@@ -299,7 +295,7 @@ export default function LoginPage() {
         <button
           onClick={() => setShowInvite((v) => !v)}
           className="ml-auto flex items-center gap-1.5 h-9 pl-2.5 pr-3.5 rounded-full text-[12px] font-medium cursor-pointer transition-all duration-200 hover:brightness-105"
-          style={{ background: T.primary, color: T.primaryInk, boxShadow: "0 6px 20px -6px rgba(43,42,34,0.5)" }}
+          style={{ background: T.accent, color: T.accentInk, boxShadow: "0 6px 20px -6px rgba(43,42,34,0.5)" }}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
           {showInvite ? "Close" : "Prototype"}

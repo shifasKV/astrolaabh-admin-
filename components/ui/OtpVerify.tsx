@@ -1,5 +1,6 @@
 "use client";
 import { T } from "@/lib/theme";
+import { Alert } from "./Alert";
 
 export function applyOtpInput(otp: string[], index: number, raw: string): { next: string[]; focusIndex: number } {
   const digits = raw.replace(/\D/g, "");
@@ -23,7 +24,6 @@ export function OtpVerifyForm({
   error,
   resendIn,
   submitLabel,
-  backLabel,
   onOtpChange,
   onOtpKeyDown,
   onSubmit,
@@ -36,7 +36,6 @@ export function OtpVerifyForm({
   error: string;
   resendIn: number;
   submitLabel: string;
-  backLabel: string;
   onOtpChange: (index: number, value: string) => void;
   onOtpKeyDown: (index: number, e: React.KeyboardEvent) => void;
   onSubmit: (e?: React.FormEvent) => void;
@@ -44,12 +43,6 @@ export function OtpVerifyForm({
   onBack: () => void;
 }) {
   const filled = otp.join("").length === 6;
-  const inputStyle = (hasValue: boolean) => ({
-    background: hasValue ? T.card : "#fbf8f1",
-    border: `1.5px solid ${hasValue ? T.accentBorder : T.border}`,
-    color: T.text,
-    boxShadow: "inset 0 1px 2px rgba(43,42,34,0.03)",
-  });
 
   return (
     <form onSubmit={onSubmit}>
@@ -96,10 +89,11 @@ export function OtpVerifyForm({
               maxLength={i === 0 ? 6 : 1}
               aria-label={`Digit ${i + 1}`}
               value={digit}
+              data-filled={!!digit}
               onChange={(e) => onOtpChange(i, e.target.value)}
               onKeyDown={(e) => onOtpKeyDown(i, e)}
-              className="h-12 w-full rounded-[10px] text-center text-[18px] font-semibold tabular-nums outline-none transition-shadow duration-200 focus:shadow-[0_0_0_3px_rgba(119,123,98,0.16)]"
-              style={inputStyle(!!digit)}
+              className="h-12 w-full rounded-[10px] text-center text-[18px] font-semibold tabular-nums outline-none transition-all duration-150 border-[1.5px] [border-color:rgba(89,82,54,0.20)] shadow-[inset_0_1px_2px_rgba(43,42,34,0.03)] data-[filled=true]:[border-color:rgba(119,123,98,0.45)] focus:[border-color:#65694f] focus:shadow-[0_0_0_3px_rgba(101,105,79,0.18)]"
+              style={{ background: digit ? T.card : "#fbf8f1", color: T.text }}
               autoFocus={i === 0}
             />
           ))}
@@ -123,32 +117,15 @@ export function OtpVerifyForm({
         )}
       </div>
 
-      {error && (
-        <div
-          className="mt-3 flex items-start gap-2 text-[12.5px] px-3 py-2.5 rounded-[9px]"
-          style={{ background: "rgba(163,73,63,0.08)", border: "1px solid rgba(163,73,63,0.22)", color: T.danger }}
-        >
-          <span className="mt-[5px] w-1.5 h-1.5 rounded-full shrink-0" style={{ background: T.danger }} />
-          {error}
-        </div>
-      )}
+      {error && <Alert tone="error" className="mt-3">{error}</Alert>}
 
       <button
         type="submit"
         disabled={!filled}
         className="mt-5 w-full h-11 rounded-[10px] text-[14px] font-semibold transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none disabled:hover:brightness-100 hover:brightness-110 hover:-translate-y-px hover:shadow-[0_1px_2px_rgba(43,42,34,0.08),0_14px_30px_-14px_rgba(160,125,56,0.55)] active:scale-[0.99] cursor-pointer"
-        style={{ background: T.primary, color: T.primaryInk, boxShadow: "inset 0 1px 0 rgba(244,241,229,0.12), 0 1px 2px rgba(43,42,34,0.1)" }}
+        style={{ background: T.accent, color: T.accentInk, boxShadow: "inset 0 1px 0 rgba(244,241,229,0.12), 0 1px 2px rgba(43,42,34,0.1)" }}
       >
         {submitLabel}
-      </button>
-
-      <button
-        type="button"
-        onClick={onBack}
-        className="mt-3 w-full h-10 text-[13px] font-medium cursor-pointer transition-opacity hover:opacity-80"
-        style={{ color: T.muted }}
-      >
-        {backLabel}
       </button>
     </form>
   );

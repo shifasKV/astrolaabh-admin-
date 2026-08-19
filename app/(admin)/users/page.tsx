@@ -304,7 +304,7 @@ export default function UsersPage() {
       </Modal>
 
       {toast && (
-        <div className="fixed top-6 right-6 z-[100] flex items-center gap-2 px-4 py-3 rounded-[10px] text-[13.5px] font-medium" style={{ background: T.card, border: `1px solid ${T.border}`, color: T.good, boxShadow: T.shadowLift }}>
+        <div className="fixed bottom-6 right-6 z-[100] flex items-center gap-2 px-4 py-3 rounded-[10px] text-[13.5px] font-medium" style={{ background: T.card, border: `1px solid ${T.border}`, color: T.good, boxShadow: T.shadowLift }}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6L9 17l-5-5"/></svg>
           {toast}
         </div>

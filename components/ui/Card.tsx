@@ -12,7 +12,7 @@ export function Card({ children, className = "", id }: CardProps) {
     <div
       id={id}
       className={`rounded-[16px] p-5 ${className}`}
-      style={{ background: T.card, border: `1px solid ${T.borderSoft}`, boxShadow: T.shadow }}
+      style={{ background: T.card, border: `1px solid ${T.borderSoft}`, boxShadow: `${T.shadow}, inset 0 0 0 1px rgba(160,125,56,0.16)` }}
     >
       {children}
     </div>
@@ -37,8 +37,8 @@ export function StatCard({ label, value, sub, trend, onClick, featured }: StatCa
       className={`rounded-[16px] p-5 text-left transition-all duration-300 ${onClick ? "cursor-pointer hover:-translate-y-[2px] hover:shadow-[0_2px_6px_rgba(43,42,34,0.05),0_16px_32px_-16px_rgba(43,42,34,0.18)]" : ""} ${onClick && !featured ? "card-interactive" : ""}`}
       style={
         featured
-          ? { background: "linear-gradient(160deg, #faf0d8 0%, #efdfb8 100%)", border: "1px solid rgba(160,125,56,0.35)", boxShadow: T.shadow }
-          : { background: T.card, border: `1px solid ${T.borderSoft}`, boxShadow: T.shadow }
+          ? { background: "linear-gradient(160deg, #faf0d8 0%, #efdfb8 100%)", border: "1px solid rgba(160,125,56,0.35)", boxShadow: `${T.shadow}, inset 0 0 0 1px rgba(160,125,56,0.22)` }
+          : { background: T.card, border: `1px solid ${T.borderSoft}`, boxShadow: `${T.shadow}, inset 0 0 0 1px rgba(160,125,56,0.16)` }
       }
     >
       <div
@@ -84,7 +84,7 @@ export function DetailCard({ children, className = "" }: CardProps) {
   return (
     <div
       className={`rounded-[16px] p-6 ${className}`}
-      style={{ background: T.card, border: `1px solid ${T.borderSoft}`, boxShadow: T.shadow }}
+      style={{ background: T.card, border: `1px solid ${T.borderSoft}`, boxShadow: `${T.shadow}, inset 0 0 0 1px rgba(160,125,56,0.16)` }}
     >
       {children}
     </div>

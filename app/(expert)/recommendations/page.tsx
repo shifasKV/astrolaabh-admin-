@@ -1,7 +1,7 @@
 "use client";
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, Select, Pagination, ToolbarSearch, FiltersPopover, FilterField, FilterChip, TableSkeleton } from "@/components/ui";
+import { PageHeader, Card, Chip, Select, Pagination, ToolbarSearch, FiltersPopover, FilterField, SortMenu, TableSkeleton } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { useSimulatedLoad } from "@/lib/useSimulatedLoad";
 import { MOCK_STONE_RECOMMENDATIONS, MOCK_CONSULTATIONS, MOCK_ORDERS } from "@/lib/mock";
@@ -101,54 +101,41 @@ export default function RecommendationsPage() {
       <div className="md:h-[calc(100dvh-78px)] md:flex md:flex-col md:min-h-0">
       <PageHeader title="Recommendations" />
 
-      {/* Toolbar */}
+      {/* Toolbar — filters left, search + sort right */}
       <div className="flex flex-wrap items-center gap-2 mb-3">
-        <ToolbarSearch value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search customer, gemstone, ID…" />
+        <FiltersPopover
+          align="left"
+          count={[filterCustomer, filterStone, filterStatus].filter(Boolean).length}
+          open={showFilters}
+          onToggle={() => setShowFilters(!showFilters)}
+        >
+          <FilterField label="Customer">
+            <Select value={filterCustomer} onChange={(v) => { setFilterCustomer(v); setPage(1); }} searchable compact placeholder="All customers" options={[{ value: "", label: "All customers" }, ...uniqueCustomers.map((n) => ({ value: n, label: n }))]} />
+          </FilterField>
+          <FilterField label="Stone">
+            <Select value={filterStone} onChange={(v) => { setFilterStone(v); setPage(1); }} searchable compact placeholder="All stones" options={[{ value: "", label: "All stones" }, ...uniqueStones.map((n) => ({ value: n, label: n }))]} />
+          </FilterField>
+          <FilterField label="Status">
+            <Select value={filterStatus} onChange={(v) => { setFilterStatus(v); setPage(1); }} compact placeholder="All statuses" options={STATUS_OPTIONS} />
+          </FilterField>
+          {hasActiveFilters && (
+            <div className="pt-1" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+              <button onClick={() => { setFilterCustomer(""); setFilterStone(""); setFilterStatus(""); setPage(1); }} className="text-[12px] font-medium cursor-pointer hover:underline underline-offset-4" style={{ color: T.danger }}>Clear all filters</button>
+            </div>
+          )}
+        </FiltersPopover>
         <div className="ml-auto flex items-center gap-2">
-          <FiltersPopover
-            count={[filterCustomer, filterStone, filterStatus].filter(Boolean).length}
-            open={showFilters}
-            onToggle={() => setShowFilters(!showFilters)}
-          >
-            <FilterField label="Customer">
-              <Select value={filterCustomer} onChange={(v) => { setFilterCustomer(v); setPage(1); }} searchable compact placeholder="All customers" options={[{ value: "", label: "All customers" }, ...uniqueCustomers.map((n) => ({ value: n, label: n }))]} />
-            </FilterField>
-            <FilterField label="Stone">
-              <Select value={filterStone} onChange={(v) => { setFilterStone(v); setPage(1); }} searchable compact placeholder="All stones" options={[{ value: "", label: "All stones" }, ...uniqueStones.map((n) => ({ value: n, label: n }))]} />
-            </FilterField>
-            <FilterField label="Status">
-              <Select value={filterStatus} onChange={(v) => { setFilterStatus(v); setPage(1); }} compact placeholder="All statuses" options={STATUS_OPTIONS} />
-            </FilterField>
-          </FiltersPopover>
-          <div className="w-[190px]">
-            <Select
-              value={sort}
-              onChange={(v) => { setSort(v as SortKey); setPage(1); }}
-              compact
-              prefix="Sort: "
-              options={[
-                { value: "newest", label: "Newest scheduled" },
-                { value: "oldest", label: "Oldest scheduled" },
-              ]}
-            />
-          </div>
+          <ToolbarSearch value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search customer, gemstone, ID…" />
+          <SortMenu
+            value={sort}
+            onChange={(v) => { setSort(v as SortKey); setPage(1); }}
+            options={[
+              { value: "newest", label: "Newest scheduled" },
+              { value: "oldest", label: "Oldest scheduled" },
+            ]}
+          />
         </div>
       </div>
-
-      {hasActiveFilters && (
-        <div className="flex flex-wrap items-center gap-1.5 mb-3">
-          {filterCustomer && <FilterChip label={`Customer: ${filterCustomer}`} onClear={() => { setFilterCustomer(""); setPage(1); }} />}
-          {filterStone && <FilterChip label={`Stone: ${filterStone}`} onClear={() => { setFilterStone(""); setPage(1); }} />}
-          {filterStatus && <FilterChip label={`Status: ${filterStatus.replace(/_/g, " ")}`} onClear={() => { setFilterStatus(""); setPage(1); }} />}
-          <button
-            onClick={() => { setFilterCustomer(""); setFilterStone(""); setFilterStatus(""); setPage(1); }}
-            className="text-[12px] px-1.5 cursor-pointer hover:underline underline-offset-4"
-            style={{ color: T.danger }}
-          >
-            Clear all
-          </button>
-        </div>
-      )}
 
       {/* Table */}
       <Card className="!p-0 md:min-h-0 md:overflow-y-auto">

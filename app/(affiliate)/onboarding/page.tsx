@@ -2,6 +2,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, Input, GoldBtn } from "@/components/ui";
+import { useAuth } from "@/lib/store/auth";
+import * as V from "@/lib/validators";
 import { T } from "@/lib/theme";
 
 const STEPS = [
@@ -12,7 +14,10 @@ const STEPS = [
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const { logout } = useAuth();
   const [step, setStep] = useState(0);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const clearErr = (k: string) => setErrors((p) => (p[k] ? { ...p, [k]: "" } : p));
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -29,20 +34,49 @@ export default function OnboardingPage() {
   const [panFile, setPanFile] = useState<string | null>(null);
   const [panDrag, setPanDrag] = useState(false);
 
-  const canNext = () => {
-    if (step === 0) return name && email && phone;
-    if (step === 1) return holderName && bankName && accountNumber && confirmAccount && ifsc && accountNumber === confirmAccount;
-    if (step === 2) return panFile;
-    return false;
+
+  const validateStep = () => {
+    const e: Record<string, string> = {};
+    if (step === 0) {
+      e.name = V.required(name, "Full name");
+      e.email = V.email(email);
+      e.phone = V.phone(phone);
+    } else if (step === 1) {
+      e.holderName = V.required(holderName, "Account holder name");
+      e.bankName = V.required(bankName, "Bank name");
+      e.accountNumber = V.required(accountNumber, "Account number");
+      e.confirmAccount = !confirmAccount ? "Please re-enter the account number." : accountNumber !== confirmAccount ? "Account numbers do not match." : "";
+      e.ifsc = V.ifsc(ifsc);
+    } else if (step === 2) {
+      e.pan = panFile ? "" : "Please upload your PAN card.";
+    }
+    setErrors(e);
+    return V.isClean(e);
   };
 
+  const goNext = () => { if (validateStep()) setStep(step + 1); };
+
   const handleSubmit = () => {
+    if (!validateStep()) return;
     router.push("/aff-dashboard?status=pending");
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-10 relative overflow-hidden" style={{ background: `url(/login/bg-onboarding.jpg) center / cover no-repeat, ${T.bg}` }}>
+    <div className="min-h-screen flex items-center justify-center px-4 py-10 relative overflow-hidden" style={{ background: `url(/login/onboarding-gems.png) center / cover no-repeat, ${T.bg}` }}>
       <div className="absolute inset-0 pointer-events-none" style={{ background: "linear-gradient(180deg, rgba(241,235,220,0.62) 0%, rgba(241,235,220,0.42) 55%, rgba(241,235,220,0.6) 100%)" }} />
+
+      {/* Subtle utility — so a new partner never feels stuck */}
+      <div className="fixed top-5 right-5 z-20 flex items-center gap-1.5 h-9 px-1.5 rounded-full" style={{ background: "rgba(255,253,247,0.8)", border: `1px solid ${T.borderSoft}`, backdropFilter: "blur(6px)", boxShadow: T.shadow }}>
+        <a href="mailto:support@astrolaabh.house" className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full text-[12px] font-medium transition-colors hover:bg-[rgba(119,123,98,0.1)]" style={{ color: T.muted }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M4 4h16v12H5.2L4 17.2z" /><path d="M8 9h8M8 12h5" /></svg>
+          Support
+        </a>
+        <span className="w-px h-4" style={{ background: T.borderSoft }} />
+        <button onClick={() => { logout(); router.push("/"); }} className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full text-[12px] font-medium cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.1)]" style={{ color: T.muted }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="M16 17l5-5-5-5M21 12H9" /></svg>
+          Log out
+        </button>
+      </div>
       <div className="relative z-10 w-full max-w-[560px]">
         {step > 0 && (
           <div className="mb-5">
@@ -104,9 +138,9 @@ export default function OnboardingPage() {
               <h2 className="text-[15px] font-semibold mb-1" style={{ color: T.text }}>Personal Details</h2>
               <p className="text-[13px] mb-5" style={{ color: T.muted }}>Tell us a bit about yourself</p>
               <div className="space-y-4">
-                <Input value={name} onChange={setName} label="Full name" placeholder="e.g. Pt. Sandeep Kochaar" />
-                <Input value={email} onChange={setEmail} label="Email address" type="email" placeholder="you@example.com" />
-                <Input value={phone} onChange={setPhone} label="Phone number" placeholder="+91 98100 00000" />
+                <Input value={name} onChange={(v) => { setName(v); clearErr("name"); }} onBlur={() => setErrors((p) => ({ ...p, name: V.required(name, "Full name") }))} error={errors.name} label="Full name" placeholder="e.g. Pt. Sandeep Kochaar" />
+                <Input value={email} onChange={(v) => { setEmail(v); clearErr("email"); }} onBlur={() => setErrors((p) => ({ ...p, email: V.email(email) }))} error={errors.email} label="Email address" type="email" placeholder="you@example.com" />
+                <Input value={phone} onChange={(v) => { setPhone(v); clearErr("phone"); }} onBlur={() => setErrors((p) => ({ ...p, phone: V.phone(phone) }))} error={errors.phone} label="Phone number" type="tel" placeholder="+91 98100 00000" />
                 <Input value={city} onChange={setCity} label="City (optional)" placeholder="e.g. New Delhi" />
               </div>
             </>
@@ -118,17 +152,14 @@ export default function OnboardingPage() {
               <h2 className="text-[15px] font-semibold mb-1" style={{ color: T.text }}>Bank Details</h2>
               <p className="text-[13px] mb-5" style={{ color: T.muted }}>For commission payouts</p>
               <div className="space-y-4">
-                <Input value={holderName} onChange={setHolderName} label="Account holder name" placeholder="As on bank records" />
-                <Input value={bankName} onChange={setBankName} label="Bank name" placeholder="e.g. HDFC Bank" />
+                <Input value={holderName} onChange={(v) => { setHolderName(v); clearErr("holderName"); }} onBlur={() => setErrors((p) => ({ ...p, holderName: V.required(holderName, "Account holder name") }))} error={errors.holderName} label="Account holder name" placeholder="As on bank records" />
+                <Input value={bankName} onChange={(v) => { setBankName(v); clearErr("bankName"); }} onBlur={() => setErrors((p) => ({ ...p, bankName: V.required(bankName, "Bank name") }))} error={errors.bankName} label="Bank name" placeholder="e.g. HDFC Bank" />
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Input value={accountNumber} onChange={setAccountNumber} label="Account number" placeholder="Enter account number" />
-                  <Input value={confirmAccount} onChange={setConfirmAccount} label="Confirm account number" placeholder="Re-enter account number" />
+                  <Input value={accountNumber} onChange={(v) => { setAccountNumber(v); clearErr("accountNumber"); }} onBlur={() => setErrors((p) => ({ ...p, accountNumber: V.required(accountNumber, "Account number") }))} error={errors.accountNumber} label="Account number" type="number" placeholder="Enter account number" />
+                  <Input value={confirmAccount} onChange={(v) => { setConfirmAccount(v); clearErr("confirmAccount"); }} onBlur={() => setErrors((p) => ({ ...p, confirmAccount: !confirmAccount ? "Please re-enter the account number." : accountNumber !== confirmAccount ? "Account numbers do not match." : "" }))} error={errors.confirmAccount} label="Confirm account number" type="number" placeholder="Re-enter account number" />
                 </div>
-                {accountNumber && confirmAccount && accountNumber !== confirmAccount && (
-                  <p className="text-[12px] -mt-2" style={{ color: T.danger }}>Account numbers do not match</p>
-                )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Input value={ifsc} onChange={setIfsc} label="IFSC code" placeholder="e.g. HDFC0001234" />
+                  <Input value={ifsc} onChange={(v) => { setIfsc(v); clearErr("ifsc"); }} onBlur={() => setErrors((p) => ({ ...p, ifsc: V.ifsc(ifsc) }))} error={errors.ifsc} label="IFSC code" placeholder="e.g. HDFC0001234" />
                   <Input value={upiId} onChange={setUpiId} label="UPI ID (optional)" placeholder="e.g. name@upi" />
                 </div>
               </div>
@@ -181,6 +212,7 @@ export default function OnboardingPage() {
                   </div>
                 )}
               </div>
+              {errors.pan && <p className="text-[12px] mt-2" style={{ color: T.danger }}>{errors.pan}</p>}
             </>
           )}
 
@@ -188,11 +220,11 @@ export default function OnboardingPage() {
           <div className="flex items-center justify-between mt-6 pt-5" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
             <span className="text-[12px] font-medium" style={{ color: T.faint }}>Step {step + 1} of {STEPS.length}</span>
             {step < STEPS.length - 1 ? (
-              <GoldBtn onClick={() => setStep(step + 1)} disabled={!canNext()}>
+              <GoldBtn onClick={goNext}>
                 Continue →
               </GoldBtn>
             ) : (
-              <GoldBtn onClick={handleSubmit} disabled={!canNext()}>
+              <GoldBtn onClick={handleSubmit}>
                 Submit for review
               </GoldBtn>
             )}

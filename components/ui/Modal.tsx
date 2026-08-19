@@ -1,5 +1,6 @@
 "use client";
-import { useEffect, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { T } from "@/lib/theme";
 
 interface ModalProps {
@@ -11,6 +12,9 @@ interface ModalProps {
 }
 
 export function Modal({ open, onClose, title, children, wide }: ModalProps) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   const handleEscape = useCallback((e: KeyboardEvent) => {
     if (e.key === "Escape") onClose();
   }, [onClose]);
@@ -26,10 +30,10 @@ export function Modal({ open, onClose, title, children, wide }: ModalProps) {
     }
   }, [open, handleEscape]);
 
-  if (!open) return null;
+  if (!open || !mounted) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby={title ? "modal-title" : undefined}>
+  return createPortal(
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby={title ? "modal-title" : undefined}>
       <div
         className="absolute inset-0 backdrop-blur-sm"
         style={{ background: "rgba(43,42,34,0.38)", animation: "modal-backdrop-in 200ms ease-out" }}
@@ -37,7 +41,7 @@ export function Modal({ open, onClose, title, children, wide }: ModalProps) {
       />
       <div
         className={`relative rounded-[18px] w-full max-h-[90vh] overflow-y-auto ${wide ? "max-w-[640px]" : "max-w-[480px]"}`}
-        style={{ background: T.card, border: `1px solid ${T.borderSoft}`, boxShadow: "0 2px 6px rgba(43,42,34,0.06), 0 44px 90px -40px rgba(43,42,34,0.45), inset 0 1px 0 rgba(255,255,255,0.5)", animation: "modal-in 250ms cubic-bezier(0.22, 1, 0.36, 1)" }}
+        style={{ background: T.card, border: `1px solid ${T.borderSoft}`, boxShadow: "0 2px 6px rgba(43,42,34,0.06), 0 44px 90px -40px rgba(43,42,34,0.45), inset 0 1px 0 rgba(255,255,255,0.5), inset 0 0 0 1px rgba(160,125,56,0.18)", animation: "modal-in 250ms cubic-bezier(0.22, 1, 0.36, 1)" }}
       >
         {title && (
           <div className="flex items-center justify-between gap-4 px-6 pt-5 pb-4" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
@@ -54,6 +58,7 @@ export function Modal({ open, onClose, title, children, wide }: ModalProps) {
         )}
         <div className="p-6">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

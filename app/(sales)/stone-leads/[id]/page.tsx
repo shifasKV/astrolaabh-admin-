@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { Card, Chip, GoldBtn, GhostBtn, BackLink, Select, Textarea } from "@/components/ui";
+import { Card, Chip, GoldBtn, BackLink, Select, Textarea } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { useAuth } from "@/lib/store/auth";
 import { MOCK_INCOMPLETE_ORDERS, MOCK_SALES_MEMBERS } from "@/lib/mock";
@@ -113,7 +113,7 @@ export default function StoneLeadDetailPage() {
               <a href={`mailto:${order.customerEmail}`} className="text-[13px] hover:underline" style={{ color: T.accent }}>{order.customerEmail}</a>
             </div>
           </div>
-          <GhostBtn onClick={() => flash("Order creation started")}>Create order</GhostBtn>
+          <GoldBtn onClick={() => flash("Order creation started")}>+ Create order</GoldBtn>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-3 text-[13px]" style={{ borderTop: `1px solid ${T.borderSoft}`, paddingTop: 14 }}>
@@ -200,7 +200,7 @@ export default function StoneLeadDetailPage() {
       </div>
 
       {toast && (
-        <div className="fixed top-6 right-6 z-[100] flex items-center gap-2 px-4 py-3 rounded-[10px] shadow-lg text-[13.5px] font-medium animate-in" style={{ background: T.card, border: `1px solid ${T.border}`, color: T.good }}>
+        <div className="fixed bottom-6 right-6 z-[100] flex items-center gap-2 px-4 py-3 rounded-[10px] shadow-lg text-[13.5px] font-medium animate-in" style={{ background: T.card, border: `1px solid ${T.border}`, color: T.good }}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6L9 17l-5-5"/></svg>
           {toast}
         </div>

@@ -15,17 +15,20 @@ import { STONES, ENERGISATION, inr } from "@/lib/catalog";
 const SETTING_TYPES = ["Ring", "Pendant", "Bracelet", "Loose stone"] as const;
 const METALS = ["22K Gold", "18K Gold", "Silver", "Panchdhatu"] as const;
 
-function SectionTitle({ n, title, hint }: { n: number; title: string; hint?: string }) {
+function SectionTitle({ n, title, hint, action }: { n: number; title: string; hint?: string; action?: React.ReactNode }) {
   return (
-    <div className="flex items-baseline gap-2.5 mb-3">
-      <span
-        className="w-6 h-6 rounded-full inline-flex items-center justify-center text-[12px] font-semibold shrink-0 translate-y-0.5"
-        style={{ background: T.accentMuted, color: T.accent }}
-      >
-        {n}
-      </span>
-      <h2 className="text-[15px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>{title}</h2>
-      {hint && <span className="text-[12px]" style={{ color: T.faint }}>{hint}</span>}
+    <div className="flex items-center justify-between gap-3 mb-3">
+      <div className="flex items-baseline gap-2.5 min-w-0">
+        <span
+          className="w-6 h-6 rounded-full inline-flex items-center justify-center text-[12px] font-semibold shrink-0 translate-y-0.5"
+          style={{ background: T.accentMuted, color: T.accent }}
+        >
+          {n}
+        </span>
+        <h2 className="text-[15px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>{title}</h2>
+        {hint && <span className="text-[12px]" style={{ color: T.faint }}>{hint}</span>}
+      </div>
+      {action}
     </div>
   );
 }
@@ -38,15 +41,14 @@ export default function CreateOrderPage() {
   const [customerOpen, setCustomerOpen] = useState(false);
   const [customerId, setCustomerId] = useState("");
   const [newCustomer, setNewCustomer] = useState<{ name: string; phone: string; email: string } | null>(null);
-  const [showBirth, setShowBirth] = useState(false);
   const [birth, setBirth] = useState({ date: "", time: "", place: "" });
   const [address, setAddress] = useState("");
+  const [deliverElsewhere, setDeliverElsewhere] = useState(false);
 
   // Stone
   const [stoneQuery, setStoneQuery] = useState("");
   const [stoneOpen, setStoneOpen] = useState(false);
   const [stoneSku, setStoneSku] = useState("");
-  const [stonePrice, setStonePrice] = useState("");
 
   // Setting (optional)
   const [settingType, setSettingType] = useState("");
@@ -90,6 +92,7 @@ export default function CreateOrderPage() {
     setCustomerId(id);
     setNewCustomer(null);
     setAddress(c.shippingAddress ?? "");
+    setDeliverElsewhere(!c.shippingAddress);
     setCustomerQuery("");
     setCustomerOpen(false);
   };
@@ -98,6 +101,7 @@ export default function CreateOrderPage() {
     setNewCustomer({ name: customerQuery.trim(), phone: "", email: "" });
     setCustomerId("");
     setAddress("");
+    setDeliverElsewhere(true);
     setCustomerOpen(false);
     setCustomerQuery("");
   };
@@ -106,25 +110,23 @@ export default function CreateOrderPage() {
     setCustomerId("");
     setNewCustomer(null);
     setAddress("");
-    setShowBirth(false);
   };
 
   const pickStone = (sku: string) => {
     const s = STONES.find((x) => x.sku === sku);
     if (!s) return;
     setStoneSku(sku);
-    setStonePrice(String(s.price));
     setStoneQuery("");
     setStoneOpen(false);
   };
 
-  const stoneAmount = selectedStone ? Number(stonePrice) || selectedStone.price : 0;
+  const stoneAmount = selectedStone ? selectedStone.price : 0;
   const settingAmount = Number(settingPrice) || 0;
   const energisationAmount = energisation?.fee ?? 0;
   const discountAmount = Number(discount) || 0;
   const total = Math.max(0, stoneAmount + settingAmount + energisationAmount - discountAmount);
 
-  const customerReady = newCustomer ? !!(newCustomer.name && newCustomer.phone) : !!selectedCustomer;
+  const customerReady = newCustomer ? !!(newCustomer.name && newCustomer.phone && birth.date && birth.time && birth.place) : !!selectedCustomer;
   const canCreate = customerReady && !!selectedStone;
 
   const handleCreate = () => {
@@ -145,7 +147,12 @@ export default function CreateOrderPage() {
         <div className="flex-1 min-w-0 space-y-4 w-full">
           {/* 1 · Customer */}
           <Card className="!p-6">
-            <SectionTitle n={1} title="Customer" />
+            <SectionTitle n={1} title="Customer" action={newCustomer ? (
+              <button onClick={clearCustomer} className="inline-flex items-center gap-1.5 text-[12px] font-medium h-8 px-3 rounded-[9px] cursor-pointer transition-colors shrink-0 hover:bg-[rgba(119,123,98,0.08)]" style={{ color: T.muted, border: `1px solid ${T.border}` }}>
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" className="w-3.5 h-3.5"><path d="M10 3.5 5.5 8 10 12.5" /></svg>
+                Back to search
+              </button>
+            ) : undefined} />
             {!customer ? (
               <div className="relative">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: T.faint }}>
@@ -171,6 +178,18 @@ export default function CreateOrderPage() {
                       className="absolute left-0 right-0 top-full mt-1.5 z-40 rounded-[12px] p-1.5 max-h-[320px] overflow-y-auto"
                       style={{ background: T.popover, border: `1px solid ${T.border}`, boxShadow: T.shadowLift }}
                     >
+                      {/* Add-new always sits on top, not just when results are empty */}
+                      <button onClick={startNewCustomer} className={suggestionRow} style={{ color: T.accent }}>
+                        <span className="w-8 h-8 rounded-[9px] flex items-center justify-center shrink-0" style={{ border: `1px dashed ${T.accentBorder}` }}>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="w-3.5 h-3.5"><path d="M12 5v14M5 12h14" /></svg>
+                        </span>
+                        <span className="text-[13px] font-medium">
+                          Add new customer{customerQuery.trim() ? ` “${customerQuery.trim()}”` : ""}
+                        </span>
+                      </button>
+                      {customerMatches.length > 0 && (
+                        <div className="my-1 mx-2 h-px" style={{ background: T.borderSoft }} />
+                      )}
                       {customerMatches.map((c) => (
                         <button key={c.id} onClick={() => pickCustomer(c.id)} className={suggestionRow}>
                           <span
@@ -185,17 +204,9 @@ export default function CreateOrderPage() {
                           </span>
                         </button>
                       ))}
-                      {customerMatches.length === 0 && (
+                      {customerMatches.length === 0 && customerQuery.trim() && (
                         <div className="px-3 py-2 text-[12.5px]" style={{ color: T.faint }}>No customers match “{customerQuery}”.</div>
                       )}
-                      <button onClick={startNewCustomer} className={suggestionRow} style={{ color: T.accent }}>
-                        <span className="w-8 h-8 rounded-[9px] flex items-center justify-center shrink-0" style={{ border: `1px dashed ${T.accentBorder}` }}>
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="w-3.5 h-3.5"><path d="M12 5v14M5 12h14" /></svg>
-                        </span>
-                        <span className="text-[13px] font-medium">
-                          New customer{customerQuery.trim() ? ` “${customerQuery.trim()}”` : ""}
-                        </span>
-                      </button>
                     </div>
                   </>
                 )}
@@ -207,19 +218,14 @@ export default function CreateOrderPage() {
                   <Input value={newCustomer.phone} onChange={(v) => setNewCustomer((p) => p && { ...p, phone: v })} label="Phone / WhatsApp" placeholder="+91 98765 43210" />
                   <Input value={newCustomer.email} onChange={(v) => setNewCustomer((p) => p && { ...p, email: v })} label="Email (optional)" placeholder="priya@example.com" />
                 </div>
-                <button onClick={() => setShowBirth((v) => !v)} className="text-[12.5px] font-medium cursor-pointer hover:underline underline-offset-4" style={{ color: T.accent }}>
-                  {showBirth ? "Hide birth details" : "+ Add birth details (for the chart)"}
-                </button>
-                {showBirth && (
+                <div>
+                  <div className="text-[11px] font-medium tracking-[0.06em] uppercase mb-1.5" style={{ color: T.faint }}>Birth details (for the chart)</div>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <Input value={birth.date} onChange={(v) => setBirth((p) => ({ ...p, date: v }))} label="Birth date" placeholder="15 Mar 1992" />
                     <Input value={birth.time} onChange={(v) => setBirth((p) => ({ ...p, time: v }))} label="Birth time" placeholder="10:30 AM" />
                     <Input value={birth.place} onChange={(v) => setBirth((p) => ({ ...p, place: v }))} label="Birth place" placeholder="Kochi, Kerala" />
                   </div>
-                )}
-                <button onClick={clearCustomer} className="text-[12.5px] cursor-pointer hover:underline underline-offset-4" style={{ color: T.muted }}>
-                  ← Back to search
-                </button>
+                </div>
               </div>
             ) : (
               <div
@@ -246,20 +252,62 @@ export default function CreateOrderPage() {
               </div>
             )}
 
-            {/* Delivery address — auto-filled, editable */}
+            {/* Delivery address — same as home on file, or deliver elsewhere */}
             {customer && (
               <div className="mt-4">
-                <div className="text-[11px] font-medium tracking-[0.06em] uppercase mb-1.5" style={{ color: T.faint }}>
-                  Deliver to {selectedCustomer?.shippingAddress && address === selectedCustomer.shippingAddress ? "· address on file" : ""}
-                </div>
-                <textarea
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  rows={2}
-                  placeholder="House / street, city, state, PIN"
-                  className="w-full px-3.5 py-2.5 rounded-[10px] text-[13.5px] outline-none resize-none transition-shadow duration-200 focus:shadow-[0_0_0_3px_rgba(119,123,98,0.16)]"
-                  style={{ background: T.popover, border: `1px solid ${T.border}`, color: T.text }}
-                />
+                <div className="text-[11px] font-medium tracking-[0.06em] uppercase mb-1.5" style={{ color: T.faint }}>Deliver to</div>
+                {selectedCustomer?.shippingAddress ? (
+                  <div className="flex flex-col gap-2">
+                    {/* Option A — same as home */}
+                    <button
+                      type="button"
+                      onClick={() => { setDeliverElsewhere(false); setAddress(selectedCustomer.shippingAddress ?? ""); }}
+                      className="flex items-start gap-2.5 text-left rounded-[10px] px-3.5 py-2.5 transition-colors"
+                      style={{ background: !deliverElsewhere ? T.accentFaint : T.popover, border: `1px solid ${!deliverElsewhere ? T.accentBorder : T.border}` }}
+                    >
+                      <span className="mt-0.5 w-[15px] h-[15px] rounded-full flex items-center justify-center shrink-0" style={{ border: `1.5px solid ${!deliverElsewhere ? T.accent : "rgba(89,82,54,0.3)"}` }}>
+                        {!deliverElsewhere && <span className="w-[7px] h-[7px] rounded-full" style={{ background: T.accent }} />}
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block text-[12.5px] font-medium" style={{ color: T.text }}>Same as home address</span>
+                        <span className="block text-[12px] mt-0.5" style={{ color: T.muted }}>{selectedCustomer.shippingAddress}</span>
+                      </span>
+                    </button>
+                    {/* Option B — deliver elsewhere */}
+                    <div className="rounded-[10px] px-3.5 py-2.5" style={{ background: deliverElsewhere ? T.accentFaint : T.popover, border: `1px solid ${deliverElsewhere ? T.accentBorder : T.border}` }}>
+                      <button
+                        type="button"
+                        onClick={() => { setDeliverElsewhere(true); if (address === selectedCustomer.shippingAddress) setAddress(""); }}
+                        className="flex items-center gap-2.5 text-left w-full"
+                      >
+                        <span className="w-[15px] h-[15px] rounded-full flex items-center justify-center shrink-0" style={{ border: `1.5px solid ${deliverElsewhere ? T.accent : "rgba(89,82,54,0.3)"}` }}>
+                          {deliverElsewhere && <span className="w-[7px] h-[7px] rounded-full" style={{ background: T.accent }} />}
+                        </span>
+                        <span className="text-[12.5px] font-medium" style={{ color: T.text }}>Deliver to a different address</span>
+                      </button>
+                      {deliverElsewhere && (
+                        <textarea
+                          value={address}
+                          onChange={(e) => setAddress(e.target.value)}
+                          rows={2}
+                          placeholder="House / street, city, state, PIN"
+                          autoFocus
+                          className="w-full mt-2.5 px-3 py-2 rounded-[9px] text-[13.5px] outline-none resize-none transition-shadow duration-200 focus:shadow-[0_0_0_3px_rgba(119,123,98,0.16)]"
+                          style={{ background: T.card, border: `1px solid ${T.border}`, color: T.text }}
+                        />
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <textarea
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    rows={2}
+                    placeholder="House / street, city, state, PIN"
+                    className="w-full px-3.5 py-2.5 rounded-[10px] text-[13.5px] outline-none resize-none transition-shadow duration-200 focus:shadow-[0_0_0_3px_rgba(119,123,98,0.16)]"
+                    style={{ background: T.popover, border: `1px solid ${T.border}`, color: T.text }}
+                  />
+                )}
               </div>
             )}
           </Card>
@@ -327,17 +375,10 @@ export default function CreateOrderPage() {
                     {selectedStone.ratti}r · {selectedStone.origin} · {selectedStone.sku}
                   </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-[12px]" style={{ color: T.faint }}>₹</span>
-                  <input
-                    value={stonePrice}
-                    onChange={(e) => setStonePrice(e.target.value.replace(/[^0-9]/g, ""))}
-                    className="w-[110px] h-8 px-2.5 rounded-[8px] text-[13px] font-semibold tabular-nums text-right outline-none"
-                    style={{ background: T.card, border: `1px solid ${T.border}`, color: T.text }}
-                    aria-label="Stone price"
-                  />
+                <div className="flex items-center gap-3 shrink-0">
+                  <span className="text-[14px] font-semibold tabular-nums" style={{ color: T.text }}>{inr(selectedStone.price)}</span>
                   <button
-                    onClick={() => { setStoneSku(""); setStonePrice(""); }}
+                    onClick={() => setStoneSku("")}
                     className="text-[12px] font-medium cursor-pointer hover:underline underline-offset-4"
                     style={{ color: T.accent }}
                   >
@@ -462,17 +503,18 @@ export default function CreateOrderPage() {
               <div className="flex justify-between"><span style={{ color: T.muted }}>Energisation</span><span style={{ color: T.text }}>{energisationAmount === 0 ? "Free" : inr(energisationAmount)}</span></div>
               <div className="flex items-center justify-between gap-3">
                 <span style={{ color: T.muted }}>Discount</span>
-                <span className="flex items-center gap-1.5">
-                  <span className="text-[12px]" style={{ color: T.faint }}>− ₹</span>
+                <label className="group flex items-center h-8 rounded-[8px] pl-2.5 pr-1 cursor-text transition-shadow duration-200 focus-within:shadow-[0_0_0_3px_rgba(119,123,98,0.16)]" style={{ background: T.bg, border: `1px solid ${discount ? T.accentBorder : T.border}` }}>
+                  <span className="text-[12.5px]" style={{ color: T.faint }}>−&nbsp;₹</span>
                   <input
                     value={discount}
                     onChange={(e) => setDiscount(e.target.value.replace(/[^0-9]/g, ""))}
+                    inputMode="numeric"
                     placeholder="0"
-                    className="w-[86px] h-7 px-2 rounded-[7px] text-[12.5px] tabular-nums text-right outline-none"
-                    style={{ background: T.popover, border: `1px solid ${T.borderSoft}`, color: T.text }}
-                    aria-label="Discount"
+                    className="w-[76px] h-full px-1.5 bg-transparent text-[13px] font-medium tabular-nums text-right outline-none"
+                    style={{ color: T.text }}
+                    aria-label="Discount amount"
                   />
-                </span>
+                </label>
               </div>
             </div>
 
@@ -498,7 +540,7 @@ export default function CreateOrderPage() {
       {toast && (
         <div
           className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-[10px] text-[13px] font-medium"
-          style={{ background: T.primary, color: T.primaryInk, boxShadow: T.shadowLift, animation: "wl-toast 0.3s ease both" }}
+          style={{ background: T.accent, color: T.accentInk, boxShadow: T.shadowLift, animation: "wl-toast 0.3s ease both" }}
         >
           {toast}
         </div>
