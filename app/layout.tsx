@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Noto_Serif_Devanagari } from "next/font/google";
 import { AuthProvider } from "@/lib/store/auth";
+import { LeadsProvider } from "@/lib/store/leads";
 import { SidebarProvider } from "@/components/ui/SidebarState";
 import "./globals.css";
 
@@ -17,7 +18,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en">
       <body className={`${geist.variable} ${devanagari.variable} antialiased`}>
-        <AuthProvider><SidebarProvider>{children}</SidebarProvider></AuthProvider>
+        <AuthProvider><LeadsProvider><SidebarProvider>{children}</SidebarProvider></LeadsProvider></AuthProvider>
       </body>
     </html>
   );

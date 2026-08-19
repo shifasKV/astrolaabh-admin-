@@ -47,7 +47,7 @@ export default function LoginPage() {
     }
     const user = login(email, password);
     if (!user) {
-      setError("We couldn't sign you in with those details. Check the email and password.");
+      setError("Incorrect email or password.");
       return;
     }
     startOtp();
@@ -69,7 +69,7 @@ export default function LoginPage() {
   const handleVerifyOtp = (e?: React.FormEvent) => {
     e?.preventDefault();
     if (otp.join("").length < 6) {
-      setError("Enter the 6-digit code sent to your email.");
+      setError("Enter the 6-digit code.");
       return;
     }
     const user = login(email, password);

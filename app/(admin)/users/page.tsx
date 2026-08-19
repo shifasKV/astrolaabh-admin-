@@ -155,7 +155,7 @@ export default function UsersPage() {
       <Card className="!p-0 md:flex md:flex-col md:min-h-0">
         <div
           className="hidden sm:grid grid-cols-[1fr_150px_100px_150px_44px] gap-3 items-center px-4 h-10 text-[11px] tracking-[0.06em] uppercase font-medium rounded-t-[15px]"
-          style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.border}` }}
+          style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.borderSoft}` }}
         >
           <span>User</span>
           <span>Role</span>

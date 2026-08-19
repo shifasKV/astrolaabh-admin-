@@ -61,7 +61,7 @@ export default function LinksPage() {
       <Card className="!p-0">
         {loading ? <TableSkeleton cols={7} rows={8} /> : <>
         {/* Header */}
-        <div className={`grid ${cols} gap-3 px-4 h-10 items-center rounded-t-[15px]`} style={{ background: T.card, borderBottom: `1px solid ${T.border}` }}>
+        <div className={`grid ${cols} gap-3 px-4 h-10 items-center rounded-t-[15px]`} style={{ background: T.card, borderBottom: `1px solid ${T.borderSoft}` }}>
           {["Product", "Campaign", "Type", "Orders", "Commission", "", "Active"].map((h, i) => (
             <div key={i} className={`text-[11px] font-medium tracking-[0.06em] uppercase ${i === 6 ? "text-right" : ""}`} style={{ color: T.faint }}>{h}</div>
           ))}

@@ -115,7 +115,7 @@ export default function AffiliatesPage() {
         <>
         <div
           className="hidden md:grid grid-cols-[minmax(220px,1.3fr)_120px_70px_120px_110px_110px_130px_140px] gap-x-4 items-center px-4 h-10 text-[11px] tracking-[0.06em] uppercase font-medium rounded-t-[15px]"
-          style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.border}` }}
+          style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.borderSoft}` }}
         >
           <span>Affiliate</span>
           <span>Code</span>

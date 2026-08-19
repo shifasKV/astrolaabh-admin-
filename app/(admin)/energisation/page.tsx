@@ -268,7 +268,7 @@ export default function EnergisationPage() {
           <>
         <div
           className="hidden sm:grid grid-cols-[64px_1fr_130px_150px] gap-3 items-center px-4 h-10 text-[11px] font-medium tracking-[0.06em] uppercase rounded-t-[15px]"
-          style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.border}` }}
+          style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.borderSoft}` }}
         >
           <span>Order</span>
           <span>Energisation</span>
@@ -355,8 +355,8 @@ export default function EnergisationPage() {
                 <div className="flex items-center gap-3">
                   <div className="hidden xl:flex items-center gap-4">
                     {[
-                      { color: "#6d8ea0", label: "Scheduled" },
-                      { color: T.accent, label: "In progress" },
+                      { color: T.info, label: "Scheduled" },
+                      { color: T.gold, label: "In progress" },
                       { color: T.good, label: "Completed" },
                     ].map((l) => (
                       <span key={l.label} className="inline-flex items-center gap-1.5 text-[11.5px]" style={{ color: T.muted }}>
@@ -372,7 +372,7 @@ export default function EnergisationPage() {
                     {(["day", "week"] as const).map((scope) => (
                       <button
                         key={scope}
-                        onClick={() => setCalScope(scope)}
+                        onClick={() => { setCalScope(scope); setSelectedEvent(null); }}
                         className="h-7 px-3.5 rounded-full text-[12.5px] capitalize shrink-0 transition-all duration-200 cursor-pointer"
                         style={
                           calScope === scope
@@ -392,7 +392,7 @@ export default function EnergisationPage() {
                 <div className="overflow-x-auto flex-1 min-h-0 flex flex-col">
                   <div className="h-full flex flex-col" style={{ minWidth: calScope === "day" ? 0 : 800 }}>
                     {/* Day headers */}
-                    <div className="grid sticky top-0 z-10" style={{ gridTemplateColumns: `60px repeat(${visibleDays.length}, 1fr)`, background: T.card, borderBottom: `1px solid ${T.border}` }}>
+                    <div className="grid sticky top-0 z-10" style={{ gridTemplateColumns: `60px repeat(${visibleDays.length}, 1fr)`, background: T.card, borderBottom: `1px solid ${T.borderSoft}` }}>
                       <div className="py-1.5" />
                       {visibleDays.map((day) => {
                         const iso = toISODate(day);
@@ -440,8 +440,8 @@ export default function EnergisationPage() {
                                   const timeStr = dt.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true });
                                   const toneColor =
                                     ev.status === "completed" ? T.good :
-                                    ev.status === "in_progress" ? T.accent :
-                                    ev.status === "scheduled" ? "#6d8ea0" :
+                                    ev.status === "in_progress" ? T.gold :
+                                    ev.status === "scheduled" ? T.info :
                                     T.muted;
                                   return (
                                     <button
@@ -533,7 +533,7 @@ export default function EnergisationPage() {
                     return (
                       <button
                         key={day}
-                        onClick={() => { setCalWeekBase(new Date(iso + "T00:00:00")); setCalScope("day"); }}
+                        onClick={() => { setCalWeekBase(new Date(iso + "T00:00:00")); setSelectedEvent(null); }}
                         className="relative h-8 rounded-full flex items-center justify-center text-[11.5px] tabular-nums transition-colors cursor-pointer hover:bg-[rgba(119,123,98,0.14)]"
                         style={{
                           background: isToday ? T.danger : isSelected ? T.accent : "transparent",

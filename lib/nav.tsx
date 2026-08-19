@@ -28,6 +28,7 @@ const ICONS = {
   activity: <><path d="M22 12h-4l-3 9L9 3l-3 9H2" strokeLinecap="round" strokeLinejoin="round" /></>,
   astroGemologist: <><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" strokeLinecap="round" /></>,
   sales: <><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" strokeLinecap="round" /><path d="M16 3.13a4 4 0 0 1 0 7.75" strokeLinecap="round" /></>,
+  leads: <><path d="M3 5h18l-7 8v6l-4-2v-4z" strokeLinejoin="round" /></>,
 };
 
 export const ADMIN_NAV: NavGroup[] = [
@@ -38,6 +39,7 @@ export const ADMIN_NAV: NavGroup[] = [
       { key: "orders", label: "Orders", href: "/orders", icon: ICONS.orders },
       { key: "energisation", label: "Energisation", href: "/energisation", icon: ICONS.energisation },
       { key: "consultations", label: "Consultations", href: "/consultations", icon: ICONS.consultations },
+      { key: "leads", label: "Leads", href: "/leads", icon: ICONS.leads },
     ],
   },
   {

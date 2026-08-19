@@ -1,10 +1,13 @@
 "use client";
-import { use, useState } from "react";
+import { use, useMemo, useState } from "react";
 import Link from "next/link";
-import { Card, Chip, GoldBtn, GhostBtn, BackLink, Select, Textarea } from "@/components/ui";
+import { Card, Chip, GoldBtn, BackLink, Select, Textarea } from "@/components/ui";
 import { T } from "@/lib/theme";
-import { MOCK_INCOMPLETE_CONSULTATIONS, EXPERT_PROFILES } from "@/lib/mock";
+import { MOCK_SALES_MEMBERS } from "@/lib/mock";
 import type { IncompleteConsultationStatus } from "@/lib/mock";
+import { useLeads, type ActivityEntry } from "@/lib/store/leads";
+
+const ASSIGN_OPTIONS = [{ value: "", label: "Unassigned" }, ...MOCK_SALES_MEMBERS.filter((m) => m.status === "active").map((m) => ({ value: m.id, label: m.name }))];
 
 const REASON_LABEL: Record<string, string> = {
   slot_check: "Slot check",
@@ -43,20 +46,19 @@ function timeAgo(d: string) {
 
 export default function IncompleteConsultationDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const consultation = MOCK_INCOMPLETE_CONSULTATIONS.find((c) => c.id === id);
-  const expert = consultation ? EXPERT_PROFILES.find((e) => e.id === consultation.expertId) : null;
+  const { consultLeads, assign, setStatus, logActivity } = useLeads();
+  const consultation = consultLeads.find((c) => c.id === id);
 
-  const [leadStatus, setLeadStatus] = useState<IncompleteConsultationStatus>(consultation?.leadStatus ?? "new");
-  const [assignee, setAssignee] = useState("");
   const [activityNote, setActivityNote] = useState("");
-  const [activityType, setActivityType] = useState<"call" | "email" | "whatsapp" | "note">("call");
   const [toast, setToast] = useState("");
-  const [activityLog, setActivityLog] = useState<{ text: string; at: string; type: "status" | "remark" | "call" }[]>(() => {
-    const log: { text: string; at: string; type: "status" | "remark" | "call" }[] = [];
-    if (consultation?.lastContactedAt) log.push({ text: `Status updated to "${STATUS_LABEL[consultation.leadStatus]}"`, at: consultation.lastContactedAt, type: "status" });
-    if (consultation?.remarks) log.push({ text: consultation.remarks, at: consultation.lastContactedAt || consultation.date, type: "remark" });
+
+  const seeded = useMemo<ActivityEntry[]>(() => {
+    if (!consultation) return [];
+    const log: ActivityEntry[] = [];
+    if (consultation.remarks) log.push({ text: consultation.remarks, at: consultation.lastContactedAt || consultation.date, type: "note" });
+    if (consultation.lastContactedAt) log.push({ text: `Marked "${STATUS_LABEL[consultation.leadStatus]}"`, at: consultation.lastContactedAt, type: "status" });
     return log;
-  });
+  }, [consultation]);
 
   if (!consultation) {
     return (
@@ -67,30 +69,34 @@ export default function IncompleteConsultationDetailPage({ params }: { params: P
     );
   }
 
+  const leadStatus = consultation.leadStatus;
+  const timeline = [...consultation.activity, ...seeded];
+
   const flash = (msg: string) => { setToast(msg); setTimeout(() => setToast(""), 3000); };
 
   const handleStatusChange = (val: string) => {
     const newStatus = val as IncompleteConsultationStatus;
-    const prev = leadStatus;
-    setLeadStatus(newStatus);
     const now = new Date().toISOString();
-    setActivityLog((p) => [{ text: `Status changed from "${STATUS_LABEL[prev]}" to "${STATUS_LABEL[newStatus]}"`, at: now, type: "status" }, ...p]);
+    setStatus(id, newStatus);
+    logActivity(id, { text: `Status changed from "${STATUS_LABEL[leadStatus]}" to "${STATUS_LABEL[newStatus]}"`, at: now, type: "status" });
     flash(`Lead marked as ${STATUS_LABEL[newStatus]}`);
   };
 
-  const ACTIVITY_TYPE_LABEL: Record<string, string> = { call: "Call", email: "Email", whatsapp: "WhatsApp", note: "Note" };
+  const handleAssign = (val: string) => {
+    assign(id, val);
+    flash(val ? `Assigned to ${ASSIGN_OPTIONS.find((o) => o.value === val)?.label}` : "Unassigned");
+  };
 
   const handleLogActivity = () => {
     const now = new Date().toISOString();
-    const label = ACTIVITY_TYPE_LABEL[activityType];
-    const text = activityNote.trim() ? `${label} — ${activityNote.trim()}` : `${label} logged`;
-    setActivityLog((prev) => [{ text, at: now, type: activityType === "note" ? "remark" : "call" }, ...prev]);
+    const text = activityNote.trim() || "Call logged";
+    logActivity(id, { text, at: now, type: "call" });
     setActivityNote("");
-    if (leadStatus === "new" && activityType !== "note") {
-      setLeadStatus("contacted");
-      setActivityLog((prev) => [{ text: `Status auto-updated to "Contacted"`, at: now, type: "status" }, ...prev]);
+    if (leadStatus === "new") {
+      setStatus(id, "contacted");
+      logActivity(id, { text: `Status auto-updated to "Contacted"`, at: now, type: "status" });
     }
-    flash(`${label} logged`);
+    flash("Activity logged");
   };
 
   return (
@@ -112,7 +118,7 @@ export default function IncompleteConsultationDetailPage({ params }: { params: P
             </div>
           </div>
           <Link href="/consultations/create" className="shrink-0">
-            <GhostBtn>Book consultation</GhostBtn>
+            <GoldBtn>Book consultation</GoldBtn>
           </Link>
         </div>
 
@@ -134,35 +140,27 @@ export default function IncompleteConsultationDetailPage({ params }: { params: P
           <div>
             <div className="text-[11px] tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>Assignee</div>
             <div className="w-[140px]">
-              <Select value={assignee} onChange={setAssignee} compact placeholder="Unassigned" options={[{ value: "", label: "Unassigned" }, { value: "admin_01", label: "Priya Sharma" }, { value: "admin_02", label: "Rahul Verma" }, { value: "admin_03", label: "Sneha Gupta" }]} />
+              <Select value={consultation.assignedTo ?? ""} onChange={handleAssign} compact placeholder="Unassigned" options={ASSIGN_OPTIONS} />
             </div>
           </div>
         </div>
       </Card>
 
-      <div className="grid md:grid-cols-[1fr_340px] gap-5">
-        {/* Left — Log a call */}
-        <div className="space-y-5">
-          <Card>
-            <div className="text-[15px] font-semibold tracking-[-0.01em] mb-3" style={{ color: T.text }}>Log activity</div>
-            <Textarea value={activityNote} onChange={setActivityNote} placeholder="What happened? — e.g. 'Spoke to customer, wants to book next week'" rows={3} />
-            <div className="flex justify-end mt-3">
-              <GoldBtn onClick={handleLogActivity}>Log activity</GoldBtn>
-            </div>
-          </Card>
-
-        </div>
-
-        {/* Right — Activity timeline */}
-        <div className="space-y-5">
-          <Card>
-            <div className="text-[15px] font-semibold tracking-[-0.01em] mb-3" style={{ color: T.text }}>Activity timeline</div>
-            {activityLog.length === 0 ? (
-              <p className="text-[13px] py-4 text-center" style={{ color: T.faint }}>No activity yet — log a call to get started</p>
+      <div className="grid lg:grid-cols-[1fr_320px] gap-5 items-start">
+        {/* Left — Activity: composer + timeline together */}
+        <Card>
+          <div className="text-[15px] font-semibold tracking-[-0.01em] mb-3" style={{ color: T.text }}>Activity</div>
+          <Textarea value={activityNote} onChange={setActivityNote} placeholder="What happened? — e.g. 'Spoke to customer, wants to book next week'" rows={2} />
+          <div className="flex justify-end mt-2.5">
+            <GoldBtn onClick={handleLogActivity}>Log activity</GoldBtn>
+          </div>
+          <div className="mt-5 pt-5" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+            {timeline.length === 0 ? (
+              <p className="text-[13px] py-2" style={{ color: T.faint }}>No activity yet — log a call to get started.</p>
             ) : (
               <div className="relative pl-5">
                 <div className="absolute left-[3px] top-1 bottom-1 w-px" style={{ background: T.borderSoft }} />
-                {activityLog.map((entry, i) => (
+                {timeline.map((entry, i) => (
                   <div key={i} className="relative pb-4 last:pb-0">
                     <div className="absolute -left-5 top-1.5 w-[7px] h-[7px] rounded-full border-2" style={{
                       borderColor: entry.type === "call" ? T.accent : entry.type === "status" ? T.good : T.faint,
@@ -171,7 +169,7 @@ export default function IncompleteConsultationDetailPage({ params }: { params: P
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 mb-0.5">
                         <span className="text-[10px] uppercase tracking-[0.06em] font-semibold" style={{ color: entry.type === "call" ? T.accent : entry.type === "status" ? T.good : T.muted }}>
-                          {entry.type === "call" ? "Call" : entry.type === "status" ? "Status" : "Note"}
+                          {entry.type === "call" ? "Call" : entry.type === "status" ? "Status" : entry.type === "system" ? "System" : "Note"}
                         </span>
                         <span className="text-[11px] tabular-nums" style={{ color: T.faint }}>{fmtDate(entry.at)} · {fmtTime(entry.at)}</span>
                       </div>
@@ -181,8 +179,21 @@ export default function IncompleteConsultationDetailPage({ params }: { params: P
                 ))}
               </div>
             )}
+          </div>
+        </Card>
+
+        {/* Right — Requested consultation (sticky) */}
+        <aside className="lg:sticky lg:top-4">
+          <Card>
+            <div className="text-[11px] tracking-[0.08em] uppercase mb-3" style={{ color: T.faint }}>Requested consultation</div>
+            <div className="space-y-2.5 text-[13px]">
+              <div className="flex justify-between gap-3"><span style={{ color: T.faint }}>Astrologer</span><span className="text-right font-medium" style={{ color: T.text }}>{consultation.expertName}</span></div>
+              <div className="flex justify-between gap-3"><span style={{ color: T.faint }}>Type</span><span className="text-right font-medium" style={{ color: T.text }}>{consultation.consultationType}</span></div>
+              <div className="flex justify-between gap-3"><span style={{ color: T.faint }}>Requested</span><span className="text-right font-medium" style={{ color: T.text }}>{fmtDate(consultation.date)}</span></div>
+            </div>
+            <Link href="/consultations/create" className="block mt-4"><GoldBtn className="w-full">Book consultation</GoldBtn></Link>
           </Card>
-        </div>
+        </aside>
       </div>
 
       {/* Toast */}

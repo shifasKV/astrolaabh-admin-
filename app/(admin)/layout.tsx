@@ -6,6 +6,7 @@ import { Sidebar, TopBar, useSidebar, CommandPalette } from "@/components/ui";
 import { ADMIN_NAV } from "@/lib/nav";
 import { T } from "@/lib/theme";
 import { MOCK_NOTIFICATIONS } from "@/lib/mock";
+import { useLeads } from "@/lib/store/leads";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
@@ -19,14 +20,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }, [user, router]);
 
   const unreadCount = useMemo(() => MOCK_NOTIFICATIONS.filter((n) => !n.read).length, []);
+  const { pendingApprovals } = useLeads();
+  const hasApprovals = pendingApprovals.length > 0;
 
   const navWithBadge = useMemo(() => ADMIN_NAV.map((g) => ({
     ...g,
     items: g.items.map((it) => {
       if (it.key === "notifications") return { ...it, badge: unreadCount };
+      if (it.key === "leads") return { ...it, dot: hasApprovals };
       return it;
     }),
-  })), [unreadCount]);
+  })), [unreadCount, hasApprovals]);
 
   if (!user || user.role !== "admin") {
     return null;

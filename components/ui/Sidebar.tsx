@@ -28,6 +28,7 @@ export interface NavItem {
   href: string;
   icon: React.ReactNode;
   badge?: number;
+  dot?: boolean;
   disabled?: boolean;
 }
 
@@ -250,7 +251,10 @@ export function Sidebar({ groups, orgName, orgSub, userLabel, userSub, onUserCli
                       {it.badge}
                     </span>
                   )}
-                  {collapsed && it.badge !== undefined && it.badge > 0 && (
+                  {!collapsed && it.dot && (it.badge === undefined || it.badge === 0) && (
+                    <span className="ml-auto w-2 h-2 rounded-full" style={{ background: T.gold, boxShadow: `0 0 0 3px ${T.sidebar}` }} />
+                  )}
+                  {collapsed && ((it.badge !== undefined && it.badge > 0) || it.dot) && (
                     <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full" style={{ background: T.gold }} />
                   )}
                 </Link>

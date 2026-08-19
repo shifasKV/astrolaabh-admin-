@@ -143,7 +143,7 @@ export default function RecommendationsPage() {
         {/* Column headers */}
         <div
           className="hidden sm:grid items-center gap-4 px-4 h-10 text-[11px] tracking-[0.06em] uppercase font-medium rounded-t-[15px]"
-          style={{ gridTemplateColumns: "1.4fr 1fr 0.9fr 0.9fr 1fr", color: T.faint, background: T.card, borderBottom: `1px solid ${T.border}` }}
+          style={{ gridTemplateColumns: "1.4fr 1fr 0.9fr 0.9fr 1fr", color: T.faint, background: T.card, borderBottom: `1px solid ${T.borderSoft}` }}
         >
           <span>Stone</span>
           <span>Customer</span>

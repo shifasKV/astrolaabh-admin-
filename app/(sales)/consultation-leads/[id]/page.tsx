@@ -1,12 +1,22 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { Card, Chip, GoldBtn, GhostBtn, BackLink, Select, Textarea } from "@/components/ui";
+import { Card, Chip, GoldBtn, BackLink, Select, Textarea } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { useAuth } from "@/lib/store/auth";
 import { MOCK_INCOMPLETE_CONSULTATIONS, MOCK_SALES_MEMBERS } from "@/lib/mock";
 import type { IncompleteConsultationStatus } from "@/lib/mock";
+import { useLeads, type ApprovalStatus } from "@/lib/store/leads";
+
+const APPROVAL_META: Record<ApprovalStatus, { label: string; tone: "gold" | "good" | "danger" | "info" }> = {
+  pending: { label: "Admin approval pending", tone: "gold" },
+  approved: { label: "Admin approved", tone: "good" },
+  completed: { label: "Completed", tone: "good" },
+  rejected: { label: "Rejected by admin", tone: "danger" },
+  on_hold: { label: "On hold", tone: "info" },
+};
+const inr = (n: number) => "₹" + n.toLocaleString("en-IN");
 
 const REASON_LABEL: Record<string, string> = {
   slot_check: "Slot check",
@@ -39,6 +49,14 @@ export default function ConsultationLeadDetailPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "sales_admin";
   const consultation = MOCK_INCOMPLETE_CONSULTATIONS.find((c) => c.id === id);
+
+  const { consultLeads, markReviewSeen } = useLeads();
+  const ff = consultLeads.find((c) => c.id === id)?.fulfillment;
+  const ffApproval = ff?.approval;
+  const ffReviewedAt = ff?.reviewedAt;
+  useEffect(() => {
+    if (ffApproval && ffApproval !== "pending") markReviewSeen(id, ffReviewedAt);
+  }, [id, ffApproval, ffReviewedAt, markReviewSeen]);
 
   const [leadStatus, setLeadStatus] = useState<IncompleteConsultationStatus>(consultation?.leadStatus ?? "new");
   const [assignee, setAssignee] = useState(consultation?.assignedTo || "");
@@ -94,6 +112,13 @@ export default function ConsultationLeadDetailPage() {
         <BackLink label="Consultation Leads" href="/consultation-leads" />
       </div>
 
+      {ff && (
+        <div className="mb-5 flex items-center gap-2.5">
+          <Chip tone={APPROVAL_META[ff.approval].tone}>{APPROVAL_META[ff.approval].label}</Chip>
+          <span className="text-[12.5px]" style={{ color: T.muted }}>Your fulfilment · {inr(ff.total)}{ff.reviewNote ? ` · ${ff.reviewNote}` : ""}</span>
+        </div>
+      )}
+
       {/* Header */}
       <Card className="mb-5">
         <div className="flex items-center justify-between gap-4 mb-4">
@@ -106,7 +131,7 @@ export default function ConsultationLeadDetailPage() {
               <a href={`mailto:${consultation.customerEmail}`} className="text-[13px] hover:underline" style={{ color: T.accent }}>{consultation.customerEmail}</a>
             </div>
           </div>
-          <GhostBtn onClick={() => flash("Booking consultation")}>Book consultation</GhostBtn>
+          <Link href={`/consultation-leads/create?customerId=${consultation.customerId}&expertId=${consultation.expertId}`}><GoldBtn>+ Create consultation</GoldBtn></Link>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-3 text-[13px]" style={{ borderTop: `1px solid ${T.borderSoft}`, paddingTop: 14 }}>

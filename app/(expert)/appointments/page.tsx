@@ -138,7 +138,7 @@ export default function AppointmentsPage() {
 
   const eventTone = (c: Consultation) => {
     const es = expertStatus(c);
-    return es === "done" ? T.good : es === "scheduled" ? "#6d8ea0" : es === "recommendation_pending" ? T.danger : T.muted;
+    return es === "done" ? T.good : es === "scheduled" ? T.info : es === "recommendation_pending" ? T.danger : T.muted;
   };
 
   const calEvents = useMemo(() => {
@@ -383,7 +383,7 @@ export default function AppointmentsPage() {
                 <div className="flex items-center gap-3">
                   <div className="hidden xl:flex items-center gap-4">
                     {[
-                      { color: "#6d8ea0", label: "Scheduled" },
+                      { color: T.info, label: "Scheduled" },
                       { color: T.danger, label: "Recommendation due" },
                       { color: T.good, label: "Done" },
                     ].map((l) => (
@@ -397,7 +397,7 @@ export default function AppointmentsPage() {
                     {(["day", "week"] as const).map((scope) => (
                       <button
                         key={scope}
-                        onClick={() => setCalScope(scope)}
+                        onClick={() => { setCalScope(scope); setSelectedEvent(null); }}
                         className="h-7 px-3.5 rounded-full text-[12.5px] capitalize shrink-0 transition-all duration-200 cursor-pointer"
                         style={
                           calScope === scope
@@ -415,7 +415,7 @@ export default function AppointmentsPage() {
               <Card className="overflow-hidden !p-0 flex-1 min-h-0 flex flex-col w-full">
                 <div className="overflow-x-auto flex-1 min-h-0 flex flex-col">
                   <div className="h-full flex flex-col" style={{ minWidth: calScope === "day" ? 0 : 800 }}>
-                    <div className="grid" style={{ gridTemplateColumns: `60px repeat(${visibleDays.length}, 1fr)`, background: T.card, borderBottom: `1px solid ${T.border}` }}>
+                    <div className="grid" style={{ gridTemplateColumns: `60px repeat(${visibleDays.length}, 1fr)`, background: T.card, borderBottom: `1px solid ${T.borderSoft}` }}>
                       <div className="py-1.5" />
                       {visibleDays.map((day) => {
                         const iso = toISODate(day);
@@ -507,7 +507,7 @@ export default function AppointmentsPage() {
                     return (
                       <button
                         key={day}
-                        onClick={() => { setCalWeekBase(new Date(iso + "T00:00:00")); setCalScope("day"); }}
+                        onClick={() => { setCalWeekBase(new Date(iso + "T00:00:00")); setSelectedEvent(null); }}
                         className="relative h-8 rounded-full flex items-center justify-center text-[11.5px] tabular-nums transition-colors cursor-pointer hover:bg-[rgba(119,123,98,0.14)]"
                         style={{ background: isToday ? T.danger : isSelected ? T.accent : "transparent", color: isToday || isSelected ? "#fdf6ea" : T.text, fontWeight: isToday || isSelected ? 700 : 400 }}
                       >

@@ -15,6 +15,9 @@ interface InputProps {
   error?: string;
   onKeyDown?: (e: React.KeyboardEvent) => void;
   onBlur?: () => void;
+  required?: boolean;
+  inputMode?: "text" | "numeric" | "tel" | "email" | "url" | "search";
+  maxLength?: number;
 }
 
 export function FieldError({ message }: { message?: string }) {
@@ -27,16 +30,18 @@ export function FieldError({ message }: { message?: string }) {
   );
 }
 
-export function Input({ value, onChange, placeholder, type = "text", label, className = "", disabled, error, onKeyDown, onBlur }: InputProps) {
+export function Input({ value, onChange, placeholder, type = "text", label, className = "", disabled, error, onKeyDown, onBlur, required, inputMode, maxLength }: InputProps) {
   return (
     <div className={className}>
       {label && (
         <label className="block text-[11px] tracking-[0.12em] uppercase mb-1.5" style={{ color: T.faint }}>
-          {label}
+          {label}{required && <span className="ml-0.5" style={{ color: T.danger }}>*</span>}
         </label>
       )}
       <input
         type={type}
+        inputMode={inputMode}
+        maxLength={maxLength}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={onKeyDown}

@@ -221,8 +221,8 @@ export default function ConsultationsPage() {
 
   const eventTone = (c: (typeof MOCK_CONSULTATIONS)[number]) =>
     c.status === "closed" || c.status === "completed" ? T.good :
-    c.status === "scheduled" ? "#6d8ea0" :
-    c.status === "reschedule_requested" ? T.accent :
+    c.status === "scheduled" ? T.info :
+    c.status === "reschedule_requested" ? T.gold :
     c.status === "summary_pending" || c.status === "no_show" ? T.danger :
     T.muted;
 
@@ -325,7 +325,7 @@ export default function ConsultationsPage() {
           <>
         <div
           className="hidden sm:grid grid-cols-[64px_1fr_150px_170px] gap-3 items-center px-4 h-10 text-[11px] font-medium tracking-[0.06em] uppercase rounded-t-[15px]"
-          style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.border}` }}
+          style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.borderSoft}` }}
         >
           <span>ID</span>
           <span>Customer</span>
@@ -377,7 +377,7 @@ export default function ConsultationsPage() {
               <>
             <div
               className="hidden sm:grid grid-cols-[1fr_1fr_100px_100px_140px] gap-3 items-center px-4 h-10 text-[11px] font-medium tracking-[0.06em] uppercase rounded-t-[15px]"
-              style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.border}` }}
+              style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.borderSoft}` }}
             >
               <span>Customer</span>
               <span>Astrologer</span>
@@ -443,8 +443,8 @@ export default function ConsultationsPage() {
                 <div className="flex items-center gap-3">
                   <div className="hidden xl:flex items-center gap-4">
                     {[
-                      { color: "#6d8ea0", label: "Scheduled" },
-                      { color: T.accent, label: "Reschedule" },
+                      { color: T.info, label: "Scheduled" },
+                      { color: T.gold, label: "Reschedule" },
                       { color: T.danger, label: "Needs action" },
                       { color: T.good, label: "Done" },
                     ].map((l) => (
@@ -461,7 +461,7 @@ export default function ConsultationsPage() {
                     {(["day", "week"] as const).map((scope) => (
                       <button
                         key={scope}
-                        onClick={() => setCalScope(scope)}
+                        onClick={() => { setCalScope(scope); setSelectedEvent(null); }}
                         className="h-7 px-3.5 rounded-full text-[12.5px] capitalize shrink-0 transition-all duration-200 cursor-pointer"
                         style={
                           calScope === scope
@@ -479,7 +479,7 @@ export default function ConsultationsPage() {
               <Card className="overflow-hidden !p-0 flex-1 min-h-0 flex flex-col w-full">
                 <div className="overflow-x-auto flex-1 min-h-0 flex flex-col">
                   <div className="h-full flex flex-col" style={{ minWidth: calScope === "day" ? 0 : 800 }}>
-                    <div className="grid" style={{ gridTemplateColumns: `60px repeat(${visibleDays.length}, 1fr)`, background: T.card, borderBottom: `1px solid ${T.border}` }}>
+                    <div className="grid" style={{ gridTemplateColumns: `60px repeat(${visibleDays.length}, 1fr)`, background: T.card, borderBottom: `1px solid ${T.borderSoft}` }}>
                       <div className="py-1.5" />
                       {visibleDays.map((day) => {
                         const iso = toISODate(day);
@@ -611,7 +611,7 @@ export default function ConsultationsPage() {
                     return (
                       <button
                         key={day}
-                        onClick={() => { setCalWeekBase(new Date(iso + "T00:00:00")); setCalScope("day"); }}
+                        onClick={() => { setCalWeekBase(new Date(iso + "T00:00:00")); setSelectedEvent(null); }}
                         className="relative h-8 rounded-full flex items-center justify-center text-[11.5px] tabular-nums transition-colors cursor-pointer hover:bg-[rgba(119,123,98,0.14)]"
                         style={{
                           background: isToday ? T.danger : isSelected ? T.accent : "transparent",

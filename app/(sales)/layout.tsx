@@ -1,15 +1,30 @@
 "use client";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/store/auth";
 import { Sidebar, TopBar, useSidebar, CommandPalette } from "@/components/ui";
 import { SALES_NAV } from "@/lib/nav";
 import { T } from "@/lib/theme";
+import { useLeads } from "@/lib/store/leads";
 
 export default function SalesLayout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
   const router = useRouter();
   const { collapsed } = useSidebar();
+  const { salesReviewUpdates } = useLeads();
+
+  const updates = user ? salesReviewUpdates(user.id) : [];
+  const orderDot = updates.some((r) => r.kind === "order");
+  const consultDot = updates.some((r) => r.kind === "consultation");
+
+  const nav = useMemo(() => SALES_NAV.map((g) => ({
+    ...g,
+    items: g.items.map((it) => {
+      if (it.key === "stone-leads") return { ...it, dot: orderDot };
+      if (it.key === "consultation-leads") return { ...it, dot: consultDot };
+      return it;
+    }),
+  })), [orderDot, consultDot]);
 
   useEffect(() => {
     if (!user || (user.role !== "sales_admin" && user.role !== "sales_exec")) {
@@ -21,13 +36,13 @@ export default function SalesLayout({ children }: { children: React.ReactNode })
     return null;
   }
 
-  const allItems = SALES_NAV.flatMap((g) => g.items);
+  const allItems = nav.flatMap((g) => g.items);
   const portalLabel = user.role === "sales_admin" ? "Sales Admin" : "Sales Executive";
 
   return (
     <div className="min-h-dvh md:h-dvh md:overflow-hidden md:py-2.5 md:pr-2.5" style={{ background: T.sidebar, color: T.text }}>
       <Sidebar
-        groups={SALES_NAV}
+        groups={nav}
         orgName="AstroLaabh"
         orgSub={portalLabel}
         userLabel={user.name}

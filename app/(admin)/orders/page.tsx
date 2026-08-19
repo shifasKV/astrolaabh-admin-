@@ -325,7 +325,7 @@ export default function OrdersPage() {
         {/* Sticky header — survives long scrolls */}
         <div
           className="hidden sm:grid grid-cols-[64px_1fr_110px_120px_150px_110px] gap-3 items-center px-4 h-10 text-[11px] font-medium tracking-[0.06em] uppercase sticky top-0 z-10 rounded-t-[15px]"
-          style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.border}` }}
+          style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.borderSoft}` }}
         >
           <span>Order</span>
           <span>Customer</span>
@@ -399,7 +399,7 @@ export default function OrdersPage() {
               <>
               <div
                 className="hidden sm:grid grid-cols-[1fr_1fr_100px_140px_100px_110px] gap-3 items-center px-4 h-10 text-[11px] font-medium tracking-[0.06em] uppercase sticky top-0 z-10 rounded-t-[15px]"
-                style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.border}` }}
+                style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.borderSoft}` }}
               >
                 <span>Customer</span>
                 <span>Stone / Item</span>

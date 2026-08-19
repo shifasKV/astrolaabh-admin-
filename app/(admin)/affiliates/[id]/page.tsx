@@ -535,7 +535,7 @@ export default function AffiliateDetailPage({ params }: { params: Promise<{ id: 
       {dataTab === "purchases" && (
         <>
         <Card className="!p-0 md:flex md:flex-col md:min-h-0">
-          <div className="hidden sm:grid grid-cols-[minmax(120px,1fr)_1fr_120px_120px_100px_110px] gap-3 items-center px-4 h-10 text-[11px] tracking-[0.06em] uppercase font-medium rounded-t-[15px]" style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.border}` }}>
+          <div className="hidden sm:grid grid-cols-[minmax(120px,1fr)_1fr_120px_120px_100px_110px] gap-3 items-center px-4 h-10 text-[11px] tracking-[0.06em] uppercase font-medium rounded-t-[15px]" style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.borderSoft}` }}>
             <span>Order</span><span>Customer</span><span className="text-right">Amount</span><span className="text-right">Commission</span><span>Status</span><span>Date</span>
           </div>
           {purchasesData.paged.length === 0 && <div className="text-center py-8 text-[13px]" style={{ color: T.muted }}>No purchases found.</div>}
@@ -565,7 +565,7 @@ export default function AffiliateDetailPage({ params }: { params: Promise<{ id: 
       {dataTab === "consultations" && (
         <>
         <Card className="!p-0 md:flex md:flex-col md:min-h-0">
-          <div className="hidden sm:grid grid-cols-[minmax(100px,1fr)_1fr_1fr_100px_120px_110px] gap-3 items-center px-4 h-10 text-[11px] tracking-[0.06em] uppercase font-medium rounded-t-[15px]" style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.border}` }}>
+          <div className="hidden sm:grid grid-cols-[minmax(100px,1fr)_1fr_1fr_100px_120px_110px] gap-3 items-center px-4 h-10 text-[11px] tracking-[0.06em] uppercase font-medium rounded-t-[15px]" style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.borderSoft}` }}>
             <span>Consultation</span><span>Customer</span><span>Expert</span><span className="text-right">Commission</span><span>Status</span><span>Date</span>
           </div>
           {consultationsData.paged.length === 0 && <div className="text-center py-8 text-[13px]" style={{ color: T.muted }}>No consultations found.</div>}
@@ -595,7 +595,7 @@ export default function AffiliateDetailPage({ params }: { params: Promise<{ id: 
       {dataTab === "registrations" && (
         <>
         <Card className="!p-0 md:flex md:flex-col md:min-h-0">
-          <div className="hidden sm:grid grid-cols-[1fr_1fr_140px_140px] gap-3 items-center px-4 h-10 text-[11px] tracking-[0.06em] uppercase font-medium rounded-t-[15px]" style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.border}` }}>
+          <div className="hidden sm:grid grid-cols-[1fr_1fr_140px_140px] gap-3 items-center px-4 h-10 text-[11px] tracking-[0.06em] uppercase font-medium rounded-t-[15px]" style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.borderSoft}` }}>
             <span>Customer</span><span>Email</span><span>Phone</span><span>Registered</span>
           </div>
           {registrationsData.paged.length === 0 && <div className="text-center py-8 text-[13px]" style={{ color: T.muted }}>No registrations found.</div>}
@@ -616,7 +616,7 @@ export default function AffiliateDetailPage({ params }: { params: Promise<{ id: 
       {dataTab === "payments" && (
         <>
         <Card className="!p-0 md:flex md:flex-col md:min-h-0">
-          <div className="hidden sm:grid grid-cols-[1fr_140px_140px_100px_120px] gap-3 items-center px-4 h-10 text-[11px] tracking-[0.06em] uppercase font-medium rounded-t-[15px]" style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.border}` }}>
+          <div className="hidden sm:grid grid-cols-[1fr_140px_140px_100px_120px] gap-3 items-center px-4 h-10 text-[11px] tracking-[0.06em] uppercase font-medium rounded-t-[15px]" style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.borderSoft}` }}>
             <span>Period</span><span>Reference</span><span>Date</span><span>Status</span><span className="text-right">Amount</span>
           </div>
           {payoutsData.paged.length === 0 && <div className="text-center py-8 text-[13px]" style={{ color: T.muted }}>No payouts found.</div>}

@@ -206,8 +206,8 @@ export default function AstroGemologistDetailPage() {
 
   const eventTone = (c: (typeof consultations)[number]) =>
     c.status === "closed" || c.status === "completed" ? T.good :
-    c.status === "scheduled" ? "#6d8ea0" :
-    c.status === "reschedule_requested" ? T.accent :
+    c.status === "scheduled" ? T.info :
+    c.status === "reschedule_requested" ? T.gold :
     c.status === "summary_pending" || c.status === "no_show" ? T.danger :
     T.muted;
 
@@ -357,7 +357,7 @@ export default function AstroGemologistDetailPage() {
 
   function TableHeader({ cols }: { cols: string[] }) {
     return (
-      <div className="hidden sm:grid gap-3 items-center px-4 h-10 text-[11px] tracking-[0.06em] uppercase font-medium rounded-t-[15px]" style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.border}`, gridTemplateColumns: "1fr 140px 100px 120px" }}>
+      <div className="hidden sm:grid gap-3 items-center px-4 h-10 text-[11px] tracking-[0.06em] uppercase font-medium rounded-t-[15px]" style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.borderSoft}`, gridTemplateColumns: "1fr 140px 100px 120px" }}>
         {cols.map((c) => <span key={c}>{c}</span>)}
       </div>
     );
@@ -659,8 +659,8 @@ export default function AstroGemologistDetailPage() {
                     <div className="flex items-center gap-3">
                       <div className="hidden xl:flex items-center gap-4">
                         {[
-                          { color: "#6d8ea0", label: "Scheduled" },
-                          { color: T.accent, label: "Reschedule" },
+                          { color: T.info, label: "Scheduled" },
+                          { color: T.gold, label: "Reschedule" },
                           { color: T.danger, label: "Needs action" },
                           { color: T.good, label: "Done" },
                         ].map((l) => (
@@ -674,7 +674,7 @@ export default function AstroGemologistDetailPage() {
                         {(["day", "week"] as const).map((scope) => (
                           <button
                             key={scope}
-                            onClick={() => setCalScope(scope)}
+                            onClick={() => { setCalScope(scope); setSelectedEvent(null); }}
                             className="h-7 px-3.5 rounded-full text-[12.5px] capitalize shrink-0 transition-all duration-200 cursor-pointer"
                             style={
                               calScope === scope
@@ -692,7 +692,7 @@ export default function AstroGemologistDetailPage() {
                   <Card className="overflow-hidden !p-0 flex-1 min-h-0 flex flex-col w-full">
                     <div className="overflow-x-auto flex-1 min-h-0 flex flex-col">
                       <div className="h-full flex flex-col" style={{ minWidth: calScope === "day" ? 0 : 800 }}>
-                        <div className="grid" style={{ gridTemplateColumns: `60px repeat(${visibleDays.length}, 1fr)`, background: T.card, borderBottom: `1px solid ${T.border}` }}>
+                        <div className="grid" style={{ gridTemplateColumns: `60px repeat(${visibleDays.length}, 1fr)`, background: T.card, borderBottom: `1px solid ${T.borderSoft}` }}>
                           <div className="py-1.5" />
                           {visibleDays.map((day) => {
                             const iso = toISODate(day);
@@ -790,7 +790,7 @@ export default function AstroGemologistDetailPage() {
                         return (
                           <button
                             key={day}
-                            onClick={() => { setCalWeekBase(new Date(iso + "T00:00:00")); setCalScope("day"); }}
+                            onClick={() => { setCalWeekBase(new Date(iso + "T00:00:00")); setSelectedEvent(null); }}
                             className="relative h-8 rounded-full flex items-center justify-center text-[11.5px] tabular-nums transition-colors cursor-pointer hover:bg-[rgba(119,123,98,0.14)]"
                             style={{ background: isToday ? T.danger : isSelected ? T.accent : "transparent", color: isToday || isSelected ? "#fdf6ea" : T.text, fontWeight: isToday || isSelected ? 700 : 400 }}
                           >
@@ -994,7 +994,7 @@ export default function AstroGemologistDetailPage() {
 
           <Card className="!p-0 md:flex md:flex-col md:min-h-0">
           <div className="md:min-h-0 overflow-y-auto max-h-[560px] md:max-h-none flex-1">
-            <div className="hidden sm:grid grid-cols-[1fr_130px_100px_100px_120px_120px] gap-3 items-center px-4 h-10 text-[11px] tracking-[0.06em] uppercase font-medium rounded-t-[15px]" style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.border}` }}>
+            <div className="hidden sm:grid grid-cols-[1fr_130px_100px_100px_120px_120px] gap-3 items-center px-4 h-10 text-[11px] tracking-[0.06em] uppercase font-medium rounded-t-[15px]" style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.borderSoft}` }}>
               <span>Stone</span>
               <span>Customer</span>
               <span className="text-right">Price</span>
@@ -1067,7 +1067,7 @@ export default function AstroGemologistDetailPage() {
 
           <Card className="!p-0 md:flex md:flex-col md:min-h-0">
           <div className="md:min-h-0 overflow-y-auto max-h-[560px] md:max-h-none flex-1">
-            <div className="hidden sm:grid grid-cols-[1fr_1fr_120px_100px_120px] gap-3 items-center px-4 h-10 text-[11px] tracking-[0.06em] uppercase font-medium rounded-t-[15px]" style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.border}` }}>
+            <div className="hidden sm:grid grid-cols-[1fr_1fr_120px_100px_120px] gap-3 items-center px-4 h-10 text-[11px] tracking-[0.06em] uppercase font-medium rounded-t-[15px]" style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.borderSoft}` }}>
               <span>Payment</span>
               <span>Customer</span>
               <span>Date</span>

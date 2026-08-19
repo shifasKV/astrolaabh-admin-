@@ -83,7 +83,7 @@ export default function SalesPage() {
         <>
         <div
           className="hidden md:grid grid-cols-[minmax(220px,1.3fr)_1fr_100px_90px_110px_140px_110px] gap-x-4 items-center px-4 h-10 text-[11px] tracking-[0.06em] uppercase font-medium rounded-t-[15px]"
-          style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.border}` }}
+          style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.borderSoft}` }}
         >
           <span>Member</span>
           <span>Contact</span>

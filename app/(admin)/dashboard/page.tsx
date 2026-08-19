@@ -5,6 +5,7 @@ import { PageHeader, Card, Chip } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_ORDERS, MOCK_CONSULTATIONS, MOCK_ENERGISATION } from "@/lib/mock";
 import { inr } from "@/lib/types";
+import { useLeads } from "@/lib/store/leads";
 
 /* Single tertiary affordance for card actions — quiet circle, diagonal arrow,
    lifts on hover. Replaces the repeated "text →" links. */
@@ -27,6 +28,7 @@ function CircleArrow({ dark }: { dark?: boolean }) {
 
 export default function AdminDashboard() {
   const [chartHover, setChartHover] = useState(false);
+  const { pendingApprovals } = useLeads();
   const now = new Date();
   const in7Days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
@@ -176,6 +178,25 @@ export default function AdminDashboard() {
           ))}
         </div>
       </div>
+
+      {/* Lead approvals — surfaced here because it blocks sales fulfilment */}
+      {pendingApprovals.length > 0 && (
+        <div className="rounded-[16px] p-5 mb-6 flex flex-col sm:flex-row sm:items-center gap-4" style={{ background: "rgba(160,125,56,0.09)", border: `1px solid rgba(160,125,56,0.30)` }}>
+          <div className="flex items-start gap-3 min-w-0 flex-1">
+            <span className="w-10 h-10 rounded-[11px] flex items-center justify-center shrink-0" style={{ background: "rgba(160,125,56,0.16)", color: T.gold }}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></svg>
+            </span>
+            <div className="min-w-0">
+              <div className="text-[14px] font-semibold" style={{ color: T.text }}>{pendingApprovals.length} fulfilment{pendingApprovals.length > 1 ? "s" : ""} awaiting your approval</div>
+              <div className="text-[12.5px] mt-0.5" style={{ color: T.muted }}>Sales executives are waiting on your review to close these deals.</div>
+            </div>
+          </div>
+          <Link href="/leads?tab=approvals" className="shrink-0 inline-flex items-center justify-center gap-2 h-10 px-5 rounded-[10px] text-[13px] font-semibold transition-all duration-200 hover:-translate-y-px active:scale-[0.98]" style={{ background: T.accent, color: T.accentInk, boxShadow: "inset 0 1px 0 rgba(244,241,229,0.14), 0 1px 2px rgba(43,42,34,0.1)" }}>
+            Review approvals
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+          </Link>
+        </div>
+      )}
 
       {/* Work band — attention list beside recent orders */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-start">

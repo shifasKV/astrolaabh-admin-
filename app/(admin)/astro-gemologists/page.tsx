@@ -88,7 +88,7 @@ export default function AstroGemologistsPage() {
         <>
         <div
           className="hidden md:grid grid-cols-[minmax(240px,1.4fr)_120px_150px_90px_90px_100px_110px_130px] gap-x-4 items-center px-4 h-10 text-[11px] tracking-[0.06em] uppercase font-medium rounded-t-[15px]"
-          style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.border}` }}
+          style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.borderSoft}` }}
         >
           <span>Expert</span>
           <span>Experience</span>

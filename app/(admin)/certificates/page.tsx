@@ -87,7 +87,7 @@ export default function CertificatesPage() {
           <>
         <div
           className="hidden sm:grid grid-cols-[1fr_130px_110px_140px] gap-3 items-center px-4 h-10 text-[11px] tracking-[0.06em] uppercase font-medium rounded-t-[15px]"
-          style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.border}` }}
+          style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.borderSoft}` }}
         >
           <span>Certificate</span>
           <span>Order</span>

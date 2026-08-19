@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { Card, Chip, GoldBtn, BackLink, Select, Textarea } from "@/components/ui";
@@ -7,6 +7,15 @@ import { T } from "@/lib/theme";
 import { useAuth } from "@/lib/store/auth";
 import { MOCK_INCOMPLETE_ORDERS, MOCK_SALES_MEMBERS } from "@/lib/mock";
 import type { IncompleteOrderStatus } from "@/lib/mock";
+import { useLeads, type ApprovalStatus } from "@/lib/store/leads";
+
+const APPROVAL_META: Record<ApprovalStatus, { label: string; tone: "gold" | "good" | "danger" | "info" }> = {
+  pending: { label: "Admin approval pending", tone: "gold" },
+  approved: { label: "Admin approved", tone: "good" },
+  completed: { label: "Completed", tone: "good" },
+  rejected: { label: "Rejected by admin", tone: "danger" },
+  on_hold: { label: "On hold", tone: "info" },
+};
 
 const REASON_LABEL: Record<string, string> = {
   payment_failed: "Payment failed",
@@ -46,6 +55,14 @@ export default function StoneLeadDetailPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "sales_admin";
   const order = MOCK_INCOMPLETE_ORDERS.find((o) => o.id === id);
+
+  const { orderLeads, markReviewSeen } = useLeads();
+  const ff = orderLeads.find((o) => o.id === id)?.fulfillment;
+  const ffApproval = ff?.approval;
+  const ffReviewedAt = ff?.reviewedAt;
+  useEffect(() => {
+    if (ffApproval && ffApproval !== "pending") markReviewSeen(id, ffReviewedAt);
+  }, [id, ffApproval, ffReviewedAt, markReviewSeen]);
 
   const [leadStatus, setLeadStatus] = useState<IncompleteOrderStatus>(order?.leadStatus ?? "new");
   const [assignee, setAssignee] = useState(order?.assignedTo || "");
@@ -101,6 +118,13 @@ export default function StoneLeadDetailPage() {
         <BackLink label="Stone Leads" href="/stone-leads" />
       </div>
 
+      {ff && (
+        <div className="mb-5 flex items-center gap-2.5">
+          <Chip tone={APPROVAL_META[ff.approval].tone}>{APPROVAL_META[ff.approval].label}</Chip>
+          <span className="text-[12.5px]" style={{ color: T.muted }}>Your fulfilment · {inr(ff.total)}{ff.reviewNote ? ` · ${ff.reviewNote}` : ""}</span>
+        </div>
+      )}
+
       {/* Header */}
       <Card className="mb-5">
         <div className="flex items-center justify-between gap-4 mb-4">
@@ -113,7 +137,7 @@ export default function StoneLeadDetailPage() {
               <a href={`mailto:${order.customerEmail}`} className="text-[13px] hover:underline" style={{ color: T.accent }}>{order.customerEmail}</a>
             </div>
           </div>
-          <GoldBtn onClick={() => flash("Order creation started")}>+ Create order</GoldBtn>
+          <Link href={`/stone-leads/create?customerId=${order.customerId}&sku=${encodeURIComponent(order.itemSku)}`}><GoldBtn>+ Create order</GoldBtn></Link>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-3 text-[13px]" style={{ borderTop: `1px solid ${T.borderSoft}`, paddingTop: 14 }}>
