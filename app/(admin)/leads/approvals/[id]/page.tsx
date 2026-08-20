@@ -46,7 +46,7 @@ export default function ApprovalDetailPage({ params }: { params: Promise<{ id: s
   const newTotal = Math.max(0, f.subtotal - discNum);
   const leadHref = f.kind === "order" ? `/orders/incomplete/${lead.id}` : `/consultations/incomplete/${lead.id}`;
 
-  const doAct = (action: ReviewAction) => { reviewFulfillment(lead.id, action, { discount: discNum, total: newTotal }); router.push("/leads?tab=approvals"); };
+  const doAct = (action: ReviewAction) => { reviewFulfillment(lead.id, action, { discount: discNum, total: newTotal }); };
   const act = (action: ReviewAction) => { if (action === "approve") setConfirmApprove(true); else doAct(action); };
 
   // Decision buttons per current status — one primary, minimal secondaries.
@@ -72,10 +72,16 @@ export default function ApprovalDetailPage({ params }: { params: Promise<{ id: s
             : f.approval === "on_hold" ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="w-[18px] h-[18px]"><path d="M10 5v14M14 5v14" /></svg>
             : <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="w-[18px] h-[18px]"><path d="M20 6 9 17l-5-5" /></svg>}
         </span>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <div className="text-[13.5px] font-semibold" style={{ color: T.text }}>{meta.label}</div>
           <div className="text-[12px]" style={{ color: T.muted }}>{meta.sub}</div>
         </div>
+        {f.approval !== "pending" && f.reviewedAt && (
+          <div className="shrink-0 text-right">
+            <div className="text-[11px] tracking-[0.08em] uppercase" style={{ color: T.faint }}>{f.approval === "on_hold" ? "Held" : f.approval === "rejected" ? "Rejected" : "Approved"} on</div>
+            <div className="text-[12.5px] font-medium tabular-nums mt-0.5" style={{ color: T.text }}>{new Date(f.reviewedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })} · {new Date(f.reviewedAt).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true }).toUpperCase()}</div>
+          </div>
+        )}
       </div>
 
       <div className="grid lg:grid-cols-[1fr_340px] gap-5 items-start max-w-[900px]">
@@ -136,19 +142,12 @@ export default function ApprovalDetailPage({ params }: { params: Promise<{ id: s
                       {f.details.design.sub && <div className="text-[12px] mt-1" style={{ color: T.muted }}>{f.details.design.sub}</div>}
                       {f.details.design.refs && f.details.design.refs.length > 0 ? (
                         <div className="flex flex-wrap gap-1.5 mt-3">
-                          {f.details.design.refs.map((r, i) => {
-                            const isLink = /^https?:\/\//.test(r);
-                            const cls = "inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full text-[11.5px] cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.08)]";
-                            const inner = (
-                              <>
-                                <svg viewBox="0 0 24 24" fill="none" stroke={isLink ? T.accent : T.muted} strokeWidth="1.6" className="w-3 h-3">{isLink ? <><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1" /><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1" /></> : <><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="m21 15-5-5L5 21" /></>}</svg>
-                                <span className="truncate max-w-[160px]">{isLink ? "Drive link" : r}</span>
-                              </>
-                            );
-                            return isLink
-                              ? <a key={i} href={r} target="_blank" rel="noreferrer" className={cls} style={{ background: T.card, border: `1px solid ${T.borderSoft}`, color: T.accent }}>{inner}</a>
-                              : <button key={i} onClick={() => setLightbox(r)} className={cls} style={{ background: T.card, border: `1px solid ${T.borderSoft}`, color: T.text }}>{inner}</button>;
-                          })}
+                          {f.details.design.refs.filter((r) => !/^https?:\/\//.test(r)).map((r, i) => (
+                            <button key={i} onClick={() => setLightbox(r)} className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full text-[11.5px] cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.08)]" style={{ background: T.card, border: `1px solid ${T.borderSoft}`, color: T.text }}>
+                              <svg viewBox="0 0 24 24" fill="none" stroke={T.muted} strokeWidth="1.6" className="w-3 h-3"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="m21 15-5-5L5 21" /></svg>
+                              <span className="truncate max-w-[160px]">{r}</span>
+                            </button>
+                          ))}
                         </div>
                       ) : <p className="text-[12px] mt-2" style={{ color: T.faint }}>No reference images attached.</p>}
                     </div>

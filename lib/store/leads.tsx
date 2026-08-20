@@ -130,7 +130,7 @@ function buildSeed(): OverlayMap {
     fulfillment: { kind: "order", submittedBy: "sales_02", submittedAt: "2026-08-17T10:00:00+05:30", summary: "Pukhraj Pendant · Custom Platinum", subtotal: 340000, discount: 0, total: 340000, note: "Customer shared a reference design via WhatsApp.", approval: "pending",
       details: {
         stone: { name: "Pukhraj · Yellow Sapphire", sub: "6.0 ratti · Ceylon (Sri Lanka) · Natural, Unheated", price: 305000, shadeHex: "#e7c14a", custom: true },
-        design: { name: "Custom pendant", sub: "Platinum · 6 ct", price: 35000, custom: true, refs: ["ref-front.jpg", "ref-side.jpg", "https://drive.google.com/customer-design"] },
+        design: { name: "Custom pendant", sub: "Platinum · 6 ct", price: 35000, custom: true, refs: ["ref-front.jpg", "ref-side.jpg"] },
         energisation: { name: "Shuddhi", fee: 0 },
         deliverTo: "Amit Khanna · Mumbai 400050",
         lineItems: [{ label: "Stone", amount: 305000 }, { label: "Making", amount: 35000 }, { label: "Energisation", amount: 0 }],
