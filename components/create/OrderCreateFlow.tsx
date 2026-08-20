@@ -451,26 +451,28 @@ export function OrderCreateFlow({ headerTitle = "Create order", submitLabel, suc
                   </div>
                 ) : (
                   <>
-                    {/* Gem chips — like the Ring / Pendant row on the Design step */}
-                    <div className="flex flex-wrap gap-1.5 mb-4">
-                      {["", ...STONE_GEMS].map((g) => (
-                        <button key={g || "all"} onClick={() => { setStoneGem(g); setStoneQuery(""); }} className="h-9 px-4 rounded-full text-[13px] cursor-pointer transition-colors" style={stoneGem === g ? { background: T.accent, color: T.accentInk, fontWeight: 600 } : { background: "rgba(89,82,54,0.06)", color: T.muted }}>{g || "All stones"}</button>
-                      ))}
-                    </div>
-
-                    {/* Vault / custom toggle + search */}
-                    <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
+                    {/* Vault / custom toggle first */}
+                    <div className="mb-3">
                       <div className="inline-flex p-0.5 rounded-[10px]" style={{ background: "rgba(89,82,54,0.08)" }}>
                         <button onClick={() => setStoneCustomMode(false)} className="h-8 px-3.5 rounded-[8px] text-[12.5px] cursor-pointer transition-all duration-150" style={!stoneCustomMode ? { background: T.card, color: T.text, fontWeight: 600, boxShadow: "0 1px 2px rgba(43,42,34,0.10)" } : { background: "transparent", color: T.muted, fontWeight: 500 }}>From vault</button>
                         <button onClick={() => setStoneCustomMode(true)} className="h-8 px-3.5 rounded-[8px] text-[12.5px] cursor-pointer transition-all duration-150" style={stoneCustomMode ? { background: T.card, color: T.text, fontWeight: 600, boxShadow: "0 1px 2px rgba(43,42,34,0.10)" } : { background: "transparent", color: T.muted, fontWeight: 500 }}>Custom stone</button>
                       </div>
-                      {!stoneCustomMode && (
-                        <div className="relative flex-1 min-w-[180px] sm:max-w-[260px] sm:flex-initial">
+                    </div>
+
+                    {/* Gem chips + search — vault mode only */}
+                    {!stoneCustomMode && (
+                      <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
+                        <div className="flex flex-wrap gap-1.5">
+                          {["", ...STONE_GEMS].map((g) => (
+                            <button key={g || "all"} onClick={() => { setStoneGem(g); setStoneQuery(""); }} className="h-8 px-3.5 rounded-full text-[12.5px] cursor-pointer transition-colors" style={stoneGem === g ? { background: T.accent, color: T.accentInk, fontWeight: 600 } : { background: "rgba(89,82,54,0.06)", color: T.muted }}>{g || "All stones"}</button>
+                          ))}
+                        </div>
+                        <div className="relative flex-1 min-w-[180px] sm:max-w-[240px] sm:flex-initial">
                           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={{ color: T.faint }}><circle cx="11" cy="11" r="7" strokeWidth="1.6" /><path d="m16 16 4 4" strokeWidth="1.6" strokeLinecap="round" /></svg>
                           <input value={stoneQuery} onChange={(e) => setStoneQuery(e.target.value)} placeholder="Search ratti, origin, SKU…" className="w-full h-8 pl-8 pr-3 rounded-[9px] text-[13px] outline-none transition-shadow duration-200 focus:shadow-[0_0_0_3px_rgba(119,123,98,0.16)]" style={{ background: T.popover, border: `1px solid ${T.border}`, color: T.text }} />
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
 
                     {!stoneCustomMode ? (
                       <div className="rounded-[12px] overflow-hidden max-h-[340px] overflow-y-auto" style={{ border: `1px solid ${T.borderSoft}` }}>
@@ -519,26 +521,31 @@ export function OrderCreateFlow({ headerTitle = "Create order", submitLabel, suc
                 <h2 className="text-[16px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>Design</h2>
                 <p className="text-[12.5px] mt-0.5 mb-4" style={{ color: T.muted }}>Choose a setting and a design, or keep it a loose stone.</p>
 
-                <div className="flex flex-wrap gap-1.5 mb-4">
-                  {FORMS.map((f) => (
-                    <button key={f} onClick={() => { setForm(f); setDesignSlug(""); setCustomDesign(false); setDesignQuery(""); }} className="h-9 px-4 rounded-full text-[13px] cursor-pointer transition-colors" style={form === f ? { background: T.accent, color: T.accentInk, fontWeight: 600 } : { background: "rgba(89,82,54,0.06)", color: T.muted }}>{f}</button>
-                  ))}
+                {form !== "Loose stone" && (
+                  <div className="mb-3">
+                    <div className="inline-flex p-0.5 rounded-[10px]" style={{ background: "rgba(89,82,54,0.08)" }}>
+                      <button onClick={() => setCustomDesign(false)} className="h-8 px-3.5 rounded-[8px] text-[12.5px] cursor-pointer transition-all duration-150" style={!customDesign ? { background: T.card, color: T.text, fontWeight: 600, boxShadow: "0 1px 2px rgba(43,42,34,0.10)" } : { background: "transparent", color: T.muted, fontWeight: 500 }}>From library</button>
+                      <button onClick={() => setCustomDesign(true)} className="h-8 px-3.5 rounded-[8px] text-[12.5px] cursor-pointer transition-all duration-150" style={customDesign ? { background: T.card, color: T.text, fontWeight: 600, boxShadow: "0 1px 2px rgba(43,42,34,0.10)" } : { background: "transparent", color: T.muted, fontWeight: 500 }}>Custom design</button>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
+                  <div className="flex flex-wrap gap-1.5">
+                    {FORMS.map((f) => (
+                      <button key={f} onClick={() => { setForm(f); setDesignSlug(""); setCustomDesign(false); setDesignQuery(""); }} className="h-8 px-3.5 rounded-full text-[12.5px] cursor-pointer transition-colors" style={form === f ? { background: T.accent, color: T.accentInk, fontWeight: 600 } : { background: "rgba(89,82,54,0.06)", color: T.muted }}>{f}</button>
+                    ))}
+                  </div>
+                  {form !== "Loose stone" && !customDesign && (
+                    <div className="relative flex-1 min-w-[180px] sm:max-w-[240px] sm:flex-initial">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={{ color: T.faint }}><circle cx="11" cy="11" r="7" strokeWidth="1.6" /><path d="m16 16 4 4" strokeWidth="1.6" strokeLinecap="round" /></svg>
+                      <input value={designQuery} onChange={(e) => setDesignQuery(e.target.value)} placeholder={`Search ${form.toLowerCase()} designs…`} className="w-full h-8 pl-8 pr-3 rounded-[9px] text-[13px] outline-none transition-shadow duration-200 focus:shadow-[0_0_0_3px_rgba(119,123,98,0.16)]" style={{ background: T.popover, border: `1px solid ${T.border}`, color: T.text }} />
+                    </div>
+                  )}
                 </div>
 
                 {form && form !== "Loose stone" && (
                   <>
-                    <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
-                      <div className="inline-flex p-0.5 rounded-[10px]" style={{ background: "rgba(89,82,54,0.08)" }}>
-                        <button onClick={() => setCustomDesign(false)} className="h-8 px-3.5 rounded-[8px] text-[12.5px] cursor-pointer transition-all duration-150" style={!customDesign ? { background: T.card, color: T.text, fontWeight: 600, boxShadow: "0 1px 2px rgba(43,42,34,0.10)" } : { background: "transparent", color: T.muted, fontWeight: 500 }}>From library</button>
-                        <button onClick={() => setCustomDesign(true)} className="h-8 px-3.5 rounded-[8px] text-[12.5px] cursor-pointer transition-all duration-150" style={customDesign ? { background: T.card, color: T.text, fontWeight: 600, boxShadow: "0 1px 2px rgba(43,42,34,0.10)" } : { background: "transparent", color: T.muted, fontWeight: 500 }}>Custom design</button>
-                      </div>
-                      {!customDesign && (
-                        <div className="relative flex-1 min-w-[180px] sm:max-w-[240px] sm:flex-initial">
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={{ color: T.faint }}><circle cx="11" cy="11" r="7" strokeWidth="1.6" /><path d="m16 16 4 4" strokeWidth="1.6" strokeLinecap="round" /></svg>
-                          <input value={designQuery} onChange={(e) => setDesignQuery(e.target.value)} placeholder={`Search ${form.toLowerCase()} designs…`} className="w-full h-8 pl-8 pr-3 rounded-[9px] text-[13px] outline-none transition-shadow duration-200 focus:shadow-[0_0_0_3px_rgba(119,123,98,0.16)]" style={{ background: T.popover, border: `1px solid ${T.border}`, color: T.text }} />
-                        </div>
-                      )}
-                    </div>
 
                     {!customDesign ? (
                       <div className="max-h-[420px] overflow-y-auto -mx-1 px-1">
