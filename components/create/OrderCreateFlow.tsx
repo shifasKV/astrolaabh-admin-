@@ -443,12 +443,6 @@ export function OrderCreateFlow({ headerTitle = "Create order", submitLabel, suc
                     <div className="min-w-0 flex-1"><div className="text-[13.5px] font-semibold truncate" style={{ color: T.text }}>{customStone.gemName} · {customStone.english} <Chip tone="gold">Custom</Chip></div><div className="text-[12px] truncate" style={{ color: T.muted }}>{customStone.ratti}r{customStone.origin ? ` · ${customStone.origin}` : ""}</div></div>
                     <div className="flex items-center gap-3 shrink-0"><span className="text-[14px] font-semibold tabular-nums" style={{ color: T.text }}>{inr(Number(customStone.price) || 0)}</span><button onClick={() => setCustomStone(null)} className="text-[12px] font-medium cursor-pointer hover:underline underline-offset-4" style={{ color: T.accent }}>Change</button></div>
                   </div>
-                ) : selectedStone ? (
-                  <div className="flex flex-wrap items-center gap-3 rounded-[12px] px-3.5 py-3" style={{ background: "linear-gradient(135deg, rgba(160,125,56,0.14), rgba(160,125,56,0.05))", border: "1px solid rgba(160,125,56,0.55)", boxShadow: "0 0 0 3px rgba(160,125,56,0.10)" }}>
-                    <span className="w-9 h-9 rounded-[10px] shrink-0" style={{ background: selectedStone.shadeHex, border: `1px solid ${T.borderSoft}` }} />
-                    <div className="min-w-0 flex-1"><div className="text-[13.5px] font-semibold truncate" style={{ color: T.text }}>{selectedStone.gemName} · {selectedStone.english}</div><div className="text-[12px] truncate" style={{ color: T.muted }}>{selectedStone.ratti}r · {selectedStone.origin} · {selectedStone.sku}</div></div>
-                    <div className="flex items-center gap-3 shrink-0"><span className="text-[14px] font-semibold tabular-nums" style={{ color: T.text }}>{inr(selectedStone.price)}</span><button onClick={() => setStoneSku("")} className="text-[12px] font-medium cursor-pointer hover:underline underline-offset-4" style={{ color: T.accent }}>Change</button></div>
-                  </div>
                 ) : (
                   <>
                     {/* Vault / custom toggle first */}
