@@ -339,7 +339,10 @@ export function OrderCreateFlow({ headerTitle = "Create order", submitLabel, suc
             {/* STEP 1 — CUSTOMER */}
             {step === 0 && (
               <div>
-                <h2 className="text-[16px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>Customer</h2>
+                <div className="flex items-start justify-between gap-3">
+                  <h2 className="text-[16px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>Customer</h2>
+                  {newCustomer && <button onClick={clearCustomer} className="inline-flex items-center gap-1 text-[12px] font-medium cursor-pointer shrink-0 hover:underline underline-offset-4" style={{ color: T.accent }}><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" className="w-3 h-3"><path d="M10 3.5 5.5 8 10 12.5" /></svg>Back to search</button>}
+                </div>
                 <p className="text-[12.5px] mt-0.5 mb-4" style={{ color: T.muted }}>Search an existing customer or add a new one.</p>
 
                 {!customer ? (
@@ -368,10 +371,7 @@ export function OrderCreateFlow({ headerTitle = "Create order", submitLabel, suc
                   </div>
                 ) : newCustomer ? (
                   <div className="rounded-[12px] p-4" style={{ background: "rgba(119,123,98,0.07)", border: `1px solid ${T.accentBorder}` }}>
-                    <div className="flex items-center justify-between mb-4">
-                      <span className="text-[12.5px] font-semibold" style={{ color: T.text }}>New customer</span>
-                      <button onClick={clearCustomer} className="inline-flex items-center gap-1 text-[12px] font-medium cursor-pointer hover:underline underline-offset-4" style={{ color: T.accent }}><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" className="w-3 h-3"><path d="M10 3.5 5.5 8 10 12.5" /></svg>Back to search</button>
-                    </div>
+                    <div className="text-[12.5px] font-semibold mb-4" style={{ color: T.text }}>New customer</div>
                     <div className="space-y-4">
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <Input value={newCustomer.name} onChange={(v) => setNewCustomer((p) => p && { ...p, name: v })} label="Name" placeholder="e.g. Priya Sharma" required />
