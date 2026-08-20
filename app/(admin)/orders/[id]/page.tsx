@@ -53,7 +53,9 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const [sourceDirty, setSourceDirty] = useState<Record<string, boolean>>({});
   const [sourceSavedAt, setSourceSavedAt] = useState<Record<string, string>>({});
   const [localEnergStatus, setLocalEnergStatus] = useState(order?.energisationStatus ?? "pending");
-  const [localCertStatus, setLocalCertStatus] = useState<string>(order?.certificateStatus ?? "missing");
+  const [localLabCert, setLocalLabCert] = useState(false);      // uploaded this session
+  const [localEnergCert, setLocalEnergCert] = useState(false);  // generated this session
+  const [certifyDone, setCertifyDone] = useState(false);        // explicit "mark as done"
   const [localTracking, setLocalTracking] = useState(order?.tracking ?? "");
   const [trackingCourier, setTrackingCourier] = useState("");
   const [trackingInput, setTrackingInput] = useState("");
@@ -83,7 +85,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const isPaid = localPaymentStatus === "paid";
 
   const getItemStatus = (sku: string) => localItemStatuses[sku] ?? order.items.find((i) => i.sku === sku)?.itemStatus ?? "order_placed";
-  const isItemReceived = (s: string) => s === "order_received" || s === "in_crafting" || s === "quality_check" || s === "ready_to_ship";
+  const isItemReceived = (s: string) => s === "order_received" || s === "in_crafting" || s === "ready_to_ship";
 
   const stones = order.items.filter((i) => i.itemType === "stone");
   const allStonesReceived = stones.every((item) => isItemReceived(getItemStatus(item.sku)));
@@ -91,9 +93,11 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
   const sourceComplete = allItemsReceived;
   const energiseComplete = localEnergStatus === "completed";
-  const hasBothCerts = (labCert?.status === "uploaded" || labCert?.status === "verified" || localCertStatus === "uploaded" || localCertStatus === "verified") &&
-    (energCert?.status === "uploaded" || energCert?.status === "verified" || localCertStatus === "verified");
-  const certifyComplete = hasBothCerts || localCertStatus === "verified";
+  const labUploaded = labCert?.status === "uploaded" || labCert?.status === "verified" || localLabCert;
+  const energUploaded = energCert?.status === "uploaded" || energCert?.status === "verified" || localEnergCert;
+  const hasBothCerts = labUploaded && energUploaded;
+  // Complete only when explicitly marked done (or seeded verified on both certs).
+  const certifyComplete = certifyDone || (labCert?.status === "verified" && energCert?.status === "verified");
   const shipComplete = dispatched || order.shopifyStatus === "fulfilled";
 
   const activeStep: PipelineStep = !isPaid ? 0 : !allStonesReceived ? 0 : !energiseComplete ? 1 : !certifyComplete ? 2 : !allItemsReceived ? 0 : 3;
@@ -137,8 +141,8 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
   const handleCertUpload = () => {
     const isGenerate = certUploadTarget === "energisation";
+    if (isGenerate) setLocalEnergCert(true); else setLocalLabCert(true);
     setCertUploadTarget(null);
-    setLocalCertStatus("uploaded");
     setCertNumber(""); setCertIssueDate(""); setCertWeight(""); setCertOrigin(""); setCertNotes(""); setCertRitualMethod(""); setCertIssueDateActual("");
     flash(isGenerate ? "Certificate generated" : "Certificate uploaded");
   };
@@ -452,7 +456,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                       )}
                       {(localEnergStatus === "scheduled" || localEnergStatus === "in_progress") && (
                         <span onClick={(e) => e.preventDefault()}>
-                          <GoldBtn onClick={() => setConfirmEnergComplete(true)}>Mark as completed</GoldBtn>
+                          <GoldBtn onClick={() => setConfirmEnergComplete(true)} disabled={!allStonesReceived}>Mark as completed</GoldBtn>
                         </span>
                       )}
                     </div>
@@ -484,65 +488,92 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               )}
                 <div className="grid sm:grid-cols-2 gap-3">
                   {/* Lab cert */}
-                  <div className="rounded-[9px] p-4" style={{ background: T.card, border: `1px solid ${T.borderSoft}` }}>
+                  <div className="rounded-[12px] p-4" style={{ background: T.card, border: `1px solid ${labUploaded ? "rgba(95,112,64,0.35)" : T.borderSoft}` }}>
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-[12px] font-medium" style={{ color: T.text }}>Lab Authenticity</span>
-                      <Chip tone={labCert?.status === "verified" || labCert?.status === "uploaded" ? "good" : "danger"}>
-                        {labCert?.status ?? "Missing"}
-                      </Chip>
+                      <span className="text-[12.5px] font-semibold" style={{ color: T.text }}>Lab Authenticity</span>
+                      <Chip tone={labUploaded ? "good" : "danger"}>{labUploaded ? "Uploaded" : "Missing"}</Chip>
                     </div>
-                    <p className="text-[11px] mb-3" style={{ color: T.faint }}>Independent gemological lab report confirming identity, weight, origin, treatment, and quality grade.</p>
-                    {labCert && labCert.status !== "missing" ? (
-                      <div className="text-[12px] space-y-1" style={{ color: T.muted }}>
-                        {labCert.certificateNumber && <div><span style={{ color: T.faint }}>Cert #:</span> {labCert.certificateNumber}</div>}
-                        {labCert.issuingAuthority && <div><span style={{ color: T.faint }}>Lab:</span> {labCert.issuingAuthority}</div>}
-                        {labCert.issueDate && <div><span style={{ color: T.faint }}>Issued:</span> {labCert.issueDate}</div>}
-                        <div className="pt-2">
-                          <a href={labCert.fileUrl ?? "#"} target="_blank" rel="noopener" className="inline-flex items-center gap-1 text-[12px]" style={{ color: T.accent }}>View certificate ↗</a>
+                    {labUploaded ? (
+                      <>
+                        <div className="text-[12px] space-y-1" style={{ color: T.muted }}>
+                          {labCert?.certificateNumber && <div><span style={{ color: T.faint }}>Cert #:</span> {labCert.certificateNumber}</div>}
+                          {labCert?.issuingAuthority && <div><span style={{ color: T.faint }}>Lab:</span> {labCert.issuingAuthority}</div>}
+                          {labCert?.issueDate && <div><span style={{ color: T.faint }}>Issued:</span> {labCert.issueDate}</div>}
+                          {!labCert && <div>Uploaded just now.</div>}
                         </div>
-                      </div>
+                        <div className="flex items-center gap-3 mt-3 pt-3" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+                          <a href={labCert?.fileUrl ?? "#"} target="_blank" rel="noopener" className="text-[12px] font-medium" style={{ color: T.accent }}>View ↗</a>
+                          <button onClick={() => setCertUploadTarget("lab_authenticity")} className="text-[12px] font-medium cursor-pointer hover:underline underline-offset-2" style={{ color: T.muted }}>Replace</button>
+                        </div>
+                      </>
                     ) : (
-                      <GoldBtn onClick={() => setCertUploadTarget("lab_authenticity")}>Upload certificate</GoldBtn>
+                      <>
+                        <p className="text-[11px] mb-3" style={{ color: T.faint }}>Independent gemological lab report confirming identity, weight, origin, treatment, and quality grade.</p>
+                        <GoldBtn onClick={() => setCertUploadTarget("lab_authenticity")} disabled={!allStonesReceived}>Upload certificate</GoldBtn>
+                        {!allStonesReceived && <p className="text-[11px] mt-2" style={{ color: T.faint }}>Available once all stones are received.</p>}
+                      </>
                     )}
                   </div>
 
-                  {/* AstroLaabh cert */}
-                  <div className="rounded-[9px] p-4" style={{ background: T.card, border: `1px solid ${T.borderSoft}` }}>
+                  {/* AstroLaabh energisation cert */}
+                  <div className="rounded-[12px] p-4" style={{ background: T.card, border: `1px solid ${energUploaded ? "rgba(95,112,64,0.35)" : T.borderSoft}` }}>
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-[12px] font-medium" style={{ color: T.text }}>AstroLaabh Certificate</span>
-                      <Chip tone={energCert?.status === "verified" || energCert?.status === "uploaded" ? "good" : "danger"}>
-                        {energCert?.status ?? "Missing"}
-                      </Chip>
+                      <span className="text-[12.5px] font-semibold" style={{ color: T.text }}>AstroLaabh Certificate</span>
+                      <Chip tone={energUploaded ? "good" : !energiseComplete ? "muted" : "danger"}>{energUploaded ? "Generated" : !energiseComplete ? "Locked" : "Missing"}</Chip>
                     </div>
-                    <p className="text-[11px] mb-3" style={{ color: T.faint }}>In-house energisation certificate confirming ritual completion, mantra details, and astrological suitability.</p>
-                    {energCert && energCert.status !== "missing" ? (
-                      <div className="text-[12px] space-y-1" style={{ color: T.muted }}>
-                        {energCert.certificateNumber && <div><span style={{ color: T.faint }}>Cert #:</span> {energCert.certificateNumber}</div>}
-                        {energCert.issuingAuthority && <div><span style={{ color: T.faint }}>Issued by:</span> {energCert.issuingAuthority}</div>}
-                        {energCert.issueDate && <div><span style={{ color: T.faint }}>Date:</span> {energCert.issueDate}</div>}
-                        <div className="pt-2">
-                          <a href={energCert.fileUrl ?? "#"} target="_blank" rel="noopener" className="inline-flex items-center gap-1 text-[12px]" style={{ color: T.accent }}>View certificate ↗</a>
+                    {energUploaded ? (
+                      <>
+                        <div className="text-[12px] space-y-1" style={{ color: T.muted }}>
+                          {energCert?.certificateNumber && <div><span style={{ color: T.faint }}>Cert #:</span> {energCert.certificateNumber}</div>}
+                          {energCert?.issuingAuthority && <div><span style={{ color: T.faint }}>Issued by:</span> {energCert.issuingAuthority}</div>}
+                          {energCert?.issueDate && <div><span style={{ color: T.faint }}>Date:</span> {energCert.issueDate}</div>}
+                          {!energCert && <div>Generated just now.</div>}
                         </div>
-                      </div>
+                        <div className="flex items-center gap-3 mt-3 pt-3" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+                          <a href={energCert?.fileUrl ?? "#"} target="_blank" rel="noopener" className="text-[12px] font-medium" style={{ color: T.accent }}>View ↗</a>
+                          <button onClick={() => setCertUploadTarget("energisation")} className="text-[12px] font-medium cursor-pointer hover:underline underline-offset-2" style={{ color: T.muted }}>Regenerate</button>
+                        </div>
+                      </>
+                    ) : !energiseComplete ? (
+                      <>
+                        <p className="text-[11px] mb-3" style={{ color: T.faint }}>In-house energisation certificate confirming ritual completion, mantra details, and astrological suitability.</p>
+                        <div className="flex items-center gap-2 text-[12px] rounded-[8px] px-3 py-2" style={{ background: T.bg, border: `1px dashed ${T.border}`, color: T.muted }}>
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+                          Unlocks after the energisation ritual is completed.
+                        </div>
+                      </>
                     ) : (
-                      <button
-                        onClick={() => {
+                      <>
+                        <p className="text-[11px] mb-3" style={{ color: T.faint }}>Ritual completed — generate the certificate with the recorded details.</p>
+                        <GoldBtn onClick={() => {
                           const stone = order.items.find((i) => i.itemType === "stone");
                           setCertWeight(stone?.caratWeight ?? "");
-                          setCertOrigin(order.customerName ?? "");
-                          if (energisation?.completedAt) setCertIssueDate(energisation.completedAt.split("T")[0]);
+                          if (energisation?.completedAt) setCertIssueDateActual(energisation.completedAt.split("T")[0]);
                           if (energisation?.method) setCertRitualMethod(energisation.method);
-                          flash("Certificate auto-generated");
-                        }}
-                        className="inline-flex items-center gap-1.5 text-[12px] font-medium px-3 py-1.5 rounded-[8px] cursor-pointer transition-all hover:brightness-110"
-                        style={{ background: "rgba(119,123,98,0.12)", color: T.accent, border: `1px solid ${T.accentBorder}` }}
-                      >
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-                        View certificate
-                      </button>
+                          setCertUploadTarget("energisation");
+                        }}>Generate certificate</GoldBtn>
+                      </>
                     )}
                   </div>
                 </div>
+
+                {/* Completion — explicit "done" moment gated on both certificates */}
+                {certifyComplete ? (
+                  <div className="flex items-center gap-2.5 rounded-[10px] px-4 py-3 mt-3" style={{ background: "rgba(95,112,64,0.10)", border: "1px solid rgba(95,112,64,0.30)" }}>
+                    <span className="w-6 h-6 rounded-full flex items-center justify-center shrink-0" style={{ background: T.good, color: "#fff" }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg></span>
+                    <span className="text-[12.5px] font-medium" style={{ color: T.good }}>Certification complete — both certificates are on file. Shipping is unlocked.</span>
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap items-center justify-between gap-3 mt-3 pt-3" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+                    <span className="text-[12px]" style={{ color: T.faint }}>
+                      {!labUploaded && !energUploaded ? "Upload the lab report and generate the AstroLaabh certificate to finish this step."
+                        : !labUploaded ? "Waiting on the lab authenticity certificate."
+                        : !energUploaded ? "Waiting on the AstroLaabh certificate."
+                        : "Both certificates are in — mark this step as done."}
+                    </span>
+                    <GoldBtn onClick={() => { setCertifyDone(true); flash("Certification marked complete"); }} disabled={!hasBothCerts}>Mark certification done</GoldBtn>
+                  </div>
+                )}
             </div>
           )}
 
@@ -555,7 +586,14 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                   style={{ background: "rgba(119,123,98,0.12)", border: "1px solid rgba(119,123,98,0.3)" }}
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                  <span className="text-[12.5px] font-medium" style={{ color: T.text }}>Complete Source, Energise and Certify to ship</span>
+                  <span className="text-[12.5px] font-medium" style={{ color: T.text }}>
+                    Shipping unlocks when everything is ready — still pending:{" "}
+                    {[
+                      !allItemsReceived && `${order.items.filter((it) => !isItemReceived(getItemStatus(it.sku))).length} item(s) not received`,
+                      !energiseComplete && "energisation",
+                      !certifyComplete && "certification",
+                    ].filter(Boolean).join(", ")}
+                  </span>
                 </div>
               ) : dispatched || order.shopifyStatus === "fulfilled" ? (
                 <div className="space-y-3">
@@ -584,7 +622,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                     <div className="shrink-0 self-end">
                       <GoldBtn
                         onClick={() => setConfirmDispatch(true)}
-                        disabled={!trackingInput}
+                        disabled={!trackingInput.trim() || !trackingCourier.trim()}
                       >
                         Mark as dispatched
                       </GoldBtn>
@@ -877,7 +915,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
           <Textarea value={scheduleNotes} onChange={setScheduleNotes} label="Notes (optional)" placeholder="Ritual details, buyer preferences…" />
         </div>
         <div className="flex gap-2.5 mt-5">
-          <GoldBtn onClick={handleScheduleSubmit}>{energisation ? "Update" : "Schedule"}</GoldBtn>
+          <GoldBtn onClick={handleScheduleSubmit} disabled={!scheduleGuruji || !scheduleDate || !scheduleTime}>{energisation ? "Update" : "Schedule"}</GoldBtn>
           <GhostBtn onClick={() => setShowSchedule(false)}>Cancel</GhostBtn>
         </div>
       </Modal>
