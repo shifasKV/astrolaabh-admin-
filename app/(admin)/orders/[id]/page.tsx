@@ -61,6 +61,8 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const [receivedNotes, setReceivedNotes] = useState("");
 
   const [viewStep, setViewStep] = useState<PipelineStep | null>(null);
+  const [summaryOpen, setSummaryOpen] = useState(false);
+  const [openSourceSku, setOpenSourceSku] = useState<string | null>(null); // null = auto (first unfinished)
   const [confirmEnergComplete, setConfirmEnergComplete] = useState(false);
   const [confirmDispatch, setConfirmDispatch] = useState(false);
 
@@ -206,75 +208,6 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       {/* ============ TWO-COLUMN BODY — work left, context right ============ */}
       <div className="flex flex-col xl:flex-row items-start gap-4">
         <div className="flex-1 min-w-0 space-y-4 w-full">
-      {/* ============ ORDER SUMMARY (invoice-style) ============ */}
-      <Card>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-[15px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>Order summary</h2>
-          {isPaid && (
-            <button
-              onClick={() => flash("Invoice opened")}
-              className="inline-flex items-center gap-1.5 text-[12px] font-medium px-3 py-1.5 rounded-[8px] cursor-pointer transition-all hover:brightness-110"
-              style={{ background: "rgba(119,123,98,0.12)", color: T.accent, border: `1px solid ${T.accentBorder}` }}
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-              View invoice
-            </button>
-          )}
-        </div>
-
-        {/* Column header */}
-        <div className="hidden sm:grid grid-cols-[auto_1fr_100px_120px] gap-3 px-3 py-2 text-[11px] tracking-[0.06em] uppercase font-medium" style={{ color: T.faint, borderBottom: `1px solid ${T.border}` }}>
-          <span className="w-6" />
-          <span>Item</span>
-          <span className="text-right">Qty</span>
-          <span className="text-right">Amount</span>
-        </div>
-
-        {order.items.map((item, i) => (
-          <div key={item.sku} className="grid grid-cols-[auto_1fr_auto] sm:grid-cols-[auto_1fr_100px_120px] gap-3 items-center px-3 py-3 text-[13px]" style={{ borderBottom: i < order.items.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}>
-            <div className="w-6 h-6 rounded-[5px] flex items-center justify-center text-[10px] font-semibold shrink-0" style={{ background: "rgba(119,123,98,0.12)", color: T.accent }}>
-              {i + 1}
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="text-[13px] font-medium truncate" style={{ color: T.text }}>{item.name}</span>
-                <span className="text-[9px] tracking-[0.06em] uppercase px-1.5 py-0.5 rounded-full shrink-0 font-semibold" style={{
-                  background: item.itemType === "jewellery" ? "rgba(119,123,98,0.10)" : "rgba(95,112,64,0.10)",
-                  color: item.itemType === "jewellery" ? T.accent : T.good,
-                }}>
-                  {item.itemType === "jewellery" ? "Jewellery" : "Stone"}
-                </span>
-              </div>
-              <div className="text-[11px] mt-0.5" style={{ color: T.faint }}>
-                {item.sku}
-                {item.caratWeight && ` · ${item.caratWeight}`}
-              </div>
-            </div>
-            <div className="hidden sm:block text-right tabular-nums" style={{ color: T.muted }}>{item.qty}</div>
-            <div className="text-right tabular-nums font-semibold" style={{ color: T.text }}>{inr(item.price)}</div>
-          </div>
-        ))}
-
-        {/* Subtotal / Total */}
-        <div className="mt-2 pt-3" style={{ borderTop: `1px solid ${T.border}` }}>
-          <div className="flex items-center justify-between px-3 py-1 text-[13px]">
-            <span style={{ color: T.muted }}>Subtotal ({order.items.length} item{order.items.length > 1 ? "s" : ""})</span>
-            <span className="tabular-nums" style={{ color: T.text }}>{inr(order.total)}</span>
-          </div>
-          {tier && tier.fee > 0 && (
-            <div className="flex items-center justify-between px-3 py-1 text-[13px]">
-              <span style={{ color: T.muted }}>Energisation — {tier.name}</span>
-              <span className="tabular-nums" style={{ color: T.text }}>{inr(tier.fee)}</span>
-            </div>
-          )}
-          <div className="flex items-baseline justify-between px-3 pt-3 mt-2" style={{ borderTop: `1px solid ${T.border}` }}>
-            <span className="text-[13.5px] font-medium" style={{ color: T.muted }}>Total</span>
-            <span className="font-title text-[20px] font-semibold tabular-nums tracking-[-0.01em]" style={{ color: T.text }}>
-              {inr(order.total + (tier && tier.fee > 0 ? tier.fee : 0))}
-            </span>
-          </div>
-        </div>
-      </Card>
       {/* ============ FULFILLMENT PIPELINE ============ */}
       {isPaid && <Card>
         <h2 className="text-[15px] font-semibold tracking-[-0.01em] mb-4" style={{ color: T.text }}>Fulfillment</h2>
@@ -348,6 +281,8 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                 const vendorOrderId = localVendorOrderIds[item.sku] ?? item.vendorOrderId ?? "";
                 const dirty = !!sourceDirty[item.sku];
                 const savedAt = sourceSavedAt[item.sku];
+                const autoOpenSku = order.items.find((it) => getItemStatus(it.sku) !== "order_received")?.sku ?? null;
+                const isOpen = dirty || (openSourceSku !== null ? openSourceSku === item.sku : autoOpenSku === item.sku);
                 const markDirty = () => setSourceDirty((p) => ({ ...p, [item.sku]: true }));
                 const fieldLabel = "block text-[10px] tracking-[0.1em] uppercase mb-1";
                 const fieldCls = "w-full h-9 px-2.5 rounded-[8px] text-[12.5px] outline-none transition-shadow duration-200 focus:shadow-[0_0_0_3px_rgba(119,123,98,0.14)]";
@@ -361,16 +296,22 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
                 return (
                   <div key={item.sku} className="rounded-[12px] p-4" style={{ background: T.card, border: `1px solid ${dirty ? T.accentBorder : T.borderSoft}` }}>
-                    {/* Item header */}
-                    <div className="flex flex-wrap items-center justify-between gap-2">
+                    {/* Item header — tap to expand */}
+                    <button onClick={() => setOpenSourceSku(isOpen && !dirty ? "" : item.sku)} className="w-full flex flex-wrap items-center justify-between gap-2 text-left cursor-pointer">
                       <div className="min-w-0">
                         <div className="text-[13.5px] font-semibold truncate" style={{ color: T.text }}>{item.name}</div>
-                        <div className="text-[11px] mt-0.5" style={{ color: T.faint }}>{item.sku}{item.caratWeight ? ` · ${item.caratWeight}` : ""}</div>
+                        <div className="text-[11px] mt-0.5 truncate" style={{ color: T.faint }}>
+                          {item.sku}{item.caratWeight ? ` · ${item.caratWeight}` : ""}
+                          {!isOpen && (vendorName || vendorOrderId) ? <span> · {vendorName}{vendorOrderId ? ` · ${vendorOrderId}` : ""}</span> : null}
+                        </div>
                       </div>
-                      <Chip tone={itemStatusTone(status)}>{itemStatusLabel(status)}</Chip>
-                    </div>
+                      <span className="flex items-center gap-2 shrink-0">
+                        <Chip tone={itemStatusTone(status)}>{itemStatusLabel(status)}</Chip>
+                        <svg viewBox="0 0 24 24" fill="none" stroke={T.faint} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={`w-3.5 h-3.5 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}><path d="m6 9 6 6 6-6" /></svg>
+                      </span>
+                    </button>
 
-                    {!isPaid ? (
+                    {isOpen && (!isPaid ? (
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-5 gap-y-2 mt-3 text-[12.5px]" style={{ color: T.muted }}>
                         <div><span className={fieldLabel} style={{ color: T.faint }}>Vendor</span>{vendorName || "—"}</div>
                         <div><span className={fieldLabel} style={{ color: T.faint }}>Vendor order</span><span className="tabular-nums">{vendorOrderId || "—"}</span></div>
@@ -440,7 +381,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                           </div>
                         </div>
                       </>
-                    )}
+                    ))}
                   </div>
                 );
               })}
@@ -655,6 +596,87 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
           )}
         </div>
       </Card>}
+      {/* ============ ORDER SUMMARY — collapsed reference; the work lives above ============ */}
+      <Card>
+        <button onClick={() => setSummaryOpen((v) => !v)} className="w-full flex items-center justify-between gap-3 cursor-pointer text-left">
+          <div>
+            <h2 className="text-[15px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>Order summary</h2>
+            <div className="text-[12px] mt-0.5" style={{ color: T.muted }}>{order.items.length} item{order.items.length > 1 ? "s" : ""}{tier && tier.fee > 0 ? ` · energisation ${tier.name}` : ""}</div>
+          </div>
+          <span className="flex items-center gap-3 shrink-0">
+            <span className="font-title text-[18px] font-semibold tabular-nums" style={{ color: T.text }}>{inr(order.total + (tier && tier.fee > 0 ? tier.fee : 0))}</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke={T.faint} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={`w-4 h-4 transition-transform duration-200 ${summaryOpen ? "rotate-180" : ""}`}><path d="m6 9 6 6 6-6" /></svg>
+          </span>
+        </button>
+
+        {summaryOpen && (<div className="mt-3">
+        {isPaid && (
+          <div className="flex justify-end mb-2">
+            <button
+              onClick={() => flash("Invoice opened")}
+              className="inline-flex items-center gap-1.5 text-[12px] font-medium px-3 py-1.5 rounded-[8px] cursor-pointer transition-all hover:brightness-110"
+              style={{ background: "rgba(119,123,98,0.12)", color: T.accent, border: `1px solid ${T.accentBorder}` }}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+              View invoice
+            </button>
+          </div>
+        )}
+
+        {/* Column header */}
+        <div className="hidden sm:grid grid-cols-[auto_1fr_100px_120px] gap-3 px-3 py-2 text-[11px] tracking-[0.06em] uppercase font-medium" style={{ color: T.faint, borderBottom: `1px solid ${T.border}` }}>
+          <span className="w-6" />
+          <span>Item</span>
+          <span className="text-right">Qty</span>
+          <span className="text-right">Amount</span>
+        </div>
+
+        {order.items.map((item, i) => (
+          <div key={item.sku} className="grid grid-cols-[auto_1fr_auto] sm:grid-cols-[auto_1fr_100px_120px] gap-3 items-center px-3 py-3 text-[13px]" style={{ borderBottom: i < order.items.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}>
+            <div className="w-6 h-6 rounded-[5px] flex items-center justify-center text-[10px] font-semibold shrink-0" style={{ background: "rgba(119,123,98,0.12)", color: T.accent }}>
+              {i + 1}
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-[13px] font-medium truncate" style={{ color: T.text }}>{item.name}</span>
+                <span className="text-[9px] tracking-[0.06em] uppercase px-1.5 py-0.5 rounded-full shrink-0 font-semibold" style={{
+                  background: item.itemType === "jewellery" ? "rgba(119,123,98,0.10)" : "rgba(95,112,64,0.10)",
+                  color: item.itemType === "jewellery" ? T.accent : T.good,
+                }}>
+                  {item.itemType === "jewellery" ? "Jewellery" : "Stone"}
+                </span>
+              </div>
+              <div className="text-[11px] mt-0.5" style={{ color: T.faint }}>
+                {item.sku}
+                {item.caratWeight && ` · ${item.caratWeight}`}
+              </div>
+            </div>
+            <div className="hidden sm:block text-right tabular-nums" style={{ color: T.muted }}>{item.qty}</div>
+            <div className="text-right tabular-nums font-semibold" style={{ color: T.text }}>{inr(item.price)}</div>
+          </div>
+        ))}
+
+        {/* Subtotal / Total */}
+        <div className="mt-2 pt-3" style={{ borderTop: `1px solid ${T.border}` }}>
+          <div className="flex items-center justify-between px-3 py-1 text-[13px]">
+            <span style={{ color: T.muted }}>Subtotal ({order.items.length} item{order.items.length > 1 ? "s" : ""})</span>
+            <span className="tabular-nums" style={{ color: T.text }}>{inr(order.total)}</span>
+          </div>
+          {tier && tier.fee > 0 && (
+            <div className="flex items-center justify-between px-3 py-1 text-[13px]">
+              <span style={{ color: T.muted }}>Energisation — {tier.name}</span>
+              <span className="tabular-nums" style={{ color: T.text }}>{inr(tier.fee)}</span>
+            </div>
+          )}
+          <div className="flex items-baseline justify-between px-3 pt-3 mt-2" style={{ borderTop: `1px solid ${T.border}` }}>
+            <span className="text-[13.5px] font-medium" style={{ color: T.muted }}>Total</span>
+            <span className="font-title text-[20px] font-semibold tabular-nums tracking-[-0.01em]" style={{ color: T.text }}>
+              {inr(order.total + (tier && tier.fee > 0 ? tier.fee : 0))}
+            </span>
+          </div>
+        </div>
+        </div>)}
+      </Card>
         </div>
 
         {/* Context rail — who, where, meta */}
