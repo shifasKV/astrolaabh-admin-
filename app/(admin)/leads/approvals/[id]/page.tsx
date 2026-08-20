@@ -79,11 +79,9 @@ export default function ApprovalDetailPage({ params }: { params: Promise<{ id: s
         {/* Left — who + what */}
         <Card className="!p-6">
           <div className="flex items-center gap-3">
-            <span className="w-11 h-11 rounded-full flex items-center justify-center text-[14px] font-semibold shrink-0" style={{ background: T.accentFaint, border: `1px solid ${T.accentBorder}`, color: T.accent }}>{initials(salesMemberName(f.submittedBy))}</span>
-            <svg viewBox="0 0 24 24" fill="none" stroke={T.faint} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 shrink-0"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
-            <span className="w-11 h-11 rounded-full flex items-center justify-center text-[14px] font-semibold shrink-0" style={{ background: T.bg, border: `1px solid ${T.borderSoft}`, color: T.muted }}>{initials(lead.customerName)}</span>
+            <span className="w-11 h-11 rounded-full flex items-center justify-center text-[14px] font-semibold shrink-0" style={{ background: T.accentFaint, border: `1px solid ${T.accentBorder}`, color: T.accent }}>{initials(lead.customerName)}</span>
             <div className="min-w-0 flex-1">
-              <div className="text-[12px]" style={{ color: T.faint }}>{salesMemberName(f.submittedBy)} → customer</div>
+              <div className="text-[11px] tracking-[0.08em] uppercase" style={{ color: T.faint }}>Customer</div>
               <Link href={leadHref} className="text-[16px] font-semibold hover:underline block truncate" style={{ color: T.text }}>{lead.customerName}</Link>
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
