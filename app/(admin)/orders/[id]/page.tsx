@@ -455,7 +455,17 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                         </span>
                       )}
                       {(localEnergStatus === "scheduled" || localEnergStatus === "in_progress") && (
-                        <span onClick={(e) => e.preventDefault()}>
+                        <span className="flex items-center gap-2" onClick={(e) => e.preventDefault()}>
+                          <GhostBtn onClick={() => {
+                            // Prefill the modal from the scheduled session
+                            if (energisation?.scheduledAt) {
+                              const d = new Date(energisation.scheduledAt);
+                              setScheduleDate(energisation.scheduledAt.split("T")[0]);
+                              setScheduleTime(d.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true }).toUpperCase());
+                            }
+                            if (energisation?.liveLink) setScheduleLink(energisation.liveLink);
+                            setShowSchedule(true);
+                          }}>Edit</GhostBtn>
                           <GoldBtn onClick={() => setConfirmEnergComplete(true)} disabled={!allStonesReceived}>Mark as completed</GoldBtn>
                         </span>
                       )}
