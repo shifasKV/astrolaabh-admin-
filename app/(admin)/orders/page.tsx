@@ -278,19 +278,17 @@ export default function OrdersPage() {
         ) : (
           paginated.map((o, idx) => {
             const paid = o.paymentStatus === "paid";
-            /* One status per row, most urgent wins — payment > cert > energisation > shipment */
-            const st =
-              o.paymentStatus === "pending"
-                ? { tone: "gold" as const, label: "Payment pending" }
-                : o.certificateStatus === "missing" && paid
-                  ? { tone: "danger" as const, label: "Cert missing" }
-                  : o.energisationStatus === "pending" && paid
-                    ? { tone: "danger" as const, label: "Energ pending" }
-                    : o.shopifyStatus === "fulfilled"
-                      ? { tone: "good" as const, label: "Delivered" }
-                      : o.tracking
-                        ? { tone: "info" as const, label: "In transit" }
-                        : { tone: "muted" as const, label: "Not shipped" };
+            /* Every flag that applies — an order can be not-shipped AND missing its cert */
+            const flags: { tone: "gold" | "danger" | "good" | "info" | "muted"; label: string }[] = [];
+            if (!paid) flags.push({ tone: "gold", label: "Payment pending" });
+            else {
+              if (o.certificateStatus === "missing") flags.push({ tone: "danger", label: "Cert missing" });
+              if (o.energisationStatus === "pending") flags.push({ tone: "danger", label: "Energ missing" });
+              if (o.shopifyStatus === "fulfilled") flags.push({ tone: "good", label: "Delivered" });
+              else if (o.tracking) flags.push({ tone: "info", label: "In transit" });
+              else flags.push({ tone: "muted", label: "Not shipped" });
+            }
+            const st = flags[0];
             return (
               <div key={o.id}>
               <MobileListCard
@@ -300,7 +298,7 @@ export default function OrdersPage() {
                 title={o.customerName}
                 right={inr(o.total)}
                 sub={o.items.length > 1 ? `${o.items[0]?.name} + ${o.items.length - 1} more` : o.items[0]?.name}
-                status={{ label: st.label, tone: st.tone === "muted" ? "muted" : st.tone, extra: o.id }}
+                status={{ label: st.label, tone: st.tone, extra: flags.length > 1 ? flags.slice(1).map((fl) => fl.label).join(" · ") : o.id }}
                 time={o.placedAt}
               />
               <Link
@@ -322,7 +320,7 @@ export default function OrdersPage() {
                 <span className="text-[12px] truncate capitalize" style={{ color: T.muted }}>
                   {o.placedBy ? o.placedBy.split("@")[0] : "Customer"}
                 </span>
-                <div><Chip tone={st.tone}>{st.label}</Chip></div>
+                <div className="flex flex-wrap gap-1">{flags.map((fl) => <Chip key={fl.label} tone={fl.tone}>{fl.label}</Chip>)}</div>
                 <span className="text-[13px] font-semibold tabular-nums text-right" style={{ color: T.text }}>{inr(o.total)}</span>
               </Link>
               </div>
