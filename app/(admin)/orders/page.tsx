@@ -261,7 +261,7 @@ export default function OrdersPage() {
           <>
         {/* Sticky header — survives long scrolls */}
         <div
-          className="hidden sm:grid grid-cols-[64px_1fr_110px_120px_150px_110px] gap-3 items-center px-4 h-10 text-[11px] font-medium tracking-[0.06em] uppercase sticky top-0 z-10 rounded-t-[15px]"
+          className="hidden sm:grid grid-cols-[64px_1fr_105px_105px_200px_110px] gap-3 items-center px-4 h-10 text-[11px] font-medium tracking-[0.06em] uppercase sticky top-0 z-10 rounded-t-[15px]"
           style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.borderSoft}` }}
         >
           <span>Order</span>
@@ -283,7 +283,7 @@ export default function OrdersPage() {
             if (!paid) flags.push({ tone: "gold", label: "Payment pending" });
             else {
               if (o.certificateStatus === "missing") flags.push({ tone: "danger", label: "Cert missing" });
-              if (o.energisationStatus === "pending") flags.push({ tone: "danger", label: "Energ missing" });
+              if (o.energisationStatus === "pending") flags.push({ tone: "gold", label: "Energ missing" });
               if (o.shopifyStatus === "fulfilled") flags.push({ tone: "good", label: "Delivered" });
               else if (o.tracking) flags.push({ tone: "info", label: "In transit" });
               else flags.push({ tone: "muted", label: "Not shipped" });
@@ -303,7 +303,7 @@ export default function OrdersPage() {
               />
               <Link
                 href={`/orders/${o.id}`}
-                className="group hidden sm:grid sm:grid-cols-[64px_1fr_110px_120px_150px_110px] gap-2 sm:gap-3 items-center px-4 py-2.5 transition-colors duration-150 last:rounded-b-[15px] even:bg-[rgba(89,82,54,0.025)] hover:!bg-[rgba(119,123,98,0.08)]"
+                className="group hidden sm:grid sm:grid-cols-[64px_1fr_105px_105px_200px_110px] gap-2 sm:gap-3 items-center px-4 py-2.5 transition-colors duration-150 last:rounded-b-[15px] even:bg-[rgba(89,82,54,0.025)] hover:!bg-[rgba(119,123,98,0.08)]"
                 style={{ borderBottom: idx < paginated.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
               >
                 <span className="text-[11.5px] tabular-nums" style={{ color: T.faint }}>#{o.id.replace("AL-ORD-", "")}</span>
@@ -320,7 +320,7 @@ export default function OrdersPage() {
                 <span className="text-[12px] truncate capitalize" style={{ color: T.muted }}>
                   {o.placedBy ? o.placedBy.split("@")[0] : "Customer"}
                 </span>
-                <div className="flex flex-wrap gap-1">{flags.map((fl) => <Chip key={fl.label} tone={fl.tone}>{fl.label}</Chip>)}</div>
+                <div className="flex flex-wrap items-center gap-1">{flags.map((fl) => <Chip key={fl.label} tone={fl.tone}>{fl.label}</Chip>)}</div>
                 <span className="text-[13px] font-semibold tabular-nums text-right" style={{ color: T.text }}>{inr(o.total)}</span>
               </Link>
               </div>
