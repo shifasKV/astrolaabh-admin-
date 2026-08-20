@@ -250,6 +250,7 @@ export default function ApprovalDetailPage({ params }: { params: Promise<{ id: s
         onClose={() => setConfirmApprove(false)}
         onConfirm={() => { setConfirmApprove(false); doAct("approve"); }}
         title="Approve this fulfilment?"
+        tone="default"
         message={<span>The total payable will be <strong>{inr(newTotal)}</strong>{discNum > 0 ? <> with a <strong>−{inr(discNum)}</strong> discount</> : null}. The submitter will see it as approved.</span>}
         confirmLabel="Approve"
       />

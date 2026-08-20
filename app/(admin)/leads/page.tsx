@@ -373,6 +373,7 @@ function LeadsPageInner() {
           setConfirmApproveId(null);
         }}
         title="Approve this fulfilment?"
+        tone="default"
         message={(() => { const row = approvals.find((r) => r.id === confirmApproveId); return row ? <span><strong>{row.customerName}</strong> · {inr(row.fulfillment.total)}{row.fulfillment.discount > 0 ? <> (−{inr(row.fulfillment.discount)} discount)</> : null}. The submitter will see it as approved.</span> : null; })()}
         confirmLabel="Approve"
       />
