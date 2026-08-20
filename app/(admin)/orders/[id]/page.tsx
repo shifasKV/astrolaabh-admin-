@@ -280,7 +280,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                 const vendorOrderId = localVendorOrderIds[item.sku] ?? item.vendorOrderId ?? "";
                 const dirty = !!sourceDirty[item.sku];
                 const savedAt = sourceSavedAt[item.sku];
-                const autoOpenSku = order.items.find((it) => getItemStatus(it.sku) !== "order_received")?.sku ?? null;
+                const autoOpenSku = order.items.find((it) => getItemStatus(it.sku) !== "order_received")?.sku ?? order.items[0]?.sku ?? null;
                 const isOpen = dirty || (openSourceSku !== null ? openSourceSku === item.sku : autoOpenSku === item.sku);
                 const markDirty = () => setSourceDirty((p) => ({ ...p, [item.sku]: true }));
                 const fieldLabel = "block text-[10px] tracking-[0.1em] uppercase mb-1";
