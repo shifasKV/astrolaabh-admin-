@@ -89,15 +89,15 @@ function ToggleSwitch({ enabled, onToggle }: { enabled: boolean; onToggle: () =>
       onClick={(e) => { e.stopPropagation(); e.preventDefault(); onToggle(); }}
       className="relative inline-flex h-[22px] w-[40px] items-center rounded-full transition-colors duration-200"
       style={{
-        background: enabled ? `${T.accent}30` : "rgba(89,82,54,0.08)",
-        border: `1px solid ${enabled ? `${T.accent}60` : "rgba(89,82,54,0.18)"}`,
+        background: enabled ? T.good : "rgba(89,82,54,0.14)",
+        border: `1px solid ${enabled ? T.good : "rgba(89,82,54,0.18)"}`,
       }}
       title={enabled ? "Enabled — click to disable" : "Disabled — click to enable"}
     >
       <span
-        className="inline-block h-[16px] w-[16px] rounded-full transition-transform duration-200"
+        className="inline-block h-[16px] w-[16px] rounded-full transition-transform duration-200 shadow-[0_1px_2px_rgba(43,42,34,0.25)]"
         style={{
-          background: enabled ? T.accent : "rgba(89,82,54,0.35)",
+          background: "#fffefa",
           transform: enabled ? "translateX(20px)" : "translateX(3px)",
         }}
       />
