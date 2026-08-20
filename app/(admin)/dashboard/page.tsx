@@ -193,7 +193,6 @@ export default function AdminDashboard() {
           </div>
           <Link href="/leads?tab=approvals" className="shrink-0 inline-flex items-center justify-center gap-2 h-10 px-5 rounded-[10px] text-[13px] font-semibold transition-all duration-200 hover:-translate-y-px active:scale-[0.98]" style={{ background: T.accent, color: T.accentInk, boxShadow: "inset 0 1px 0 rgba(244,241,229,0.14), 0 1px 2px rgba(43,42,34,0.1)" }}>
             Review approvals
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
           </Link>
         </div>
       )}
