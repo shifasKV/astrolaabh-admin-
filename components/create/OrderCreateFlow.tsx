@@ -530,19 +530,21 @@ export function OrderCreateFlow({ headerTitle = "Create order", submitLabel, suc
                   </div>
                 )}
 
+                {!customDesign && (
                 <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
                   <div className="flex flex-wrap gap-1.5">
                     {FORMS.map((f) => (
                       <button key={f} onClick={() => { setForm(f); setDesignSlug(""); setCustomDesign(false); setDesignQuery(""); }} className="h-8 px-3.5 rounded-full text-[12.5px] cursor-pointer transition-colors" style={form === f ? { background: T.accent, color: T.accentInk, fontWeight: 600 } : { background: "rgba(89,82,54,0.06)", color: T.muted }}>{f}</button>
                     ))}
                   </div>
-                  {form !== "Loose stone" && !customDesign && (
+                  {form !== "Loose stone" && (
                     <div className="relative flex-1 min-w-[180px] sm:max-w-[240px] sm:flex-initial">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={{ color: T.faint }}><circle cx="11" cy="11" r="7" strokeWidth="1.6" /><path d="m16 16 4 4" strokeWidth="1.6" strokeLinecap="round" /></svg>
                       <input value={designQuery} onChange={(e) => setDesignQuery(e.target.value)} placeholder={`Search ${form.toLowerCase()} designs…`} className="w-full h-8 pl-8 pr-3 rounded-[9px] text-[13px] outline-none transition-shadow duration-200 focus:shadow-[0_0_0_3px_rgba(119,123,98,0.16)]" style={{ background: T.popover, border: `1px solid ${T.border}`, color: T.text }} />
                     </div>
                   )}
                 </div>
+                )}
 
                 {form && form !== "Loose stone" && (
                   <>
@@ -572,7 +574,8 @@ export function OrderCreateFlow({ headerTitle = "Create order", submitLabel, suc
                           <div><div className="text-[13.5px] font-semibold" style={{ color: T.text }}>Custom {form.toLowerCase()}</div><div className="text-[11.5px]" style={{ color: T.faint }}>Specify the metal and share references for the workshop.</div></div>
                         </div>
                         <div className="space-y-4">
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-start">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
+                            <Select value={form} onChange={(v) => setForm(v)} label="Type" options={FORMS.filter((f) => f !== "Loose stone").map((f) => ({ value: f, label: f }))} />
                             <Select value={cdMetal} onChange={setCdMetal} label="Metal" options={[{ value: "", label: "Select metal" }, ...METAL_OPTIONS]} placeholder="Select metal" />
                             <Input value={cdCarat} onChange={(v) => setCdCarat(v.replace(/[^0-9.]/g, ""))} label="Carat (optional)" inputMode="numeric" placeholder="e.g. 6" />
                             <Input value={cdPrice} onChange={(v) => setCdPrice(v.replace(/[^0-9]/g, ""))} label="Making charge (₹)" inputMode="numeric" placeholder="e.g. 18500" />
