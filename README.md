@@ -23,3 +23,10 @@ Open http://localhost:3000 — the panel is the root route.
   without the storefront running.
 - Stone/design imagery is not bundled — the panel is text-first and does not
   render product photos.
+
+## Release workflow
+
+- All changes land on the `staging` branch first.
+- Review build: https://astrolaabh-admin-staging.vercel.app (updated on every staging deploy).
+- Code review happens on the `staging → main` pull request.
+- After approval: merge the PR, then deploy production (`vercel --prod`) → https://astrolaabh-admin-three.vercel.app
