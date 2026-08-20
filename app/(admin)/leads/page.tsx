@@ -313,7 +313,7 @@ function LeadsPageInner() {
       {tab === "approvals" && (
         <Card className="!p-0 overflow-hidden">
           <div className="hidden lg:grid grid-cols-[150px_minmax(0,1.5fr)_112px_96px_110px_110px_104px_120px] gap-3 px-4 h-10 items-center text-[11px] tracking-[0.06em] uppercase sticky top-0 z-10" style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.borderSoft}` }}>
-            <span>Sales exec</span><span>Customer · item</span><span>Type</span><span>Submitted</span><span className="text-right">Discount</span><span className="text-right">Total</span><span>Status</span><span className="text-right">Action</span>
+            <span>Submitted by</span><span>Customer · item</span><span>Type</span><span>Submitted</span><span className="text-right">Discount</span><span className="text-right">Total</span><span>Status</span><span className="text-right">Action</span>
           </div>
           <div className="max-h-[calc(100vh-300px)] overflow-y-auto">
             {approvals.map((r) => {
