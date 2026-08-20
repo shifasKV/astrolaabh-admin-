@@ -66,7 +66,6 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
   const [viewStep, setViewStep] = useState<PipelineStep | null>(null);
   const [summaryOpen, setSummaryOpen] = useState(false);
-  const [openSourceSku, setOpenSourceSku] = useState<string | null>(null); // null = auto (first unfinished)
   const [confirmEnergComplete, setConfirmEnergComplete] = useState(false);
   const [confirmDispatch, setConfirmDispatch] = useState(false);
 
@@ -280,8 +279,6 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                 const vendorOrderId = localVendorOrderIds[item.sku] ?? item.vendorOrderId ?? "";
                 const dirty = !!sourceDirty[item.sku];
                 const savedAt = sourceSavedAt[item.sku];
-                const autoOpenSku = order.items.find((it) => getItemStatus(it.sku) !== "order_received")?.sku ?? order.items[0]?.sku ?? null;
-                const isOpen = dirty || (openSourceSku !== null ? openSourceSku === item.sku : autoOpenSku === item.sku);
                 const markDirty = () => setSourceDirty((p) => ({ ...p, [item.sku]: true }));
                 const fieldLabel = "block text-[10px] tracking-[0.1em] uppercase mb-1";
                 const fieldCls = "w-full h-9 px-2.5 rounded-[8px] text-[12.5px] outline-none transition-shadow duration-200 focus:shadow-[0_0_0_3px_rgba(119,123,98,0.14)]";
@@ -295,22 +292,13 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
                 return (
                   <div key={item.sku} className="rounded-[12px] p-4" style={{ background: T.card, border: `1px solid ${dirty ? T.accentBorder : T.borderSoft}` }}>
-                    {/* Item header — tap to expand */}
-                    <button onClick={() => setOpenSourceSku(isOpen && !dirty ? "" : item.sku)} className="w-full flex flex-wrap items-center justify-between gap-2 text-left cursor-pointer">
-                      <div className="min-w-0">
-                        <div className="text-[13.5px] font-semibold truncate" style={{ color: T.text }}>{item.name}</div>
-                        <div className="text-[11px] mt-0.5 truncate" style={{ color: T.faint }}>
-                          {item.sku}{item.caratWeight ? ` · ${item.caratWeight}` : ""}
-                          {!isOpen && (vendorName || vendorOrderId) ? <span> · {vendorName}{vendorOrderId ? ` · ${vendorOrderId}` : ""}</span> : null}
-                        </div>
-                      </div>
-                      <span className="flex items-center gap-2 shrink-0">
-                        <Chip tone={itemStatusTone(status)}>{itemStatusLabel(status)}</Chip>
-                        <svg viewBox="0 0 24 24" fill="none" stroke={T.faint} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={`w-3.5 h-3.5 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}><path d="m6 9 6 6 6-6" /></svg>
-                      </span>
-                    </button>
+                    {/* Item header */}
+                    <div className="min-w-0">
+                      <div className="text-[13.5px] font-semibold truncate" style={{ color: T.text }}>{item.name}</div>
+                      <div className="text-[11px] mt-0.5 truncate" style={{ color: T.faint }}>{item.sku}{item.caratWeight ? ` · ${item.caratWeight}` : ""}</div>
+                    </div>
 
-                    {isOpen && (!isPaid ? (
+                    {(!isPaid ? (
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-5 gap-y-2 mt-3 text-[12.5px]" style={{ color: T.muted }}>
                         <div><span className={fieldLabel} style={{ color: T.faint }}>Vendor</span>{vendorName || "—"}</div>
                         <div><span className={fieldLabel} style={{ color: T.faint }}>Vendor order</span><span className="tabular-nums">{vendorOrderId || "—"}</span></div>
