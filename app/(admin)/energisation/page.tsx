@@ -331,7 +331,7 @@ export default function EnergisationPage() {
               />
               <Link
                 href={`/energisation/${e.id}`}
-                className="group hidden sm:grid sm:grid-cols-[64px_1fr_130px_150px] gap-2 sm:gap-3 items-center px-4 py-2.5 transition-colors duration-150 last:rounded-b-[15px] even:bg-[rgba(89,82,54,0.025)] hover:!bg-[rgba(119,123,98,0.08)]"
+                className="group hidden sm:grid sm:grid-cols-[64px_1fr_130px_150px] gap-2 sm:gap-3 items-center px-4 py-2.5 transition-colors duration-150 hover:!bg-[rgba(119,123,98,0.08)]"
                 style={{ borderBottom: idx < paginated.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
               >
                 <span className="text-[11.5px] tabular-nums" style={{ color: T.faint }}>#{e.orderNumber.replace("AL-ORD-", "")}</span>

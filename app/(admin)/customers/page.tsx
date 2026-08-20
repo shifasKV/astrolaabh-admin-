@@ -152,7 +152,7 @@ export default function CustomersPage() {
             />
             <Link
               href={`/customers/${c.id}`}
-              className="group hidden md:grid md:grid-cols-[minmax(240px,1.4fr)_150px_minmax(140px,1fr)_90px_90px_120px_24px] gap-x-4 gap-y-1 items-center px-4 py-2.5 transition-colors last:rounded-b-[15px] even:bg-[rgba(89,82,54,0.025)] hover:!bg-[rgba(119,123,98,0.08)]"
+              className="group hidden md:grid md:grid-cols-[minmax(240px,1.4fr)_150px_minmax(140px,1fr)_90px_90px_120px_24px] gap-x-4 gap-y-1 items-center px-4 py-2.5 transition-colors hover:!bg-[rgba(119,123,98,0.08)]"
               style={{ borderBottom: i < arr.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
             >
               <span className="flex items-center gap-3 min-w-0">

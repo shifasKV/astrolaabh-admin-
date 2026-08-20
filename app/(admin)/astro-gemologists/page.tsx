@@ -136,7 +136,7 @@ export default function AstroGemologistsPage() {
                 />
                 <Link
                   href={`/astro-gemologists/${expert.id}`}
-                  className="group hidden md:grid md:grid-cols-[minmax(240px,1.4fr)_120px_150px_90px_90px_100px_110px_130px] gap-2 md:gap-x-4 items-center px-4 py-2.5 transition-colors duration-150 last:rounded-b-[15px] even:bg-[rgba(89,82,54,0.025)] hover:!bg-[rgba(119,123,98,0.08)]"
+                  className="group hidden md:grid md:grid-cols-[minmax(240px,1.4fr)_120px_150px_90px_90px_100px_110px_130px] gap-2 md:gap-x-4 items-center px-4 py-2.5 transition-colors duration-150 hover:!bg-[rgba(119,123,98,0.08)]"
                   style={{ borderBottom: idx < sorted.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
                 >
                   <div className="flex items-center gap-3 min-w-0">

@@ -379,7 +379,7 @@ export default function ConsultationsPage() {
                 />
                 <Link
                   href={`/consultations/${c.id}`}
-                  className="group hidden sm:grid sm:grid-cols-[64px_1fr_150px_170px] gap-2 sm:gap-3 items-center px-4 py-2.5 transition-colors duration-150 last:rounded-b-[15px] even:bg-[rgba(89,82,54,0.025)] hover:!bg-[rgba(119,123,98,0.08)]"
+                  className="group hidden sm:grid sm:grid-cols-[64px_1fr_150px_170px] gap-2 sm:gap-3 items-center px-4 py-2.5 transition-colors duration-150 hover:!bg-[rgba(119,123,98,0.08)]"
                   style={{ borderBottom: idx < paginated.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
                 >
                   <span className="text-[11.5px] tabular-nums" style={{ color: T.faint }}>#{c.id.replace(/\D/g, "")}</span>
@@ -440,7 +440,7 @@ export default function ConsultationsPage() {
                   />
                   <Link
                     href={`/consultations/incomplete/${c.id}`}
-                    className="hidden sm:grid sm:grid-cols-[1fr_1fr_100px_100px_140px] gap-2 sm:gap-3 items-center px-4 py-2.5 transition-colors duration-150 last:rounded-b-[15px] even:bg-[rgba(89,82,54,0.025)] hover:!bg-[rgba(119,123,98,0.08)]"
+                    className="hidden sm:grid sm:grid-cols-[1fr_1fr_100px_100px_140px] gap-2 sm:gap-3 items-center px-4 py-2.5 transition-colors duration-150 hover:!bg-[rgba(119,123,98,0.08)]"
                     style={{ borderBottom: idx < incPaginated.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
                   >
                     <span className="text-[13px] font-semibold truncate block" style={{ color: T.text }}>{c.customerName}</span>

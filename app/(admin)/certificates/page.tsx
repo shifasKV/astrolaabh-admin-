@@ -121,7 +121,7 @@ export default function CertificatesPage() {
               />
               <div
                 onClick={c.status !== "missing" ? () => setViewId(c.id) : undefined}
-                className={`hidden sm:grid sm:grid-cols-[1fr_130px_110px_140px] gap-2 sm:gap-3 items-center px-4 py-2.5 even:bg-[rgba(89,82,54,0.025)] last:rounded-b-[15px] ${c.status !== "missing" ? "cursor-pointer hover:!bg-[rgba(119,123,98,0.08)] transition-colors" : ""}`}
+                className={`hidden sm:grid sm:grid-cols-[1fr_130px_110px_140px] gap-2 sm:gap-3 items-center px-4 py-2.5 ${c.status !== "missing" ? "cursor-pointer hover:!bg-[rgba(119,123,98,0.08)] transition-colors" : ""}`}
                 style={{ borderBottom: i < arr.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
               >
                 {/* Certificate — file icon + number over filename */}

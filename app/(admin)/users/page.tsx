@@ -191,7 +191,7 @@ export default function UsersPage() {
               time={u.lastLoginAt}
             />
             <div
-              className="hidden sm:grid sm:grid-cols-[1fr_150px_100px_150px_44px] gap-2 sm:gap-3 items-center px-4 py-2.5 even:bg-[rgba(89,82,54,0.025)] last:rounded-b-[15px]"
+              className="hidden sm:grid sm:grid-cols-[1fr_150px_100px_150px_44px] gap-2 sm:gap-3 items-center px-4 py-2.5"
               style={{ borderBottom: i < arr.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
             >
               <div className="flex items-center gap-3 min-w-0">

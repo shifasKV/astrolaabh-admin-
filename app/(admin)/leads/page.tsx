@@ -179,7 +179,7 @@ function LeadsPageInner() {
                   time={o.failedAt}
                   facts={[{ label: "with", value: salesMemberName(o.assignedTo) }]}
                 />
-                <div className="hidden lg:grid lg:grid-cols-[1.3fr_1.6fr_120px_180px_110px_120px] gap-3 px-4 py-3 lg:items-center transition-colors even:bg-[rgba(89,82,54,0.02)] hover:bg-[rgba(119,123,98,0.05)]" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
+                <div className="hidden lg:grid lg:grid-cols-[1.3fr_1.6fr_120px_180px_110px_120px] gap-3 px-4 py-3 lg:items-center transition-colors hover:bg-[rgba(119,123,98,0.05)]" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
                   <Link href={`/orders/incomplete/${o.id}`} className="min-w-0"><span className="block text-[13.5px] font-medium truncate hover:underline underline-offset-2" style={{ color: T.text }}>{o.customerName}</span><span className="block text-[11.5px] truncate" style={{ color: T.faint }}>{fmtDate(o.failedAt)} · {o.customerPhone}</span></Link>
                   <Link href={`/orders/incomplete/${o.id}`} className="min-w-0"><span className="block text-[13px] truncate" style={{ color: T.muted }}>{o.itemName}</span></Link>
                   <span><Chip tone={REASON_TONE[o.reason]}>{REASON_LABEL[o.reason]}</Chip></span>
@@ -213,7 +213,7 @@ function LeadsPageInner() {
                   time={c.date}
                   facts={[{ label: "with", value: salesMemberName(c.assignedTo) }]}
                 />
-                <div className="hidden lg:grid lg:grid-cols-[1.3fr_1.6fr_120px_180px_110px] gap-3 px-4 py-3 lg:items-center transition-colors even:bg-[rgba(89,82,54,0.02)] hover:bg-[rgba(119,123,98,0.05)]" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
+                <div className="hidden lg:grid lg:grid-cols-[1.3fr_1.6fr_120px_180px_110px] gap-3 px-4 py-3 lg:items-center transition-colors hover:bg-[rgba(119,123,98,0.05)]" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
                   <Link href={`/consultations/incomplete/${c.id}`} className="min-w-0"><span className="block text-[13.5px] font-medium truncate hover:underline underline-offset-2" style={{ color: T.text }}>{c.customerName}</span><span className="block text-[11.5px] truncate" style={{ color: T.faint }}>{fmtDate(c.date)} · {c.customerPhone}</span></Link>
                   <Link href={`/consultations/incomplete/${c.id}`} className="min-w-0"><span className="block text-[13px] truncate" style={{ color: T.muted }}>{c.expertName}</span><span className="block text-[11.5px] truncate" style={{ color: T.faint }}>{c.consultationType}</span></Link>
                   <span><Chip tone={REASON_TONE[c.reason]}>{REASON_LABEL[c.reason]}</Chip></span>
@@ -259,7 +259,7 @@ function LeadsPageInner() {
                     status={{ label: "Payment pending", tone: "gold", extra: o.id }}
                     time={o.placedAt}
                   />
-                  <Link href={`/orders/${o.id}`} className="hidden lg:grid lg:grid-cols-[80px_1.4fr_120px_140px_120px] gap-3 px-4 py-3 lg:items-center transition-colors even:bg-[rgba(89,82,54,0.02)] hover:bg-[rgba(119,123,98,0.05)]" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
+                  <Link href={`/orders/${o.id}`} className="hidden lg:grid lg:grid-cols-[80px_1.4fr_120px_140px_120px] gap-3 px-4 py-3 lg:items-center transition-colors hover:bg-[rgba(119,123,98,0.05)]" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
                     <span className="text-[11.5px] tabular-nums" style={{ color: T.faint }}>#{o.id.replace("AL-ORD-", "")}</span>
                     <span className="min-w-0"><span className="block text-[13.5px] font-medium truncate" style={{ color: T.text }}>{o.customerName}</span><span className="block text-[11.5px] truncate" style={{ color: T.faint }}>{o.items[0]?.name}{o.items.length > 1 ? ` +${o.items.length - 1}` : ""}</span></span>
                     <span className="text-[12px] tabular-nums" style={{ color: T.muted }}>{fmtDate(o.placedAt)}</span>
@@ -337,7 +337,7 @@ function LeadsPageInner() {
                   }}
                   time={f.submittedAt}
                 />
-                <div onClick={() => router.push(`/leads/approvals/${r.id}`)} className="hidden lg:grid lg:grid-cols-[150px_minmax(0,1.5fr)_112px_96px_110px_110px_104px_120px] gap-3 px-4 py-3 lg:items-center cursor-pointer transition-colors even:bg-[rgba(89,82,54,0.02)] hover:bg-[rgba(119,123,98,0.05)]" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
+                <div onClick={() => router.push(`/leads/approvals/${r.id}`)} className="hidden lg:grid lg:grid-cols-[150px_minmax(0,1.5fr)_112px_96px_110px_110px_104px_120px] gap-3 px-4 py-3 lg:items-center cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.05)]" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
                   <span className="flex items-center gap-2 min-w-0"><span className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold shrink-0" style={{ background: T.accentFaint, border: `1px solid ${T.accentBorder}`, color: T.accent }}>{salesMemberName(f.submittedBy).split(" ").map((w) => w[0]).slice(0, 2).join("")}</span><span className="text-[12.5px] font-medium truncate" style={{ color: T.text }}>{salesMemberName(f.submittedBy)}</span></span>
                   <span className="min-w-0"><span className="block text-[13.5px] font-medium truncate" style={{ color: T.text }}>{r.customerName}</span><span className="block text-[11.5px] truncate" style={{ color: T.faint }}>{f.summary}</span></span>
                   <span><Chip tone={f.kind === "order" ? "info" : "muted"}>{f.kind === "order" ? "Stone order" : "Consultation"}</Chip></span>

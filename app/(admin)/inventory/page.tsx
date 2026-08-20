@@ -627,7 +627,7 @@ function InventoryPageInner() {
               facts={[{ label: "intent", value: s.purpose?.[0] || "—" }, { label: "zodiac", value: `${s.planetGlyph} ${s.planet}` }]}
             />
             <div
-              className="hidden md:grid md:grid-cols-[minmax(220px,1.4fr)_130px_130px_100px_80px_120px_48px] gap-x-4 gap-y-1.5 items-center px-4 py-2.5 text-[13px] even:bg-[rgba(89,82,54,0.025)] last:rounded-b-[15px]"
+              className="hidden md:grid md:grid-cols-[minmax(220px,1.4fr)_130px_130px_100px_80px_120px_48px] gap-x-4 gap-y-1.5 items-center px-4 py-2.5 text-[13px]"
               style={{ borderBottom: i < arr.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
             >
               <span className="flex items-center gap-3 min-w-0">
@@ -726,7 +726,7 @@ function InventoryPageInner() {
               }
             />
             <div
-              className="hidden md:grid md:grid-cols-[minmax(200px,1.2fr)_120px_120px_120px_48px] gap-x-4 gap-y-1.5 items-center px-4 py-2.5 text-[13px] even:bg-[rgba(89,82,54,0.025)] last:rounded-b-[15px]"
+              className="hidden md:grid md:grid-cols-[minmax(200px,1.2fr)_120px_120px_120px_48px] gap-x-4 gap-y-1.5 items-center px-4 py-2.5 text-[13px]"
               style={{ borderBottom: i < arr.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
             >
               <span className="flex items-center gap-3 min-w-0">
@@ -906,7 +906,7 @@ function InventoryPageInner() {
                   status={{ label: enabled ? "Active" : "Inactive", tone: enabled ? "good" : "muted", extra: g.location }}
                 />
                 <div
-                  className="hidden md:grid md:grid-cols-[minmax(220px,1.3fr)_1fr_130px_150px_130px] gap-x-4 gap-y-1 items-center px-4 py-2.5 transition-opacity even:bg-[rgba(89,82,54,0.025)] last:rounded-b-[15px]"
+                  className="hidden md:grid md:grid-cols-[minmax(220px,1.3fr)_1fr_130px_150px_130px] gap-x-4 gap-y-1 items-center px-4 py-2.5 transition-opacity"
                   style={{ borderBottom: i < GURUJIS.length - 1 ? `1px solid ${T.borderSoft}` : "none", opacity: enabled ? 1 : 0.55 }}
                 >
                   <div className="flex items-center gap-3 min-w-0">

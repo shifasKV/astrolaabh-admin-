@@ -347,7 +347,7 @@ export default function AppointmentsPage() {
                 time={c.scheduledAt}
               />
               <Link href={`/appointments/${c.id}`}
-                className={`hidden sm:grid items-center gap-4 px-4 py-3.5 transition-colors duration-150 group-last:rounded-b-[15px] ${i % 2 === 0 ? "bg-[rgba(89,82,54,0.025)]" : ""} hover:!bg-[rgba(119,123,98,0.08)]`}
+                className={`hidden sm:grid items-center gap-4 px-4 py-3.5 transition-colors duration-150 group-${i % 2 === 0 ? "bg-[rgba(89,82,54,0.025)]" : ""} hover:!bg-[rgba(119,123,98,0.08)]`}
                 style={{ borderBottom: `1px solid ${T.borderSoft}`, gridTemplateColumns: "1fr 150px 100px 130px" }}
               >
                 <div className="min-w-0">

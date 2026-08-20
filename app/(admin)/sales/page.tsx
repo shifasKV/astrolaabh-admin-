@@ -128,7 +128,7 @@ export default function SalesPage() {
                 />
                 <Link
                   href={`/sales/${member.id}`}
-                  className="group hidden md:grid md:grid-cols-[minmax(220px,1.3fr)_1fr_100px_90px_110px_140px_110px] gap-2 md:gap-x-4 items-center px-4 py-2.5 transition-colors duration-150 last:rounded-b-[15px] even:bg-[rgba(89,82,54,0.025)] hover:!bg-[rgba(119,123,98,0.08)]"
+                  className="group hidden md:grid md:grid-cols-[minmax(220px,1.3fr)_1fr_100px_90px_110px_140px_110px] gap-2 md:gap-x-4 items-center px-4 py-2.5 transition-colors duration-150 hover:!bg-[rgba(119,123,98,0.08)]"
                   style={{ borderBottom: idx < sorted.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
                 >
                   <div className="flex items-center gap-3 min-w-0">
