@@ -281,7 +281,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                 const savedAt = sourceSavedAt[item.sku];
                 const markDirty = () => setSourceDirty((p) => ({ ...p, [item.sku]: true }));
                 const fieldLabel = "block text-[10px] tracking-[0.1em] uppercase mb-1";
-                const fieldCls = "w-full h-9 px-2.5 rounded-[8px] text-[12.5px] outline-none transition-shadow duration-200 focus:shadow-[0_0_0_3px_rgba(119,123,98,0.14)]";
+                const fieldCls = "w-full h-9 px-2.5 rounded-[8px] text-[12.5px] outline-none transition-shadow duration-200 focus:shadow-[0_0_0_3px_rgba(160,125,56,0.16)]";
                 const fieldStyle = { background: T.card, border: `1px solid ${T.border}`, color: T.text };
 
                 const saveItem = () => {
