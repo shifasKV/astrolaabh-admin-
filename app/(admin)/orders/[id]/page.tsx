@@ -49,6 +49,9 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const [localVendorNames, setLocalVendorNames] = useState<Record<string, string>>({});
   const [localVendorOrderIds, setLocalVendorOrderIds] = useState<Record<string, string>>({});
   const [localRemarks, setLocalRemarks] = useState<Record<string, string>>({});
+  // Sourcing edits are drafts until saved — saving pushes the update to the customer's web app.
+  const [sourceDirty, setSourceDirty] = useState<Record<string, boolean>>({});
+  const [sourceSavedAt, setSourceSavedAt] = useState<Record<string, string>>({});
   const [localEnergStatus, setLocalEnergStatus] = useState(order?.energisationStatus ?? "pending");
   const [localCertStatus, setLocalCertStatus] = useState<string>(order?.certificateStatus ?? "missing");
   const [localTracking, setLocalTracking] = useState(order?.tracking ?? "");
@@ -328,119 +331,116 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
         {/* Step content */}
         <div className="rounded-[10px] p-4" style={{ background: T.bg, border: `1px solid ${T.borderSoft}` }}>
 
-          {/* ---- STEP 0: SOURCE ---- */}
+          {/* ---- STEP 0: SOURCE — per-item sourcing cards; saving notifies the customer ---- */}
           {displayStep === 0 && (
-            <div>
-              {/* Header row */}
-              <div className="hidden sm:grid grid-cols-[minmax(160px,1fr)_130px_130px_120px_150px_50px] gap-3 px-3 py-2 text-[10px] tracking-[0.06em] uppercase font-semibold rounded-[6px] mb-1" style={{ color: T.muted, background: "rgba(89,82,54,0.04)" }}>
-                <span>Item</span>
-                <span>Vendor</span>
-                <span>Vendor order</span>
-                <span>Status</span>
-                <span>Remarks</span>
-                <span className="text-center">Received</span>
-              </div>
+            <div className="space-y-3">
+              {isPaid && (
+                <div className="flex items-center gap-2 text-[12px]" style={{ color: T.muted }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke={T.accent} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 shrink-0"><path d="M12 3a6 6 0 0 1 6 6v4l2 2H4l2-2V9a6 6 0 0 1 6-6z" /><path d="M9 17a3 3 0 0 0 6 0" /></svg>
+                  Saved updates are pushed to the customer&apos;s web app.
+                </div>
+              )}
 
-              {order.items.map((item, i) => {
+              {order.items.map((item) => {
                 const status = getItemStatus(item.sku);
                 const received = status === "order_received";
                 const vendorName = localVendorNames[item.sku] ?? item.vendorName ?? "";
                 const vendorOrderId = localVendorOrderIds[item.sku] ?? item.vendorOrderId ?? "";
+                const dirty = !!sourceDirty[item.sku];
+                const savedAt = sourceSavedAt[item.sku];
+                const markDirty = () => setSourceDirty((p) => ({ ...p, [item.sku]: true }));
+                const fieldLabel = "block text-[10px] tracking-[0.1em] uppercase mb-1";
+                const fieldCls = "w-full h-9 px-2.5 rounded-[8px] text-[12.5px] outline-none transition-shadow duration-200 focus:shadow-[0_0_0_3px_rgba(119,123,98,0.14)]";
+                const fieldStyle = { background: T.card, border: `1px solid ${T.border}`, color: T.text };
+
+                const saveItem = () => {
+                  setSourceDirty((p) => ({ ...p, [item.sku]: false }));
+                  setSourceSavedAt((p) => ({ ...p, [item.sku]: new Date().toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true }) }));
+                  flash(`${item.name.split("·")[0].trim()} updated — customer notified`);
+                };
 
                 return (
-                  <div key={item.sku} className="grid grid-cols-1 sm:grid-cols-[minmax(160px,1fr)_130px_130px_120px_150px_50px] gap-2 sm:gap-3 items-center px-3 py-3" style={{ borderBottom: i < order.items.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}>
-                    <div className="min-w-0">
-                      <div className="text-[13px] font-medium truncate" style={{ color: T.text }}>{item.name}</div>
-                      <div className="text-[11px] mt-0.5" style={{ color: T.faint }}>{item.sku} {item.caratWeight && `· ${item.caratWeight}`}</div>
+                  <div key={item.sku} className="rounded-[12px] p-4" style={{ background: T.card, border: `1px solid ${dirty ? T.accentBorder : T.borderSoft}` }}>
+                    {/* Item header */}
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="text-[13.5px] font-semibold truncate" style={{ color: T.text }}>{item.name}</div>
+                        <div className="text-[11px] mt-0.5" style={{ color: T.faint }}>{item.sku}{item.caratWeight ? ` · ${item.caratWeight}` : ""}</div>
+                      </div>
+                      <Chip tone={itemStatusTone(status)}>{itemStatusLabel(status)}</Chip>
                     </div>
-                    <div>
-                      {isPaid ? (
-                        <input
-                          type="text"
-                          value={vendorName}
-                          onChange={(e) => setLocalVendorNames((prev) => ({ ...prev, [item.sku]: e.target.value }))}
-                          placeholder="Vendor name"
-                          disabled={received}
-                          className="w-full h-7 px-2 rounded-[6px] text-[11px] outline-none truncate"
-                          style={{ background: T.card, border: `1px solid ${T.borderSoft}`, color: T.text, opacity: received ? 0.6 : 1 }}
-                        />
-                      ) : (
-                        <div className="text-[12px] truncate" style={{ color: T.muted }}>{vendorName || "—"}</div>
-                      )}
-                    </div>
-                    <div>
-                      {isPaid ? (
-                        <input
-                          type="text"
-                          value={vendorOrderId}
-                          onChange={(e) => setLocalVendorOrderIds((prev) => ({ ...prev, [item.sku]: e.target.value }))}
-                          placeholder="Order ID"
-                          disabled={received}
-                          className="w-full h-7 px-2 rounded-[6px] text-[11px] outline-none tabular-nums truncate"
-                          style={{ background: T.card, border: `1px solid ${T.borderSoft}`, color: T.text, opacity: received ? 0.6 : 1 }}
-                        />
-                      ) : (
-                        <div className="text-[12px] tabular-nums truncate" style={{ color: T.muted }}>{vendorOrderId || "—"}</div>
-                      )}
-                    </div>
-                    <div>
-                      {isPaid ? (
-                        <Select
-                          value={status}
-                          onChange={(val) => {
-                            setLocalItemStatuses((prev) => ({ ...prev, [item.sku]: val }));
-                            flash(`${item.name.split("·")[0].trim()} → ${itemStatusLabel(val)}`);
-                          }}
-                          disabled={received}
-                          compact
-                          options={[
-                            { value: "order_placed", label: "Order placed" },
-                            { value: "in_transit", label: "In transit" },
-                            { value: "quality_check", label: "Quality check" },
-                            { value: "order_received", label: "Received" },
-                          ]}
-                        />
-                      ) : (
-                        <Chip tone={itemStatusTone(status)}>{itemStatusLabel(status)}</Chip>
-                      )}
-                    </div>
-                    <div>
-                      {isPaid ? (
-                        <input
-                          type="text"
-                          value={localRemarks[item.sku] ?? ""}
-                          onChange={(e) => setLocalRemarks((prev) => ({ ...prev, [item.sku]: e.target.value }))}
-                          placeholder="Add remarks"
-                          className="w-full h-7 px-2 rounded-[6px] text-[11px] outline-none truncate"
-                          style={{ background: T.card, border: `1px solid ${T.borderSoft}`, color: T.text }}
-                        />
-                      ) : (
-                        <div className="text-[12px] truncate" style={{ color: T.muted }}>{localRemarks[item.sku] || "—"}</div>
-                      )}
-                    </div>
-                    <div className="flex justify-center">
-                      {isPaid && (
-                        <button
-                          onClick={() => {
-                            const next = received ? "in_transit" : "order_received";
-                            setLocalItemStatuses((prev) => ({ ...prev, [item.sku]: next }));
-                            setViewStep(0);
-                            flash(`${item.name.split("·")[0].trim()} ${received ? "→ In transit" : "marked as received"}`);
-                          }}
-                          className="w-9 h-9 rounded-[8px] flex items-center justify-center cursor-pointer transition-all hover:brightness-110"
-                          style={{
-                            background: received ? T.good : T.borderSoft,
-                            color: received ? "#fff" : T.faint,
-                          }}
-                        >
-                          {received ? (
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
-                          ) : (
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" opacity="0.3"/></svg>
-                          )}
-                        </button>
-                      )}
-                    </div>
+
+                    {!isPaid ? (
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-5 gap-y-2 mt-3 text-[12.5px]" style={{ color: T.muted }}>
+                        <div><span className={fieldLabel} style={{ color: T.faint }}>Vendor</span>{vendorName || "—"}</div>
+                        <div><span className={fieldLabel} style={{ color: T.faint }}>Vendor order</span><span className="tabular-nums">{vendorOrderId || "—"}</span></div>
+                        <div className="col-span-2"><span className={fieldLabel} style={{ color: T.faint }}>Remarks</span>{localRemarks[item.sku] || "—"}</div>
+                      </div>
+                    ) : (
+                      <>
+                        {/* Fields */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3.5">
+                          <div>
+                            <label className={fieldLabel} style={{ color: T.faint }}>Vendor</label>
+                            <input type="text" value={vendorName} onChange={(e) => { setLocalVendorNames((p) => ({ ...p, [item.sku]: e.target.value })); markDirty(); }} placeholder="e.g. Kanakadhara Jewellers" disabled={received} className={fieldCls} style={{ ...fieldStyle, opacity: received ? 0.55 : 1 }} />
+                          </div>
+                          <div>
+                            <label className={fieldLabel} style={{ color: T.faint }}>Vendor order no.</label>
+                            <input type="text" value={vendorOrderId} onChange={(e) => { setLocalVendorOrderIds((p) => ({ ...p, [item.sku]: e.target.value })); markDirty(); }} placeholder="e.g. KJ-2026-0950" disabled={received} className={`${fieldCls} tabular-nums`} style={{ ...fieldStyle, opacity: received ? 0.55 : 1 }} />
+                          </div>
+                          <div>
+                            <label className={fieldLabel} style={{ color: T.faint }}>Status</label>
+                            <Select
+                              value={status}
+                              onChange={(val) => { setLocalItemStatuses((p) => ({ ...p, [item.sku]: val })); setSourceDirty((p) => ({ ...p, [item.sku]: true })); }}
+                              disabled={received}
+                              compact
+                              options={[
+                                { value: "order_placed", label: "Order placed" },
+                                { value: "in_transit", label: "In transit" },
+                                { value: "quality_check", label: "Quality check" },
+                                { value: "order_received", label: "Received" },
+                              ]}
+                            />
+                          </div>
+                        </div>
+                        <div className="mt-3">
+                          <label className={fieldLabel} style={{ color: T.faint }}>Remarks <span className="normal-case tracking-normal" style={{ color: T.faint }}>· visible to the customer</span></label>
+                          <input type="text" value={localRemarks[item.sku] ?? ""} onChange={(e) => { setLocalRemarks((p) => ({ ...p, [item.sku]: e.target.value })); markDirty(); }} placeholder="e.g. Vendor confirmed dispatch by Friday" className={fieldCls} style={fieldStyle} />
+                        </div>
+
+                        {/* Footer: received toggle + save */}
+                        <div className="flex flex-wrap items-center justify-between gap-3 mt-4 pt-3.5" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+                          <button
+                            onClick={() => {
+                              const next = received ? "in_transit" : "order_received";
+                              setLocalItemStatuses((p) => ({ ...p, [item.sku]: next }));
+                              setSourceDirty((p) => ({ ...p, [item.sku]: true }));
+                              setViewStep(0);
+                            }}
+                            className="inline-flex items-center gap-2 h-9 pl-2 pr-3.5 rounded-full text-[12.5px] font-medium cursor-pointer transition-all active:scale-[0.98]"
+                            style={received ? { background: "rgba(95,112,64,0.13)", border: `1px solid rgba(95,112,64,0.35)`, color: T.good } : { background: T.bg, border: `1px solid ${T.border}`, color: T.muted }}
+                          >
+                            <span className="w-5 h-5 rounded-full flex items-center justify-center" style={{ background: received ? T.good : "rgba(89,82,54,0.14)", color: received ? "#fff" : T.faint }}>
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
+                            </span>
+                            {received ? "Received at studio" : "Mark as received"}
+                          </button>
+                          <div className="flex items-center gap-3">
+                            {savedAt && !dirty && <span className="text-[11.5px]" style={{ color: T.faint }}>Saved {savedAt} · customer notified</span>}
+                            {dirty && <span className="text-[11.5px] font-medium" style={{ color: T.gold }}>Unsaved changes</span>}
+                            <button
+                              onClick={saveItem}
+                              disabled={!dirty}
+                              className="h-9 px-4 rounded-[9px] text-[12.5px] font-semibold cursor-pointer transition-all active:scale-[0.98] disabled:cursor-default"
+                              style={dirty ? { background: T.accent, color: T.accentInk } : { background: "rgba(89,82,54,0.10)", color: T.faint }}
+                            >
+                              Save &amp; notify
+                            </button>
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
                 );
               })}
