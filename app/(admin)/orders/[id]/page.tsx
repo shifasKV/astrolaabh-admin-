@@ -1,7 +1,7 @@
 "use client";
 import { use, useState } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, GoldBtn, GhostBtn, Modal, Input, Select, FileInput, Textarea, DateInput, TimeInput, ShopifyButton, BackLink, Toast, ConfirmDialog } from "@/components/ui";
+import { PageHeader, Card, Chip, GoldBtn, GhostBtn, Modal, Input, Select, Textarea, DateInput, TimeInput, ShopifyButton, BackLink, Toast, ConfirmDialog } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_ORDERS, MOCK_CUSTOMERS, MOCK_CERTIFICATES, MOCK_ENERGISATION } from "@/lib/mock";
 import { ENERGISATION } from "@/lib/catalog";
@@ -23,6 +23,8 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const order = MOCK_ORDERS.find((o) => o.id === id);
 
   const [certUploadTarget, setCertUploadTarget] = useState<CertUploadTarget>(null);
+  const [certFile, setCertFile] = useState("");
+  const [certDrag, setCertDrag] = useState(false);
   const [toast, setToast] = useState("");
   const [certNumber, setCertNumber] = useState("");
   const [certIssueDate, setCertIssueDate] = useState("");
@@ -143,7 +145,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
     const isGenerate = certUploadTarget === "energisation";
     if (isGenerate) setLocalEnergCert(true); else setLocalLabCert(true);
     setCertUploadTarget(null);
-    setCertNumber(""); setCertIssueDate(""); setCertWeight(""); setCertOrigin(""); setCertNotes(""); setCertRitualMethod(""); setCertIssueDateActual("");
+    setCertNumber(""); setCertIssueDate(""); setCertWeight(""); setCertOrigin(""); setCertNotes(""); setCertRitualMethod(""); setCertIssueDateActual(""); setCertFile("");
     flash(isGenerate ? "Certificate generated" : "Certificate uploaded");
   };
 
@@ -884,7 +886,35 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
         <div className="space-y-3">
           {certUploadTarget === "lab_authenticity" ? (
             <>
-              <FileInput label="Certificate file (PDF or image)" accept=".pdf,.jpg,.jpeg,.png" onSelect={() => {}} />
+              <div>
+                <label className="block text-[11px] tracking-[0.12em] uppercase mb-1.5" style={{ color: T.faint }}>Certificate file (PDF or image)</label>
+                <div
+                  className="rounded-[11px] px-4 py-5 flex flex-col items-center justify-center gap-1.5 text-center transition-colors cursor-pointer"
+                  style={{ border: `1.5px dashed ${certDrag ? T.accent : certFile ? "rgba(95,112,64,0.5)" : T.border}`, background: certDrag ? "rgba(119,123,98,0.06)" : certFile ? "rgba(95,112,64,0.06)" : T.bg }}
+                  onDragOver={(e) => { e.preventDefault(); setCertDrag(true); }}
+                  onDragLeave={() => setCertDrag(false)}
+                  onDrop={(e) => { e.preventDefault(); setCertDrag(false); const n = e.dataTransfer.files[0]?.name; if (n) setCertFile(n); }}
+                  onClick={() => { const inp = document.createElement("input"); inp.type = "file"; inp.accept = ".pdf,.jpg,.jpeg,.png"; inp.onchange = (e) => { const n = (e.target as HTMLInputElement).files?.[0]?.name; if (n) setCertFile(n); }; inp.click(); }}
+                >
+                  {certFile ? (
+                    <>
+                      <span className="w-9 h-9 rounded-full flex items-center justify-center" style={{ background: "rgba(95,112,64,0.14)", color: T.good }}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M20 6 9 17l-5-5" /></svg>
+                      </span>
+                      <span className="text-[13px] font-medium" style={{ color: T.text }}>{certFile}</span>
+                      <span className="text-[11.5px]" style={{ color: T.faint }}>Tap to replace</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="w-9 h-9 rounded-full flex items-center justify-center" style={{ background: T.accentFaint, color: T.accent }}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M17 8l-5-5-5 5" /><path d="M12 3v12" /></svg>
+                      </span>
+                      <span className="text-[13px] font-medium" style={{ color: T.text }}>Drop the certificate here, or tap to browse</span>
+                      <span className="text-[11.5px]" style={{ color: T.faint }}>PDF, JPG or PNG</span>
+                    </>
+                  )}
+                </div>
+              </div>
               <Input value={certNumber} onChange={setCertNumber} label="Certificate / report number (optional)" placeholder="e.g. GIA-2026-78451" />
               <Textarea value={certNotes} onChange={setCertNotes} label="Notes (optional)" placeholder="Any remarks about this certificate…" rows={2} />
             </>
@@ -906,9 +936,9 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
             </>
           )}
         </div>
-        <div className="flex gap-2.5 mt-5">
-          <GoldBtn onClick={handleCertUpload}>{certUploadTarget === "lab_authenticity" ? "Upload certificate" : "Generate certificate"}</GoldBtn>
-          <GhostBtn onClick={() => setCertUploadTarget(null)}>Cancel</GhostBtn>
+        <div className="flex justify-end gap-2.5 mt-5">
+          <GhostBtn onClick={() => { setCertUploadTarget(null); setCertFile(""); }}>Cancel</GhostBtn>
+          <GoldBtn onClick={handleCertUpload} disabled={certUploadTarget === "lab_authenticity" && !certFile}>{certUploadTarget === "lab_authenticity" ? "Upload certificate" : "Generate certificate"}</GoldBtn>
         </div>
       </Modal>
 
