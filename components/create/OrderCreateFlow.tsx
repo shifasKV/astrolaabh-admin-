@@ -123,8 +123,8 @@ export function OrderCreateFlow({ headerTitle = "Create order", submitLabel, suc
   const [cdMetal, setCdMetal] = useState("");
   const [cdCarat, setCdCarat] = useState("");
   const [cdPrice, setCdPrice] = useState("");
-  const [cdImages, setCdImages] = useState<string[]>([]);
-  const [cdDrive, setCdDrive] = useState("");
+  const [cdImages, setCdImages] = useState<{ name: string; url: string }[]>([]);
+  const [cdPreview, setCdPreview] = useState<string | null>(null);
   const [cdDrag, setCdDrag] = useState(false);
 
   // Energisation + pricing
@@ -250,7 +250,7 @@ export function OrderCreateFlow({ headerTitle = "Create order", submitLabel, suc
       design: form === "Loose stone"
         ? { name: "Loose stone", sub: "No setting — ships loose" }
         : customDesign
-          ? { name: `Custom ${form.toLowerCase()}`, sub: [cdMetal, cdCarat && `${cdCarat} ct`].filter(Boolean).join(" · ") || undefined, price: settingAmount, custom: true, refs: [...cdImages, ...(cdDrive ? [cdDrive] : [])] }
+          ? { name: `Custom ${form.toLowerCase()}`, sub: [cdMetal, cdCarat && `${cdCarat} ct`].filter(Boolean).join(" · ") || undefined, price: settingAmount, custom: true, refs: cdImages.map((im) => im.name) }
           : selectedDesign
             ? { name: selectedDesign.name, sub: `${selectedDesign.metal} · From library`, price: settingAmount, image: selectedDesign.image, custom: false }
             : undefined,
@@ -271,7 +271,7 @@ export function OrderCreateFlow({ headerTitle = "Create order", submitLabel, suc
       total,
       image: !customDesign && form !== "Loose stone" ? selectedDesign?.image : undefined,
       isCustom: customDesign || !!customStone,
-      refs: customDesign ? [...cdImages, ...(cdDrive ? [cdDrive] : [])] : undefined,
+      refs: customDesign ? cdImages.map((im) => im.name) : undefined,
       details,
     });
     setToastTone("success");
@@ -576,30 +576,31 @@ export function OrderCreateFlow({ headerTitle = "Create order", submitLabel, suc
                             <Input value={cdCarat} onChange={(v) => setCdCarat(v.replace(/[^0-9.]/g, ""))} label="Carat (optional)" inputMode="numeric" placeholder="e.g. 6" />
                             <Input value={cdPrice} onChange={(v) => setCdPrice(v.replace(/[^0-9]/g, ""))} label="Making charge (₹)" inputMode="numeric" placeholder="e.g. 18500" />
                           </div>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
-                            <div>
-                              <div className="block text-[11px] tracking-[0.12em] uppercase mb-1.5" style={{ color: T.faint }}>Reference images</div>
-                              <div
-                                className="rounded-[9px] h-10 px-3.5 flex items-center justify-center gap-2 text-center transition-colors cursor-pointer"
-                                style={{ border: `1.5px dashed ${cdDrag ? T.accent : cdImages.length ? T.good : T.border}`, background: cdDrag ? "rgba(119,123,98,0.06)" : T.bg }}
-                                onDragOver={(e) => { e.preventDefault(); setCdDrag(true); }}
-                                onDragLeave={() => setCdDrag(false)}
-                                onDrop={(e) => { e.preventDefault(); setCdDrag(false); const names = Array.from(e.dataTransfer.files).map((f) => f.name); if (names.length) setCdImages((p) => [...p, ...names]); }}
-                                onClick={() => { const inp = document.createElement("input"); inp.type = "file"; inp.multiple = true; inp.accept = "image/*"; inp.onchange = (e) => { const names = Array.from((e.target as HTMLInputElement).files ?? []).map((f) => f.name); if (names.length) setCdImages((p) => [...p, ...names]); }; inp.click(); }}
-                              >
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={cdImages.length ? T.good : T.muted} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M17 8l-5-5-5 5" /><path d="M12 3v12" /></svg>
-                                <span className="text-[12.5px] font-medium" style={{ color: cdImages.length ? T.good : T.muted }}>{cdImages.length ? `${cdImages.length} image${cdImages.length > 1 ? "s" : ""} added` : "Drop or click · multiple"}</span>
+                          <div>
+                            <div className="block text-[11px] tracking-[0.12em] uppercase mb-1.5" style={{ color: T.faint }}>Reference images</div>
+                            <div
+                              className="rounded-[11px] py-4 px-3.5 flex items-center justify-center gap-2 text-center transition-colors cursor-pointer"
+                              style={{ border: `1.5px dashed ${cdDrag ? T.accent : cdImages.length ? "rgba(95,112,64,0.5)" : T.border}`, background: cdDrag ? "rgba(119,123,98,0.06)" : T.bg }}
+                              onDragOver={(e) => { e.preventDefault(); setCdDrag(true); }}
+                              onDragLeave={() => setCdDrag(false)}
+                              onDrop={(e) => { e.preventDefault(); setCdDrag(false); const files = Array.from(e.dataTransfer.files).filter((fl) => fl.type.startsWith("image/")); if (files.length) setCdImages((p) => [...p, ...files.map((fl) => ({ name: fl.name, url: URL.createObjectURL(fl) }))]); }}
+                              onClick={() => { const inp = document.createElement("input"); inp.type = "file"; inp.multiple = true; inp.accept = "image/*"; inp.onchange = (e) => { const files = Array.from((e.target as HTMLInputElement).files ?? []); if (files.length) setCdImages((p) => [...p, ...files.map((fl) => ({ name: fl.name, url: URL.createObjectURL(fl) }))]); }; inp.click(); }}
+                            >
+                              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={T.muted} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M17 8l-5-5-5 5" /><path d="M12 3v12" /></svg>
+                              <span className="text-[12.5px] font-medium" style={{ color: T.muted }}>Drop images here, or tap to browse · multiple allowed</span>
+                            </div>
+                            {cdImages.length > 0 && (
+                              <div className="flex flex-wrap gap-2 mt-3">
+                                {cdImages.map((im, i) => (
+                                  <div key={i} className="relative group/thumb">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <button onClick={() => setCdPreview(im.url)} className="block w-16 h-16 rounded-[10px] overflow-hidden cursor-zoom-in" style={{ border: `1px solid ${T.borderSoft}` }}><img src={im.url} alt={im.name} className="w-full h-full object-cover" /></button>
+                                    <button onClick={() => setCdImages((p) => p.filter((_, x) => x !== i))} aria-label="Remove image" className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full flex items-center justify-center cursor-pointer shadow-sm" style={{ background: T.text, color: "#faf6ec" }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" className="w-2.5 h-2.5"><path d="M18 6 6 18M6 6l12 12" /></svg></button>
+                                  </div>
+                                ))}
                               </div>
-                            </div>
-                            <Input value={cdDrive} onChange={setCdDrive} label="Or reference link (optional)" placeholder="https://drive.google.com/…" />
+                            )}
                           </div>
-                          {cdImages.length > 0 && (
-                            <div className="flex flex-wrap gap-1.5">
-                              {cdImages.map((n, i) => (
-                                <span key={i} className="inline-flex items-center gap-1.5 h-7 pl-2.5 pr-1 rounded-full text-[11.5px]" style={{ background: T.bg, border: `1px solid ${T.borderSoft}`, color: T.text }}>{n}<button onClick={() => setCdImages((p) => p.filter((_, x) => x !== i))} className="w-[18px] h-[18px] rounded-full inline-flex items-center justify-center cursor-pointer hover:bg-[rgba(89,82,54,0.14)]"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" className="w-2.5 h-2.5"><path d="M18 6 6 18M6 6l12 12" /></svg></button></span>
-                              ))}
-                            </div>
-                          )}
                         </div>
                       </div>
                     )}
@@ -697,6 +698,14 @@ export function OrderCreateFlow({ headerTitle = "Create order", submitLabel, suc
           {submitLabel}
         </button>
       </div>
+
+      {/* Reference image lightbox */}
+      <Modal open={!!cdPreview} onClose={() => setCdPreview(null)} title="Reference image">
+        {cdPreview && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <div className="rounded-[12px] overflow-hidden" style={{ background: T.bg, border: `1px solid ${T.borderSoft}` }}><img src={cdPreview} alt="Reference" className="w-full max-h-[70vh] object-contain" /></div>
+        )}
+      </Modal>
 
       {/* Design preview modal */}
       <Modal open={!!previewDesign} onClose={() => setPreviewSlug("")} title={previewDesign?.name ?? "Design"}>
