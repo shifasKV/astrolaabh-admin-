@@ -12,10 +12,10 @@ type CertUploadTarget = "lab_authenticity" | "energisation" | null;
 type PipelineStep = 0 | 1 | 2 | 3;
 
 const PIPELINE_STEPS = [
-  { key: "source", label: "Source" },
-  { key: "energise", label: "Energise" },
-  { key: "certify", label: "Certify" },
-  { key: "ship", label: "Ship" },
+  { key: "source", label: "Source", sub: "Vendor & receipt" },
+  { key: "energise", label: "Energise", sub: "Ritual" },
+  { key: "certify", label: "Certify", sub: "Certificates" },
+  { key: "ship", label: "Ship", sub: "Dispatch" },
 ] as const;
 
 export default function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -218,54 +218,47 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       {isPaid && <Card>
         <h2 className="text-[15px] font-semibold tracking-[-0.01em] mb-4" style={{ color: T.text }}>Fulfillment</h2>
 
-        {/* Stepper */}
-        <div className="flex items-center gap-1 mb-5 overflow-x-auto no-scrollbar">
-          {PIPELINE_STEPS.map((step, i) => {
-            const idx = i as PipelineStep;
-            const complete = isStepComplete(idx);
-            const unlocked = isStepUnlocked(idx);
-            const isActive = displayStep === idx;
-            const locked = !unlocked && !complete;
-
-            return (
-              <div key={step.key} className="flex items-center gap-1 flex-1 min-w-0">
-                <button
-                  onClick={() => {
-                    if (unlocked || complete) { setViewStep(idx); }
-                    else if (idx === 3) {
-                      flash("Complete Source, Energise and Certify to ship");
-                    }
-                  }}
-                  className="flex items-center gap-2 text-[12px] px-3 py-1.5 rounded-full whitespace-nowrap transition-all duration-200"
-                  style={{
-                    background: isActive && complete ? "rgba(95,112,64,0.10)" : isActive ? T.accentMuted : complete ? "rgba(95,112,64,0.10)" : "transparent",
-                    border: `1px solid ${isActive && complete ? "rgba(95,112,64,0.25)" : isActive ? T.accentBorder : complete ? "rgba(95,112,64,0.25)" : T.borderSoft}`,
-                    color: isActive && complete ? T.good : isActive ? T.accent : complete ? T.good : locked ? T.faint : T.muted,
-                    fontWeight: isActive ? 600 : 400,
-                    cursor: unlocked || complete ? "pointer" : "default",
-                    opacity: unlocked || complete || isActive ? 1 : 0.5,
-                  }}
-                >
-                  <span
-                    className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0"
+        <div className="grid grid-cols-1 lg:grid-cols-[190px_1fr] gap-4 items-start">
+        {/* Stepper — side rail on desktop, scrollable chips on mobile */}
+        <nav className="lg:sticky lg:top-4">
+          <ol className="flex lg:flex-col gap-1 overflow-x-auto no-scrollbar">
+            {PIPELINE_STEPS.map((step, i) => {
+              const idx = i as PipelineStep;
+              const complete = isStepComplete(idx);
+              const unlocked = isStepUnlocked(idx);
+              const isActive = displayStep === idx;
+              const locked = !unlocked && !complete;
+              return (
+                <li key={step.key} className="shrink-0">
+                  <button
+                    onClick={() => {
+                      if (unlocked || complete) { setViewStep(idx); }
+                      else if (idx === 3) { flash("Complete Source, Energise and Certify to ship"); }
+                    }}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-[11px] text-left transition-colors"
                     style={{
-                      background: complete ? T.good : isActive ? T.accent : T.border,
-                      color: isActive || complete ? T.accentInk : T.faint,
+                      background: isActive ? (complete ? "rgba(95,112,64,0.10)" : T.accentFaint) : "transparent",
+                      cursor: unlocked || complete ? "pointer" : "default",
+                      opacity: unlocked || complete || isActive ? 1 : 0.5,
                     }}
                   >
-                    {complete ? "✓" : locked ? (
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-                    ) : i + 1}
-                  </span>
-                  {step.label}
-                </button>
-                {i < PIPELINE_STEPS.length - 1 && (
-                  <div className="flex-1 h-[1px] min-w-3" style={{ background: complete ? T.good : T.borderSoft }} />
-                )}
-              </div>
-            );
-          })}
-        </div>
+                    <span className="w-7 h-7 rounded-full flex items-center justify-center text-[12px] font-semibold shrink-0" style={complete ? { background: T.good, color: "#fff" } : isActive ? { background: T.accent, color: T.accentInk } : { background: "rgba(89,82,54,0.09)", color: T.faint }}>
+                      {complete ? (
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M20 6 9 17l-5-5" /></svg>
+                      ) : locked ? (
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+                      ) : i + 1}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block text-[13px] font-semibold whitespace-nowrap" style={{ color: isActive || complete ? T.text : T.muted }}>{step.label}</span>
+                      <span className="hidden lg:block text-[11px]" style={{ color: T.faint }}>{step.sub}</span>
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ol>
+        </nav>
 
         {/* Step content */}
         <div className="rounded-[10px] p-4" style={{ background: T.bg, border: `1px solid ${T.borderSoft}` }}>
@@ -648,6 +641,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               )}
             </div>
           )}
+        </div>
         </div>
       </Card>}
       {/* ============ ORDER SUMMARY — collapsed reference; the work lives above ============ */}
