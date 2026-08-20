@@ -107,9 +107,9 @@ function LeadsPageInner() {
 
   const TABS = [
     { key: "approvals", label: "Approvals", count: pendingApprovals.length },
+    { key: "payment", label: "Payment pending", count: MOCK_ORDERS.filter((o) => o.paymentStatus === "pending").length },
     { key: "stone", label: "Stone leads", count: orderLeads.length },
     { key: "consultation", label: "Consultation leads", count: consultLeads.length },
-    { key: "payment", label: "Payment pending", count: MOCK_ORDERS.filter((o) => o.paymentStatus === "pending").length },
   ];
 
   return (
