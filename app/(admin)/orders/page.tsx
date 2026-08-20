@@ -4,33 +4,15 @@ import Link from "next/link";
 import { PageHeader, Card, Chip, Tabs, GoldBtn, ShopifyButton, Pagination, downloadXLS, downloadPDF, ExportBtn, DateRangePanel, ToolbarSearch, InlineFilter, MultiCheck, SortMenu, EmptyState, TableSkeleton, MobileListCard, Monogram, MobileToolbar, SheetSection, MobileFab } from "@/components/ui";
 import { useSimulatedLoad } from "@/lib/useSimulatedLoad";
 import { T } from "@/lib/theme";
-import { MOCK_ORDERS, MOCK_INCOMPLETE_ORDERS } from "@/lib/mock";
+import { MOCK_ORDERS } from "@/lib/mock";
 import { inr } from "@/lib/types";
 
 const TABS = [
   { key: "all", label: "All orders" },
-  { key: "payment_pending", label: "Payment pending" },
   { key: "not_shipped", label: "Not shipped" },
   { key: "cert_missing", label: "Cert missing" },
   { key: "energ_missing", label: "Energ missing" },
-  { key: "incomplete", label: "Incomplete" },
 ];
-
-const INCOMPLETE_REASON_LABEL: Record<string, string> = {
-  payment_failed: "Payment failed",
-  abandoned_cart: "Cart abandoned",
-  payment_expired: "Payment expired",
-  card_declined: "Card declined",
-  requested_call: "Requested call",
-};
-
-const INCOMPLETE_REASON_TONE: Record<string, "danger" | "gold" | "muted"> = {
-  payment_failed: "danger",
-  abandoned_cart: "gold",
-  payment_expired: "muted",
-  card_declined: "danger",
-  requested_call: "gold",
-};
 
 type SortKey = "date_desc" | "date_asc" | "amount_high" | "amount_low";
 
@@ -98,15 +80,6 @@ export default function OrdersPage() {
   const [filterStoneType, setFilterStoneType] = useState<string[]>([]);
   const [page, setPage] = useState(1);
 
-  // Incomplete tab filters
-  const [incFilterCustomer, setIncFilterCustomer] = useState("");
-  const [incFilterStone, setIncFilterStone] = useState<string[]>([]);
-  const [incFilterReason, setIncFilterReason] = useState<string[]>([]);
-  const [incFilterDateFrom, setIncFilterDateFrom] = useState("");
-  const [incFilterDateTo, setIncFilterDateTo] = useState("");
-  const [incSort, setIncSort] = useState<SortKey>("date_desc");
-  const [incPage, setIncPage] = useState(1);
-
   const PER_PAGE = 10;
   const loading = useSimulatedLoad();
 
@@ -121,7 +94,7 @@ export default function OrdersPage() {
     return true;
   };
 
-  const filtered = MOCK_ORDERS.filter((o) => (tab === "all" || tab === "incomplete") ? true : matchesStatus(o, tab)).filter((o) => {
+  const filtered = MOCK_ORDERS.filter((o) => (tab === "all" ? true : matchesStatus(o, tab))).filter((o) => {
     if (!search) return true;
     const q = search.toLowerCase();
     return o.id.toLowerCase().includes(q) || o.customerName.toLowerCase().includes(q) || o.items.some((i) => i.name.toLowerCase().includes(q));
@@ -168,45 +141,10 @@ export default function OrdersPage() {
     Object.keys(STATUS_FILTER_LABEL).map((k) => [k, MOCK_ORDERS.filter((o) => matchesStatus(o, k)).length]),
   );
 
-  // Incomplete tab — computed at component scope so global export can reach it
-  const incStones = [...new Set(MOCK_INCOMPLETE_ORDERS.map((o) => o.itemName))].sort();
-  const hasIncFilters = !!incFilterCustomer || incFilterStone.length > 0 || incFilterReason.length > 0 || !!incFilterDateFrom || !!incFilterDateTo;
-  const incFilterCount = [incFilterCustomer, incFilterReason.length > 0 ? "1" : "", incFilterStone.length > 0 ? "1" : "", incFilterDateFrom || incFilterDateTo].filter(Boolean).length;
-
-  const incFiltered = MOCK_INCOMPLETE_ORDERS
-    .filter((o) => {
-      if (!search) return true;
-      const q = search.toLowerCase();
-      return o.customerName.toLowerCase().includes(q) || o.itemName.toLowerCase().includes(q);
-    })
-    .filter((o) => !incFilterCustomer || o.customerName === incFilterCustomer)
-    .filter((o) => incFilterStone.length === 0 || incFilterStone.includes(o.itemName))
-    .filter((o) => incFilterReason.length === 0 || incFilterReason.includes(o.reason))
-    .filter((o) => {
-      if (incFilterDateFrom && o.failedAt < incFilterDateFrom) return false;
-      if (incFilterDateTo && o.failedAt > incFilterDateTo) return false;
-      return true;
-    })
-    .sort((a, b) => {
-      if (incSort === "date_asc") return new Date(a.failedAt).getTime() - new Date(b.failedAt).getTime();
-      if (incSort === "amount_high") return b.amount - a.amount;
-      if (incSort === "amount_low") return a.amount - b.amount;
-      return new Date(b.failedAt).getTime() - new Date(a.failedAt).getTime();
-    });
-
-  const incTotalPages = Math.ceil(incFiltered.length / PER_PAGE);
-  const incCurrentPage = incPage > incTotalPages && incTotalPages > 0 ? incTotalPages : incPage;
-  const incPaginated = incFiltered.slice((incCurrentPage - 1) * PER_PAGE, incCurrentPage * PER_PAGE);
-
   /* Global export — respects active tab + filters, scoped to the chosen period */
   const handleExport = ({ from, to, format, periodLabel }: { from: string; to: string; format: "pdf" | "xls"; periodLabel: string }) => {
     const inRange = (d: string) => (!from || d.slice(0, 10) >= from) && (!to || d.slice(0, 10) <= to);
-    if (tab === "incomplete") {
-      const header = ["Customer", "Item", "Failed at", "Reason", "Amount (INR)"];
-      const rows = incFiltered.filter((o) => inRange(o.failedAt)).map((o) => [o.customerName, o.itemName, o.failedAt, INCOMPLETE_REASON_LABEL[o.reason] || o.reason, o.amount]);
-      if (format === "xls") downloadXLS(header, rows, `incomplete-orders-${from}-to-${to}.xls`);
-      else downloadPDF(`Incomplete orders — ${periodLabel}`, header, rows);
-    } else {
+    {
       const header = ["Order ID", "Customer", "Items", "Created date", "Created by", "Shipment status", "Payment status", "Amount (INR)"];
       const rows = filtered.filter((o) => inRange(o.placedAt)).map((o) => [
         o.id,
@@ -249,7 +187,7 @@ export default function OrdersPage() {
         <Tabs
           tabs={TABS.map((t) => ({
             ...t,
-            count: t.key === "all" ? MOCK_ORDERS.length : t.key === "incomplete" ? MOCK_INCOMPLETE_ORDERS.length : (statusCounts[t.key] ?? 0),
+            count: t.key === "all" ? MOCK_ORDERS.length : (statusCounts[t.key] ?? 0),
           }))}
           active={tab}
           onChange={(k) => { setTab(k); setPage(1); }}
@@ -257,8 +195,7 @@ export default function OrdersPage() {
       </div>
 
       {/* Mobile: single collapsed toolbar row (filters sheet + expanding search + sort) */}
-      {tab !== "incomplete" ? (
-        <MobileToolbar
+      <MobileToolbar
           className="sm:hidden pt-3"
           filterCount={activeFilterCount}
           onClearAll={() => { setFilterCustomer(""); setFilterStatus([]); setFilterPlacedBy([]); setFilterDateFrom(""); setFilterDateTo(""); setFilterStoneType([]); setPage(1); }}
@@ -283,36 +220,10 @@ export default function OrdersPage() {
             </>
           }
         />
-      ) : (
-        <MobileToolbar
-          className="sm:hidden pt-3"
-          filterCount={incFilterCount}
-          onClearAll={() => { setIncFilterCustomer(""); setIncFilterStone([]); setIncFilterReason([]); setIncFilterDateFrom(""); setIncFilterDateTo(""); setIncPage(1); }}
-          search={search}
-          onSearch={setSearch}
-          searchPlaceholder="Search orders, customers…"
-          sort={<SortMenu value={incSort} onChange={(v) => { setIncSort(v as SortKey); setIncPage(1); }} options={SORT_OPTIONS} />}
-          filters={
-            <>
-              <SheetSection label="Status">
-                <MultiCheck options={Object.entries(INCOMPLETE_REASON_LABEL).map(([k, v]) => ({ value: k, label: v }))} value={incFilterReason} onChange={setIncFilterReason} onAfter={() => setIncPage(1)} />
-              </SheetSection>
-              <SheetSection label="Stone">
-                <MultiCheck options={incStones.map((s) => ({ value: s, label: s }))} value={incFilterStone} onChange={setIncFilterStone} onAfter={() => setIncPage(1)} />
-              </SheetSection>
-              <SheetSection label="Date">
-                <DateRangePanel from={incFilterDateFrom} to={incFilterDateTo} onChange={(f, t) => { setIncFilterDateFrom(f); setIncFilterDateTo(t); setIncPage(1); }} />
-              </SheetSection>
-            </>
-          }
-        />
-      )}
 
       {/* Filter strip — subtle band below the divider: filters left, search + sort right */}
       <div className="hidden sm:flex flex-wrap items-center gap-2 pt-4" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
         <div className="flex flex-wrap items-center gap-2">
-          {tab !== "incomplete" ? (
-            <>
               <InlineFilter label="Status" icon={F_ICONS.status} count={filterStatus.length}>
                 <MultiCheck options={Object.entries(STATUS_FILTER_LABEL).map(([k, v]) => ({ value: k, label: v }))} value={filterStatus} onChange={setFilterStatus} onAfter={() => setPage(1)} />
               </InlineFilter>
@@ -334,43 +245,15 @@ export default function OrdersPage() {
                   Clear all
                 </button>
               )}
-            </>
-          ) : (
-            <>
-              <InlineFilter label="Status" icon={F_ICONS.status} count={incFilterReason.length}>
-                <MultiCheck options={Object.entries(INCOMPLETE_REASON_LABEL).map(([k, v]) => ({ value: k, label: v }))} value={incFilterReason} onChange={setIncFilterReason} onAfter={() => setIncPage(1)} />
-              </InlineFilter>
-              <InlineFilter label="Stone" icon={F_ICONS.stone} count={incFilterStone.length}>
-                <MultiCheck options={incStones.map((s) => ({ value: s, label: s }))} value={incFilterStone} onChange={setIncFilterStone} onAfter={() => setIncPage(1)} />
-              </InlineFilter>
-              <InlineFilter label="Date" icon={F_ICONS.date} count={incFilterDateFrom || incFilterDateTo ? 1 : 0} width={440}>
-                <DateRangePanel from={incFilterDateFrom} to={incFilterDateTo} onChange={(f, t) => { setIncFilterDateFrom(f); setIncFilterDateTo(t); setIncPage(1); }} />
-              </InlineFilter>
-              {hasIncFilters && (
-                <button
-                  onClick={() => { setIncFilterCustomer(""); setIncFilterStone([]); setIncFilterReason([]); setIncFilterDateFrom(""); setIncFilterDateTo(""); setIncPage(1); }}
-                  className="text-[12px] font-medium px-1.5 cursor-pointer hover:underline underline-offset-4 whitespace-nowrap"
-                  style={{ color: T.danger }}
-                >
-                  Clear all
-                </button>
-              )}
-            </>
-          )}
         </div>
         <div className="ml-auto flex items-center gap-2">
           <ToolbarSearch value={search} onChange={setSearch} placeholder="Search orders, customers…" />
-          {tab !== "incomplete" ? (
-            <SortMenu value={sort} onChange={(v) => setSortBy(v)} options={SORT_OPTIONS} />
-          ) : (
-            <SortMenu value={incSort} onChange={(v) => { setIncSort(v as SortKey); setIncPage(1); }} options={SORT_OPTIONS} />
-          )}
+          <SortMenu value={sort} onChange={(v) => setSortBy(v)} options={SORT_OPTIONS} />
         </div>
       </div>
 
       </div>
 
-      {tab !== "incomplete" && <>
       <Card className="!p-0 md:flex md:flex-col md:min-h-0">
         {loading ? (
           <TableSkeleton cols={6} rows={8} />
@@ -452,77 +335,7 @@ export default function OrdersPage() {
       </Card>
 
       <Pagination page={currentPage - 1} totalPages={totalPages} totalItems={filtered.length} perPage={PER_PAGE} onPageChange={(p) => setPage(p + 1)} />
-      </>}
 
-      {/* ============ INCOMPLETE ORDERS ============ */}
-      {tab === "incomplete" && (
-        <>
-          <Card className="!p-0 md:flex md:flex-col md:min-h-0">
-            {loading ? (
-              <TableSkeleton cols={6} rows={8} />
-            ) : (
-              <>
-              <div
-                className="hidden sm:grid grid-cols-[1fr_1fr_100px_140px_100px_110px] gap-3 items-center px-4 h-10 text-[11px] font-medium tracking-[0.06em] uppercase sticky top-0 z-10 rounded-t-[15px]"
-                style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.borderSoft}` }}
-              >
-                <span>Customer</span>
-                <span>Stone / Item</span>
-                <span>Date</span>
-                <span>Status</span>
-                <span>Assignee</span>
-                <span className="text-right">Amount</span>
-              </div>
-            <div className="md:flex-1 md:min-h-0 overflow-y-auto max-h-[560px] md:max-h-none">
-              {incFiltered.length === 0 ? (
-                <EmptyState inline icon="check" title="No incomplete orders" description="Nothing needs recovery right now." />
-              ) : (
-                incPaginated.map((o, idx) => (
-                  <div key={o.id}>
-                  <MobileListCard
-                    className="sm:hidden"
-                    href={`/orders/incomplete/${o.id}`}
-                    leading={<Monogram name={o.customerName} tone="muted" />}
-                    title={o.customerName}
-                    right={inr(o.amount)}
-                    sub={o.itemName}
-                    status={{ label: "Didn't complete", tone: INCOMPLETE_REASON_TONE[o.reason] || "muted", extra: INCOMPLETE_REASON_LABEL[o.reason] || o.reason }}
-                    time={o.failedAt}
-                  />
-                  <Link
-                    href={`/orders/incomplete/${o.id}`}
-                    className="hidden sm:grid sm:grid-cols-[1fr_1fr_100px_140px_100px_110px] gap-2 sm:gap-3 items-center px-4 py-2.5 transition-colors duration-150 last:rounded-b-[15px] even:bg-[rgba(89,82,54,0.025)] hover:!bg-[rgba(119,123,98,0.08)]"
-                    style={{ borderBottom: idx < incPaginated.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
-                  >
-                    <div className="min-w-0">
-                      <span className="text-[13px] font-semibold truncate block" style={{ color: T.text }}>{o.customerName}</span>
-                    </div>
-                    <div className="min-w-0">
-                      <span className="text-[13px] truncate block" style={{ color: T.muted }}>{o.itemName}</span>
-                    </div>
-                    <div className="min-w-0">
-                      <span className="text-[12px]" style={{ color: T.text }}>{new Date(o.failedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</span>
-                    </div>
-                    <div>
-                      <Chip tone={INCOMPLETE_REASON_TONE[o.reason] || "muted"}>{INCOMPLETE_REASON_LABEL[o.reason] || o.reason}</Chip>
-                    </div>
-                    <div className="min-w-0">
-                      <span className="text-[12px]" style={{ color: T.faint }}>—</span>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-[14px] font-semibold tabular-nums" style={{ color: T.text }}>{inr(o.amount)}</span>
-                    </div>
-                  </Link>
-                  </div>
-                ))
-              )}
-            </div>
-              </>
-            )}
-            </Card>
-          <Pagination page={incCurrentPage - 1} totalPages={incTotalPages} totalItems={incFiltered.length} perPage={PER_PAGE} onPageChange={(p) => setIncPage(p + 1)} />
-        </>
-      )}
       </div>
       <MobileFab href="/orders/create" label="New order" />
     </>

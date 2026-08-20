@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { PageHeader, Card, Chip, Tabs, Select, InlineFilter, MultiCheck, ToolbarSearch, SortMenu, EmptyState, Toast, MobileListCard, Monogram, MobileToolbar, SheetSection } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { inr } from "@/lib/types";
-import { MOCK_SALES_MEMBERS } from "@/lib/mock";
+import { MOCK_SALES_MEMBERS, MOCK_ORDERS } from "@/lib/mock";
 import { useLeads, salesMemberName, type LeadStatus } from "@/lib/store/leads";
 
 /* ─── label + tone maps ─── */
@@ -38,9 +38,9 @@ function AssigneeCell({ id, value }: { id: string; value?: string }) {
 function LeadsPageInner() {
   const params = useSearchParams();
   const router = useRouter();
-  const initialTab = ((["stone", "consultation", "approvals"].includes(params.get("tab") || "") ? params.get("tab") : "approvals") as "stone" | "consultation" | "approvals");
+  const initialTab = ((["stone", "consultation", "approvals", "payment"].includes(params.get("tab") || "") ? params.get("tab") : "approvals") as "stone" | "consultation" | "approvals" | "payment");
   const { orderLeads, consultLeads, pendingApprovals, reviewedFulfillments, reviewFulfillment } = useLeads();
-  const [tab, setTab] = useState<"stone" | "consultation" | "approvals">(initialTab);
+  const [tab, setTab] = useState<"stone" | "consultation" | "approvals" | "payment">(initialTab);
 
   const [statusF, setStatusF] = useState<string[]>([]);
   const [reasonF, setReasonF] = useState<string[]>([]);
@@ -71,6 +71,15 @@ function LeadsPageInner() {
     return rows;
   }, [consultLeads, statusF, reasonF, assigneeF, search, sort]);
 
+  // ── Payment-pending orders (moved here from the Orders page) ──
+  const paymentRows = useMemo(() => {
+    let rows = MOCK_ORDERS.filter((o) => o.paymentStatus === "pending").filter((o) =>
+      !search || `${o.id} ${o.customerName} ${o.items.map((i) => i.name).join(" ")}`.toLowerCase().includes(search.toLowerCase()),
+    );
+    rows = [...rows].sort((a, b) => sort === "amount_high" ? b.total - a.total : sort === "amount_low" ? a.total - b.total : sort === "oldest" ? +new Date(a.placedAt) - +new Date(b.placedAt) : +new Date(b.placedAt) - +new Date(a.placedAt));
+    return rows;
+  }, [search, sort]);
+
   // ── Approvals tab state ──
   const [apprTypeF, setApprTypeF] = useState<string[]>([]);
   const [apprStatusF, setApprStatusF] = useState<string[]>([]);
@@ -100,6 +109,7 @@ function LeadsPageInner() {
     { key: "approvals", label: "Approvals", count: pendingApprovals.length },
     { key: "stone", label: "Stone leads", count: orderLeads.length },
     { key: "consultation", label: "Consultation leads", count: consultLeads.length },
+    { key: "payment", label: "Payment pending", count: MOCK_ORDERS.filter((o) => o.paymentStatus === "pending").length },
   ];
 
   return (
@@ -109,7 +119,7 @@ function LeadsPageInner() {
       <div className="mb-4"><Tabs tabs={TABS} active={tab} onChange={(k) => setTab(k as typeof tab)} /></div>
 
       {/* Toolbar (leads tabs only) — mobile: collapsed MobileToolbar row */}
-      {tab !== "approvals" && (
+      {(tab === "stone" || tab === "consultation") && (
         <>
           <MobileToolbar
             className="sm:hidden"
@@ -214,6 +224,53 @@ function LeadsPageInner() {
             {consultRows.length === 0 && <EmptyState inline icon="search" title="No leads found" description="Try clearing filters or search." />}
           </div>
         </Card>
+      )}
+
+      {/* PAYMENT PENDING — orders awaiting payment (moved from the Orders page) */}
+      {tab === "payment" && (
+        <>
+          <MobileToolbar
+            className="sm:hidden mb-3"
+            filterCount={0}
+            search={search}
+            onSearch={setSearch}
+            searchPlaceholder="Search order, customer…"
+            sort={<SortMenu value={sort} onChange={setSort} options={SORTS} />}
+          />
+          <div className="hidden sm:flex items-center justify-end gap-2 mb-3">
+            <ToolbarSearch value={search} onChange={setSearch} placeholder="Search order, customer…" />
+            <SortMenu value={sort} onChange={setSort} options={SORTS} />
+          </div>
+          <Card className="!p-0 overflow-hidden">
+            <div className="hidden lg:grid grid-cols-[80px_1.4fr_120px_140px_120px] gap-3 px-4 h-10 items-center text-[11px] tracking-[0.06em] uppercase sticky top-0 z-10" style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.borderSoft}` }}>
+              <span>Order</span><span>Customer</span><span>Created</span><span>Created by</span><span className="text-right">Amount</span>
+            </div>
+            <div className="max-h-[calc(100vh-300px)] overflow-y-auto">
+              {paymentRows.map((o) => (
+                <div key={o.id}>
+                  <MobileListCard
+                    className="lg:hidden"
+                    href={`/orders/${o.id}`}
+                    leading={<Monogram name={o.customerName} />}
+                    title={o.customerName}
+                    right={inr(o.total)}
+                    sub={o.items.length > 1 ? `${o.items[0]?.name} + ${o.items.length - 1} more` : o.items[0]?.name}
+                    status={{ label: "Payment pending", tone: "gold", extra: o.id }}
+                    time={o.placedAt}
+                  />
+                  <Link href={`/orders/${o.id}`} className="hidden lg:grid lg:grid-cols-[80px_1.4fr_120px_140px_120px] gap-3 px-4 py-3 lg:items-center transition-colors even:bg-[rgba(89,82,54,0.02)] hover:bg-[rgba(119,123,98,0.05)]" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
+                    <span className="text-[11.5px] tabular-nums" style={{ color: T.faint }}>#{o.id.replace("AL-ORD-", "")}</span>
+                    <span className="min-w-0"><span className="block text-[13.5px] font-medium truncate" style={{ color: T.text }}>{o.customerName}</span><span className="block text-[11.5px] truncate" style={{ color: T.faint }}>{o.items[0]?.name}{o.items.length > 1 ? ` +${o.items.length - 1}` : ""}</span></span>
+                    <span className="text-[12px] tabular-nums" style={{ color: T.muted }}>{fmtDate(o.placedAt)}</span>
+                    <span className="text-[12px] truncate capitalize" style={{ color: T.muted }}>{o.placedBy ? o.placedBy.split("@")[0] : "Customer"}</span>
+                    <span className="text-[13.5px] font-semibold tabular-nums lg:text-right" style={{ color: T.text }}>{inr(o.total)}</span>
+                  </Link>
+                </div>
+              ))}
+              {paymentRows.length === 0 && <EmptyState inline icon="check" title="No pending payments" description="Every order is paid up." />}
+            </div>
+          </Card>
+        </>
       )}
 
       {/* APPROVALS TOOLBAR — mobile: collapsed MobileToolbar row */}
