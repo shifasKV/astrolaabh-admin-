@@ -38,17 +38,13 @@ type Addr = { line1: string; line2: string; city: string; state: string; pincode
 const EMPTY_ADDR: Addr = { line1: "", line2: "", city: "", state: "", pincode: "" };
 const fmtAddr = (a: Addr) => [a.line1, a.line2, a.city, a.state && a.pincode ? `${a.state} ${a.pincode}` : a.state || a.pincode].filter(Boolean).join(", ");
 
-type CustomStone = { gem: string; gemName: string; english: string; ratti: string; carat: string; origin: string; shade: string; shadeHex: string; treatment: string; price: string };
+type CustomStone = { gem: string; gemName: string; english: string; ratti: string; carat: string; origin: string; shade: string; shadeHex: string; price: string };
 
 const GEM_OPTIONS = [
   { value: "pukhraj", label: "Pukhraj · Yellow Sapphire", english: "Yellow Sapphire", gemName: "Pukhraj" },
   { value: "manik", label: "Manik · Ruby", english: "Ruby", gemName: "Manik" },
   { value: "neelam", label: "Neelam · Blue Sapphire", english: "Blue Sapphire", gemName: "Neelam" },
   { value: "panna", label: "Panna · Emerald", english: "Emerald", gemName: "Panna" },
-];
-const TREATMENT_OPTIONS = [
-  { value: "Natural · Unheated", label: "Natural · Unheated" },
-  { value: "Natural · Untreated", label: "Natural · Untreated" },
 ];
 const SHADE_SWATCHES = ["#e7c14a", "#c0392b", "#2a4a8a", "#1f7a4d", "#d98324", "#7d5ba6", "#4a4a4a"];
 
@@ -111,8 +107,9 @@ export function OrderCreateFlow({ headerTitle = "Create order", submitLabel, suc
   const [stoneSku, setStoneSku] = useState(() => (prefill?.stoneSku && STONES.some((s) => s.sku === prefill.stoneSku) ? prefill.stoneSku : ""));
   const [customStone, setCustomStone] = useState<CustomStone | null>(null);
   const [stoneGem, setStoneGem] = useState("");           // "" = all gems
+  const [stonePreviewSku, setStonePreviewSku] = useState("");
   const [stoneCustomMode, setStoneCustomMode] = useState(false);
-  const [draftStone, setDraftStone] = useState<CustomStone>({ gem: "pukhraj", gemName: "Pukhraj", english: "Yellow Sapphire", ratti: "", carat: "", origin: "", shade: "", shadeHex: SHADE_SWATCHES[0], treatment: "Natural · Unheated", price: "" });
+  const [draftStone, setDraftStone] = useState<CustomStone>({ gem: "pukhraj", gemName: "Pukhraj", english: "Yellow Sapphire", ratti: "", carat: "", origin: "", shade: "", shadeHex: SHADE_SWATCHES[0], price: "" });
 
   // Design / setting
   const [form, setForm] = useState<string>("Ring");
@@ -138,6 +135,7 @@ export function OrderCreateFlow({ headerTitle = "Create order", submitLabel, suc
   const selectedStone = STONES.find((s) => s.sku === stoneSku);
   const selectedDesign = DESIGNS.find((d) => d.slug === designSlug);
   const previewDesign = DESIGNS.find((d) => d.slug === previewSlug);
+  const previewStone = STONES.find((s) => s.sku === stonePreviewSku);
   const energisation = ENERGISATION.find((e) => e.key === energisationKey);
 
   const customerMatches = useMemo(() => {
@@ -242,7 +240,7 @@ export function OrderCreateFlow({ headerTitle = "Create order", submitLabel, suc
     const details: FulfillmentDetails = {
       stone: {
         name: customStone ? `${customStone.gemName} · ${customStone.english}` : selectedStone ? `${selectedStone.gemName} · ${selectedStone.english}` : "",
-        sub: customStone ? [`${customStone.ratti} ratti`, customStone.origin, customStone.treatment].filter(Boolean).join(" · ") : selectedStone ? `${selectedStone.ratti} ratti · ${selectedStone.origin} · ${selectedStone.sku}` : undefined,
+        sub: customStone ? [`${customStone.ratti} ratti`, customStone.origin].filter(Boolean).join(" · ") : selectedStone ? `${selectedStone.ratti} ratti · ${selectedStone.origin} · ${selectedStone.sku}` : undefined,
         price: stoneAmount,
         shadeHex: customStone ? customStone.shadeHex : selectedStone?.shadeHex,
         custom: !!customStone,
@@ -347,7 +345,7 @@ export function OrderCreateFlow({ headerTitle = "Create order", submitLabel, suc
                 {!customer ? (
                   <div className="relative">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: T.faint }}><circle cx="11" cy="11" r="7" strokeWidth="1.5" /><path d="m16 16 4 4" strokeWidth="1.5" strokeLinecap="round" /></svg>
-                    <input value={customerQuery} onChange={(e) => { setCustomerQuery(e.target.value); setCustomerOpen(true); }} onFocusCapture={() => setCustomerOpen(true)} placeholder="Type a name, phone, or email…" className="w-full h-11 pl-9 pr-3 rounded-[10px] text-[14px] outline-none transition-shadow duration-200 focus:shadow-[0_0_0_3px_rgba(119,123,98,0.16)]" style={{ background: T.popover, border: `1px solid ${T.border}`, color: T.text }} />
+                    <input value={customerQuery} onChange={(e) => { setCustomerQuery(e.target.value); setCustomerOpen(true); }} onFocusCapture={() => setCustomerOpen(true)} placeholder="Type a name, phone, or email…" className="w-full h-11 pl-9 pr-3 rounded-[10px] text-[14px] outline-none transition-shadow duration-200 focus:shadow-[0_0_0_3px_rgba(160,125,56,0.16)]" style={{ background: T.popover, border: `1px solid ${T.border}`, color: T.text }} />
                     {customerOpen && (
                       <>
                         <div className="fixed inset-0 z-30" onClick={() => setCustomerOpen(false)} />
@@ -440,7 +438,7 @@ export function OrderCreateFlow({ headerTitle = "Create order", submitLabel, suc
                 {customStone ? (
                   <div className="flex flex-wrap items-center gap-3 rounded-[12px] px-3.5 py-3" style={{ background: "linear-gradient(135deg, rgba(160,125,56,0.14), rgba(160,125,56,0.05))", border: "1px solid rgba(160,125,56,0.55)", boxShadow: "0 0 0 3px rgba(160,125,56,0.10)" }}>
                     <span className="w-9 h-9 rounded-[10px] shrink-0" style={{ background: customStone.shadeHex, border: `1px solid ${T.borderSoft}` }} />
-                    <div className="min-w-0 flex-1"><div className="text-[13.5px] font-semibold truncate" style={{ color: T.text }}>{customStone.gemName} · {customStone.english} <Chip tone="gold">Custom</Chip></div><div className="text-[12px] truncate" style={{ color: T.muted }}>{customStone.ratti}r{customStone.origin ? ` · ${customStone.origin}` : ""}{customStone.treatment ? ` · ${customStone.treatment}` : ""}</div></div>
+                    <div className="min-w-0 flex-1"><div className="text-[13.5px] font-semibold truncate" style={{ color: T.text }}>{customStone.gemName} · {customStone.english} <Chip tone="gold">Custom</Chip></div><div className="text-[12px] truncate" style={{ color: T.muted }}>{customStone.ratti}r{customStone.origin ? ` · ${customStone.origin}` : ""}</div></div>
                     <div className="flex items-center gap-3 shrink-0"><span className="text-[14px] font-semibold tabular-nums" style={{ color: T.text }}>{inr(Number(customStone.price) || 0)}</span><button onClick={() => setCustomStone(null)} className="text-[12px] font-medium cursor-pointer hover:underline underline-offset-4" style={{ color: T.accent }}>Change</button></div>
                   </div>
                 ) : selectedStone ? (
@@ -469,28 +467,31 @@ export function OrderCreateFlow({ headerTitle = "Create order", submitLabel, suc
                         </div>
                         <div className="relative flex-1 min-w-[180px] sm:max-w-[240px] sm:flex-initial">
                           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={{ color: T.faint }}><circle cx="11" cy="11" r="7" strokeWidth="1.6" /><path d="m16 16 4 4" strokeWidth="1.6" strokeLinecap="round" /></svg>
-                          <input value={stoneQuery} onChange={(e) => setStoneQuery(e.target.value)} placeholder="Search ratti, origin, SKU…" className="w-full h-8 pl-8 pr-3 rounded-[9px] text-[13px] outline-none transition-shadow duration-200 focus:shadow-[0_0_0_3px_rgba(119,123,98,0.16)]" style={{ background: T.popover, border: `1px solid ${T.border}`, color: T.text }} />
+                          <input value={stoneQuery} onChange={(e) => setStoneQuery(e.target.value)} placeholder="Search ratti, origin, SKU…" className="w-full h-8 pl-8 pr-3 rounded-[9px] text-[13px] outline-none transition-shadow duration-200 focus:shadow-[0_0_0_3px_rgba(160,125,56,0.16)]" style={{ background: T.popover, border: `1px solid ${T.border}`, color: T.text }} />
                         </div>
                       </div>
                     )}
 
                     {!stoneCustomMode ? (
-                      <div className="rounded-[12px] overflow-hidden max-h-[340px] overflow-y-auto" style={{ border: `1px solid ${T.borderSoft}` }}>
-                        {stoneMatches.map((s, i) => (
-                          <button key={s.sku} onClick={() => pickStone(s.sku)} className="w-full flex items-center gap-3 px-3.5 py-2.5 text-left transition-colors hover:bg-[rgba(119,123,98,0.06)]" style={{ borderTop: i > 0 ? `1px solid ${T.borderSoft}` : undefined }}>
-                            <span className="w-8 h-8 rounded-[9px] shrink-0" style={{ background: s.shadeHex, border: `1px solid ${T.borderSoft}` }} />
-                            <span className="min-w-0 flex-1"><span className="block text-[13.5px] font-medium truncate" style={{ color: T.text }}>{s.gemName} · {s.english}</span><span className="block text-[11.5px] truncate" style={{ color: T.muted }}>{s.ratti}r · {s.origin} · {s.sku}</span></span>
-                            <span className="text-[13px] font-semibold tabular-nums shrink-0" style={{ color: T.text }}>{inr(s.price)}</span>
-                          </button>
-                        ))}
-                        {stoneMatches.length === 0 && <div className="px-3.5 py-4 text-[12.5px] text-center" style={{ color: T.faint }}>No {stoneGem || "stones"} match{stoneQuery ? ` “${stoneQuery}”` : ""} — try Custom stone.</div>}
+                      <div className="max-h-[420px] overflow-y-auto -mx-1 px-1">
+                        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
+                          {stoneMatches.map((s) => {
+                            const on = stoneSku === s.sku;
+                            return (
+                              <button key={s.sku} onClick={() => setStonePreviewSku(s.sku)} className="group relative text-left rounded-[12px] overflow-hidden transition-all duration-200 hover:-translate-y-0.5" style={{ background: T.card, border: `1.5px solid ${on ? T.accent : T.borderSoft}`, boxShadow: on ? `0 0 0 3px rgba(160,125,56,0.14), ${T.shadow}` : T.shadow }}>
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <span className="block aspect-square w-full" style={{ background: T.bg }}><img src={s.image} alt={`${s.gemName} · ${s.english}`} className={`w-full h-full ${imgFit(s.image)}`} /></span>
+                                {on && <span className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center" style={{ background: T.accent, color: T.accentInk }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3"><path d="M20 6 9 17l-5-5" /></svg></span>}
+                                <span className="absolute inset-x-0 bottom-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center py-1 text-[10px] font-medium" style={{ background: "rgba(41,38,23,0.55)", color: "#faf6ec" }}>View</span>
+                                <span className="block p-2"><span className="block text-[11.5px] font-semibold truncate" style={{ color: T.text }}>{s.gemName} · {s.english}</span><span className="block text-[10.5px] truncate mt-0.5" style={{ color: T.faint }}>{s.ratti}r · {s.origin}</span><span className="block text-[11px] font-semibold tabular-nums mt-0.5" style={{ color: T.muted }}>{inr(s.price)}</span></span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                        {stoneMatches.length === 0 && <p className="text-[12.5px] py-4 text-center" style={{ color: T.faint }}>No {stoneGem || "stones"} match{stoneQuery ? ` “${stoneQuery}”` : ""} — try Custom stone.</p>}
                       </div>
                     ) : (
                       <div className="rounded-[16px] p-5" style={{ background: T.card, border: `1px solid ${T.borderSoft}`, boxShadow: "inset 0 0 0 1px rgba(160,125,56,0.10)" }}>
-                        <div className="flex items-center gap-2 pb-3.5 mb-4" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
-                          <span className="w-6 h-6 rounded-[7px] flex items-center justify-center shrink-0" style={{ background: T.accentFaint, color: T.accent }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M12 3l2 5.5L19.5 10 14 12l-2 5.5L10 12 4.5 10 10 8.5 12 3z" /><path d="M19 15l1 2.5 2.5 1-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1 1-2.5z" /></svg></span>
-                          <div><div className="text-[13.5px] font-semibold" style={{ color: T.text }}>Custom stone</div><div className="text-[11.5px]" style={{ color: T.faint }}>Sourced outside the vault — enter its details.</div></div>
-                        </div>
                         <div className="space-y-4">
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <Select value={draftStone.gem} onChange={(v) => { const g = GEM_OPTIONS.find((o) => o.value === v)!; setDraftStone((p) => ({ ...p, gem: v, gemName: g.gemName, english: g.english })); }} label="Gemstone" options={GEM_OPTIONS.map((o) => ({ value: o.value, label: o.label }))} />
@@ -500,10 +501,7 @@ export function OrderCreateFlow({ headerTitle = "Create order", submitLabel, suc
                             <Input value={draftStone.ratti} onChange={(v) => setDraftStone((p) => ({ ...p, ratti: v.replace(/[^0-9.]/g, "") }))} label="Ratti" placeholder="e.g. 5.9" required />
                             <Input value={draftStone.price} onChange={(v) => setDraftStone((p) => ({ ...p, price: v.replace(/[^0-9]/g, "") }))} label="Price (₹)" inputMode="numeric" placeholder="e.g. 250000" required />
                           </div>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <Input value={draftStone.origin} onChange={(v) => setDraftStone((p) => ({ ...p, origin: v }))} label="Origin (optional)" placeholder="e.g. Ceylon (Sri Lanka)" />
-                            <Select value={draftStone.treatment} onChange={(v) => setDraftStone((p) => ({ ...p, treatment: v }))} label="Treatment" options={TREATMENT_OPTIONS} />
-                          </div>
+                          <Input value={draftStone.origin} onChange={(v) => setDraftStone((p) => ({ ...p, origin: v }))} label="Origin (optional)" placeholder="e.g. Ceylon (Sri Lanka)" />
                           <div className="flex justify-end pt-1">
                             <GoldBtn onClick={saveCustomStone} disabled={!draftStone.ratti || !draftStone.price}>Use this stone</GoldBtn>
                           </div>
@@ -540,7 +538,7 @@ export function OrderCreateFlow({ headerTitle = "Create order", submitLabel, suc
                   {form !== "Loose stone" && (
                     <div className="relative flex-1 min-w-[180px] sm:max-w-[240px] sm:flex-initial">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={{ color: T.faint }}><circle cx="11" cy="11" r="7" strokeWidth="1.6" /><path d="m16 16 4 4" strokeWidth="1.6" strokeLinecap="round" /></svg>
-                      <input value={designQuery} onChange={(e) => setDesignQuery(e.target.value)} placeholder={`Search ${form.toLowerCase()} designs…`} className="w-full h-8 pl-8 pr-3 rounded-[9px] text-[13px] outline-none transition-shadow duration-200 focus:shadow-[0_0_0_3px_rgba(119,123,98,0.16)]" style={{ background: T.popover, border: `1px solid ${T.border}`, color: T.text }} />
+                      <input value={designQuery} onChange={(e) => setDesignQuery(e.target.value)} placeholder={`Search ${form.toLowerCase()} designs…`} className="w-full h-8 pl-8 pr-3 rounded-[9px] text-[13px] outline-none transition-shadow duration-200 focus:shadow-[0_0_0_3px_rgba(160,125,56,0.16)]" style={{ background: T.popover, border: `1px solid ${T.border}`, color: T.text }} />
                     </div>
                   )}
                 </div>
@@ -704,6 +702,33 @@ export function OrderCreateFlow({ headerTitle = "Create order", submitLabel, suc
         {cdPreview && (
           // eslint-disable-next-line @next/next/no-img-element
           <div className="rounded-[12px] overflow-hidden" style={{ background: T.bg, border: `1px solid ${T.borderSoft}` }}><img src={cdPreview} alt="Reference" className="w-full max-h-[70vh] object-contain" /></div>
+        )}
+      </Modal>
+
+      {/* Stone preview modal */}
+      <Modal open={!!previewStone} onClose={() => setStonePreviewSku("")} title={previewStone ? `${previewStone.gemName} · ${previewStone.english}` : "Stone"}>
+        {previewStone && (
+          <div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <div className="rounded-[14px] overflow-hidden" style={{ background: T.bg, border: `1px solid ${T.borderSoft}` }}>
+              <img src={previewStone.image} alt={`${previewStone.gemName} · ${previewStone.english}`} className={`w-full aspect-square ${imgFit(previewStone.image)}`} />
+            </div>
+            <div className="flex items-center justify-between gap-3 mt-4">
+              <div className="min-w-0">
+                <div className="text-[15px] font-semibold" style={{ color: T.text }}>{previewStone.gemName} · {previewStone.english}</div>
+                <div className="text-[12.5px] mt-0.5" style={{ color: T.muted }}>{previewStone.ratti}r · {previewStone.origin} · {previewStone.sku}</div>
+              </div>
+              <div className="text-[18px] font-semibold tabular-nums shrink-0" style={{ color: T.text }}>{inr(previewStone.price)}</div>
+            </div>
+            <div className="flex justify-end gap-2.5 mt-5">
+              <GhostBtn onClick={() => setStonePreviewSku("")}>Close</GhostBtn>
+              {stoneSku === previewStone.sku ? (
+                <GhostBtn onClick={() => { setStoneSku(""); setStonePreviewSku(""); }}>Remove selection</GhostBtn>
+              ) : (
+                <GoldBtn onClick={() => { pickStone(previewStone.sku); setStonePreviewSku(""); }}>Select this stone</GoldBtn>
+              )}
+            </div>
+          </div>
         )}
       </Modal>
 

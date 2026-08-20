@@ -212,7 +212,7 @@ function ConsultationInner({ headerTitle = "Book consultation", submitLabel, suc
                 {!customer ? (
                   <div className="relative">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: T.faint }}><circle cx="11" cy="11" r="7" strokeWidth="1.5" /><path d="m16 16 4 4" strokeWidth="1.5" strokeLinecap="round" /></svg>
-                    <input value={customerQuery} onChange={(e) => { setCustomerQuery(e.target.value); setCustomerOpen(true); }} onFocusCapture={() => setCustomerOpen(true)} placeholder="Type a name, phone, or email…" className="w-full h-11 pl-9 pr-3 rounded-[10px] text-[14px] outline-none transition-shadow duration-200 focus:shadow-[0_0_0_3px_rgba(119,123,98,0.16)]" style={{ background: T.popover, border: `1px solid ${T.border}`, color: T.text }} />
+                    <input value={customerQuery} onChange={(e) => { setCustomerQuery(e.target.value); setCustomerOpen(true); }} onFocusCapture={() => setCustomerOpen(true)} placeholder="Type a name, phone, or email…" className="w-full h-11 pl-9 pr-3 rounded-[10px] text-[14px] outline-none transition-shadow duration-200 focus:shadow-[0_0_0_3px_rgba(160,125,56,0.16)]" style={{ background: T.popover, border: `1px solid ${T.border}`, color: T.text }} />
                     {customerOpen && (
                       <>
                         <div className="fixed inset-0 z-30" onClick={() => setCustomerOpen(false)} />

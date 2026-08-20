@@ -21,7 +21,7 @@ export default function AffiliateSignupPage() {
   const [resendIn, setResendIn] = useState(0);
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  const inputCls = "w-full h-11 px-3.5 rounded-[10px] text-[14px] outline-none transition-shadow duration-200 focus:shadow-[0_0_0_3px_rgba(119,123,98,0.16)]";
+  const inputCls = "w-full h-11 px-3.5 rounded-[10px] text-[14px] outline-none transition-shadow duration-200 focus:shadow-[0_0_0_3px_rgba(160,125,56,0.16)]";
   const inputStyle = { background: "#fbf8f1", border: `1px solid ${T.border}`, color: T.text, boxShadow: "inset 0 1px 2px rgba(43,42,34,0.03)" };
 
   useEffect(() => {

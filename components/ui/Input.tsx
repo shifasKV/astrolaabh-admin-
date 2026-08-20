@@ -154,7 +154,7 @@ export function Select({ value, onChange, options, label, className = "", disabl
         onClick={() => !disabled && setOpen(!open)}
         onKeyDown={handleKeyDown}
         disabled={disabled}
-        className={`${height} px-3.5 rounded-[9px] text-[13.5px] w-full text-left flex items-center justify-between gap-2 outline-none disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors`}
+        className={`${height} px-3.5 rounded-[10px] text-[13.5px] w-full text-left flex items-center justify-between gap-2 outline-none disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-shadow duration-200 shadow-[0_1px_2px_rgba(43,42,34,0.06)] focus-visible:shadow-[0_0_0_3px_rgba(160,125,56,0.16),0_1px_2px_rgba(43,42,34,0.06)]`}
         style={{ ...INPUT_STYLE, ...(error ? { borderColor: T.danger, boxShadow: "0 0 0 3px rgba(163,73,63,0.1)" } : {}), color: selected ? T.text : T.faint }}
       >
         <span className="truncate">{triggerLabel}</span>
@@ -295,7 +295,7 @@ export function DateInput({ value, onChange, label, className = "", placeholder 
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="h-10 px-3.5 rounded-[9px] text-[13.5px] w-full text-left flex items-center justify-between gap-2 outline-none cursor-pointer"
+        className="h-10 px-3.5 rounded-[10px] text-[13.5px] w-full text-left flex items-center justify-between gap-2 outline-none cursor-pointer transition-shadow duration-200 shadow-[0_1px_2px_rgba(43,42,34,0.06)] focus-visible:shadow-[0_0_0_3px_rgba(160,125,56,0.16),0_1px_2px_rgba(43,42,34,0.06)]"
         style={{ ...INPUT_STYLE, color: parsed ? T.text : T.faint }}
       >
         <span>{parsed ? formatDate(parsed) : (placeholder ?? "Select date…")}</span>
@@ -411,7 +411,7 @@ export function TimeInput({ value, onChange, label, className = "", placeholder 
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="h-10 px-3.5 rounded-[9px] text-[13.5px] w-full text-left flex items-center justify-between gap-2 outline-none cursor-pointer"
+        className="h-10 px-3.5 rounded-[10px] text-[13.5px] w-full text-left flex items-center justify-between gap-2 outline-none cursor-pointer transition-shadow duration-200 shadow-[0_1px_2px_rgba(43,42,34,0.06)] focus-visible:shadow-[0_0_0_3px_rgba(160,125,56,0.16),0_1px_2px_rgba(43,42,34,0.06)]"
         style={{ ...INPUT_STYLE, color: value ? T.text : T.faint }}
       >
         <span>{value || (placeholder ?? "Select time…")}</span>
@@ -476,7 +476,7 @@ export function Textarea({ value, onChange, placeholder, label, rows = 4, classN
         placeholder={placeholder}
         rows={rows}
         aria-invalid={!!error}
-        className="w-full px-3.5 py-2.5 rounded-[9px] text-[13.5px] outline-none resize-y"
+        className="w-full px-3.5 py-2.5 rounded-[10px] text-[13.5px] outline-none resize-y transition-shadow duration-200 shadow-[0_1px_2px_rgba(43,42,34,0.06)] focus:shadow-[0_0_0_3px_rgba(160,125,56,0.16),0_1px_2px_rgba(43,42,34,0.06)]"
         style={error ? { ...INPUT_STYLE, borderColor: T.danger, boxShadow: "0 0 0 3px rgba(163,73,63,0.1)" } : INPUT_STYLE}
       />
       <FieldError message={error} />

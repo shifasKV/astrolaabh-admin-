@@ -61,5 +61,5 @@ export const STATUS_COLORS = {
 
 export type StatusTone = keyof typeof STATUS_COLORS;
 
-export const INPUT_CLASS = "h-10 px-3.5 rounded-[9px] text-[13.5px] outline-none w-full transition-shadow duration-200 focus:shadow-[0_0_0_3px_rgba(119,123,98,0.18)]";
-export const INPUT_STYLE = { background: T.bg, border: `1px solid ${T.border}`, color: T.text };
+export const INPUT_CLASS = "h-10 px-3.5 rounded-[10px] text-[13.5px] outline-none w-full transition-shadow duration-200 shadow-[0_1px_2px_rgba(43,42,34,0.06)] focus:shadow-[0_0_0_3px_rgba(160,125,56,0.16),0_1px_2px_rgba(43,42,34,0.06)]";
+export const INPUT_STYLE = { background: T.popover, border: "1px solid rgba(89,82,54,0.22)", color: T.text };
