@@ -407,57 +407,58 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               )}
 
               {tier && (
-                <Link
-                  href={energisation ? `/energisation/${energisation.id}` : "#"}
-                  className="block rounded-[9px] p-4 transition-all duration-150 hover:brightness-[0.97] hover:shadow-md cursor-pointer group"
-                  style={{ background: T.card, border: `1px solid ${T.borderSoft}` }}
-                >
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-[13.5px] font-semibold group-hover:underline" style={{ color: T.accent }}>{tier.name}</span>
-                        <span className="text-[11px]" style={{ color: T.faint }}>{tier.sanskrit}</span>
-                        <Chip tone={localEnergStatus === "completed" ? "good" : localEnergStatus === "scheduled" || localEnergStatus === "in_progress" ? "gold" : "muted"}>
-                          {localEnergStatus === "completed" ? "Completed" : localEnergStatus === "scheduled" || localEnergStatus === "in_progress" ? "Scheduled" : "Not scheduled"}
-                        </Chip>
+                <div className="rounded-[12px] p-4" style={{ background: T.card, border: `1px solid ${localEnergStatus === "completed" ? "rgba(95,112,64,0.35)" : T.borderSoft}` }}>
+                  {/* Header — ritual identity + status */}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="w-10 h-10 rounded-[11px] flex items-center justify-center shrink-0" style={{ background: localEnergStatus === "completed" ? "rgba(95,112,64,0.13)" : T.accentFaint, color: localEnergStatus === "completed" ? T.good : T.accent }}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" className="w-[18px] h-[18px]"><path d="M12 3c2 3.5 5 5.5 5 9a5 5 0 0 1-10 0c0-3.5 3-5.5 5-9z" /></svg>
+                      </span>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-[14.5px] font-semibold" style={{ color: T.text }}>{tier.name}</span>
+                          <span className="text-[11.5px]" style={{ color: T.faint }}>{tier.sanskrit}</span>
+                        </div>
+                        <div className="text-[12px] mt-0.5" style={{ color: T.muted }}>{tier.duration}{tier.fee > 0 ? ` · ${inr(tier.fee)}` : " · included free"}</div>
                       </div>
-                      <div className="flex items-center gap-3 text-[12px]" style={{ color: T.muted }}>
-                        <span>{tier.duration}</span>
-                        {energisation?.scheduledAt && (
-                          <>
-                            <span style={{ color: T.faint }}>·</span>
-                            <span className="tabular-nums">
-                              {new Date(energisation.scheduledAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-                            </span>
-                            <span style={{ color: T.faint }}>·</span>
-                            <span className="tabular-nums">
-                              {new Date(energisation.scheduledAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })}
-                            </span>
-                          </>
-                        )}
-                        {energisation?.assignedTo && (
-                          <>
-                            <span style={{ color: T.faint }}>·</span>
-                            <span>{energisation.assignedTo}</span>
-                          </>
-                        )}
+                    </div>
+                    <Chip tone={localEnergStatus === "completed" ? "good" : localEnergStatus === "scheduled" || localEnergStatus === "in_progress" ? "gold" : "muted"}>
+                      {localEnergStatus === "completed" ? "Completed" : localEnergStatus === "scheduled" || localEnergStatus === "in_progress" ? "Scheduled" : "Not scheduled"}
+                    </Chip>
+                  </div>
+
+                  {/* Session details — labeled, not a dot run-on */}
+                  {(localEnergStatus === "scheduled" || localEnergStatus === "in_progress" || localEnergStatus === "completed") && energisation?.scheduledAt && (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 mt-4 pt-3.5" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+                      <div>
+                        <div className="text-[10px] tracking-[0.1em] uppercase mb-0.5" style={{ color: T.faint }}>Date</div>
+                        <div className="text-[13px] font-medium tabular-nums" style={{ color: T.text }}>{new Date(energisation.scheduledAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</div>
                       </div>
-                      {tier.fee > 0 && (
-                        <div className="text-[12px] font-medium tabular-nums mt-1" style={{ color: T.text }}>
-                          {inr(tier.fee)}
+                      <div>
+                        <div className="text-[10px] tracking-[0.1em] uppercase mb-0.5" style={{ color: T.faint }}>Time</div>
+                        <div className="text-[13px] font-medium tabular-nums" style={{ color: T.text }}>{new Date(energisation.scheduledAt).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true })}</div>
+                      </div>
+                      {energisation.assignedTo && (
+                        <div>
+                          <div className="text-[10px] tracking-[0.1em] uppercase mb-0.5" style={{ color: T.faint }}>Guruji</div>
+                          <div className="text-[13px] font-medium truncate" style={{ color: T.text }}>{energisation.assignedTo}</div>
                         </div>
                       )}
                     </div>
-                    <div className="shrink-0">
+                  )}
+
+                  {/* Footer — link to the session + actions */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 mt-4 pt-3.5" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+                    {energisation ? (
+                      <Link href={`/energisation/${energisation.id}`} className="text-[12px] font-medium hover:underline underline-offset-2" style={{ color: T.accent }}>View session ↗</Link>
+                    ) : <span />}
+                    <div className="flex items-center gap-2">
                       {localEnergStatus !== "completed" && localEnergStatus !== "scheduled" && localEnergStatus !== "in_progress" && (
-                        <span onClick={(e) => e.preventDefault()}>
-                          <GoldBtn onClick={() => setShowSchedule(true)}>Schedule</GoldBtn>
-                        </span>
+                        <GoldBtn onClick={() => setShowSchedule(true)}>Schedule</GoldBtn>
                       )}
                       {(localEnergStatus === "scheduled" || localEnergStatus === "in_progress") && (
-                        <span className="flex items-center gap-2" onClick={(e) => e.preventDefault()}>
+                        <>
                           <GhostBtn onClick={() => {
-                            // Prefill the modal from the scheduled session
                             if (energisation?.scheduledAt) {
                               const d = new Date(energisation.scheduledAt);
                               setScheduleDate(energisation.scheduledAt.split("T")[0]);
@@ -467,11 +468,14 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                             setShowSchedule(true);
                           }}>Edit</GhostBtn>
                           <GoldBtn onClick={() => setConfirmEnergComplete(true)} disabled={!allStonesReceived}>Mark as completed</GoldBtn>
-                        </span>
+                        </>
+                      )}
+                      {localEnergStatus === "completed" && energisation?.completedAt && (
+                        <span className="text-[12px]" style={{ color: T.good }}>Completed {new Date(energisation.completedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>
                       )}
                     </div>
                   </div>
-                </Link>
+                </div>
               )}
 
               {!tier && !energisation && (
