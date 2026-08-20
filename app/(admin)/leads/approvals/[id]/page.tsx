@@ -65,7 +65,7 @@ export default function ApprovalDetailPage({ params }: { params: Promise<{ id: s
       <div className="mb-4"><BackLink label="Approvals" href="/leads?tab=approvals" /></div>
 
       {/* Status banner */}
-      <div className="rounded-[14px] px-4 py-3.5 mb-5 flex items-center gap-3 max-w-[900px]" style={{ background: meta.bg, border: `1px solid ${meta.border}` }}>
+      <div className="rounded-[14px] px-4 py-3.5 mb-5 flex items-center gap-3" style={{ background: meta.bg, border: `1px solid ${meta.border}` }}>
         <span className="w-9 h-9 rounded-[10px] flex items-center justify-center shrink-0" style={{ background: T.card, color: meta.fg, border: `1px solid ${meta.border}` }}>
           {f.approval === "pending" ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-[18px] h-[18px]"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
             : f.approval === "rejected" ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" className="w-[18px] h-[18px]"><path d="M18 6 6 18M6 6l12 12" /></svg>
@@ -84,7 +84,7 @@ export default function ApprovalDetailPage({ params }: { params: Promise<{ id: s
         )}
       </div>
 
-      <div className="grid lg:grid-cols-[1fr_340px] gap-5 items-start max-w-[900px]">
+      <div className="grid lg:grid-cols-[1fr_340px] gap-5 items-start">
         {/* Left — who + what */}
         <Card className="!p-6">
           <div className="flex items-center gap-3">
