@@ -130,7 +130,7 @@ export default function ApprovalDetailPage({ params }: { params: Promise<{ id: s
                   ) : f.details.design.custom ? (
                     <div className="rounded-[12px] p-4" style={{ background: "rgba(160,125,56,0.07)", border: `1px solid rgba(160,125,56,0.28)` }}>
                       <div className="flex items-center justify-between gap-2">
-                        <span className="flex items-center gap-2"><svg viewBox="0 0 24 24" fill="none" stroke={T.gold} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg><span className="text-[13.5px] font-semibold" style={{ color: T.text }}>{f.details.design.name}</span></span>
+                        <span className="flex items-center gap-2"><svg viewBox="0 0 24 24" fill="none" stroke={T.gold} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M12 3l2 5.5L19.5 10 14 12l-2 5.5L10 12 4.5 10 10 8.5 12 3z" /><path d="M19 15l1 2.5 2.5 1-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1 1-2.5z" /></svg><span className="text-[13.5px] font-semibold" style={{ color: T.text }}>{f.details.design.name}</span></span>
                         {typeof f.details.design.price === "number" && <span className="text-[13.5px] font-semibold tabular-nums" style={{ color: T.text }}>{inr(f.details.design.price)}</span>}
                       </div>
                       {f.details.design.sub && <div className="text-[12px] mt-1" style={{ color: T.muted }}>{f.details.design.sub}</div>}

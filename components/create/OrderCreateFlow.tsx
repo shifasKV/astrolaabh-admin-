@@ -518,7 +518,7 @@ export function OrderCreateFlow({ headerTitle = "Create order", submitLabel, suc
                     ) : (
                       <div className="rounded-[16px] p-5" style={{ background: T.card, border: `1px solid ${T.borderSoft}`, boxShadow: "inset 0 0 0 1px rgba(160,125,56,0.10)" }}>
                         <div className="flex items-center gap-2 pb-3.5 mb-4" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
-                          <span className="w-6 h-6 rounded-[7px] flex items-center justify-center shrink-0" style={{ background: T.accentFaint, color: T.accent }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg></span>
+                          <span className="w-6 h-6 rounded-[7px] flex items-center justify-center shrink-0" style={{ background: T.accentFaint, color: T.accent }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M12 3l2 5.5L19.5 10 14 12l-2 5.5L10 12 4.5 10 10 8.5 12 3z" /><path d="M19 15l1 2.5 2.5 1-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1 1-2.5z" /></svg></span>
                           <div><div className="text-[13.5px] font-semibold" style={{ color: T.text }}>Custom {form.toLowerCase()}</div><div className="text-[11.5px]" style={{ color: T.faint }}>Specify the metal and share references for the workshop.</div></div>
                         </div>
                         <div className="space-y-4">
