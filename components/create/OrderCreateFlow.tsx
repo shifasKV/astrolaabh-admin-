@@ -392,7 +392,7 @@ export function OrderCreateFlow({ headerTitle = "Create order", submitLabel, suc
                   </div>
                 ) : (
                   <div className="space-y-5">
-                    <div className="flex items-center gap-3 rounded-[12px] px-3.5 py-3" style={{ background: T.accentFaint, border: `1px solid ${T.accentBorder}` }}>
+                    <div className="flex items-center gap-3 rounded-[12px] px-3.5 py-3" style={{ background: "linear-gradient(135deg, rgba(119,123,98,0.18), rgba(119,123,98,0.08))", border: `1px solid ${T.accent}`, boxShadow: "0 0 0 3px rgba(119,123,98,0.10)" }}>
                       <span className="w-9 h-9 rounded-[10px] flex items-center justify-center text-[13px] font-semibold shrink-0" style={{ background: T.card, border: `1px solid ${T.borderSoft}`, color: T.accent }}>{selectedCustomer!.name.split(" ").map((w) => w[0]).slice(0, 2).join("")}</span>
                       <div className="min-w-0 flex-1"><div className="text-[13.5px] font-semibold truncate" style={{ color: T.text }}>{selectedCustomer!.name}</div><div className="text-[12px] truncate" style={{ color: T.muted }}>{selectedCustomer!.phone} · {selectedCustomer!.email}</div></div>
                       <button onClick={clearCustomer} className="text-[12px] font-medium shrink-0 cursor-pointer hover:underline underline-offset-4" style={{ color: T.accent }}>Change</button>
@@ -408,7 +408,7 @@ export function OrderCreateFlow({ headerTitle = "Create order", submitLabel, suc
                         {addresses.map((a, i) => {
                           const on = selectedAddrIdx === i;
                           return (
-                            <button key={i} onClick={() => setSelectedAddrIdx(i)} className="w-full flex items-start gap-2.5 text-left rounded-[10px] px-3.5 py-2.5 transition-colors" style={{ background: on ? T.accentFaint : T.popover, border: `1px solid ${on ? T.accentBorder : T.border}` }}>
+                            <button key={i} onClick={() => setSelectedAddrIdx(i)} className="w-full flex items-start gap-2.5 text-left rounded-[10px] px-3.5 py-2.5 transition-colors" style={on ? { background: "linear-gradient(135deg, rgba(119,123,98,0.18), rgba(119,123,98,0.08))", border: `1px solid ${T.accent}`, boxShadow: "0 0 0 3px rgba(119,123,98,0.10)" } : { background: T.popover, border: `1px solid ${T.border}` }}>
                               <span className="mt-0.5 w-[15px] h-[15px] rounded-full flex items-center justify-center shrink-0" style={{ border: `1.5px solid ${on ? T.accent : "rgba(89,82,54,0.3)"}` }}>{on && <span className="w-[7px] h-[7px] rounded-full" style={{ background: T.accent }} />}</span>
                               <span className="min-w-0"><span className="flex items-center gap-2"><span className="text-[12.5px] font-medium" style={{ color: T.text }}>{a.label}</span>{i === 0 && <Chip tone="muted">On file</Chip>}</span><span className="block text-[12px] mt-0.5" style={{ color: T.muted }}>{a.text}</span></span>
                             </button>
@@ -438,13 +438,13 @@ export function OrderCreateFlow({ headerTitle = "Create order", submitLabel, suc
                 </div>
 
                 {customStone ? (
-                  <div className="mt-4 flex flex-wrap items-center gap-3 rounded-[12px] px-3.5 py-3" style={{ background: T.accentFaint, border: `1px solid ${T.accentBorder}` }}>
+                  <div className="mt-4 flex flex-wrap items-center gap-3 rounded-[12px] px-3.5 py-3" style={{ background: "linear-gradient(135deg, rgba(119,123,98,0.18), rgba(119,123,98,0.08))", border: `1px solid ${T.accent}`, boxShadow: "0 0 0 3px rgba(119,123,98,0.10)" }}>
                     <span className="w-9 h-9 rounded-[10px] shrink-0" style={{ background: customStone.shadeHex, border: `1px solid ${T.borderSoft}` }} />
                     <div className="min-w-0 flex-1"><div className="text-[13.5px] font-semibold truncate" style={{ color: T.text }}>{customStone.gemName} · {customStone.english} <Chip tone="gold">Custom</Chip></div><div className="text-[12px] truncate" style={{ color: T.muted }}>{customStone.ratti}r{customStone.origin ? ` · ${customStone.origin}` : ""}{customStone.treatment ? ` · ${customStone.treatment}` : ""}</div></div>
                     <div className="flex items-center gap-3 shrink-0"><span className="text-[14px] font-semibold tabular-nums" style={{ color: T.text }}>{inr(Number(customStone.price) || 0)}</span><button onClick={() => setCustomStone(null)} className="text-[12px] font-medium cursor-pointer hover:underline underline-offset-4" style={{ color: T.accent }}>Change</button></div>
                   </div>
                 ) : selectedStone ? (
-                  <div className="mt-4 flex flex-wrap items-center gap-3 rounded-[12px] px-3.5 py-3" style={{ background: T.accentFaint, border: `1px solid ${T.accentBorder}` }}>
+                  <div className="mt-4 flex flex-wrap items-center gap-3 rounded-[12px] px-3.5 py-3" style={{ background: "linear-gradient(135deg, rgba(119,123,98,0.18), rgba(119,123,98,0.08))", border: `1px solid ${T.accent}`, boxShadow: "0 0 0 3px rgba(119,123,98,0.10)" }}>
                     <span className="w-9 h-9 rounded-[10px] shrink-0" style={{ background: selectedStone.shadeHex, border: `1px solid ${T.borderSoft}` }} />
                     <div className="min-w-0 flex-1"><div className="text-[13.5px] font-semibold truncate" style={{ color: T.text }}>{selectedStone.gemName} · {selectedStone.english}</div><div className="text-[12px] truncate" style={{ color: T.muted }}>{selectedStone.ratti}r · {selectedStone.origin} · {selectedStone.sku}</div></div>
                     <div className="flex items-center gap-3 shrink-0"><span className="text-[14px] font-semibold tabular-nums" style={{ color: T.text }}>{inr(selectedStone.price)}</span><button onClick={() => setStoneSku("")} className="text-[12px] font-medium cursor-pointer hover:underline underline-offset-4" style={{ color: T.accent }}>Change</button></div>
@@ -569,7 +569,7 @@ export function OrderCreateFlow({ headerTitle = "Create order", submitLabel, suc
                   {ENERGISATION.map((e) => {
                     const active = energisationKey === e.key;
                     return (
-                      <button key={e.key} onClick={() => setEnergisationKey(e.key)} className="text-left rounded-[12px] px-4 py-3 cursor-pointer transition-all duration-150" style={{ background: active ? T.accentFaint : T.popover, border: `1px solid ${active ? T.accentBorder : T.borderSoft}`, boxShadow: active ? `inset 0 0 0 1px ${T.accentBorder}` : "none" }}>
+                      <button key={e.key} onClick={() => setEnergisationKey(e.key)} className="text-left rounded-[12px] px-4 py-3 cursor-pointer transition-all duration-150" style={active ? { background: "linear-gradient(135deg, rgba(119,123,98,0.18), rgba(119,123,98,0.08))", border: `1px solid ${T.accent}`, boxShadow: "0 0 0 3px rgba(119,123,98,0.10)" } : { background: T.popover, border: `1px solid ${T.borderSoft}` }}>
                         <div className="flex items-baseline justify-between gap-2"><span className="text-[13.5px] font-semibold" style={{ color: T.text }}>{e.name}</span><span className="text-[12.5px] font-semibold tabular-nums" style={{ color: e.fee === 0 ? T.good : T.text }}>{e.fee === 0 ? "Included" : inr(e.fee)}</span></div>
                         <div className="text-[11.5px] mt-0.5" style={{ color: T.muted }}>{e.duration}</div>
                       </button>

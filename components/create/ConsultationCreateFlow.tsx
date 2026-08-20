@@ -254,7 +254,7 @@ function ConsultationInner({ headerTitle = "Book consultation", submitLabel, suc
                     </div>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-3 rounded-[12px] px-3.5 py-3" style={{ background: T.accentFaint, border: `1px solid ${T.accentBorder}` }}>
+                  <div className="flex items-center gap-3 rounded-[12px] px-3.5 py-3" style={{ background: "linear-gradient(135deg, rgba(119,123,98,0.18), rgba(119,123,98,0.08))", border: `1px solid ${T.accent}`, boxShadow: "0 0 0 3px rgba(119,123,98,0.10)" }}>
                     <span className="w-9 h-9 rounded-[10px] flex items-center justify-center text-[13px] font-semibold shrink-0" style={{ background: T.card, border: `1px solid ${T.borderSoft}`, color: T.accent }}>{selectedCustomer!.name.split(" ").map((w) => w[0]).slice(0, 2).join("")}</span>
                     <div className="min-w-0 flex-1"><div className="text-[13.5px] font-semibold truncate" style={{ color: T.text }}>{selectedCustomer!.name}</div><div className="text-[12px] truncate" style={{ color: T.muted }}>{selectedCustomer!.phone} · {selectedCustomer!.email}</div></div>
                     <button onClick={clearCustomer} className="text-[12px] font-medium shrink-0 cursor-pointer hover:underline underline-offset-4" style={{ color: T.accent }}>Change</button>
@@ -279,7 +279,7 @@ function ConsultationInner({ headerTitle = "Book consultation", submitLabel, suc
                     const on = selectedExpert?.id === ep.id;
                     const initials = ep.name.replace(/^(Dr|Pt|Acharya)\.?\s*/i, "").split(" ").map((w) => w[0]).slice(0, 2).join("");
                     return (
-                      <button key={ep.id} type="button" onClick={() => pickExpert(ep)} className="group relative text-left rounded-[14px] p-4 transition-all duration-200 cursor-pointer hover:-translate-y-0.5" style={{ background: on ? T.accentFaint : T.card, border: `1px solid ${on ? T.accent : T.borderSoft}`, boxShadow: on ? `0 0 0 3px rgba(119,123,98,0.16), ${T.shadow}` : T.shadow }}>
+                      <button key={ep.id} type="button" onClick={() => pickExpert(ep)} className="group relative text-left rounded-[14px] p-4 transition-all duration-200 cursor-pointer hover:-translate-y-0.5" style={on ? { background: "linear-gradient(135deg, rgba(119,123,98,0.18), rgba(119,123,98,0.08))", border: `1px solid ${T.accent}`, boxShadow: `0 0 0 3px rgba(119,123,98,0.14), ${T.shadow}` } : { background: T.card, border: `1px solid ${T.borderSoft}`, boxShadow: T.shadow }}>
                         {on && <span className="absolute top-3 right-3 w-5 h-5 rounded-full flex items-center justify-center" style={{ background: T.accent, color: T.accentInk }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3"><path d="M20 6 9 17l-5-5" /></svg></span>}
                         <div className="flex items-start gap-3">
                           <span className="w-10 h-10 rounded-full flex items-center justify-center text-[13px] font-semibold shrink-0" style={{ background: on ? T.card : T.accentFaint, border: `1px solid ${T.accentBorder}`, color: T.accent }}>{initials}</span>
