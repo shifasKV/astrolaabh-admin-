@@ -367,27 +367,29 @@ export function OrderCreateFlow({ headerTitle = "Create order", submitLabel, suc
                     )}
                   </div>
                 ) : newCustomer ? (
-                  <div className="space-y-5">
-                    <div className="flex items-center justify-between">
-                      <span className={eyebrow} style={{ color: T.faint }}>New customer</span>
-                      <button onClick={clearCustomer} className="inline-flex items-center gap-1.5 text-[12px] font-medium h-8 px-3 rounded-[9px] cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.08)]" style={{ color: T.muted, border: `1px solid ${T.border}` }}><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" className="w-3.5 h-3.5"><path d="M10 3.5 5.5 8 10 12.5" /></svg>Back to search</button>
+                  <div className="rounded-[12px] p-4" style={{ background: "rgba(119,123,98,0.07)", border: `1px solid ${T.accentBorder}` }}>
+                    <div className="flex items-center justify-between mb-4">
+                      <span className="text-[12.5px] font-semibold" style={{ color: T.text }}>New customer</span>
+                      <button onClick={clearCustomer} className="inline-flex items-center gap-1 text-[12px] font-medium cursor-pointer hover:underline underline-offset-4" style={{ color: T.accent }}><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" className="w-3 h-3"><path d="M10 3.5 5.5 8 10 12.5" /></svg>Back to search</button>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      <Input value={newCustomer.name} onChange={(v) => setNewCustomer((p) => p && { ...p, name: v })} label="Name" placeholder="e.g. Priya Sharma" required />
-                      <Input value={newCustomer.phone} onChange={(v) => setNewCustomer((p) => p && { ...p, phone: v })} label="Phone / WhatsApp" type="tel" placeholder="+91 98765 43210" required />
-                      <Input value={newCustomer.email} onChange={(v) => setNewCustomer((p) => p && { ...p, email: v })} label="Email (optional)" type="email" placeholder="priya@example.com" />
-                    </div>
-                    <div>
-                      <div className={`${eyebrow} mb-1.5`} style={{ color: T.faint }}>Birth details (for the chart)</div>
+                    <div className="space-y-4">
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <Input value={birth.date} onChange={(v) => setBirth((p) => ({ ...p, date: fmtDob(v) }))} label="Birth date" placeholder="DD / MM / YYYY" inputMode="numeric" maxLength={10} required />
-                        <Input value={birth.time} onChange={(v) => setBirth((p) => ({ ...p, time: v }))} label="Birth time" placeholder="10:30 AM" required />
-                        <Input value={birth.place} onChange={(v) => setBirth((p) => ({ ...p, place: v }))} label="Birth place" placeholder="Kochi, Kerala" required />
+                        <Input value={newCustomer.name} onChange={(v) => setNewCustomer((p) => p && { ...p, name: v })} label="Name" placeholder="e.g. Priya Sharma" required />
+                        <Input value={newCustomer.phone} onChange={(v) => setNewCustomer((p) => p && { ...p, phone: v })} label="Phone / WhatsApp" type="tel" placeholder="+91 98765 43210" required />
+                        <Input value={newCustomer.email} onChange={(v) => setNewCustomer((p) => p && { ...p, email: v })} label="Email (optional)" type="email" placeholder="priya@example.com" />
                       </div>
-                    </div>
-                    <div>
-                      <div className={`${eyebrow} mb-1.5`} style={{ color: T.faint }}>Home / delivery address</div>
-                      <AddressFields value={homeAddr} onChange={setHomeAddr} />
+                      <div className="pt-3.5" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+                        <div className={`${eyebrow} mb-2.5`} style={{ color: T.faint }}>Birth details (for the chart)</div>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          <Input value={birth.date} onChange={(v) => setBirth((p) => ({ ...p, date: fmtDob(v) }))} label="Birth date" placeholder="DD / MM / YYYY" inputMode="numeric" maxLength={10} required />
+                          <Input value={birth.time} onChange={(v) => setBirth((p) => ({ ...p, time: v }))} label="Birth time" placeholder="10:30 AM" required />
+                          <Input value={birth.place} onChange={(v) => setBirth((p) => ({ ...p, place: v }))} label="Birth place" placeholder="Kochi, Kerala" required />
+                        </div>
+                      </div>
+                      <div className="pt-3.5" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+                        <div className={`${eyebrow} mb-2.5`} style={{ color: T.faint }}>Home / delivery address</div>
+                        <AddressFields value={homeAddr} onChange={setHomeAddr} />
+                      </div>
                     </div>
                   </div>
                 ) : (
