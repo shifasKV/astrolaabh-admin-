@@ -2,7 +2,7 @@
 import { use, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Card, Chip, GoldBtn, GhostBtn, BackLink, Modal } from "@/components/ui";
+import { Card, Chip, GoldBtn, GhostBtn, BackLink, Modal, ConfirmDialog } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { inr, imgFit } from "@/lib/catalog";
 import { useLeads, salesMemberName, type ApprovalStatus, type ReviewAction } from "@/lib/store/leads";
@@ -29,6 +29,7 @@ export default function ApprovalDetailPage({ params }: { params: Promise<{ id: s
 
   const [disc, setDisc] = useState(f ? String(f.discount) : "0");
   const [lightbox, setLightbox] = useState<string | null>(null);
+  const [confirmApprove, setConfirmApprove] = useState(false);
 
   if (!lead || !f) {
     return (
@@ -40,18 +41,20 @@ export default function ApprovalDetailPage({ params }: { params: Promise<{ id: s
   }
 
   const meta = STATUS_META[f.approval];
+  const discountEditable = f.approval === "pending" || f.approval === "on_hold";
   const discNum = Number(disc) || 0;
   const newTotal = Math.max(0, f.subtotal - discNum);
   const leadHref = f.kind === "order" ? `/orders/incomplete/${lead.id}` : `/consultations/incomplete/${lead.id}`;
 
-  const act = (action: ReviewAction) => { reviewFulfillment(lead.id, action, { discount: discNum, total: newTotal }); router.push("/leads?tab=approvals"); };
+  const doAct = (action: ReviewAction) => { reviewFulfillment(lead.id, action, { discount: discNum, total: newTotal }); router.push("/leads?tab=approvals"); };
+  const act = (action: ReviewAction) => { if (action === "approve") setConfirmApprove(true); else doAct(action); };
 
   // Decision buttons per current status — one primary, minimal secondaries.
   const decisions: { primary?: { label: string; action: ReviewAction }; secondary: { label: string; action: ReviewAction }[] } = (() => {
     switch (f.approval) {
       case "pending": return { primary: { label: "Approve fulfilment", action: "approve" }, secondary: [{ label: "Put on hold", action: "hold" }, { label: "Reject", action: "reject" }] };
       case "on_hold": return { primary: { label: "Approve fulfilment", action: "approve" }, secondary: [{ label: "Reject", action: "reject" }] };
-      case "approved": return { secondary: [{ label: "Put on hold", action: "hold" }, { label: "Reject", action: "reject" }] };
+      case "approved": return { secondary: [] };
       case "rejected": return { primary: { label: "Approve fulfilment", action: "approve" }, secondary: [{ label: "Put on hold", action: "hold" }] };
       case "completed": return { secondary: [{ label: "Reopen to approved", action: "approve" }] };
     }
@@ -214,27 +217,42 @@ export default function ApprovalDetailPage({ params }: { params: Promise<{ id: s
               <div className="flex items-center justify-between"><span style={{ color: T.muted }}>Subtotal</span><span className="tabular-nums" style={{ color: T.text }}>{inr(f.subtotal)}</span></div>
               <div className="flex items-center justify-between">
                 <span style={{ color: T.muted }}>Discount</span>
-                <label className="inline-flex items-center h-9 rounded-[9px] pl-2.5 pr-1.5 cursor-text transition-shadow duration-200 focus-within:shadow-[0_0_0_3px_rgba(119,123,98,0.16)]" style={{ background: T.card, border: `1px solid ${T.accent}` }}>
-                  <span className="text-[12.5px]" style={{ color: T.accent }}>−&nbsp;₹</span>
-                  <input value={disc} onChange={(e) => setDisc(e.target.value.replace(/[^0-9]/g, ""))} inputMode="numeric" placeholder="0" className="w-[92px] h-full px-1.5 bg-transparent text-[13.5px] font-semibold tabular-nums text-right outline-none placeholder:font-normal" style={{ color: T.text }} />
-                </label>
+                {discountEditable ? (
+                  <label className="inline-flex items-center h-9 rounded-[9px] pl-2.5 pr-1.5 cursor-text transition-shadow duration-200 focus-within:shadow-[0_0_0_3px_rgba(119,123,98,0.16)]" style={{ background: T.card, border: `1px solid ${T.accent}` }}>
+                    <span className="text-[12.5px]" style={{ color: T.accent }}>−&nbsp;₹</span>
+                    <input value={disc} onChange={(e) => setDisc(e.target.value.replace(/[^0-9]/g, ""))} inputMode="numeric" placeholder="0" className="w-[92px] h-full px-1.5 bg-transparent text-[13.5px] font-semibold tabular-nums text-right outline-none placeholder:font-normal" style={{ color: T.text }} />
+                  </label>
+                ) : (
+                  <span className="tabular-nums font-medium" style={{ color: f.discount > 0 ? T.danger : T.faint }}>{f.discount > 0 ? `−${inr(f.discount)}` : "—"}</span>
+                )}
               </div>
             </div>
             <div className="mt-4 pt-4 flex items-baseline justify-between" style={{ borderTop: `1px solid ${T.border}` }}>
               <span className="text-[13px] font-medium" style={{ color: T.muted }}>Total payable</span>
-              <span className="font-title text-[24px] font-semibold tabular-nums tracking-[-0.01em]" style={{ color: T.text }}>{inr(newTotal)}</span>
+              <span className="font-title text-[24px] font-semibold tabular-nums tracking-[-0.01em]" style={{ color: T.text }}>{inr(discountEditable ? newTotal : f.total)}</span>
             </div>
-            <p className="text-[11.5px] mt-2 leading-relaxed" style={{ color: T.faint }}>Adjust the discount if needed — the sales executive sees your final figure.</p>
+            {discountEditable && <p className="text-[11.5px] mt-2 leading-relaxed" style={{ color: T.faint }}>Adjust the discount if needed — the sales executive sees your final figure.</p>}
           </Card>
 
+          {(decisions.primary || decisions.secondary.length > 0) && (
           <Card className="!p-4">
             {decisions.primary && <GoldBtn onClick={() => act(decisions.primary!.action)} className="w-full">{decisions.primary.label}</GoldBtn>}
             {decisions.secondary.map((s, i) => (
               <GhostBtn key={s.action} onClick={() => act(s.action)} className={`w-full ${decisions.primary || i > 0 ? "mt-2.5" : ""}`}>{s.label}</GhostBtn>
             ))}
           </Card>
+          )}
         </aside>
       </div>
+
+      <ConfirmDialog
+        open={confirmApprove}
+        onClose={() => setConfirmApprove(false)}
+        onConfirm={() => { setConfirmApprove(false); doAct("approve"); }}
+        title="Approve this fulfilment?"
+        message={<span>The total payable will be <strong>{inr(newTotal)}</strong>{discNum > 0 ? <> with a <strong>−{inr(discNum)}</strong> discount</> : null}. The submitter will see it as approved.</span>}
+        confirmLabel="Approve"
+      />
 
       <Modal open={!!lightbox} onClose={() => setLightbox(null)} title="Reference">
         {lightbox && ((lightbox.startsWith("/") || lightbox.startsWith("http")) ? (

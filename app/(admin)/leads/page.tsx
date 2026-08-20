@@ -2,7 +2,7 @@
 import { Suspense, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { PageHeader, Card, Chip, Tabs, Select, InlineFilter, MultiCheck, ToolbarSearch, SortMenu, EmptyState, Toast, MobileListCard, Monogram, MobileToolbar, SheetSection } from "@/components/ui";
+import { PageHeader, Card, Chip, Tabs, Select, InlineFilter, MultiCheck, ToolbarSearch, SortMenu, EmptyState, Toast, MobileListCard, Monogram, MobileToolbar, SheetSection, ConfirmDialog } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { inr } from "@/lib/types";
 import { MOCK_SALES_MEMBERS, MOCK_ORDERS } from "@/lib/mock";
@@ -48,6 +48,7 @@ function LeadsPageInner() {
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("newest");
   const [toast, setToast] = useState("");
+  const [confirmApproveId, setConfirmApproveId] = useState<string | null>(null);
 
   const stoneRows = useMemo(() => {
     let rows = orderLeads.filter((o) =>
@@ -347,7 +348,7 @@ function LeadsPageInner() {
                   <span className="flex items-center gap-1.5 lg:justify-end">
                     {p === "pending" ? (
                       <>
-                        <button onClick={(e) => { e.stopPropagation(); reviewFulfillment(r.id, "approve"); setToast(`Approved · ${r.customerName}`); }} title="Approve" className="w-8 h-8 rounded-[8px] flex items-center justify-center cursor-pointer transition-colors" style={{ background: "rgba(95,112,64,0.14)", color: T.good }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M20 6 9 17l-5-5" /></svg></button>
+                        <button onClick={(e) => { e.stopPropagation(); setConfirmApproveId(r.id); }} title="Approve" className="w-8 h-8 rounded-[8px] flex items-center justify-center cursor-pointer transition-colors" style={{ background: "rgba(95,112,64,0.14)", color: T.good }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M20 6 9 17l-5-5" /></svg></button>
                         <button onClick={(e) => { e.stopPropagation(); reviewFulfillment(r.id, "reject", { note: "Rejected by admin" }); setToast(`Rejected · ${r.customerName}`); }} title="Reject" className="w-8 h-8 rounded-[8px] flex items-center justify-center cursor-pointer transition-colors" style={{ background: "rgba(163,73,63,0.12)", color: T.danger }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" className="w-3.5 h-3.5"><path d="M18 6 6 18M6 6l12 12" /></svg></button>
                       </>
                     ) : (
@@ -362,6 +363,19 @@ function LeadsPageInner() {
           </div>
         </Card>
       )}
+
+      <ConfirmDialog
+        open={!!confirmApproveId}
+        onClose={() => setConfirmApproveId(null)}
+        onConfirm={() => {
+          const row = approvals.find((r) => r.id === confirmApproveId);
+          if (row) { reviewFulfillment(row.id, "approve"); setToast(`Approved · ${row.customerName}`); }
+          setConfirmApproveId(null);
+        }}
+        title="Approve this fulfilment?"
+        message={(() => { const row = approvals.find((r) => r.id === confirmApproveId); return row ? <span><strong>{row.customerName}</strong> · {inr(row.fulfillment.total)}{row.fulfillment.discount > 0 ? <> (−{inr(row.fulfillment.discount)} discount)</> : null}. The submitter will see it as approved.</span> : null; })()}
+        confirmLabel="Approve"
+      />
 
       <Toast message={toast} tone={toast.includes("Reject") ? "info" : "success"} />
     </>
