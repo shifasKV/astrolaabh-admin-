@@ -2,7 +2,7 @@
 import { Suspense, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { PageHeader, Card, Chip, Tabs, Select, InlineFilter, MultiCheck, ToolbarSearch, SortMenu, EmptyState, Toast, MobileListCard, Monogram, MobileToolbar, SheetSection, ConfirmDialog } from "@/components/ui";
+import { PageHeader, Card, Chip, Tabs, Select, InlineFilter, MultiCheck, ToolbarSearch, SortMenu, EmptyState, Toast, MobileListCard, Monogram, MobileToolbar, SheetSection } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { inr } from "@/lib/types";
 import { MOCK_SALES_MEMBERS, MOCK_ORDERS } from "@/lib/mock";
@@ -39,7 +39,7 @@ function LeadsPageInner() {
   const params = useSearchParams();
   const router = useRouter();
   const initialTab = ((["stone", "consultation", "approvals", "payment"].includes(params.get("tab") || "") ? params.get("tab") : "approvals") as "stone" | "consultation" | "approvals" | "payment");
-  const { orderLeads, consultLeads, pendingApprovals, reviewedFulfillments, reviewFulfillment } = useLeads();
+  const { orderLeads, consultLeads, pendingApprovals, reviewedFulfillments } = useLeads();
   const [tab, setTab] = useState<"stone" | "consultation" | "approvals" | "payment">(initialTab);
 
   const [statusF, setStatusF] = useState<string[]>([]);
@@ -48,7 +48,6 @@ function LeadsPageInner() {
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("newest");
   const [toast, setToast] = useState("");
-  const [confirmApproveId, setConfirmApproveId] = useState<string | null>(null);
 
   const stoneRows = useMemo(() => {
     let rows = orderLeads.filter((o) =>
@@ -313,8 +312,8 @@ function LeadsPageInner() {
       {/* APPROVALS TABLE */}
       {tab === "approvals" && (
         <Card className="!p-0 overflow-hidden">
-          <div className="hidden lg:grid grid-cols-[150px_minmax(0,1.5fr)_112px_96px_110px_110px_104px_120px] gap-3 px-4 h-10 items-center text-[11px] tracking-[0.06em] uppercase sticky top-0 z-10" style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.borderSoft}` }}>
-            <span>Submitted by</span><span>Customer · item</span><span>Type</span><span>Submitted</span><span className="text-right">Discount</span><span className="text-right">Total</span><span>Status</span><span className="text-right">Action</span>
+          <div className="hidden lg:grid grid-cols-[170px_minmax(0,1.6fr)_120px_100px_120px_110px] gap-3 px-4 h-10 items-center text-[11px] tracking-[0.06em] uppercase sticky top-0 z-10" style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.borderSoft}` }}>
+            <span>Submitted by</span><span>Customer · item</span><span>Type</span><span>Submitted</span><span className="text-right">Total</span><span>Status</span>
           </div>
           <div className="max-h-[calc(100vh-300px)] overflow-y-auto">
             {approvals.map((r) => {
@@ -329,7 +328,6 @@ function LeadsPageInner() {
                   title={r.customerName}
                   right={inr(f.total)}
                   sub={f.summary}
-                  rightSub={f.discount > 0 ? `−${inr(f.discount)} off` : undefined}
                   status={{
                     label: p === "pending" ? "Needs your review" : p === "approved" ? "Approved" : p === "completed" ? "Completed" : p === "on_hold" ? "On hold" : "Rejected",
                     tone: p === "pending" ? "gold" : p === "approved" || p === "completed" ? "good" : p === "on_hold" ? "info" : "danger",
@@ -337,24 +335,13 @@ function LeadsPageInner() {
                   }}
                   time={f.submittedAt}
                 />
-                <div onClick={() => router.push(`/leads/approvals/${r.id}`)} className="hidden lg:grid lg:grid-cols-[150px_minmax(0,1.5fr)_112px_96px_110px_110px_104px_120px] gap-3 px-4 py-3 lg:items-center cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.05)]" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
+                <div onClick={() => router.push(`/leads/approvals/${r.id}`)} className="hidden lg:grid lg:grid-cols-[170px_minmax(0,1.6fr)_120px_100px_120px_110px] gap-3 px-4 py-3 lg:items-center cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.05)]" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
                   <span className="flex items-center gap-2 min-w-0"><span className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold shrink-0" style={{ background: T.accentFaint, border: `1px solid ${T.accentBorder}`, color: T.accent }}>{salesMemberName(f.submittedBy).split(" ").map((w) => w[0]).slice(0, 2).join("")}</span><span className="min-w-0"><span className="block text-[12.5px] font-medium truncate" style={{ color: T.text }}>{salesMemberName(f.submittedBy)}</span>{submitterRole(f.submittedBy) && <span className="block text-[10.5px] truncate" style={{ color: T.faint }}>{submitterRole(f.submittedBy)}</span>}</span></span>
                   <span className="min-w-0"><span className="block text-[13.5px] font-medium truncate" style={{ color: T.text }}>{r.customerName}</span><span className="block text-[11.5px] truncate" style={{ color: T.faint }}>{f.summary}</span></span>
                   <span><Chip tone={f.kind === "order" ? "info" : "muted"}>{f.kind === "order" ? "Stone order" : "Consultation"}</Chip></span>
                   <span className="text-[12px] tabular-nums" style={{ color: T.muted }}>{new Date(f.submittedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>
-                  <span className="text-[12.5px] tabular-nums lg:text-right" style={{ color: f.discount > 0 ? T.danger : T.faint }}>{f.discount > 0 ? `−${inr(f.discount)}` : "—"}</span>
                   <span className="text-[13.5px] font-semibold tabular-nums lg:text-right" style={{ color: T.text }}>{inr(f.total)}</span>
                   <span><Chip tone={p === "pending" ? "gold" : p === "approved" || p === "completed" ? "good" : p === "on_hold" ? "info" : "danger"}>{p === "pending" ? "Pending" : p === "approved" ? "Approved" : p === "completed" ? "Completed" : p === "on_hold" ? "On hold" : "Rejected"}</Chip></span>
-                  <span className="flex items-center gap-1.5 lg:justify-end">
-                    {p === "pending" ? (
-                      <>
-                        <button onClick={(e) => { e.stopPropagation(); setConfirmApproveId(r.id); }} title="Approve" className="w-8 h-8 rounded-[8px] flex items-center justify-center cursor-pointer transition-colors" style={{ background: "rgba(95,112,64,0.14)", color: T.good }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M20 6 9 17l-5-5" /></svg></button>
-                        <button onClick={(e) => { e.stopPropagation(); reviewFulfillment(r.id, "reject", { note: "Rejected by admin" }); setToast(`Rejected · ${r.customerName}`); }} title="Reject" className="w-8 h-8 rounded-[8px] flex items-center justify-center cursor-pointer transition-colors" style={{ background: "rgba(163,73,63,0.12)", color: T.danger }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" className="w-3.5 h-3.5"><path d="M18 6 6 18M6 6l12 12" /></svg></button>
-                      </>
-                    ) : (
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4" style={{ color: T.faint }}><path d="M9 6l6 6-6 6" /></svg>
-                    )}
-                  </span>
                 </div>
                 </div>
               );
@@ -363,20 +350,6 @@ function LeadsPageInner() {
           </div>
         </Card>
       )}
-
-      <ConfirmDialog
-        open={!!confirmApproveId}
-        onClose={() => setConfirmApproveId(null)}
-        onConfirm={() => {
-          const row = approvals.find((r) => r.id === confirmApproveId);
-          if (row) { reviewFulfillment(row.id, "approve"); setToast(`Approved · ${row.customerName}`); }
-          setConfirmApproveId(null);
-        }}
-        title="Approve this fulfilment?"
-        tone="default"
-        message={(() => { const row = approvals.find((r) => r.id === confirmApproveId); return row ? <span><strong>{row.customerName}</strong> · {inr(row.fulfillment.total)}{row.fulfillment.discount > 0 ? <> (−{inr(row.fulfillment.discount)} discount)</> : null}. The submitter will see it as approved.</span> : null; })()}
-        confirmLabel="Approve"
-      />
 
       <Toast message={toast} tone={toast.includes("Reject") ? "info" : "success"} />
     </>
