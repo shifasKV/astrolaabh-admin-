@@ -81,6 +81,12 @@ export default function ApprovalDetailPage({ params }: { params: Promise<{ id: s
             <div className="text-[12.5px] font-medium tabular-nums mt-0.5" style={{ color: T.text }}>{new Date(f.reviewedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })} · {new Date(f.reviewedAt).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true }).toUpperCase()}</div>
           </div>
         )}
+        {(f.approval === "approved" || f.approval === "completed") && leadHref && (
+          <Link href={leadHref} className="shrink-0 inline-flex items-center gap-1.5 h-9 px-4 rounded-[9px] text-[12.5px] font-semibold cursor-pointer transition-all hover:brightness-110" style={{ background: meta.fg, color: "#faf6ec" }}>
+            {f.kind === "order" ? "View order" : "View consultation"}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M9 6l6 6-6 6" /></svg>
+          </Link>
+        )}
       </div>
       )}
 
@@ -187,7 +193,7 @@ export default function ApprovalDetailPage({ params }: { params: Promise<{ id: s
           <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-x-6 gap-y-4 mt-5">
             <div><div className="text-[11px] tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>Fulfilled by</div><div className="text-[13px] font-medium" style={{ color: T.text }}>{salesMemberName(f.submittedBy)}</div>{submitterRole(f.submittedBy) && <div className="text-[11px] mt-0.5" style={{ color: T.faint }}>{submitterRole(f.submittedBy)}</div>}</div>
             <div><div className="text-[11px] tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>Submitted</div><div className="text-[13px] font-medium" style={{ color: T.text }}>{new Date(f.submittedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</div></div>
-            {leadHref && <div className="col-span-2"><div className="text-[11px] tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>Lead</div><Link href={leadHref} className="text-[13px] font-medium hover:underline underline-offset-2" style={{ color: T.accent }}>Open lead record ↗</Link></div>}
+            {leadHref && <div className="col-span-2 pt-1"><Link href={leadHref} className="inline-flex items-center gap-2 h-9 px-3.5 rounded-[9px] text-[12.5px] font-semibold cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.08)]" style={{ color: T.text, border: `1px solid ${T.border}`, background: T.card }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-[14px] h-[14px]" style={{ color: T.accent }}><path d="M15 3h6v6" /><path d="M10 14 21 3" /><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /></svg>Open lead record</Link></div>}
           </div>
 
           {f.note && (
