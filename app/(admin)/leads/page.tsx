@@ -6,7 +6,7 @@ import { PageHeader, Card, Chip, Tabs, Select, InlineFilter, MultiCheck, Toolbar
 import { T } from "@/lib/theme";
 import { inr } from "@/lib/types";
 import { MOCK_SALES_MEMBERS, MOCK_ORDERS } from "@/lib/mock";
-import { useLeads, salesMemberName, submitterRole, type LeadStatus } from "@/lib/store/leads";
+import { useLeads, salesMemberName, submitterRole, placedByInfo, type LeadStatus } from "@/lib/store/leads";
 
 /* ─── label + tone maps ─── */
 const STATUS_LABEL: Record<LeadStatus, string> = { new: "New", contacted: "Contacted", follow_up: "Follow up", converted: "Converted", lost: "Lost" };
@@ -241,7 +241,7 @@ function LeadsPageInner() {
             <SortMenu value={sort} onChange={setSort} options={SORTS} />
           </div>
           <Card className="!p-0 overflow-hidden">
-            <div className="hidden lg:grid grid-cols-[80px_1.4fr_120px_140px_120px] gap-3 px-4 h-10 items-center text-[11px] tracking-[0.06em] uppercase sticky top-0 z-10" style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.borderSoft}` }}>
+            <div className="hidden lg:grid grid-cols-[80px_1.4fr_110px_180px_120px] gap-3 px-4 h-10 items-center text-[11px] tracking-[0.06em] uppercase sticky top-0 z-10" style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.borderSoft}` }}>
               <span>Order</span><span>Customer</span><span>Created</span><span>Created by</span><span className="text-right">Amount</span>
             </div>
             <div className="max-h-[calc(100vh-300px)] overflow-y-auto">
@@ -257,11 +257,11 @@ function LeadsPageInner() {
                     status={{ label: "Payment pending", tone: "gold", extra: o.id }}
                     time={o.placedAt}
                   />
-                  <Link href={`/orders/${o.id}`} className="hidden lg:grid lg:grid-cols-[80px_1.4fr_120px_140px_120px] gap-3 px-4 py-3 lg:items-center transition-colors hover:bg-[rgba(119,123,98,0.05)]" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
+                  <Link href={`/orders/${o.id}`} className="hidden lg:grid lg:grid-cols-[80px_1.4fr_110px_180px_120px] gap-3 px-4 py-3 lg:items-center transition-colors hover:bg-[rgba(119,123,98,0.05)]" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
                     <span className="text-[11.5px] tabular-nums" style={{ color: T.faint }}>#{o.id.replace("AL-ORD-", "")}</span>
                     <span className="min-w-0"><span className="block text-[13.5px] font-medium truncate" style={{ color: T.text }}>{o.customerName}</span><span className="block text-[11.5px] truncate" style={{ color: T.faint }}>{o.items[0]?.name}{o.items.length > 1 ? ` +${o.items.length - 1}` : ""}</span></span>
                     <span className="text-[12px] tabular-nums" style={{ color: T.muted }}>{fmtDate(o.placedAt)}</span>
-                    <span className="text-[12px] truncate capitalize" style={{ color: T.muted }}>{o.placedBy ? o.placedBy.split("@")[0] : "Customer"}</span>
+                    <span className="flex items-center gap-2 min-w-0">{(() => { const p = placedByInfo(o.placedBy); return (<><span className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold shrink-0" style={{ background: T.accentFaint, border: `1px solid ${T.accentBorder}`, color: T.accent }}>{p.name.split(" ").map((w) => w[0]).slice(0, 2).join("")}</span><span className="min-w-0"><span className="block text-[12.5px] font-medium truncate" style={{ color: T.text }}>{p.name}</span><span className="block text-[10.5px] truncate" style={{ color: T.faint }}>{p.role}</span></span></>); })()}</span>
                     <span className="text-[13.5px] font-semibold tabular-nums lg:text-right" style={{ color: T.text }}>{inr(o.total)}</span>
                   </Link>
                 </div>

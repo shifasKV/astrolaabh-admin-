@@ -4,6 +4,7 @@ import Link from "next/link";
 import { PageHeader, Card, Chip, Tabs, GoldBtn, ShopifyButton, Pagination, downloadXLS, downloadPDF, ExportBtn, DateRangePanel, ToolbarSearch, InlineFilter, MultiCheck, SortMenu, EmptyState, TableSkeleton, MobileListCard, Monogram, MobileToolbar, SheetSection, MobileFab } from "@/components/ui";
 import { useSimulatedLoad } from "@/lib/useSimulatedLoad";
 import { T } from "@/lib/theme";
+import { placedByInfo } from "@/lib/store/leads";
 import { MOCK_ORDERS } from "@/lib/mock";
 import { inr } from "@/lib/types";
 
@@ -151,7 +152,7 @@ export default function OrdersPage() {
         o.customerName,
         o.items.map((i) => i.name).join("; "),
         o.placedAt,
-        o.placedBy || "Customer",
+        placedByInfo(o.placedBy).name,
         o.shopifyStatus === "fulfilled" ? "Delivered" : o.tracking ? "In transit" : "Not shipped",
         o.paymentStatus,
         o.total,
@@ -261,7 +262,7 @@ export default function OrdersPage() {
           <>
         {/* Sticky header — survives long scrolls */}
         <div
-          className="hidden sm:grid grid-cols-[64px_1fr_105px_105px_200px_110px] gap-3 items-center px-4 h-10 text-[11px] font-medium tracking-[0.06em] uppercase sticky top-0 z-10 rounded-t-[15px]"
+          className="hidden sm:grid grid-cols-[64px_1fr_100px_170px_200px_110px] gap-3 items-center px-4 h-10 text-[11px] font-medium tracking-[0.06em] uppercase sticky top-0 z-10 rounded-t-[15px]"
           style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.borderSoft}` }}
         >
           <span>Order</span>
@@ -303,7 +304,7 @@ export default function OrdersPage() {
               />
               <Link
                 href={`/orders/${o.id}`}
-                className="group hidden sm:grid sm:grid-cols-[64px_1fr_105px_105px_200px_110px] gap-2 sm:gap-3 items-center px-4 py-2.5 transition-colors duration-150 hover:!bg-[rgba(119,123,98,0.08)]"
+                className="group hidden sm:grid sm:grid-cols-[64px_1fr_100px_170px_200px_110px] gap-2 sm:gap-3 items-center px-4 py-2.5 transition-colors duration-150 hover:!bg-[rgba(119,123,98,0.08)]"
                 style={{ borderBottom: idx < paginated.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
               >
                 <span className="text-[11.5px] tabular-nums" style={{ color: T.faint }}>#{o.id.replace("AL-ORD-", "")}</span>
@@ -317,9 +318,7 @@ export default function OrdersPage() {
                 <span className="text-[12px] tabular-nums" style={{ color: T.muted }}>
                   {new Date(o.placedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
                 </span>
-                <span className="text-[12px] truncate capitalize" style={{ color: T.muted }}>
-                  {o.placedBy ? o.placedBy.split("@")[0] : "Customer"}
-                </span>
+                <span className="flex items-center gap-2 min-w-0">{(() => { const p = placedByInfo(o.placedBy); return (<><span className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold shrink-0" style={{ background: T.accentFaint, border: `1px solid ${T.accentBorder}`, color: T.accent }}>{p.name.split(" ").map((w) => w[0]).slice(0, 2).join("")}</span><span className="min-w-0"><span className="block text-[12.5px] font-medium truncate" style={{ color: T.text }}>{p.name}</span><span className="block text-[10.5px] truncate" style={{ color: T.faint }}>{p.role}</span></span></>); })()}</span>
                 <div className="flex flex-wrap items-center gap-1">{flags.map((fl) => <Chip key={fl.label} tone={fl.tone}>{fl.label}</Chip>)}</div>
                 <span className="text-[13px] font-semibold tabular-nums text-right" style={{ color: T.text }}>{inr(o.total)}</span>
               </Link>

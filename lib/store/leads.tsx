@@ -71,6 +71,20 @@ const SUBMISSIONS_KEY = "astro:leads:subs:v3";
 const SEEN_KEY = "astro:leads:seen:v3";
 const ACTIVE_EXECS = MOCK_SALES_MEMBERS.filter((m) => m.status === "active");
 
+const EXPERT_EMAILS: Record<string, string> = { "sandeep@astrolaabh.house": "usr_expert_01" };
+
+/** Resolve an order's placedBy (email or id) to a display name + role. */
+export function placedByInfo(placedBy?: string): { name: string; role: string } {
+  if (!placedBy) return { name: "Customer", role: "Web checkout" };
+  const sm = MOCK_SALES_MEMBERS.find((m) => m.email === placedBy || m.id === placedBy);
+  if (sm) return { name: sm.name, role: "Sales executive" };
+  const ex = EXPERT_PROFILES.find((e) => e.id === placedBy || e.id === EXPERT_EMAILS[placedBy]);
+  if (ex) return { name: ex.name, role: "Astro-gemologist" };
+  if (placedBy.startsWith("admin@")) return { name: "Admin", role: "AstroLaabh" };
+  if (placedBy.startsWith("ops@")) return { name: "Ops team", role: "AstroLaabh" };
+  return { name: placedBy.split("@")[0], role: "AstroLaabh" };
+}
+
 export function submitterRole(id?: string): string {
   if (!id) return "";
   if (MOCK_SALES_MEMBERS.some((m) => m.id === id)) return "Sales executive";
