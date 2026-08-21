@@ -71,6 +71,13 @@ const SUBMISSIONS_KEY = "astro:leads:subs:v3";
 const SEEN_KEY = "astro:leads:seen:v3";
 const ACTIVE_EXECS = MOCK_SALES_MEMBERS.filter((m) => m.status === "active");
 
+export function submitterRole(id?: string): string {
+  if (!id) return "";
+  if (MOCK_SALES_MEMBERS.some((m) => m.id === id)) return "Sales executive";
+  if (EXPERT_PROFILES.some((e) => e.id === id)) return "Astro-gemologist";
+  return "";
+}
+
 export function salesMemberName(id?: string): string {
   if (!id) return "Unassigned";
   return (

@@ -6,7 +6,7 @@ import { PageHeader, Card, Chip, Tabs, Select, InlineFilter, MultiCheck, Toolbar
 import { T } from "@/lib/theme";
 import { inr } from "@/lib/types";
 import { MOCK_SALES_MEMBERS, MOCK_ORDERS } from "@/lib/mock";
-import { useLeads, salesMemberName, type LeadStatus } from "@/lib/store/leads";
+import { useLeads, salesMemberName, submitterRole, type LeadStatus } from "@/lib/store/leads";
 
 /* ─── label + tone maps ─── */
 const STATUS_LABEL: Record<LeadStatus, string> = { new: "New", contacted: "Contacted", follow_up: "Follow up", converted: "Converted", lost: "Lost" };
@@ -333,12 +333,12 @@ function LeadsPageInner() {
                   status={{
                     label: p === "pending" ? "Needs your review" : p === "approved" ? "Approved" : p === "completed" ? "Completed" : p === "on_hold" ? "On hold" : "Rejected",
                     tone: p === "pending" ? "gold" : p === "approved" || p === "completed" ? "good" : p === "on_hold" ? "info" : "danger",
-                    extra: `by ${salesMemberName(f.submittedBy).split(" ")[0]}`,
+                    extra: `by ${salesMemberName(f.submittedBy).split(" ")[0]}${submitterRole(f.submittedBy) ? ` · ${submitterRole(f.submittedBy)}` : ""}`,
                   }}
                   time={f.submittedAt}
                 />
                 <div onClick={() => router.push(`/leads/approvals/${r.id}`)} className="hidden lg:grid lg:grid-cols-[150px_minmax(0,1.5fr)_112px_96px_110px_110px_104px_120px] gap-3 px-4 py-3 lg:items-center cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.05)]" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
-                  <span className="flex items-center gap-2 min-w-0"><span className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold shrink-0" style={{ background: T.accentFaint, border: `1px solid ${T.accentBorder}`, color: T.accent }}>{salesMemberName(f.submittedBy).split(" ").map((w) => w[0]).slice(0, 2).join("")}</span><span className="text-[12.5px] font-medium truncate" style={{ color: T.text }}>{salesMemberName(f.submittedBy)}</span></span>
+                  <span className="flex items-center gap-2 min-w-0"><span className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold shrink-0" style={{ background: T.accentFaint, border: `1px solid ${T.accentBorder}`, color: T.accent }}>{salesMemberName(f.submittedBy).split(" ").map((w) => w[0]).slice(0, 2).join("")}</span><span className="min-w-0"><span className="block text-[12.5px] font-medium truncate" style={{ color: T.text }}>{salesMemberName(f.submittedBy)}</span>{submitterRole(f.submittedBy) && <span className="block text-[10.5px] truncate" style={{ color: T.faint }}>{submitterRole(f.submittedBy)}</span>}</span></span>
                   <span className="min-w-0"><span className="block text-[13.5px] font-medium truncate" style={{ color: T.text }}>{r.customerName}</span><span className="block text-[11.5px] truncate" style={{ color: T.faint }}>{f.summary}</span></span>
                   <span><Chip tone={f.kind === "order" ? "info" : "muted"}>{f.kind === "order" ? "Stone order" : "Consultation"}</Chip></span>
                   <span className="text-[12px] tabular-nums" style={{ color: T.muted }}>{new Date(f.submittedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Card, Chip, GoldBtn, GhostBtn, BackLink, Modal, ConfirmDialog } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { inr, imgFit } from "@/lib/catalog";
-import { useLeads, salesMemberName, type ApprovalStatus, type ReviewAction } from "@/lib/store/leads";
+import { useLeads, salesMemberName, submitterRole, type ApprovalStatus, type ReviewAction } from "@/lib/store/leads";
 
 const initials = (name: string) => name.split(" ").map((w) => w[0]).slice(0, 2).join("");
 
@@ -185,7 +185,7 @@ export default function ApprovalDetailPage({ params }: { params: Promise<{ id: s
 
           {/* Meta grid */}
           <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-x-6 gap-y-4 mt-5">
-            <div><div className="text-[11px] tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>Fulfilled by</div><div className="text-[13px] font-medium" style={{ color: T.text }}>{salesMemberName(f.submittedBy)}</div></div>
+            <div><div className="text-[11px] tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>Fulfilled by</div><div className="text-[13px] font-medium" style={{ color: T.text }}>{salesMemberName(f.submittedBy)}</div>{submitterRole(f.submittedBy) && <div className="text-[11px] mt-0.5" style={{ color: T.faint }}>{submitterRole(f.submittedBy)}</div>}</div>
             <div><div className="text-[11px] tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>Submitted</div><div className="text-[13px] font-medium" style={{ color: T.text }}>{new Date(f.submittedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</div></div>
             <div className="col-span-2"><div className="text-[11px] tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>Lead</div><Link href={leadHref} className="text-[13px] font-medium hover:underline underline-offset-2" style={{ color: T.accent }}>Open lead record ↗</Link></div>
           </div>
