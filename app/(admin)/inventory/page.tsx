@@ -345,6 +345,7 @@ function InventoryPageInner() {
   };
 
   const [showAddGuruji, setShowAddGuruji] = useState(false);
+  const [preview, setPreview] = useState<{ src: string; name: string; sub?: string } | null>(null);
   const [newGurujiName, setNewGurujiName] = useState("");
   const [newGurujiSpeciality, setNewGurujiSpeciality] = useState("");
   const [newGurujiLocation, setNewGurujiLocation] = useState("");
@@ -606,14 +607,16 @@ function InventoryPageInner() {
             <MobileListCard
               className="md:hidden"
               leading={
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={`/gems/${s.gem}.png`}
-                  alt={s.gemName}
-                  className="w-10 h-10 rounded-[10px] object-cover shrink-0"
-                  style={{ border: `1px solid ${T.borderSoft}` }}
-                  loading="lazy"
-                />
+                <button onClick={() => setPreview({ src: `/gems/${s.gem}.png`, name: s.gemName, sub: `${s.ratti} r · ${s.sku}` })} className="shrink-0 cursor-zoom-in" aria-label="View image">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={`/gems/${s.gem}.png`}
+                    alt={s.gemName}
+                    className="w-10 h-10 rounded-[10px] object-cover"
+                    style={{ border: `1px solid ${T.borderSoft}` }}
+                    loading="lazy"
+                  />
+                </button>
               }
               title={s.gemName}
               right={catalogInr(s.price)}
@@ -631,14 +634,16 @@ function InventoryPageInner() {
               style={{ borderBottom: i < arr.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
             >
               <span className="flex items-center gap-3 min-w-0">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={`/gems/${s.gem}.png`}
-                  alt={s.gemName}
-                  className="w-9 h-9 rounded-[8px] object-cover shrink-0"
-                  style={{ border: `1px solid ${T.borderSoft}` }}
-                  loading="lazy"
-                />
+                <button onClick={() => setPreview({ src: `/gems/${s.gem}.png`, name: s.gemName, sub: `${s.ratti} r · ${s.sku}` })} className="shrink-0 cursor-zoom-in" aria-label="View image">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={`/gems/${s.gem}.png`}
+                    alt={s.gemName}
+                    className="w-9 h-9 rounded-[8px] object-cover"
+                    style={{ border: `1px solid ${T.borderSoft}` }}
+                    loading="lazy"
+                  />
+                </button>
                 <span className="min-w-0">
                   <span className="flex items-center gap-1.5">
                     <span className="font-medium truncate" style={{ color: T.text }}>{s.gemName}</span>
@@ -705,14 +710,16 @@ function InventoryPageInner() {
             <MobileListCard
               className="md:hidden"
               leading={
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={designThumb(d)}
-                  alt={d.name}
-                  className="w-10 h-10 rounded-[10px] object-cover shrink-0"
-                  style={{ border: `1px solid ${T.borderSoft}`, background: "#fffdf5" }}
-                  loading="lazy"
-                />
+                <button onClick={() => setPreview({ src: designThumb(d), name: d.name, sub: `${d.form} · ${d.metal}` })} className="shrink-0 cursor-zoom-in" aria-label="View image">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={designThumb(d)}
+                    alt={d.name}
+                    className="w-10 h-10 rounded-[10px] object-cover"
+                    style={{ border: `1px solid ${T.borderSoft}`, background: "#fffdf5" }}
+                    loading="lazy"
+                  />
+                </button>
               }
               title={d.name}
               right={<span style={{ color: d.remaining === 0 ? T.danger : T.text }}>{d.remaining}</span>}
@@ -730,14 +737,16 @@ function InventoryPageInner() {
               style={{ borderBottom: i < arr.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
             >
               <span className="flex items-center gap-3 min-w-0">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={designThumb(d)}
-                  alt={d.name}
-                  className="w-9 h-9 rounded-[8px] object-cover shrink-0"
-                  style={{ border: `1px solid ${T.borderSoft}`, background: "#fffdf5" }}
-                  loading="lazy"
-                />
+                <button onClick={() => setPreview({ src: designThumb(d), name: d.name, sub: `${d.form} · ${d.metal}` })} className="shrink-0 cursor-zoom-in" aria-label="View image">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={designThumb(d)}
+                    alt={d.name}
+                    className="w-9 h-9 rounded-[8px] object-cover"
+                    style={{ border: `1px solid ${T.borderSoft}`, background: "#fffdf5" }}
+                    loading="lazy"
+                  />
+                </button>
                 <span className="min-w-0">
                   <span className="flex items-center gap-1.5">
                     <span className="font-medium truncate" style={{ color: T.text }}>{d.name}</span>
@@ -950,6 +959,22 @@ function InventoryPageInner() {
 
       {toast && <Toast message={toast} />}
       </div>
+
+      {/* Catalogue image preview */}
+      <Modal open={!!preview} onClose={() => setPreview(null)} title={preview?.name ?? "Preview"}>
+        {preview && (
+          <div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <div className="rounded-[14px] overflow-hidden" style={{ background: T.bg, border: `1px solid ${T.borderSoft}` }}>
+              <img src={preview.src} alt={preview.name} className="w-full max-h-[60vh] object-contain" />
+            </div>
+            <div className="mt-4">
+              <div className="text-[15px] font-semibold" style={{ color: T.text }}>{preview.name}</div>
+              {preview.sub && <div className="text-[12.5px] mt-0.5" style={{ color: T.muted }}>{preview.sub}</div>}
+            </div>
+          </div>
+        )}
+      </Modal>
     </>
   );
 }
