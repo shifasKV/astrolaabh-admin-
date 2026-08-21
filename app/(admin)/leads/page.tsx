@@ -2,7 +2,7 @@
 import { Suspense, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { PageHeader, Card, Chip, Tabs, Select, InlineFilter, MultiCheck, ToolbarSearch, SortMenu, EmptyState, Toast, MobileListCard, Monogram, MobileToolbar, SheetSection } from "@/components/ui";
+import { PageHeader, Card, Chip, Tabs, Select, InlineFilter, MultiCheck, ToolbarSearch, SortMenu, EmptyState, MobileListCard, Monogram, MobileToolbar, SheetSection } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { inr } from "@/lib/types";
 import { MOCK_SALES_MEMBERS, MOCK_ORDERS } from "@/lib/mock";
@@ -47,7 +47,6 @@ function LeadsPageInner() {
   const [assigneeF, setAssigneeF] = useState<string[]>([]);
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("newest");
-  const [toast, setToast] = useState("");
 
   const stoneRows = useMemo(() => {
     let rows = orderLeads.filter((o) =>
@@ -351,7 +350,6 @@ function LeadsPageInner() {
         </Card>
       )}
 
-      <Toast message={toast} tone={toast.includes("Reject") ? "info" : "success"} />
     </>
   );
 }
