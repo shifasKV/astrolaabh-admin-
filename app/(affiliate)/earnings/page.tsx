@@ -20,6 +20,11 @@ export default function EarningsPage() {
   const [confirmAccount, setConfirmAccount] = useState("50100123456789");
   const [ifsc, setIfsc] = useState("HDFC0001234");
   const [upiId, setUpiId] = useState("sandeep@upi");
+  // Snapshot on open — Save stays disabled until something actually changes.
+  const [saved, setSaved] = useState({ holderName: "Pt. Sandeep Kochaar", bankName: "HDFC Bank", accountNumber: "50100123456789", confirmAccount: "50100123456789", ifsc: "HDFC0001234", upiId: "sandeep@upi" });
+  const bankDirty = holderName !== saved.holderName || bankName !== saved.bankName || accountNumber !== saved.accountNumber || confirmAccount !== saved.confirmAccount || ifsc !== saved.ifsc || upiId !== saved.upiId;
+  const openBankEdit = () => { setHolderName(saved.holderName); setBankName(saved.bankName); setAccountNumber(saved.accountNumber); setConfirmAccount(saved.confirmAccount); setIfsc(saved.ifsc); setUpiId(saved.upiId); setEditingBank(true); };
+  const saveBank = () => { setSaved({ holderName, bankName, accountNumber, confirmAccount, ifsc, upiId }); setEditingBank(false); };
 
   return (
     <>
@@ -76,7 +81,7 @@ export default function EarningsPage() {
         <Card className="!p-5">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-[15px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>Account details</h2>
-            <GhostBtn className="!h-8 !px-3 !text-[12px]" onClick={() => setEditingBank(true)}>Edit</GhostBtn>
+            <GhostBtn className="!h-8 !px-3 !text-[12px]" onClick={openBankEdit}>Edit</GhostBtn>
           </div>
 
           <div className="grid grid-cols-2 gap-y-4 gap-x-6">
@@ -127,7 +132,7 @@ export default function EarningsPage() {
         <p className="text-[11px] mt-3" style={{ color: T.faint }}>Banking details are encrypted and only visible to authorized finance team.</p>
         <div className="flex justify-end gap-2.5 mt-5">
           <GhostBtn onClick={() => setEditingBank(false)}>Cancel</GhostBtn>
-          <GoldBtn onClick={() => setEditingBank(false)}>Save details</GoldBtn>
+          <GoldBtn onClick={saveBank} disabled={!bankDirty}>Save details</GoldBtn>
         </div>
       </Modal>
     </>

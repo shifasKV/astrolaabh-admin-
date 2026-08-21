@@ -20,12 +20,11 @@ const STATUS_META: Record<ApprovalStatus, { label: string; fg: string; bg: strin
 export default function ApprovalDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
-  const { orderLeads, consultLeads, reviewFulfillment } = useLeads();
+  const { getById, reviewFulfillment } = useLeads();
 
-  const orderLead = orderLeads.find((o) => o.id === id && o.fulfillment);
-  const consultLead = consultLeads.find((c) => c.id === id && c.fulfillment);
-  const lead = orderLead ?? consultLead;
+  const lead = getById(id);
   const f = lead?.fulfillment;
+  const isSubmission = id.startsWith("sub_"); // from-scratch submission — no lead record behind it
 
   const [disc, setDisc] = useState(f ? String(f.discount) : "0");
   const [lightbox, setLightbox] = useState<string | null>(null);
@@ -44,7 +43,7 @@ export default function ApprovalDetailPage({ params }: { params: Promise<{ id: s
   const discountEditable = f.approval === "pending" || f.approval === "on_hold";
   const discNum = Number(disc) || 0;
   const newTotal = Math.max(0, f.subtotal - discNum);
-  const leadHref = f.kind === "order" ? `/orders/incomplete/${lead.id}` : `/consultations/incomplete/${lead.id}`;
+  const leadHref = isSubmission ? null : f.kind === "order" ? `/orders/incomplete/${lead.id}` : `/consultations/incomplete/${lead.id}`;
 
   const doAct = (action: ReviewAction) => { reviewFulfillment(lead.id, action, { discount: discNum, total: newTotal }); };
   const act = (action: ReviewAction) => { if (action === "approve") setConfirmApprove(true); else doAct(action); };
@@ -92,7 +91,7 @@ export default function ApprovalDetailPage({ params }: { params: Promise<{ id: s
             <span className="w-11 h-11 rounded-full flex items-center justify-center text-[14px] font-semibold shrink-0" style={{ background: T.accentFaint, border: `1px solid ${T.accentBorder}`, color: T.accent }}>{initials(lead.customerName)}</span>
             <div className="min-w-0 flex-1">
               <div className="text-[11px] tracking-[0.08em] uppercase" style={{ color: T.faint }}>Customer</div>
-              <Link href={leadHref} className="text-[16px] font-semibold hover:underline block truncate" style={{ color: T.text }}>{lead.customerName}</Link>
+              {leadHref ? <Link href={leadHref} className="text-[16px] font-semibold hover:underline block truncate" style={{ color: T.text }}>{lead.customerName}</Link> : <span className="text-[16px] font-semibold block truncate" style={{ color: T.text }}>{lead.customerName}</span>}
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
               <Chip tone={f.kind === "order" ? "info" : "muted"}>{f.kind === "order" ? "Stone order" : "Consultation"}</Chip>
@@ -188,7 +187,7 @@ export default function ApprovalDetailPage({ params }: { params: Promise<{ id: s
           <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-x-6 gap-y-4 mt-5">
             <div><div className="text-[11px] tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>Fulfilled by</div><div className="text-[13px] font-medium" style={{ color: T.text }}>{salesMemberName(f.submittedBy)}</div>{submitterRole(f.submittedBy) && <div className="text-[11px] mt-0.5" style={{ color: T.faint }}>{submitterRole(f.submittedBy)}</div>}</div>
             <div><div className="text-[11px] tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>Submitted</div><div className="text-[13px] font-medium" style={{ color: T.text }}>{new Date(f.submittedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</div></div>
-            <div className="col-span-2"><div className="text-[11px] tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>Lead</div><Link href={leadHref} className="text-[13px] font-medium hover:underline underline-offset-2" style={{ color: T.accent }}>Open lead record ↗</Link></div>
+            {leadHref && <div className="col-span-2"><div className="text-[11px] tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>Lead</div><Link href={leadHref} className="text-[13px] font-medium hover:underline underline-offset-2" style={{ color: T.accent }}>Open lead record ↗</Link></div>}
           </div>
 
           {f.note && (
