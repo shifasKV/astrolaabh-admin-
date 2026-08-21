@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { PageHeader, Card, StatCard, Chip, GhostBtn, Input, GoldBtn, EmptyState } from "@/components/ui";
+import { PageHeader, Card, StatCard, Chip, GhostBtn, Input, GoldBtn, EmptyState, Modal } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_AFFILIATES, MOCK_PAYOUTS, MOCK_REFERRAL_EVENTS } from "@/lib/mock";
 import { inr } from "@/lib/types";
@@ -25,7 +25,7 @@ export default function EarningsPage() {
     <>
       <PageHeader
         title="Earnings & payouts"
-        action={<GhostBtn>Download statement</GhostBtn>}
+        action={<GhostBtn><span className="inline-flex items-center gap-1.5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-[15px] h-[15px]"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M7 10l5 5 5-5" /><path d="M12 15V3" /></svg>Download statement</span></GhostBtn>}
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
@@ -76,29 +76,10 @@ export default function EarningsPage() {
         <Card className="!p-5">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-[15px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>Account details</h2>
-            {!editingBank && (
-              <GhostBtn className="!h-8 !px-3 !text-[12px]" onClick={() => setEditingBank(true)}>Edit</GhostBtn>
-            )}
+            <GhostBtn className="!h-8 !px-3 !text-[12px]" onClick={() => setEditingBank(true)}>Edit</GhostBtn>
           </div>
 
-          {editingBank ? (
-            <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Input value={holderName} onChange={setHolderName} label="Bank account holder name" />
-                <Input value={bankName} onChange={setBankName} label="Bank name" />
-                <Input value={accountNumber} onChange={setAccountNumber} label="Bank account number" />
-                <Input value={confirmAccount} onChange={setConfirmAccount} label="Confirm bank account number" />
-                <Input value={ifsc} onChange={setIfsc} label="IFSC code" />
-                <Input value={upiId} onChange={setUpiId} label="UPI ID" placeholder="e.g. name@upi" />
-              </div>
-              <div className="mt-4 flex gap-2.5">
-                <GoldBtn onClick={() => setEditingBank(false)}>Save details</GoldBtn>
-                <GhostBtn onClick={() => setEditingBank(false)}>Cancel</GhostBtn>
-              </div>
-              <p className="text-[11px] mt-3" style={{ color: T.faint }}>Banking details are encrypted and only visible to authorized finance team.</p>
-            </>
-          ) : (
-            <div className="grid grid-cols-2 gap-y-4 gap-x-6">
+          <div className="grid grid-cols-2 gap-y-4 gap-x-6">
               {[
                 ["Account holder", holderName],
                 ["Bank name", bankName],
@@ -111,8 +92,7 @@ export default function EarningsPage() {
                   <div className="text-[13px] font-medium tabular-nums truncate" style={{ color: T.text }}>{v}</div>
                 </div>
               ))}
-            </div>
-          )}
+          </div>
         </Card>
 
         {/* Payout policy */}
@@ -134,6 +114,22 @@ export default function EarningsPage() {
           </div>
         </Card>
       </div>
+
+      <Modal open={editingBank} onClose={() => setEditingBank(false)} title="Edit account details">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Input value={holderName} onChange={setHolderName} label="Bank account holder name" />
+          <Input value={bankName} onChange={setBankName} label="Bank name" />
+          <Input value={accountNumber} onChange={setAccountNumber} label="Bank account number" />
+          <Input value={confirmAccount} onChange={setConfirmAccount} label="Confirm bank account number" />
+          <Input value={ifsc} onChange={setIfsc} label="IFSC code" />
+          <Input value={upiId} onChange={setUpiId} label="UPI ID" placeholder="e.g. name@upi" />
+        </div>
+        <p className="text-[11px] mt-3" style={{ color: T.faint }}>Banking details are encrypted and only visible to authorized finance team.</p>
+        <div className="flex justify-end gap-2.5 mt-5">
+          <GhostBtn onClick={() => setEditingBank(false)}>Cancel</GhostBtn>
+          <GoldBtn onClick={() => setEditingBank(false)}>Save details</GoldBtn>
+        </div>
+      </Modal>
     </>
   );
 }
