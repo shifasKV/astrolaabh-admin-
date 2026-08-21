@@ -210,6 +210,39 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
         </div>
       )}
 
+      {/* ============ CUSTOMER — full-width identity card ============ */}
+      {customer ? (
+        <Link href={`/customers/${customer.id}`} className="block group mb-4">
+          <div className="card-interactive rounded-[16px] p-4 sm:p-5 cursor-pointer flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6" style={{ background: T.card, border: `1px solid ${T.borderSoft}`, boxShadow: T.shadow }}>
+            <div className="flex items-center gap-3 sm:w-[240px] shrink-0 min-w-0">
+              <span className="w-10 h-10 rounded-[12px] flex items-center justify-center text-[13.5px] font-semibold shrink-0" style={{ background: T.accentFaint, border: `1px solid ${T.accentBorder}`, color: T.accent }}>
+                {customer.name.split(" ").map((w) => w[0]).slice(0, 2).join("")}
+              </span>
+              <div className="min-w-0">
+                <div className="text-[10px] font-medium tracking-[0.08em] uppercase" style={{ color: T.faint }}>Customer</div>
+                <div className="text-[14.5px] font-semibold truncate" style={{ color: T.text }}>{customer.name}</div>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-6 flex-1 min-w-0 sm:pl-6" style={{ borderLeft: undefined }}>
+              {[["Phone", customer.phone], ["Email", customer.email], ["Location", customer.birthPlace]].map(([k, v]) => (
+                <div key={k} className="min-w-0">
+                  <div className="text-[10px] font-medium tracking-[0.08em] uppercase mb-0.5" style={{ color: T.faint }}>{k}</div>
+                  <div className="text-[13px] font-medium truncate" style={{ color: T.text }}>{v}</div>
+                </div>
+              ))}
+            </div>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="hidden sm:block w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" style={{ color: T.faint }}><path d="m9 18 6-6-6-6" /></svg>
+          </div>
+        </Link>
+      ) : (
+        <Card className="mb-4">
+          <div className="flex items-center justify-between text-[13px]">
+            <span className="text-[10px] font-medium tracking-[0.08em] uppercase" style={{ color: T.faint }}>Customer</span>
+            <span className="font-medium" style={{ color: T.text }}>{order.customerName}</span>
+          </div>
+        </Card>
+      )}
+
       {/* ============ TWO-COLUMN BODY — work left, context right ============ */}
       <div className="flex flex-col xl:flex-row items-start gap-4">
         <div className="flex-1 min-w-0 space-y-4 w-full">
@@ -717,40 +750,6 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
         {/* Context rail — who, where, meta */}
         <aside className="w-full xl:w-[320px] shrink-0 space-y-4 xl:sticky xl:top-4">
-        {customer ? (
-          <Link href={`/customers/${customer.id}`} className="block group">
-            <div className="card-interactive rounded-[16px] p-5 h-full cursor-pointer" style={{ background: T.card, border: `1px solid ${T.borderSoft}`, boxShadow: T.shadow }}>
-              {/* Identity header */}
-              <div className="flex items-center gap-3 pb-4 mb-4" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
-                <span className="w-10 h-10 rounded-[12px] flex items-center justify-center text-[13.5px] font-semibold shrink-0" style={{ background: T.accentFaint, border: `1px solid ${T.accentBorder}`, color: T.accent }}>
-                  {customer.name.split(" ").map((w) => w[0]).slice(0, 2).join("")}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="text-[10px] font-medium tracking-[0.08em] uppercase" style={{ color: T.faint }}>Customer</div>
-                  <div className="text-[14.5px] font-semibold truncate" style={{ color: T.text }}>{customer.name}</div>
-                </div>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" style={{ color: T.faint }}><path d="m9 18 6-6-6-6" /></svg>
-              </div>
-              <div className="space-y-3">
-                {[["Phone", customer.phone], ["Email", customer.email], ["Location", customer.birthPlace]].map(([k, v]) => (
-                  <div key={k}>
-                    <div className="text-[10px] font-medium tracking-[0.08em] uppercase mb-0.5" style={{ color: T.faint }}>{k}</div>
-                    <div className="text-[13px] font-medium truncate" style={{ color: T.text }}>{v}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </Link>
-        ) : (
-          <Card>
-            <h2 className="text-[15px] font-semibold tracking-[-0.01em] mb-3" style={{ color: T.text }}>Customer</h2>
-            <div className="flex items-center justify-between text-[13px]">
-              <span style={{ color: T.muted }}>Name</span>
-              <span style={{ color: T.text }}>{order.customerName}</span>
-            </div>
-          </Card>
-        )}
-
         {/* Payment details */}
         <Card>
           <div className="flex items-center justify-between mb-3.5">
