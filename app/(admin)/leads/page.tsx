@@ -2,10 +2,10 @@
 import { Suspense, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { PageHeader, Card, Chip, Tabs, Select, InlineFilter, MultiCheck, ToolbarSearch, SortMenu, EmptyState, Toast, MobileListCard, Monogram, MobileToolbar, SheetSection } from "@/components/ui";
+import { PageHeader, Card, Chip, Tabs, Select, InlineFilter, MultiCheck, ToolbarSearch, SortMenu, EmptyState, Toast, MobileListCard, Monogram, MobileToolbar, SheetSection, Pagination } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { inr } from "@/lib/types";
-import { MOCK_SALES_MEMBERS } from "@/lib/mock";
+import { MOCK_SALES_MEMBERS, MOCK_ORDERS } from "@/lib/mock";
 import { useLeads, salesMemberName, type LeadStatus } from "@/lib/store/leads";
 
 /* ─── label + tone maps ─── */
@@ -38,9 +38,9 @@ function AssigneeCell({ id, value }: { id: string; value?: string }) {
 function LeadsPageInner() {
   const params = useSearchParams();
   const router = useRouter();
-  const initialTab = ((["stone", "consultation", "approvals"].includes(params.get("tab") || "") ? params.get("tab") : "approvals") as "stone" | "consultation" | "approvals");
+  const initialTab = ((["stone", "consultation", "approvals", "order_unpaid"].includes(params.get("tab") || "") ? params.get("tab") : "approvals") as "stone" | "consultation" | "approvals" | "order_unpaid");
   const { orderLeads, consultLeads, pendingApprovals, reviewedFulfillments, reviewFulfillment } = useLeads();
-  const [tab, setTab] = useState<"stone" | "consultation" | "approvals">(initialTab);
+  const [tab, setTab] = useState<"stone" | "consultation" | "approvals" | "order_unpaid">(initialTab);
 
   const [statusF, setStatusF] = useState<string[]>([]);
   const [reasonF, setReasonF] = useState<string[]>([]);
@@ -48,6 +48,12 @@ function LeadsPageInner() {
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("newest");
   const [toast, setToast] = useState("");
+
+  // Order Unpaid tab
+  const [unpaidSearch, setUnpaidSearch] = useState("");
+  const [unpaidSort, setUnpaidSort] = useState("newest");
+  const [unpaidPage, setUnpaidPage] = useState(1);
+  const UNPAID_PER_PAGE = 10;
 
   const stoneRows = useMemo(() => {
     let rows = orderLeads.filter((o) =>
@@ -70,6 +76,20 @@ function LeadsPageInner() {
     rows = [...rows].sort((a, b) => sort === "oldest" ? +new Date(a.date) - +new Date(b.date) : +new Date(b.date) - +new Date(a.date));
     return rows;
   }, [consultLeads, statusF, reasonF, assigneeF, search, sort]);
+
+  const unpaidOrders = useMemo(() => {
+    let rows = MOCK_ORDERS.filter((o) => o.paymentStatus === "pending");
+    if (unpaidSearch) {
+      const q = unpaidSearch.toLowerCase();
+      rows = rows.filter((o) => o.customerName.toLowerCase().includes(q) || o.items.some((i) => i.name.toLowerCase().includes(q)) || o.id.toLowerCase().includes(q));
+    }
+    rows = [...rows].sort((a, b) => unpaidSort === "amount_high" ? b.total - a.total : unpaidSort === "amount_low" ? a.total - b.total : unpaidSort === "oldest" ? +new Date(a.placedAt) - +new Date(b.placedAt) : +new Date(b.placedAt) - +new Date(a.placedAt));
+    return rows;
+  }, [unpaidSearch, unpaidSort]);
+  const unpaidTotal = unpaidOrders.length;
+  const unpaidTotalPages = Math.ceil(unpaidTotal / UNPAID_PER_PAGE);
+  const unpaidCurrentPage = unpaidPage > unpaidTotalPages && unpaidTotalPages > 0 ? unpaidTotalPages : unpaidPage;
+  const unpaidPaginated = unpaidOrders.slice((unpaidCurrentPage - 1) * UNPAID_PER_PAGE, unpaidCurrentPage * UNPAID_PER_PAGE);
 
   // ── Approvals tab state ──
   const [apprTypeF, setApprTypeF] = useState<string[]>([]);
@@ -100,6 +120,7 @@ function LeadsPageInner() {
     { key: "approvals", label: "Approvals", count: pendingApprovals.length },
     { key: "stone", label: "Stone leads", count: orderLeads.length },
     { key: "consultation", label: "Consultation leads", count: consultLeads.length },
+    { key: "order_unpaid", label: "Order Unpaid", count: unpaidTotal },
   ];
 
   return (
@@ -109,7 +130,7 @@ function LeadsPageInner() {
       <div className="mb-4"><Tabs tabs={TABS} active={tab} onChange={(k) => setTab(k as typeof tab)} /></div>
 
       {/* Toolbar (leads tabs only) — mobile: collapsed MobileToolbar row */}
-      {tab !== "approvals" && (
+      {(tab === "stone" || tab === "consultation") && (
         <>
           <MobileToolbar
             className="sm:hidden"
@@ -304,6 +325,64 @@ function LeadsPageInner() {
             {approvals.length === 0 && <EmptyState inline icon="check" title="All caught up" description="No fulfilments match — nothing waiting for approval." />}
           </div>
         </Card>
+      )}
+
+      {/* ORDER UNPAID TOOLBAR */}
+      {tab === "order_unpaid" && (
+        <div className="hidden sm:flex items-center justify-between gap-3 mb-3">
+          <div />
+          <div className="flex items-center gap-2">
+            <ToolbarSearch value={unpaidSearch} onChange={(v) => { setUnpaidSearch(v); setUnpaidPage(1); }} placeholder="Search order, customer…" />
+            <SortMenu value={unpaidSort} onChange={(v) => { setUnpaidSort(v); setUnpaidPage(1); }} options={SORTS} />
+          </div>
+        </div>
+      )}
+
+      {/* ORDER UNPAID TABLE */}
+      {tab === "order_unpaid" && (
+        <>
+          <Card className="!p-0 overflow-hidden">
+            <div className="hidden lg:grid grid-cols-[64px_1.3fr_1.6fr_120px_120px] gap-3 px-4 h-10 items-center text-[11px] tracking-[0.06em] uppercase sticky top-0 z-10" style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.borderSoft}` }}>
+              <span>Order</span><span>Customer</span><span>Items</span><span>Created</span><span className="text-right">Amount</span>
+            </div>
+            <div className="max-h-[calc(100vh-300px)] overflow-y-auto">
+              {unpaidPaginated.map((o) => (
+                <div key={o.id}>
+                  <MobileListCard
+                    className="lg:hidden"
+                    href={`/orders/${o.id}`}
+                    leading={<Monogram name={o.customerName} />}
+                    title={o.customerName}
+                    right={inr(o.total)}
+                    sub={o.items.length > 1 ? `${o.items[0]?.name} + ${o.items.length - 1} more` : o.items[0]?.name}
+                    status={{ label: "Payment pending", tone: "gold" }}
+                    time={o.placedAt}
+                  />
+                  <Link
+                    href={`/orders/${o.id}`}
+                    className="hidden lg:grid lg:grid-cols-[64px_1.3fr_1.6fr_120px_120px] gap-3 px-4 py-3 lg:items-center transition-colors even:bg-[rgba(89,82,54,0.02)] hover:bg-[rgba(119,123,98,0.05)]"
+                    style={{ borderBottom: `1px solid ${T.borderSoft}` }}
+                  >
+                    <span className="text-[11.5px] tabular-nums" style={{ color: T.faint }}>#{o.id.replace("AL-ORD-", "")}</span>
+                    <div className="min-w-0">
+                      <span className="block text-[13.5px] font-medium truncate" style={{ color: T.text }}>{o.customerName}</span>
+                      <span className="block text-[11.5px] truncate" style={{ color: T.faint }}>{fmtDate(o.placedAt)}</span>
+                    </div>
+                    <div className="min-w-0">
+                      <span className="block text-[13px] truncate" style={{ color: T.muted }}>
+                        {o.items[0]?.name}{o.items.length > 1 && ` + ${o.items.length - 1} more`}
+                      </span>
+                    </div>
+                    <span className="text-[12px] tabular-nums" style={{ color: T.muted }}>{fmtDate(o.placedAt)}</span>
+                    <span className="text-[13.5px] font-semibold tabular-nums lg:text-right" style={{ color: T.text }}>{inr(o.total)}</span>
+                  </Link>
+                </div>
+              ))}
+              {unpaidOrders.length === 0 && <EmptyState inline icon="check" title="No unpaid orders" description="All orders have been paid." />}
+            </div>
+          </Card>
+          <Pagination page={unpaidCurrentPage - 1} totalPages={unpaidTotalPages} totalItems={unpaidTotal} perPage={UNPAID_PER_PAGE} onPageChange={(p) => setUnpaidPage(p + 1)} />
+        </>
       )}
 
       <Toast message={toast} tone={toast.includes("Reject") ? "info" : "success"} />

@@ -18,18 +18,14 @@ const C_SORT_OPTIONS = [
 import { T } from "@/lib/theme";
 import { useSimulatedLoad } from "@/lib/useSimulatedLoad";
 import { usePersistentState } from "@/lib/usePersistentState";
-import { MOCK_CONSULTATIONS, MOCK_INCOMPLETE_CONSULTATIONS } from "@/lib/mock";
+import { MOCK_CONSULTATIONS } from "@/lib/mock";
 
 const TABS = [
   { key: "all", label: "All" },
   { key: "reschedule", label: "Reschedule Request" },
   { key: "summary_due", label: "Recommendation due" },
   { key: "no_show", label: "No show" },
-  { key: "incomplete", label: "Incomplete" },
 ];
-
-const INC_REASON_LABEL: Record<string, string> = { slot_check: "Slot check", payment_failed: "Payment failed", requested_call: "Requested call" };
-const INC_REASON_TONE: Record<string, "danger" | "gold" | "muted"> = { slot_check: "muted", payment_failed: "danger", requested_call: "gold" };
 
 const STATUS_FILTER_LABEL: Record<string, string> = {
   payment_pending: "Payment pending",
@@ -79,15 +75,6 @@ export default function ConsultationsPage() {
   const [filterDateTo, setFilterDateTo] = useState("");
   const [page, setPage] = useState(1);
 
-  // Incomplete tab
-  const [incFilterCustomer, setIncFilterCustomer] = useState("");
-  const [incFilterExpert, setIncFilterExpert] = useState("");
-  const [incFilterReason, setIncFilterReason] = useState("");
-  const [incFilterDateFrom, setIncFilterDateFrom] = useState("");
-  const [incFilterDateTo, setIncFilterDateTo] = useState("");
-  const [incSort, setIncSort] = useState<SortKey>("date_desc");
-  const [incPage, setIncPage] = useState(1);
-
   // Calendar
   const [calWeekBase, setCalWeekBase] = useState(() => new Date());
   const [calScope, setCalScope] = usePersistentState<"day" | "week">("pref-cal-scope", "week");
@@ -117,7 +104,7 @@ export default function ConsultationsPage() {
 
   const filtered = MOCK_CONSULTATIONS
     .filter((c) => {
-      if (tab === "all" || tab === "incomplete") return true;
+      if (tab === "all") return true;
       return matchesStatus(c, tab);
     })
     .filter((c) => {
@@ -161,32 +148,7 @@ export default function ConsultationsPage() {
     reschedule: MOCK_CONSULTATIONS.filter(c => matchesStatus(c, "reschedule")).length,
     summary_due: MOCK_CONSULTATIONS.filter(c => matchesStatus(c, "summary_due")).length,
     no_show: MOCK_CONSULTATIONS.filter(c => matchesStatus(c, "no_show")).length,
-    incomplete: MOCK_INCOMPLETE_CONSULTATIONS.length,
   };
-  // Incomplete
-  const incCustomers = [...new Set(MOCK_INCOMPLETE_CONSULTATIONS.map((c) => c.customerName))].sort();
-  const incExperts = [...new Set(MOCK_INCOMPLETE_CONSULTATIONS.map((c) => c.expertName))].sort();
-
-
-  const incFiltered = MOCK_INCOMPLETE_CONSULTATIONS
-    .filter((c) => {
-      if (!search) return true;
-      const q = search.toLowerCase();
-      return c.customerName.toLowerCase().includes(q) || c.expertName.toLowerCase().includes(q);
-    })
-    .filter((c) => !incFilterCustomer || c.customerName === incFilterCustomer)
-    .filter((c) => !incFilterExpert || c.expertName === incFilterExpert)
-    .filter((c) => !incFilterReason || c.reason === incFilterReason)
-    .filter((c) => {
-      if (incFilterDateFrom && c.date < incFilterDateFrom) return false;
-      if (incFilterDateTo && c.date > incFilterDateTo) return false;
-      return true;
-    })
-    .sort((a, b) => (incSort === "date_asc" ? new Date(a.date).getTime() - new Date(b.date).getTime() : new Date(b.date).getTime() - new Date(a.date).getTime()));
-
-  const incTotalPages = Math.ceil(incFiltered.length / PER_PAGE);
-  const incCurrentPage = incPage > incTotalPages && incTotalPages > 0 ? incTotalPages : incPage;
-  const incPaginated = incFiltered.slice((incCurrentPage - 1) * PER_PAGE, incCurrentPage * PER_PAGE);
 
   // Calendar data
   const weekDays = useMemo(() => getWeekDays(calWeekBase), [calWeekBase]);
@@ -229,17 +191,10 @@ export default function ConsultationsPage() {
 
   const handleExport = ({ from, to, format, periodLabel }: { from: string; to: string; format: "pdf" | "xls"; periodLabel: string }) => {
     const inRange = (d: string) => (!from || d.slice(0, 10) >= from) && (!to || d.slice(0, 10) <= to);
-    if (tab === "incomplete") {
-      const header = ["Customer", "Expert", "Date", "Reason"];
-      const rows = incFiltered.filter((c) => inRange(c.date)).map((c) => [c.customerName, c.expertName, c.date, INC_REASON_LABEL[c.reason] || c.reason]);
-      if (format === "xls") downloadXLS(header, rows, `incomplete-consultations-${from}-to-${to}.xls`);
-      else downloadPDF(`Incomplete consultations — ${periodLabel}`, header, rows);
-    } else {
-      const header = ["ID", "Customer", "Expert", "Scheduled at", "Status", "Payment"];
-      const rows = filtered.filter((c) => inRange(c.scheduledAt || "")).map((c) => [c.id, c.customerName, c.expertName, c.scheduledAt || "—", c.status || "—", c.paymentStatus || "—"] as (string | number)[]);
-      if (format === "xls") downloadXLS(header, rows, `consultations-${from}-to-${to}.xls`);
-      else downloadPDF(`Consultations — ${periodLabel}`, header, rows);
-    }
+    const header = ["ID", "Customer", "Expert", "Scheduled at", "Status", "Payment"];
+    const rows = filtered.filter((c) => inRange(c.scheduledAt || "")).map((c) => [c.id, c.customerName, c.expertName, c.scheduledAt || "—", c.status || "—", c.paymentStatus || "—"] as (string | number)[]);
+    if (format === "xls") downloadXLS(header, rows, `consultations-${from}-to-${to}.xls`);
+    else downloadPDF(`Consultations — ${periodLabel}`, header, rows);
   };
 
   return (
@@ -267,10 +222,9 @@ export default function ConsultationsPage() {
           <Tabs
             tabs={TABS.map((t) => ({ ...t, count: tabCounts[t.key] ?? 0 }))}
             active={tab}
-            onChange={(key) => { setTab(key); if (key !== "all") setViewMode("list"); setPage(1); }}
+            onChange={(key) => { setTab(key); setPage(1); }}
           />
-          {tab === "all" && (
-            <div className="ml-auto inline-flex items-center gap-1 p-1 rounded-full shrink-0" style={{ background: "rgba(89,82,54,0.07)", border: `1px solid ${T.borderSoft}` }}>
+          <div className="ml-auto inline-flex items-center gap-1 p-1 rounded-full shrink-0" style={{ background: "rgba(89,82,54,0.07)", border: `1px solid ${T.borderSoft}` }}>
               {(["list", "calendar"] as const).map((mode) => (
                 <Tooltip key={mode} label={mode === "list" ? "List view" : "Calendar view"}>
                 <button onClick={() => setViewMode(mode)} aria-label={mode === "list" ? "List view" : "Calendar view"}
@@ -285,7 +239,6 @@ export default function ConsultationsPage() {
                 </Tooltip>
               ))}
             </div>
-          )}
         </div>
 
         {/* Mobile: single collapsed toolbar row (filters sheet + expanding search + sort) */}
@@ -314,8 +267,8 @@ export default function ConsultationsPage() {
           />
         )}
 
-        {/* Filter strip — filters left, search + sort right */}
-        <div className="hidden sm:flex flex-wrap items-center gap-2 pt-4" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+        {/* Filter strip — filters left, search + sort right (hidden in calendar view) */}
+        {viewMode === "list" && <div className="hidden sm:flex flex-wrap items-center gap-2 pt-4" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
           <div className="flex flex-wrap items-center gap-2">
             <InlineFilter label="Expert" icon={C_ICONS.expert} count={filterExpert.length} width={240}>
               <MultiCheck options={uniqueExperts.map((e) => ({ value: e, label: e }))} value={filterExpert} onChange={setFilterExpert} onAfter={() => setPage(1)} />
@@ -340,11 +293,11 @@ export default function ConsultationsPage() {
             <ToolbarSearch value={search} onChange={setSearch} placeholder="Search customer, expert, ID…" />
             <SortMenu value={sort} onChange={(v) => { setSort(v as SortKey); setPage(1); }} options={C_SORT_OPTIONS} />
           </div>
-        </div>
+        </div>}
       </div>
 
       {/* ============ List view ============ */}
-      {tab !== "incomplete" && viewMode === "list" && <>
+      {viewMode === "list" && <>
       <Card className="!p-0 md:flex md:flex-col md:min-h-0">
         {loading ? (
           <TableSkeleton cols={4} rows={8} />
@@ -404,64 +357,8 @@ export default function ConsultationsPage() {
       <Pagination page={currentPage - 1} totalPages={totalPages} totalItems={filtered.length} perPage={PER_PAGE} onPageChange={(p) => setPage(p + 1)} />
       </>}
 
-      {/* ============ Incomplete bookings ============ */}
-      {tab === "incomplete" && (
-        <>
-          <Card className="!p-0 md:flex md:flex-col md:min-h-0">
-            {loading ? (
-              <TableSkeleton cols={4} rows={8} />
-            ) : (
-              <>
-            <div
-              className="hidden sm:grid grid-cols-[1fr_1fr_100px_100px_140px] gap-3 items-center px-4 h-10 text-[11px] font-medium tracking-[0.06em] uppercase rounded-t-[15px]"
-              style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.borderSoft}` }}
-            >
-              <span>Customer</span>
-              <span>Astrologer</span>
-              <span>Date</span>
-              <span>Assignee</span>
-              <span>Reason</span>
-            </div>
-            <div className="md:flex-1 md:min-h-0 overflow-y-auto max-h-[560px] md:max-h-none">
-              {incPaginated.length === 0 ? (
-                <EmptyState inline icon="check" title="No incomplete bookings" description="Nothing needs recovery right now." />
-              ) : (
-                incPaginated.map((c, idx) => (
-                  <div key={c.id}>
-                  <MobileListCard
-                    className="sm:hidden"
-                    href={`/consultations/incomplete/${c.id}`}
-                    leading={<Monogram name={c.customerName} tone="muted" />}
-                    title={c.customerName}
-                    sub={`Booking with ${c.expertName}`}
-                    status={{ label: INC_REASON_LABEL[c.reason] || c.reason, tone: INC_REASON_TONE[c.reason] || "muted" }}
-                    time={c.date}
-                    facts={c.assignedTo ? [{ label: "with", value: c.assignedTo }] : undefined}
-                  />
-                  <Link
-                    href={`/consultations/incomplete/${c.id}`}
-                    className="hidden sm:grid sm:grid-cols-[1fr_1fr_100px_100px_140px] gap-2 sm:gap-3 items-center px-4 py-2.5 transition-colors duration-150 last:rounded-b-[15px] even:bg-[rgba(89,82,54,0.025)] hover:!bg-[rgba(119,123,98,0.08)]"
-                    style={{ borderBottom: idx < incPaginated.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
-                  >
-                    <span className="text-[13px] font-semibold truncate block" style={{ color: T.text }}>{c.customerName}</span>
-                    <span className="text-[12.5px] truncate block" style={{ color: T.muted }}>{c.expertName}</span>
-                    <span className="text-[12px] tabular-nums" style={{ color: T.muted }}>{new Date(c.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>
-                    <span className="text-[12px] truncate" style={{ color: c.assignedTo ? T.text : T.faint }}>{c.assignedTo || "—"}</span>
-                    <div><Chip tone={INC_REASON_TONE[c.reason] || "muted"}>{INC_REASON_LABEL[c.reason] || c.reason}</Chip></div>
-                  </Link>
-                  </div>
-                ))
-              )}
-            </div>
-              </>
-            )}
-          </Card>
-          <Pagination page={incCurrentPage - 1} totalPages={incTotalPages} totalItems={incFiltered.length} perPage={PER_PAGE} onPageChange={(p) => setIncPage(p + 1)} />
-        </>
-      )}
-
       {/* ============ Calendar view ============ */}
-      {tab === "all" && viewMode === "calendar" && (() => {
+      {viewMode === "calendar" && (() => {
         const now = new Date();
         const nowHour = now.getHours();
         const nowPct = (now.getMinutes() / 60) * 100;

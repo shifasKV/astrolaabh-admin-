@@ -1,7 +1,7 @@
 "use client";
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, Select, Pagination, ToolbarSearch, FiltersPopover, FilterField, SortMenu, TableSkeleton, MobileListCard, Monogram, MobileToolbar, SheetSection } from "@/components/ui";
+import { PageHeader, Card, Chip, Select, Pagination, ToolbarSearch, FiltersPopover, FilterField, SortMenu, TableSkeleton, MobileListCard, Monogram, MobileToolbar, SheetSection, GoldBtn } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { useSimulatedLoad } from "@/lib/useSimulatedLoad";
 import { MOCK_STONE_RECOMMENDATIONS, MOCK_CONSULTATIONS, MOCK_ORDERS } from "@/lib/mock";
@@ -99,7 +99,10 @@ export default function RecommendationsPage() {
   return (
     <>
       <div className="md:h-[calc(100dvh-78px)] md:flex md:flex-col md:min-h-0">
-      <PageHeader title="Recommendations" />
+      <PageHeader
+        title="Recommendations"
+        action={<Link href="/orders/create"><GoldBtn>+ Recommend</GoldBtn></Link>}
+      />
 
       {/* Mobile: collapsed toolbar (filters sheet + expanding search + sort) */}
       <MobileToolbar

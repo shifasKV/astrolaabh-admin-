@@ -89,15 +89,15 @@ function ToggleSwitch({ enabled, onToggle }: { enabled: boolean; onToggle: () =>
       onClick={(e) => { e.stopPropagation(); e.preventDefault(); onToggle(); }}
       className="relative inline-flex h-[22px] w-[40px] items-center rounded-full transition-colors duration-200"
       style={{
-        background: enabled ? `${T.accent}30` : "rgba(89,82,54,0.08)",
-        border: `1px solid ${enabled ? `${T.accent}60` : "rgba(89,82,54,0.18)"}`,
+        background: enabled ? `${T.good}30` : "rgba(89,82,54,0.08)",
+        border: `1px solid ${enabled ? `${T.good}60` : "rgba(89,82,54,0.18)"}`,
       }}
       title={enabled ? "Enabled — click to disable" : "Disabled — click to enable"}
     >
       <span
         className="inline-block h-[16px] w-[16px] rounded-full transition-transform duration-200"
         style={{
-          background: enabled ? T.accent : "rgba(89,82,54,0.35)",
+          background: enabled ? T.good : "rgba(89,82,54,0.35)",
           transform: enabled ? "translateX(20px)" : "translateX(3px)",
         }}
       />
@@ -783,7 +783,7 @@ function InventoryPageInner() {
               className="inline-flex items-center gap-1 p-1 rounded-full"
               style={{ background: "rgba(89,82,54,0.07)", border: `1px solid ${T.borderSoft}` }}
             >
-              {([["packages", `Packages`, ENERGISATION.length], ["gurujis", "Gurujis / Pandits", GURUJIS.length]] as const).map(([key, label, count]) => {
+              {([["packages", `Packages`, ENERGISATION.length], ["gurujis", "Gurujis", GURUJIS.length]] as const).map(([key, label, count]) => {
                 const active = energTab === key;
                 return (
                   <button
@@ -873,7 +873,7 @@ function InventoryPageInner() {
           <Card className="!p-0 md:flex md:flex-col md:min-h-0">
             <div className="flex items-center justify-between px-4 h-12 rounded-t-[15px]" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
               <h2 className="text-[13.5px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>
-                Gurujis / Pandits
+                Gurujis
               </h2>
               <button
                 onClick={() => setShowAddGuruji(true)}
