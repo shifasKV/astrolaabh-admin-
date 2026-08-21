@@ -1,6 +1,6 @@
 "use client";
 import { createContext, useContext, useState, useEffect, useCallback, useMemo, type ReactNode } from "react";
-import { MOCK_INCOMPLETE_ORDERS, MOCK_INCOMPLETE_CONSULTATIONS, MOCK_SALES_MEMBERS } from "@/lib/mock";
+import { MOCK_INCOMPLETE_ORDERS, MOCK_INCOMPLETE_CONSULTATIONS, MOCK_SALES_MEMBERS, EXPERT_PROFILES } from "@/lib/mock";
 import type { IncompleteOrder, IncompleteConsultation, IncompleteOrderStatus } from "@/lib/mock";
 import { DESIGNS } from "@/lib/catalog";
 
@@ -73,7 +73,11 @@ const ACTIVE_EXECS = MOCK_SALES_MEMBERS.filter((m) => m.status === "active");
 
 export function salesMemberName(id?: string): string {
   if (!id) return "Unassigned";
-  return MOCK_SALES_MEMBERS.find((m) => m.id === id)?.name ?? "Unassigned";
+  return (
+    MOCK_SALES_MEMBERS.find((m) => m.id === id)?.name ??
+    EXPERT_PROFILES.find((e) => e.id === id)?.name ??
+    "Unassigned"
+  );
 }
 
 /* Deterministic seed: round-robin any unassigned lead across active execs,
