@@ -26,6 +26,8 @@ export const PaymentRequestSchema = z.object({
   expiresAt: z.string().optional(),
   paidAt: z.string().optional(),
   transactionRef: z.string().optional(),
+  medium: z.enum(["UPI", "Card", "Bank Transfer", "Cash", "Cheque", "Net Banking"]).optional(),
+  paidBy: z.string().optional(),
   ownerId: z.string(),
   ownerName: z.string(),
   createdAt: z.string(),

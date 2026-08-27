@@ -415,7 +415,7 @@ export const SEED_CONSULTATIONS: Consultation[] = [
     problemStatement: "Financial instability during Rahu Mahadasha",
     summary: "Rahu strong in 2nd house. Gomed recommended, 7+ ratti, Sri Lankan origin. Silver ring, middle finger.",
     summarySubmittedAt: "2026-07-20T11:30:00+05:30",
-    recommendationId: "rec_030", createdAt: "2026-07-15", updatedAt: "2026-07-20",
+    recommendationId: "rec_030", createdBy: "rahul.verma@astrolaabh.com", createdAt: "2026-07-15", updatedAt: "2026-07-20",
   },
   {
     id: "cons_031", customerId: "cust_014", customerName: "Nikhil Deshmukh",
@@ -426,7 +426,7 @@ export const SEED_CONSULTATIONS: Consultation[] = [
     problemStatement: "Career breakthrough needed — Saturn return phase",
     summary: "Saturn in 10th needs strengthening. Blue Sapphire recommended, 5+ ratti, natural unheated.",
     summarySubmittedAt: "2026-07-25T15:30:00+05:30",
-    recommendationId: "rec_031", createdAt: "2026-07-20", updatedAt: "2026-07-25",
+    recommendationId: "rec_031", createdBy: "priya.sharma@astrolaabh.com", createdAt: "2026-07-20", updatedAt: "2026-07-25",
   },
   {
     id: "cons_032", customerId: "cust_015", customerName: "Ishita Banerjee",
@@ -437,7 +437,7 @@ export const SEED_CONSULTATIONS: Consultation[] = [
     problemStatement: "Marriage delay and Venus affliction concerns",
     summary: "Venus weak in 7th. Diamond recommended for marriage harmony, minimum 1.2 carat, high clarity.",
     summarySubmittedAt: "2026-07-28T12:30:00+05:30",
-    recommendationId: "rec_032", createdAt: "2026-07-25", updatedAt: "2026-07-28",
+    recommendationId: "rec_032", createdBy: "sneha.gupta@astrolaabh.com", createdAt: "2026-07-25", updatedAt: "2026-07-28",
   },
   {
     id: "cons_033", customerId: "cust_016", customerName: "Gaurav Mehta",

@@ -38,7 +38,7 @@ function AssigneeCell({ id, value }: { id: string; value?: string }) {
 function LeadsPageInner() {
   const params = useSearchParams();
   const router = useRouter();
-  const initialTab = ((["stone", "consultation", "approvals", "payment"].includes(params.get("tab") || "") ? params.get("tab") : "approvals") as "stone" | "consultation" | "approvals" | "payment");
+  const initialTab = ((["stone", "consultation", "approvals", "payment"].includes(params.get("tab") || "") ? params.get("tab") : "stone") as "stone" | "consultation" | "approvals" | "payment");
   const { orderLeads, consultLeads, pendingApprovals, reviewedFulfillments } = useLeads();
   const [tab, setTab] = useState<"stone" | "consultation" | "approvals" | "payment">(initialTab);
 
@@ -47,6 +47,9 @@ function LeadsPageInner() {
   const [assigneeF, setAssigneeF] = useState<string[]>([]);
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("newest");
+  const [payTypeF, setPayTypeF] = useState<string[]>([]);
+  const [payCreatorF, setPayCreatorF] = useState<string[]>([]);
+  const creatorOptions = [{ value: "__admin", label: "Admin / Ops" }, ...ACTIVE_EXECS.map((m) => ({ value: m.email || m.id, label: m.name }))];
 
   const stoneRows = useMemo(() => {
     let rows = orderLeads.filter((o) =>
@@ -72,43 +75,52 @@ function LeadsPageInner() {
 
   // ── Payment-pending orders (moved here from the Orders page) ──
   const paymentRows = useMemo(() => {
-    let rows = MOCK_ORDERS.filter((o) => o.paymentStatus === "pending").filter((o) =>
-      !search || `${o.id} ${o.customerName} ${o.items.map((i) => i.name).join(" ")}`.toLowerCase().includes(search.toLowerCase()),
-    );
+    let rows = MOCK_ORDERS.filter((o) => o.paymentStatus === "pending").filter((o) => {
+      if (search && !`${o.id} ${o.customerName} ${o.items.map((i) => i.name).join(" ")}`.toLowerCase().includes(search.toLowerCase())) return false;
+      if (payCreatorF.length) {
+        const p = placedByInfo(o.placedBy);
+        const isAdmin = p.role === "AstroLaabh";
+        const matchesAdmin = payCreatorF.includes("__admin") && isAdmin;
+        const matchesExec = payCreatorF.some((f) => f !== "__admin" && (o.placedBy === f || o.placedBy?.includes(f)));
+        if (!matchesAdmin && !matchesExec) return false;
+      }
+      return true;
+    });
     rows = [...rows].sort((a, b) => sort === "amount_high" ? b.total - a.total : sort === "amount_low" ? a.total - b.total : sort === "oldest" ? +new Date(a.placedAt) - +new Date(b.placedAt) : +new Date(b.placedAt) - +new Date(a.placedAt));
     return rows;
-  }, [search, sort]);
+  }, [search, sort, payCreatorF]);
 
   // ── Approvals tab state ──
   const [apprTypeF, setApprTypeF] = useState<string[]>([]);
-  const [apprStatusF, setApprStatusF] = useState<string[]>([]);
+  const [apprAssigneeF, setApprAssigneeF] = useState<string[]>([]);
   const [apprSearch, setApprSearch] = useState("");
   const [apprSort, setApprSort] = useState("newest");
 
   const approvals = useMemo(() => {
     let rows = [...pendingApprovals, ...reviewedFulfillments].filter((r) =>
       (!apprTypeF.length || apprTypeF.includes(r.fulfillment.kind)) &&
-      (!apprStatusF.length || apprStatusF.includes(r.fulfillment.approval)) &&
+      (!apprAssigneeF.length || apprAssigneeF.includes(r.fulfillment.submittedBy ?? "")) &&
       (!apprSearch || `${r.customerName} ${salesMemberName(r.fulfillment.submittedBy)} ${r.fulfillment.summary}`.toLowerCase().includes(apprSearch.toLowerCase())),
     );
     rows = [...rows].sort((a, b) => apprSort === "amount_high" ? b.fulfillment.total - a.fulfillment.total : apprSort === "amount_low" ? a.fulfillment.total - b.fulfillment.total : apprSort === "oldest" ? +new Date(a.fulfillment.submittedAt) - +new Date(b.fulfillment.submittedAt) : +new Date(b.fulfillment.submittedAt) - +new Date(a.fulfillment.submittedAt));
     return rows;
-  }, [pendingApprovals, reviewedFulfillments, apprTypeF, apprStatusF, apprSearch, apprSort]);
-  const apprFilterCount = apprTypeF.length + apprStatusF.length;
+  }, [pendingApprovals, reviewedFulfillments, apprTypeF, apprAssigneeF, apprSearch, apprSort]);
+  const apprFilterCount = apprTypeF.length + apprAssigneeF.length;
 
   const reasonOptions = tab === "consultation"
     ? [{ value: "slot_check", label: "Slot check" }, { value: "payment_failed", label: "Payment failed" }, { value: "requested_call", label: "Requested call" }]
     : [{ value: "payment_failed", label: "Payment failed" }, { value: "abandoned_cart", label: "Abandoned cart" }, { value: "payment_expired", label: "Payment expired" }, { value: "card_declined", label: "Card declined" }, { value: "requested_call", label: "Requested call" }];
   const assigneeOptions = [{ value: "__unassigned", label: "Unassigned" }, ...ACTIVE_EXECS.map((m) => ({ value: m.id, label: m.name }))];
+  const apprAssigneeOptions = ACTIVE_EXECS.map((m) => ({ value: m.id, label: m.name }));
 
   const filterCount = statusF.length + reasonF.length + assigneeF.length;
   const clearAll = () => { setStatusF([]); setReasonF([]); setAssigneeF([]); };
 
   const TABS = [
-    { key: "approvals", label: "Approvals", count: pendingApprovals.length },
-    { key: "payment", label: "Payment pending", count: MOCK_ORDERS.filter((o) => o.paymentStatus === "pending").length },
     { key: "stone", label: "Stone leads", count: orderLeads.length },
     { key: "consultation", label: "Consultation leads", count: consultLeads.length },
+    { key: "approvals", label: "Approvals", count: pendingApprovals.length },
+    { key: "payment", label: "Payment pending", count: MOCK_ORDERS.filter((o) => o.paymentStatus === "pending").length },
   ];
 
   return (
@@ -130,11 +142,11 @@ function LeadsPageInner() {
             sort={<SortMenu value={sort} onChange={setSort} options={SORTS} />}
             filters={
               <>
+                <SheetSection label="Type">
+                  <MultiCheck options={reasonOptions} value={reasonF} onChange={setReasonF} />
+                </SheetSection>
                 <SheetSection label="Status">
                   <MultiCheck options={STATUS_OPTIONS} value={statusF} onChange={setStatusF} />
-                </SheetSection>
-                <SheetSection label="Reason">
-                  <MultiCheck options={reasonOptions} value={reasonF} onChange={setReasonF} />
                 </SheetSection>
                 <SheetSection label="Assignee">
                   <MultiCheck options={assigneeOptions} value={assigneeF} onChange={setAssigneeF} />
@@ -144,8 +156,8 @@ function LeadsPageInner() {
           />
           <div className="hidden sm:flex items-center justify-between gap-3 mb-3">
             <div className="flex flex-wrap items-center gap-2">
+              <InlineFilter label="Type" icon={TagIcon} count={reasonF.length}><MultiCheck options={reasonOptions} value={reasonF} onChange={setReasonF} /></InlineFilter>
               <InlineFilter label="Status" icon={FunnelIcon} count={statusF.length}><MultiCheck options={STATUS_OPTIONS} value={statusF} onChange={setStatusF} /></InlineFilter>
-              <InlineFilter label="Reason" icon={TagIcon} count={reasonF.length}><MultiCheck options={reasonOptions} value={reasonF} onChange={setReasonF} /></InlineFilter>
               <InlineFilter label="Assignee" icon={UserIcon} count={assigneeF.length}><MultiCheck options={assigneeOptions} value={assigneeF} onChange={setAssigneeF} /></InlineFilter>
               {filterCount > 0 && <button onClick={clearAll} className="shrink-0 text-[12px] font-medium h-8 px-2.5 rounded-[8px] cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.08)]" style={{ color: T.muted }}>Clear all</button>}
             </div>
@@ -230,15 +242,33 @@ function LeadsPageInner() {
         <>
           <MobileToolbar
             className="sm:hidden mb-3"
-            filterCount={0}
+            filterCount={payTypeF.length + payCreatorF.length}
+            onClearAll={() => { setPayTypeF([]); setPayCreatorF([]); }}
             search={search}
             onSearch={setSearch}
             searchPlaceholder="Search order, customer…"
             sort={<SortMenu value={sort} onChange={setSort} options={SORTS} />}
+            filters={
+              <>
+                <SheetSection label="Type">
+                  <MultiCheck options={[{ value: "stone", label: "Stone order" }, { value: "consultation", label: "Consultation" }]} value={payTypeF} onChange={setPayTypeF} />
+                </SheetSection>
+                <SheetSection label="Created by">
+                  <MultiCheck options={creatorOptions} value={payCreatorF} onChange={setPayCreatorF} />
+                </SheetSection>
+              </>
+            }
           />
-          <div className="hidden sm:flex items-center justify-end gap-2 mb-3">
-            <ToolbarSearch value={search} onChange={setSearch} placeholder="Search order, customer…" />
-            <SortMenu value={sort} onChange={setSort} options={SORTS} />
+          <div className="hidden sm:flex items-center justify-between gap-3 mb-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <InlineFilter label="Type" icon={TagIcon} count={payTypeF.length}><MultiCheck options={[{ value: "stone", label: "Stone order" }, { value: "consultation", label: "Consultation" }]} value={payTypeF} onChange={setPayTypeF} /></InlineFilter>
+              <InlineFilter label="Created by" icon={UserIcon} count={payCreatorF.length}><MultiCheck options={creatorOptions} value={payCreatorF} onChange={setPayCreatorF} /></InlineFilter>
+              {(payTypeF.length + payCreatorF.length) > 0 && <button onClick={() => { setPayTypeF([]); setPayCreatorF([]); }} className="shrink-0 text-[12px] font-medium h-8 px-2.5 rounded-[8px] cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.08)]" style={{ color: T.muted }}>Clear all</button>}
+            </div>
+            <div className="flex items-center gap-2">
+              <ToolbarSearch value={search} onChange={setSearch} placeholder="Search order, customer…" />
+              <SortMenu value={sort} onChange={setSort} options={SORTS} />
+            </div>
           </div>
           <Card className="!p-0 overflow-hidden">
             <div className="hidden lg:grid grid-cols-[80px_1.4fr_110px_180px_120px] gap-3 px-4 h-10 items-center text-[11px] tracking-[0.06em] uppercase sticky top-0 z-10" style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.borderSoft}` }}>
@@ -278,7 +308,7 @@ function LeadsPageInner() {
           <MobileToolbar
             className="sm:hidden"
             filterCount={apprFilterCount}
-            onClearAll={() => { setApprTypeF([]); setApprStatusF([]); }}
+            onClearAll={() => { setApprTypeF([]); setApprAssigneeF([]); }}
             search={apprSearch}
             onSearch={setApprSearch}
             searchPlaceholder="Search customer, exec, item…"
@@ -288,8 +318,8 @@ function LeadsPageInner() {
                 <SheetSection label="Type">
                   <MultiCheck options={[{ value: "order", label: "Stone order" }, { value: "consultation", label: "Consultation" }]} value={apprTypeF} onChange={setApprTypeF} />
                 </SheetSection>
-                <SheetSection label="Status">
-                  <MultiCheck options={[{ value: "pending", label: "Admin approval pending" }, { value: "approved", label: "Admin approved" }, { value: "on_hold", label: "On hold" }, { value: "completed", label: "Completed" }, { value: "rejected", label: "Rejected" }]} value={apprStatusF} onChange={setApprStatusF} />
+                <SheetSection label="Assignee">
+                  <MultiCheck options={apprAssigneeOptions} value={apprAssigneeF} onChange={setApprAssigneeF} />
                 </SheetSection>
               </>
             }
@@ -297,8 +327,8 @@ function LeadsPageInner() {
           <div className="hidden sm:flex items-center justify-between gap-3 mb-3">
             <div className="flex flex-wrap items-center gap-2">
               <InlineFilter label="Type" icon={TagIcon} count={apprTypeF.length}><MultiCheck options={[{ value: "order", label: "Stone order" }, { value: "consultation", label: "Consultation" }]} value={apprTypeF} onChange={setApprTypeF} /></InlineFilter>
-              <InlineFilter label="Status" icon={FunnelIcon} count={apprStatusF.length}><MultiCheck options={[{ value: "pending", label: "Admin approval pending" }, { value: "approved", label: "Admin approved" }, { value: "on_hold", label: "On hold" }, { value: "completed", label: "Completed" }, { value: "rejected", label: "Rejected" }]} value={apprStatusF} onChange={setApprStatusF} /></InlineFilter>
-              {apprFilterCount > 0 && <button onClick={() => { setApprTypeF([]); setApprStatusF([]); }} className="shrink-0 text-[12px] font-medium h-8 px-2.5 rounded-[8px] cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.08)]" style={{ color: T.muted }}>Clear all</button>}
+              <InlineFilter label="Assignee" icon={UserIcon} count={apprAssigneeF.length}><MultiCheck options={apprAssigneeOptions} value={apprAssigneeF} onChange={setApprAssigneeF} /></InlineFilter>
+              {apprFilterCount > 0 && <button onClick={() => { setApprTypeF([]); setApprAssigneeF([]); }} className="shrink-0 text-[12px] font-medium h-8 px-2.5 rounded-[8px] cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.08)]" style={{ color: T.muted }}>Clear all</button>}
             </div>
             <div className="flex items-center gap-2">
               <ToolbarSearch value={apprSearch} onChange={setApprSearch} placeholder="Search customer, exec, item…" />

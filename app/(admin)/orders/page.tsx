@@ -19,8 +19,6 @@ type SortKey = "date_desc" | "date_asc" | "amount_high" | "amount_low";
 
 const STATUS_FILTER_LABEL: Record<string, string> = {
   payment_pending: "Payment pending",
-  cert_missing: "Cert missing",
-  energ_missing: "Energ missing",
   not_shipped: "Not shipped",
   in_transit: "In transit",
   delivered: "Delivered",
@@ -265,11 +263,11 @@ export default function OrdersPage() {
           className="hidden sm:grid grid-cols-[64px_1fr_100px_170px_200px_110px] gap-3 items-center px-4 h-10 text-[11px] font-medium tracking-[0.06em] uppercase sticky top-0 z-10 rounded-t-[15px]"
           style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.borderSoft}` }}
         >
-          <span>Order</span>
-          <span>Customer</span>
+          <span>Order ID</span>
+          <span>Order details</span>
           <span>Created</span>
           <span>Created by</span>
-          <span>Status</span>
+          <span>Order status</span>
           <span className="text-right">Amount</span>
         </div>
         <div className="md:flex-1 md:min-h-0 overflow-y-auto max-h-[560px] md:max-h-none">
@@ -280,16 +278,16 @@ export default function OrdersPage() {
           paginated.map((o, idx) => {
             const paid = o.paymentStatus === "paid";
             /* Every flag that applies — an order can be not-shipped AND missing its cert */
-            const flags: { tone: "gold" | "danger" | "good" | "info" | "muted"; label: string }[] = [];
-            if (!paid) flags.push({ tone: "gold", label: "Payment pending" });
-            else {
-              if (o.certificateStatus === "missing") flags.push({ tone: "danger", label: "Cert missing" });
-              if (o.energisationStatus === "pending") flags.push({ tone: "gold", label: "Energ missing" });
-              if (o.shopifyStatus === "fulfilled") flags.push({ tone: "good", label: "Delivered" });
-              else if (o.tracking) flags.push({ tone: "info", label: "In transit" });
-              else flags.push({ tone: "muted", label: "Not shipped" });
-            }
-            const st = flags[0];
+            const orderStatus = !paid
+              ? { tone: "gold" as const, label: "Payment pending" }
+              : o.shopifyStatus === "fulfilled"
+                ? { tone: "good" as const, label: "Completed" }
+                : o.tracking
+                  ? { tone: "info" as const, label: "In transit" }
+                  : { tone: "muted" as const, label: "Not shipped" };
+            const warningFlags: { tone: "gold" | "danger"; label: string }[] = [];
+            if (paid && o.certificateStatus === "missing") warningFlags.push({ tone: "danger", label: "Cert missing" });
+            if (paid && o.energisationStatus === "pending") warningFlags.push({ tone: "gold", label: "Energ missing" });
             return (
               <div key={o.id}>
               <MobileListCard
@@ -299,7 +297,7 @@ export default function OrdersPage() {
                 title={o.customerName}
                 right={inr(o.total)}
                 sub={o.items.length > 1 ? `${o.items[0]?.name} + ${o.items.length - 1} more` : o.items[0]?.name}
-                status={{ label: st.label, tone: st.tone, extra: flags.length > 1 ? flags.slice(1).map((fl) => fl.label).join(" · ") : o.id }}
+                status={{ label: orderStatus.label, tone: orderStatus.tone, extra: warningFlags.length > 0 ? warningFlags.map((fl) => fl.label).join(" · ") : o.id }}
                 time={o.placedAt}
               />
               <Link
@@ -309,7 +307,10 @@ export default function OrdersPage() {
               >
                 <span className="text-[11.5px] tabular-nums" style={{ color: T.faint }}>#{o.id.replace("AL-ORD-", "")}</span>
                 <div className="min-w-0">
-                  <div className="text-[13px] font-semibold truncate" style={{ color: T.text }}>{o.customerName}</div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[13px] font-semibold truncate" style={{ color: T.text }}>{o.customerName}</span>
+                    {warningFlags.map((fl) => <Chip key={fl.label} tone={fl.tone}>{fl.label}</Chip>)}
+                  </div>
                   <div className="text-[12px] truncate mt-px" style={{ color: T.muted }}>
                     {o.items[0]?.name}
                     {o.items.length > 1 && <span style={{ color: T.faint }}> +{o.items.length - 1}</span>}
@@ -319,7 +320,7 @@ export default function OrdersPage() {
                   {new Date(o.placedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
                 </span>
                 <span className="flex items-center gap-2 min-w-0">{(() => { const p = placedByInfo(o.placedBy); return (<><span className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold shrink-0" style={{ background: T.accentFaint, border: `1px solid ${T.accentBorder}`, color: T.accent }}>{p.name.split(" ").map((w) => w[0]).slice(0, 2).join("")}</span><span className="min-w-0"><span className="block text-[12.5px] font-medium truncate" style={{ color: T.text }}>{p.name}</span><span className="block text-[10.5px] truncate" style={{ color: T.faint }}>{p.role}</span></span></>); })()}</span>
-                <div className="flex flex-wrap items-center gap-1">{flags.map((fl) => <Chip key={fl.label} tone={fl.tone}>{fl.label}</Chip>)}</div>
+                <div className="flex flex-wrap items-center gap-1"><Chip tone={orderStatus.tone}>{orderStatus.label}</Chip></div>
                 <span className="text-[13px] font-semibold tabular-nums text-right" style={{ color: T.text }}>{inr(o.total)}</span>
               </Link>
               </div>

@@ -1,13 +1,115 @@
 "use client";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { PageHeader, Card, Input, GoldBtn, GhostBtn, Modal } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_AFFILIATES } from "@/lib/mock";
+import { useApproval, type ApprovalState } from "../layout";
 
-export default function ProfilePage() {
+function ApplicationStatusContent({ state, reason }: { state: ApprovalState; reason: string }) {
+  const router = useRouter();
+
+  const applicant = {
+    name: "Rajendra Pandey",
+    email: "rajendra.p@wellnessindia.in",
+    phone: "+91 98765 43210",
+    city: "New Delhi",
+    appliedAt: "15 Jun, 2026",
+    bankName: "HDFC Bank",
+    accountNumber: "••••6789",
+    ifsc: "HDFC0001234",
+    upi: "rajendra@upi",
+    panFile: "PAN_Card_Rajendra.pdf",
+  };
+
+  const meta = state === "rejected"
+    ? { icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6"><circle cx="12" cy="12" r="10" /><path d="m15 9-6 6M9 9l6 6" /></svg>, color: "#a3493f", bg: "rgba(163,73,63,0.10)", border: "rgba(163,73,63,0.35)", title: "Application rejected", desc: "Your affiliate application was not approved. Please review the feedback below." }
+    : state === "revision_requested"
+    ? { icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6"><path d="M1 4v6h6" /><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" /></svg>, color: "#8a6a2f", bg: "rgba(160,125,56,0.10)", border: "rgba(184,138,62,0.42)", title: "Revision requested", desc: "The AstroLaabh team has reviewed your application and needs some changes before approval." }
+    : { icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6"><circle cx="12" cy="12" r="10" /><path d="M12 8v4l3 2" /></svg>, color: "#8a6a2f", bg: "rgba(160,125,56,0.10)", border: "rgba(184,138,62,0.42)", title: "Application under review", desc: "Your application is being reviewed by the AstroLaabh team. This typically takes 1–2 business days." };
+
+  return (
+    <>
+      {/* Status header */}
+      <div className="text-center mb-8">
+        <div className="w-14 h-14 rounded-[18px] flex items-center justify-center mx-auto mb-4" style={{ background: meta.bg, color: meta.color, border: `1px solid ${meta.border}` }}>
+          {meta.icon}
+        </div>
+        <h1 className="text-[22px] font-semibold tracking-[-0.02em] mb-1.5" style={{ color: T.text }}>{meta.title}</h1>
+        <p className="text-[13.5px] leading-relaxed max-w-[420px] mx-auto" style={{ color: T.muted }}>{meta.desc}</p>
+      </div>
+
+      {/* Feedback reason (for rejected / revision_requested) */}
+      {(state === "rejected" || state === "revision_requested") && reason && (
+        <div className="rounded-[14px] p-4 mb-6" style={{ background: state === "rejected" ? "rgba(163,73,63,0.06)" : "rgba(160,125,56,0.06)", border: `1px solid ${meta.border}`, borderLeft: `3px solid ${meta.color}` }}>
+          <div className="text-[11px] font-semibold tracking-[0.08em] uppercase mb-1.5" style={{ color: meta.color }}>
+            {state === "rejected" ? "Reason for rejection" : "Changes requested"}
+          </div>
+          <p className="text-[13px] leading-relaxed" style={{ color: T.text }}>{reason}</p>
+        </div>
+      )}
+
+      {/* Submitted details */}
+      <Card className="!p-0 overflow-hidden mb-6">
+        <div className="p-5">
+          <h2 className="text-[14px] font-semibold tracking-[-0.01em] mb-3" style={{ color: T.text }}>Personal details</h2>
+          <div className="grid grid-cols-2 gap-y-3 gap-x-6">
+            {[["Full name", applicant.name], ["Email", applicant.email], ["Phone", applicant.phone], ["City", applicant.city], ["Applied on", applicant.appliedAt]].map(([k, v]) => (
+              <div key={k}>
+                <div className="text-[10px] font-medium tracking-[0.08em] uppercase mb-0.5" style={{ color: T.faint }}>{k}</div>
+                <div className="text-[13px] font-medium" style={{ color: T.text }}>{v}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="p-5" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+          <h2 className="text-[14px] font-semibold tracking-[-0.01em] mb-3" style={{ color: T.text }}>Bank details</h2>
+          <div className="grid grid-cols-2 gap-y-3 gap-x-6">
+            {[["Bank name", applicant.bankName], ["Account", applicant.accountNumber], ["IFSC", applicant.ifsc], ["UPI ID", applicant.upi]].map(([k, v]) => (
+              <div key={k}>
+                <div className="text-[10px] font-medium tracking-[0.08em] uppercase mb-0.5" style={{ color: T.faint }}>{k}</div>
+                <div className="text-[13px] font-medium tabular-nums" style={{ color: T.text }}>{v}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="p-5" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+          <h2 className="text-[14px] font-semibold tracking-[-0.01em] mb-3" style={{ color: T.text }}>Documents</h2>
+          <div className="flex items-center gap-3 rounded-[10px] p-3" style={{ background: T.bg, border: `1px solid ${T.borderSoft}` }}>
+            <span className="w-9 h-9 rounded-[10px] flex items-center justify-center shrink-0" style={{ background: T.card, border: `1px solid ${T.borderSoft}`, color: T.accent }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+            </span>
+            <div className="min-w-0">
+              <div className="text-[13px] font-medium truncate" style={{ color: T.text }}>{applicant.panFile}</div>
+              <div className="text-[11px]" style={{ color: T.muted }}>PAN Card</div>
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      {/* Actions */}
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        {state === "revision_requested" && (
+          <button
+            onClick={() => router.push("/onboarding")}
+            className="h-10 px-6 rounded-[10px] text-[13px] font-semibold cursor-pointer transition-all duration-200 hover:brightness-110"
+            style={{ background: T.accent, color: T.accentInk }}
+          >
+            Resubmit application
+          </button>
+        )}
+        <a href="mailto:support@astrolaabh.house" className="h-10 px-5 rounded-[10px] text-[13px] font-medium inline-flex items-center gap-1.5 cursor-pointer transition-colors hover:bg-[rgba(89,82,54,0.06)]" style={{ border: `1px solid ${T.border}`, color: T.text }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M4 4h16v12H5.2L4 17.2z" /><path d="M8 9h8M8 12h5" /></svg>
+          Contact support
+        </a>
+      </div>
+    </>
+  );
+}
+
+function ApprovedProfileContent() {
   const affiliate = MOCK_AFFILIATES[0];
 
-  // Profile — saved values + modal draft; Save enabled only when dirty.
   const [profile, setProfile] = useState({ name: affiliate.name, email: affiliate.email, phone: "+91 98100 55555" });
   const [editingProfile, setEditingProfile] = useState(false);
   const [name, setName] = useState(profile.name);
@@ -157,4 +259,14 @@ export default function ProfilePage() {
       </Modal>
     </>
   );
+}
+
+export default function ProfilePage() {
+  const { approval, reviewReason } = useApproval();
+
+  if (approval !== "approved") {
+    return <ApplicationStatusContent state={approval} reason={reviewReason} />;
+  }
+
+  return <ApprovedProfileContent />;
 }

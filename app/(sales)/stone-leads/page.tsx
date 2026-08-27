@@ -1,7 +1,7 @@
 "use client";
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, GoldBtn, ToolbarSearch, InlineFilter, MultiCheck, SortMenu, Pagination, EmptyState, TableSkeleton, MobileListCard, Monogram, MobileToolbar, SheetSection, MobileFab } from "@/components/ui";
+import { PageHeader, Card, Chip, Tabs, GoldBtn, ToolbarSearch, InlineFilter, MultiCheck, SortMenu, Pagination, EmptyState, TableSkeleton, MobileListCard, Monogram, MobileToolbar, SheetSection, MobileFab } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { useSimulatedLoad } from "@/lib/useSimulatedLoad";
 import { useAuth } from "@/lib/store/auth";
@@ -26,20 +26,27 @@ const FunnelIcon = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" st
 const TagIcon = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M20.6 13.4 12 22l-9-9V4h9z" /><circle cx="7.5" cy="7.5" r="1.3" /></svg>;
 const UserIcon = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><circle cx="12" cy="8" r="4" /><path d="M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6" /></svg>;
 
+const APPROVAL_LABEL: Record<string, string> = { pending: "Pending approval", approved: "Approved", rejected: "Rejected", on_hold: "On hold", completed: "Completed" };
+const APPROVAL_TONE: Record<string, "gold" | "good" | "danger" | "info" | "muted"> = { pending: "gold", approved: "good", rejected: "danger", on_hold: "info", completed: "good" };
+
 export default function StoneLeadsPage() {
   const loading = useSimulatedLoad();
   const { user } = useAuth();
-  const { orderLeads, isReviewUnseen } = useLeads();
+  const { orderLeads, pendingApprovals, reviewedFulfillments, isReviewUnseen } = useLeads();
   const isAdmin = user?.role === "sales_admin";
   const myId = user?.id;
   const rowUnseen = (o: (typeof orderLeads)[number]) => !!(myId && o.fulfillment && isReviewUnseen(myId, { kind: "order", id: o.id, customerName: o.customerName, assignedTo: o.assignedTo, fulfillment: o.fulfillment }));
 
+  const [activeTab, setActiveTab] = useState("leads");
   const [search, setSearch] = useState("");
   const [statusF, setStatusF] = useState<string[]>([]);
   const [reasonF, setReasonF] = useState<string[]>([]);
   const [assigneeF, setAssigneeF] = useState<string[]>([]);
   const [sort, setSort] = useState("newest");
   const [page, setPage] = useState(0);
+
+  const allSubmissions = useMemo(() => [...pendingApprovals, ...reviewedFulfillments], [pendingApprovals, reviewedFulfillments]);
+  const myOrders = useMemo(() => allSubmissions.filter((s) => s.fulfillment.kind === "order" && (!myId || s.fulfillment.submittedBy === myId)), [allSubmissions, myId]);
 
   const assigneeOptions = useMemo(() => [{ value: "__unassigned", label: "Unassigned" }, ...MOCK_SALES_MEMBERS.filter((m) => m.status === "active").map((m) => ({ value: m.id, label: m.name }))], []);
 
@@ -71,6 +78,18 @@ export default function StoneLeadsPage() {
       <div className="md:h-[calc(100dvh-78px)] md:flex md:flex-col md:min-h-0">
         <PageHeader title="Stone Leads" action={<span className="hidden sm:block"><Link href="/stone-leads/create"><GoldBtn>+ Create order</GoldBtn></Link></span>} />
 
+        <div className="mb-4">
+          <Tabs
+            tabs={[
+              { key: "leads", label: "Stone Leads", count: filtered.length },
+              { key: "created_orders", label: "Created Orders", count: myOrders.length },
+            ]}
+            active={activeTab}
+            onChange={(k) => { setActiveTab(k); setPage(0); }}
+          />
+        </div>
+
+        {activeTab === "leads" && <>
         <div className="hidden sm:flex items-center justify-between gap-2 mb-4">
           <div className="flex items-center gap-2 flex-wrap">
             <InlineFilter label="Status" icon={FunnelIcon} count={statusF.length}><MultiCheck options={STATUS_OPTIONS} value={statusF} onChange={(v) => { setStatusF(v); setPage(0); }} /></InlineFilter>
@@ -156,6 +175,35 @@ export default function StoneLeadsPage() {
           </div>
         </Card>
         <Pagination page={page} totalPages={totalPages} onPageChange={setPage} perPage={PAGE_SIZE} totalItems={filtered.length} />
+        </>}
+
+        {/* Created Orders tab — read-only */}
+        {activeTab === "created_orders" && (
+          <Card className="!p-0 md:flex md:flex-col md:min-h-0">
+            <div className="md:min-h-0 overflow-y-auto max-h-[560px] md:max-h-none flex-1">
+              <div className="hidden sm:grid grid-cols-[1fr_1fr_120px_120px] gap-3 px-4 h-10 items-center text-[11px] tracking-[0.06em] uppercase font-medium rounded-t-[15px]" style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.borderSoft}` }}>
+                <span>Customer</span><span>Summary</span><span>Approval</span><span className="text-right">Amount</span>
+              </div>
+              {myOrders.length === 0 ? (
+                <EmptyState inline icon="inbox" title="No created orders" description="Orders you create will appear here." />
+              ) : (
+                myOrders.map((s, i, arr) => (
+                  <div
+                    key={s.id}
+                    className={`grid grid-cols-1 sm:grid-cols-[1fr_1fr_120px_120px] gap-2 sm:gap-3 items-center px-4 py-2.5 ${i % 2 === 0 ? "bg-[rgba(89,82,54,0.025)]" : ""} ${i === arr.length - 1 ? "rounded-b-[15px]" : ""}`}
+                    style={{ borderBottom: i < arr.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
+                  >
+                    <div className="text-[13px] font-medium truncate" style={{ color: T.text }}>{s.customerName}</div>
+                    <div className="text-[12px] truncate" style={{ color: T.muted }}>{s.fulfillment.summary}</div>
+                    <div><Chip tone={APPROVAL_TONE[s.fulfillment.approval] || "muted"}>{APPROVAL_LABEL[s.fulfillment.approval]}</Chip></div>
+                    <div className="text-[13px] text-right font-semibold tabular-nums" style={{ color: T.text }}>{inr(s.fulfillment.total)}</div>
+                  </div>
+                ))
+              )}
+            </div>
+          </Card>
+        )}
+
       </div>
       <MobileFab href="/stone-leads/create" label="New order" />
     </>

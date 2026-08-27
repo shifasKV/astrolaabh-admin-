@@ -2,7 +2,7 @@
 import { use, useState, useRef, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Card, StatCard, Chip, GoldBtn, GhostBtn, DangerBtn, Modal, Input, Textarea, Tabs, Pagination, BackLink, Select, ToolbarSearch, FiltersPopover, FilterField, FilterChip, Toast, ConfirmDialog } from "@/components/ui";
+import { Card, StatCard, Chip, GoldBtn, GhostBtn, DangerBtn, Modal, Input, Textarea, Tabs, Pagination, BackLink, Select, ToolbarSearch, InlineFilter, MultiCheck, SortMenu, Toast, ConfirmDialog } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_AFFILIATES, MOCK_REFERRAL_EVENTS, MOCK_PAYOUTS, MOCK_ORDERS, MOCK_CONSULTATIONS, MOCK_CUSTOMERS } from "@/lib/mock";
 import { inr } from "@/lib/types";
@@ -21,7 +21,9 @@ function AffiliateReviewView({ affiliate }: { affiliate: typeof MOCK_AFFILIATES[
   const router = useRouter();
   const [toast, setToast] = useState("");
   const [showReject, setShowReject] = useState(false);
+  const [showRevision, setShowRevision] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
+  const [revisionReason, setRevisionReason] = useState("");
 
   const [stoneRate, setStoneRate] = useState("5");
   const [jewelleryRate, setJewelleryRate] = useState("4");
@@ -35,6 +37,12 @@ function AffiliateReviewView({ affiliate }: { affiliate: typeof MOCK_AFFILIATES[
   const rejectAffiliate = () => {
     setShowReject(false);
     flash("Application rejected — feedback sent to the applicant");
+    setTimeout(() => router.push("/affiliates"), 1800);
+  };
+
+  const requestRevision = () => {
+    setShowRevision(false);
+    flash("Revision requested — feedback sent to the applicant");
     setTimeout(() => router.push("/affiliates"), 1800);
   };
 
@@ -90,11 +98,11 @@ function AffiliateReviewView({ affiliate }: { affiliate: typeof MOCK_AFFILIATES[
           </div>
         </div>
         <p className="text-[12.5px] mt-4 pt-4 leading-relaxed" style={{ color: T.muted, borderTop: `1px solid ${T.borderSoft}` }}>
-          These details were shared by the applicant during onboarding. Review them, set the commission &amp; discount, then approve to create their account — or reject with feedback.
+          Review the submitted details, set commission &amp; discount, then choose an action: approve the account, reject it, or request a revision if details need correction.
         </p>
       </Card>
 
-      {/* Submitted information — one seamless surface */}
+      {/* Submitted information */}
       <Card className="!p-0 overflow-hidden mb-4">
         <div className="p-6">
           <h2 className="text-[15px] font-semibold tracking-[-0.01em] mb-4" style={{ color: T.text }}>Personal details</h2>
@@ -154,25 +162,40 @@ function AffiliateReviewView({ affiliate }: { affiliate: typeof MOCK_AFFILIATES[
         </div>
       </Card>
 
-      {/* Sticky decision bar */}
+      {/* Sticky decision bar — 3 actions */}
       <div className="sticky bottom-0 -mx-5 md:-mx-10 px-5 md:px-10 py-3.5 flex items-center justify-between gap-3" style={{ background: "rgba(248,245,238,0.9)", backdropFilter: "blur(6px)", borderTop: `1px solid ${T.borderSoft}` }}>
-        <span className="text-[12px] hidden sm:block" style={{ color: T.faint }}>Approving creates their account and sends an invite link.</span>
+        <span className="text-[12px] hidden sm:block" style={{ color: T.faint }}>Choose an action after reviewing the application.</span>
         <div className="flex items-center gap-2.5 ml-auto">
           <button onClick={() => setShowReject(true)} className="h-10 px-5 rounded-[10px] text-[13px] font-medium transition-colors cursor-pointer hover:bg-[rgba(163,73,63,0.06)]" style={{ border: `1px solid rgba(163,73,63,0.3)`, color: T.danger }}>Reject</button>
-          <GoldBtn onClick={approveAndCreate}>Approve &amp; create account</GoldBtn>
+          <button onClick={() => setShowRevision(true)} className="h-10 px-5 rounded-[10px] text-[13px] font-medium transition-colors cursor-pointer hover:bg-[rgba(160,125,56,0.06)]" style={{ border: `1px solid rgba(184,138,62,0.45)`, color: "#8a6a2f" }}>Request revision</button>
+          <GoldBtn onClick={approveAndCreate}>Approve</GoldBtn>
         </div>
       </div>
 
-      {/* Reject with feedback */}
+      {/* Reject modal */}
       <Modal open={showReject} onClose={() => setShowReject(false)} title="Reject application">
         <div className="space-y-4">
           <p className="text-[13px] leading-relaxed" style={{ color: T.muted }}>
-            Share why <span className="font-medium" style={{ color: T.text }}>{affiliate.name}</span>&apos;s application is being rejected. This feedback is emailed to them so they can correct and re-apply.
+            This will permanently reject <span className="font-medium" style={{ color: T.text }}>{affiliate.name}</span>&apos;s application. Share the reason so they understand the decision.
           </p>
-          <Textarea value={rejectReason} onChange={setRejectReason} label="Reason / feedback" placeholder="e.g. The PAN document is blurry — please re-upload a clear copy." rows={4} />
+          <Textarea value={rejectReason} onChange={setRejectReason} label="Reason for rejection" placeholder="e.g. The applicant does not meet the minimum audience requirements." rows={4} />
           <div className="flex items-center justify-end gap-2.5 pt-1">
             <GhostBtn onClick={() => setShowReject(false)}>Cancel</GhostBtn>
             <DangerBtn onClick={rejectAffiliate} disabled={!rejectReason.trim()}>Reject application</DangerBtn>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Request revision modal */}
+      <Modal open={showRevision} onClose={() => setShowRevision(false)} title="Request revision">
+        <div className="space-y-4">
+          <p className="text-[13px] leading-relaxed" style={{ color: T.muted }}>
+            Ask <span className="font-medium" style={{ color: T.text }}>{affiliate.name}</span> to correct and resubmit their application. They&apos;ll see this feedback on their status page.
+          </p>
+          <Textarea value={revisionReason} onChange={setRevisionReason} label="What needs to be corrected" placeholder="e.g. The PAN card image is blurry — please upload a clear copy. IFSC code doesn't match the bank name." rows={4} />
+          <div className="flex items-center justify-end gap-2.5 pt-1">
+            <GhostBtn onClick={() => setShowRevision(false)}>Cancel</GhostBtn>
+            <GoldBtn onClick={requestRevision} disabled={!revisionReason.trim()}>Send revision request</GoldBtn>
           </div>
         </div>
       </Modal>
@@ -203,17 +226,20 @@ export default function AffiliateDetailPage({ params }: { params: Promise<{ id: 
     ifsc: "HDFC0001234",
     upi: `${affiliate?.name.split(" ").pop()?.toLowerCase()}@upi`,
   };
-  const [payoutForm, setPayoutForm] = useState({ amount: "", notes: "" });
+  const [payoutForm, setPayoutForm] = useState({ amount: "", paymentType: "bank_transfer", paidBy: "", paymentDate: new Date().toISOString().split("T")[0], notes: "" });
   const [specificRates] = useState({ stone: "5", jewellery: "4", consultation: "10" });
 
   const [dataTab, setDataTab] = useState("overview");
-  const [showFilters, setShowFilters] = useState(false);
   const [search, setSearch] = useState("");
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
   const [statusFilter, setStatusFilter] = useState("");
+  const [statusFilterMulti, setStatusFilterMulti] = useState<string[]>([]);
   const [customerFilter, setCustomerFilter] = useState("");
+  const [customerFilterMulti, setCustomerFilterMulti] = useState<string[]>([]);
   const [stoneFilter, setStoneFilter] = useState("");
+  const [stoneFilterMulti, setStoneFilterMulti] = useState<string[]>([]);
   const [expertFilter, setExpertFilter] = useState("");
+  const [expertFilterMulti, setExpertFilterMulti] = useState<string[]>([]);
   const [purchasesPage, setPurchasesPage] = useState(0);
   const [consultationsPage, setConsultationsPage] = useState(0);
   const [registrationsPage, setRegistrationsPage] = useState(0);
@@ -237,7 +263,7 @@ export default function AffiliateDetailPage({ params }: { params: Promise<{ id: 
     );
   }
 
-  if (affiliate.status === "under_review") {
+  if (affiliate.status === "under_review" || affiliate.status === "rejected" || affiliate.status === "revision_requested") {
     return <AffiliateReviewView affiliate={affiliate} />;
   }
 
@@ -264,20 +290,26 @@ export default function AffiliateDetailPage({ params }: { params: Promise<{ id: 
   const filteredOrders = useMemo(() => {
     let items = allOrders;
     if (search) items = items.filter((o) => o.customerName.toLowerCase().includes(searchQ) || o.id.toLowerCase().includes(searchQ) || o.items.some((i) => i.name.toLowerCase().includes(searchQ)));
-    if (statusFilter) items = items.filter((o) => o.paymentStatus === statusFilter || o.operationalStatus === statusFilter);
-    if (customerFilter) items = items.filter((o) => o.customerName === customerFilter);
-    if (stoneFilter) items = items.filter((o) => o.items.some((i) => (i.gemstone ?? i.name) === stoneFilter));
+    if (statusFilterMulti.length) items = items.filter((o) => statusFilterMulti.includes(o.paymentStatus) || statusFilterMulti.includes(o.operationalStatus));
+    else if (statusFilter) items = items.filter((o) => o.paymentStatus === statusFilter || o.operationalStatus === statusFilter);
+    if (customerFilterMulti.length) items = items.filter((o) => customerFilterMulti.includes(o.customerName));
+    else if (customerFilter) items = items.filter((o) => o.customerName === customerFilter);
+    if (stoneFilterMulti.length) items = items.filter((o) => o.items.some((i) => stoneFilterMulti.includes(i.gemstone ?? i.name)));
+    else if (stoneFilter) items = items.filter((o) => o.items.some((i) => (i.gemstone ?? i.name) === stoneFilter));
     return [...items].sort((a, b) => sortOrder === "newest" ? (b.placedAt ?? "").localeCompare(a.placedAt ?? "") : (a.placedAt ?? "").localeCompare(b.placedAt ?? ""));
-  }, [allOrders, search, statusFilter, customerFilter, stoneFilter, sortOrder]);
+  }, [allOrders, search, statusFilter, statusFilterMulti, customerFilter, customerFilterMulti, stoneFilter, stoneFilterMulti, sortOrder]);
 
   const filteredConsultations = useMemo(() => {
     let items = allConsultations;
     if (search) items = items.filter((c) => c.customerName.toLowerCase().includes(searchQ) || c.id.toLowerCase().includes(searchQ) || c.expertName.toLowerCase().includes(searchQ));
-    if (statusFilter) items = items.filter((c) => c.status === statusFilter);
-    if (customerFilter) items = items.filter((c) => c.customerName === customerFilter);
-    if (expertFilter) items = items.filter((c) => c.expertName === expertFilter);
+    if (statusFilterMulti.length) items = items.filter((c) => statusFilterMulti.includes(c.status));
+    else if (statusFilter) items = items.filter((c) => c.status === statusFilter);
+    if (customerFilterMulti.length) items = items.filter((c) => customerFilterMulti.includes(c.customerName));
+    else if (customerFilter) items = items.filter((c) => c.customerName === customerFilter);
+    if (expertFilterMulti.length) items = items.filter((c) => expertFilterMulti.includes(c.expertName));
+    else if (expertFilter) items = items.filter((c) => c.expertName === expertFilter);
     return [...items].sort((a, b) => sortOrder === "newest" ? b.scheduledAt.localeCompare(a.scheduledAt) : a.scheduledAt.localeCompare(b.scheduledAt));
-  }, [allConsultations, search, statusFilter, customerFilter, expertFilter, sortOrder]);
+  }, [allConsultations, search, statusFilter, statusFilterMulti, customerFilter, customerFilterMulti, expertFilter, expertFilterMulti, sortOrder]);
 
   const filteredRegistrations = useMemo(() => {
     let items = referredCustomers;
@@ -288,9 +320,10 @@ export default function AffiliateDetailPage({ params }: { params: Promise<{ id: 
   const filteredPayouts = useMemo(() => {
     let items = payouts;
     if (search) items = items.filter((p) => p.period.toLowerCase().includes(searchQ) || (p.reference ?? "").toLowerCase().includes(searchQ));
-    if (statusFilter) items = items.filter((p) => p.status === statusFilter);
+    if (statusFilterMulti.length) items = items.filter((p) => statusFilterMulti.includes(p.status));
+    else if (statusFilter) items = items.filter((p) => p.status === statusFilter);
     return [...items].sort((a, b) => sortOrder === "newest" ? (b.paidAt ?? b.createdAt).localeCompare(a.paidAt ?? a.createdAt) : (a.paidAt ?? a.createdAt).localeCompare(b.paidAt ?? b.createdAt));
-  }, [payouts, search, statusFilter, sortOrder]);
+  }, [payouts, search, statusFilter, statusFilterMulti, sortOrder]);
 
   const paginate = <T,>(items: T[], page: number) => ({
     total: items.length,
@@ -305,7 +338,7 @@ export default function AffiliateDetailPage({ params }: { params: Promise<{ id: 
 
   const flash = (msg: string) => { setToast(msg); setTimeout(() => setToast(""), 3000); };
   const resetPages = () => { setPurchasesPage(0); setConsultationsPage(0); setRegistrationsPage(0); setPayoutsPage(0); };
-  const clearFilters = () => { setSearch(""); setStatusFilter(""); setCustomerFilter(""); setStoneFilter(""); setExpertFilter(""); resetPages(); };
+  const clearFilters = () => { setSearch(""); setStatusFilter(""); setStatusFilterMulti([]); setCustomerFilter(""); setCustomerFilterMulti([]); setStoneFilter(""); setStoneFilterMulti([]); setExpertFilter(""); setExpertFilterMulti([]); resetPages(); };
 
   const fmtDate = (d: string) => new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }).replace(/ (\d{4})$/, ", $1");
 
@@ -399,8 +432,12 @@ export default function AffiliateDetailPage({ params }: { params: Promise<{ id: 
         />
       </div>
 
-      {/* Toolbar — search + Filters popover + sort (per-tab fields) */}
+      {/* Toolbar — InlineFilter style */}
       {dataTab !== "overview" && (() => {
+        const FunnelIcon = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M3 5h18l-7 8v6l-4-2v-4z" /></svg>;
+        const UserIcon = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><circle cx="12" cy="8" r="4" /><path d="M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6" /></svg>;
+        const TagIcon = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M20.6 13.4 12 22l-9-9V4h9z" /><circle cx="7.5" cy="7.5" r="1.3" /></svg>;
+
         const statusOpts = dataTab === "purchases"
           ? [{ value: "paid", label: "Paid" }, { value: "pending", label: "Payment pending" }, { value: "completed", label: "Completed" }, { value: "in_progress", label: "In progress" }]
           : dataTab === "consultations"
@@ -408,61 +445,29 @@ export default function AffiliateDetailPage({ params }: { params: Promise<{ id: 
             : dataTab === "payments"
               ? [{ value: "paid", label: "Paid" }, { value: "pending", label: "Pending" }, { value: "processing", label: "Processing" }]
               : [];
-        const statusLabel = statusOpts.find((o) => o.value === statusFilter)?.label ?? statusFilter;
         const showCustomer = dataTab === "purchases" || dataTab === "consultations";
         const showStone = dataTab === "purchases";
         const showExpert = dataTab === "consultations";
         const showStatus = statusOpts.length > 0;
-        const filterCount = [showCustomer && customerFilter, showStone && stoneFilter, showExpert && expertFilter, showStatus && statusFilter].filter(Boolean).length;
-        const hasChips = filterCount > 0;
+        const filterCount = statusFilterMulti.length + customerFilterMulti.length + stoneFilterMulti.length + expertFilterMulti.length;
         return (
-          <>
-            <div className="flex flex-wrap items-center gap-2 mb-3">
+          <div className="hidden sm:flex flex-wrap items-center gap-2 pt-4 mb-3" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+            <div className="flex flex-wrap items-center gap-2">
+              {showStatus && <InlineFilter label="Status" icon={FunnelIcon} count={statusFilterMulti.length}><MultiCheck options={statusOpts} value={statusFilterMulti} onChange={(v) => { setStatusFilterMulti(v); resetPages(); }} /></InlineFilter>}
+              {showCustomer && <InlineFilter label="Customer" icon={UserIcon} count={customerFilterMulti.length}><MultiCheck options={uniqueCustomerNames.map((n) => ({ value: n, label: n }))} value={customerFilterMulti} onChange={(v) => { setCustomerFilterMulti(v); resetPages(); }} /></InlineFilter>}
+              {showStone && <InlineFilter label="Stone" icon={TagIcon} count={stoneFilterMulti.length}><MultiCheck options={uniqueStones.map((s) => ({ value: s, label: s }))} value={stoneFilterMulti} onChange={(v) => { setStoneFilterMulti(v); resetPages(); }} /></InlineFilter>}
+              {showExpert && <InlineFilter label="Expert" icon={UserIcon} count={expertFilterMulti.length}><MultiCheck options={uniqueExperts.map((e) => ({ value: e, label: e }))} value={expertFilterMulti} onChange={(v) => { setExpertFilterMulti(v); resetPages(); }} /></InlineFilter>}
+              {filterCount > 0 && <button onClick={() => { setStatusFilterMulti([]); setCustomerFilterMulti([]); setStoneFilterMulti([]); setExpertFilterMulti([]); resetPages(); }} className="shrink-0 text-[12px] font-medium h-8 px-2.5 rounded-[8px] cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.08)]" style={{ color: T.muted }}>Clear all</button>}
+            </div>
+            <div className="ml-auto flex items-center gap-2">
               <ToolbarSearch
                 value={search}
                 onChange={(v) => { setSearch(v); resetPages(); }}
                 placeholder={dataTab === "purchases" ? "Search order, customer, stone…" : dataTab === "consultations" ? "Search customer, expert…" : dataTab === "registrations" ? "Search customer, email…" : "Search period, reference…"}
               />
-              <div className="ml-auto flex items-center gap-2">
-                {(showCustomer || showStone || showExpert || showStatus) && (
-                  <FiltersPopover count={filterCount} open={showFilters} onToggle={() => setShowFilters(!showFilters)}>
-                    {showCustomer && (
-                      <FilterField label="Customer">
-                        <Select value={customerFilter} onChange={(v) => { setCustomerFilter(v); resetPages(); }} searchable compact placeholder="All customers" options={[{ value: "", label: "All customers" }, ...uniqueCustomerNames.map((n) => ({ value: n, label: n }))]} />
-                      </FilterField>
-                    )}
-                    {showStatus && (
-                      <FilterField label="Status">
-                        <Select value={statusFilter} onChange={(v) => { setStatusFilter(v); resetPages(); }} compact placeholder="All statuses" options={[{ value: "", label: "All statuses" }, ...statusOpts]} />
-                      </FilterField>
-                    )}
-                    {showStone && (
-                      <FilterField label="Stone">
-                        <Select value={stoneFilter} onChange={(v) => { setStoneFilter(v); resetPages(); }} searchable compact placeholder="All stones" options={[{ value: "", label: "All stones" }, ...uniqueStones.map((s2) => ({ value: s2, label: s2 }))]} />
-                      </FilterField>
-                    )}
-                    {showExpert && (
-                      <FilterField label="Expert">
-                        <Select value={expertFilter} onChange={(v) => { setExpertFilter(v); resetPages(); }} searchable compact placeholder="All experts" options={[{ value: "", label: "All experts" }, ...uniqueExperts.map((e) => ({ value: e, label: e }))]} />
-                      </FilterField>
-                    )}
-                  </FiltersPopover>
-                )}
-                <div className="w-[150px]">
-                  <Select value={sortOrder} onChange={(v) => { setSortOrder(v as "newest" | "oldest"); resetPages(); }} compact prefix="Sort: " options={[{ value: "newest", label: "Newest" }, { value: "oldest", label: "Oldest" }]} />
-                </div>
-              </div>
+              <SortMenu value={sortOrder} onChange={(v) => { setSortOrder(v as "newest" | "oldest"); resetPages(); }} options={[{ value: "newest", label: "Newest" }, { value: "oldest", label: "Oldest" }]} />
             </div>
-            {hasChips && (
-              <div className="flex flex-wrap items-center gap-1.5 mb-3">
-                {showCustomer && customerFilter && <FilterChip label={`Customer: ${customerFilter}`} onClear={() => { setCustomerFilter(""); resetPages(); }} />}
-                {showStatus && statusFilter && <FilterChip label={`Status: ${statusLabel}`} onClear={() => { setStatusFilter(""); resetPages(); }} />}
-                {showStone && stoneFilter && <FilterChip label={`Stone: ${stoneFilter}`} onClear={() => { setStoneFilter(""); resetPages(); }} />}
-                {showExpert && expertFilter && <FilterChip label={`Expert: ${expertFilter}`} onClear={() => { setExpertFilter(""); resetPages(); }} />}
-                <button onClick={() => { setCustomerFilter(""); setStatusFilter(""); setStoneFilter(""); setExpertFilter(""); resetPages(); }} className="text-[12px] px-1.5 cursor-pointer hover:underline underline-offset-4" style={{ color: T.danger }}>Clear all</button>
-              </div>
-            )}
-          </>
+          </div>
         );
       })()}
 
@@ -616,43 +621,68 @@ export default function AffiliateDetailPage({ params }: { params: Promise<{ id: 
       {dataTab === "payments" && (
         <>
         <Card className="!p-0 md:flex md:flex-col md:min-h-0">
-          <div className="hidden sm:grid grid-cols-[1fr_140px_140px_100px_120px] gap-3 items-center px-4 h-10 text-[11px] tracking-[0.06em] uppercase font-medium rounded-t-[15px]" style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.borderSoft}` }}>
-            <span>Period</span><span>Reference</span><span>Date</span><span>Status</span><span className="text-right">Amount</span>
+          <div className="hidden sm:grid grid-cols-[120px_1fr_1fr_160px_120px] gap-3 items-center px-4 h-10 text-[11px] tracking-[0.06em] uppercase font-medium rounded-t-[15px]" style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.borderSoft}` }}>
+            <span>Payment ID</span><span>Payment type</span><span>Paid by</span><span>Date &amp; time</span><span className="text-right">Amount</span>
           </div>
           {payoutsData.paged.length === 0 && <div className="text-center py-8 text-[13px]" style={{ color: T.muted }}>No payouts found.</div>}
-          {payoutsData.paged.map((p) => (
-            <div key={p.id} className="grid grid-cols-1 sm:grid-cols-[1fr_140px_140px_100px_120px] gap-2 sm:gap-3 items-center px-4 py-2.5 even:bg-[rgba(89,82,54,0.025)] last:rounded-b-[15px]" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
-              <div className="text-[13px] font-medium" style={{ color: T.text }}>{p.period}</div>
-              <div className="text-[12px]" style={{ color: T.muted }}>{p.reference}</div>
-              <div className="text-[12px]" style={{ color: T.muted }}>{p.paidAt ?? "—"}</div>
-              <div><Chip tone={p.status === "paid" ? "good" : "gold"}>{p.status}</Chip></div>
-              <div className="text-[13px] text-right font-semibold tabular-nums" style={{ color: T.text }}>{inr(p.amount)}</div>
-            </div>
-          ))}
+          {payoutsData.paged.map((p) => {
+            const dt = new Date(p.paidAt ?? p.createdAt);
+            return (
+              <div key={p.id} className="grid grid-cols-1 sm:grid-cols-[120px_1fr_1fr_160px_120px] gap-2 sm:gap-3 items-center px-4 py-2.5 even:bg-[rgba(89,82,54,0.025)] last:rounded-b-[15px]" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
+                <div className="text-[11px] tracking-[0.06em] uppercase font-medium" style={{ color: T.accent }}>{p.reference || p.id}</div>
+                <div className="text-[13px] truncate" style={{ color: T.text }}>Bank Transfer</div>
+                <div className="text-[13px] truncate" style={{ color: T.text }}>Admin</div>
+                <div className="text-[12px] tabular-nums" style={{ color: T.muted }}>
+                  {dt.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                  <span className="ml-1 opacity-60">{dt.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true })}</span>
+                </div>
+                <div className="text-[13px] text-right font-semibold tabular-nums" style={{ color: T.text }}>{inr(p.amount)}</div>
+              </div>
+            );
+          })}
         </Card>
         <Pagination page={payoutsPage} totalPages={payoutsData.totalPages} onPageChange={setPayoutsPage} perPage={PER_PAGE} totalItems={payoutsData.total} />
         </>
       )}
 
       {/* Make Payout Modal */}
-      <Modal open={showPayoutModal} onClose={() => setShowPayoutModal(false)} title="Initiate payout">
-        <div className="space-y-5">
-          <div className="p-4 rounded-[10px]" style={{ background: T.panel, border: `1px solid ${T.borderSoft}` }}>
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-[13.5px] font-medium" style={{ color: T.text }}>{affiliate.name}</div>
-                <div className="text-[12px] mt-0.5" style={{ color: T.muted }}>{editForm.upi}</div>
-              </div>
-              <div className="text-right">
-                <div className="text-[11px] uppercase tracking-wider" style={{ color: T.faint }}>Commission due</div>
-                <div className="text-[16px] font-semibold" style={{ color: T.accent }}>{inr(commissionDue)}</div>
-              </div>
+      <Modal open={showPayoutModal} onClose={() => setShowPayoutModal(false)} title="Make payout">
+        <div className="space-y-4">
+          <div className="flex items-center justify-between gap-3 p-3.5 rounded-[12px]" style={{ background: T.accentFaint, border: `1px solid ${T.borderSoft}` }}>
+            <div className="min-w-0">
+              <div className="text-[13.5px] font-semibold truncate" style={{ color: T.text }}>{affiliate.name}</div>
+              <div className="text-[12px] mt-0.5 truncate" style={{ color: T.muted }}>{editForm.upi}</div>
+            </div>
+            <div className="text-right shrink-0">
+              <div className="text-[10px] font-medium uppercase tracking-[0.08em]" style={{ color: T.faint }}>Commission due</div>
+              <div className="text-[16px] font-semibold tabular-nums" style={{ color: T.accent }}>{inr(commissionDue)}</div>
             </div>
           </div>
-          <Input value={payoutForm.amount} onChange={(v) => setPayoutForm((p) => ({ ...p, amount: v }))} label="Payout amount (₹)" placeholder={String(commissionDue)} />
-          <Input value={payoutForm.notes} onChange={(v) => setPayoutForm((p) => ({ ...p, notes: v }))} label="Period / notes" placeholder="e.g. May – Jul 2026" />
-          <div className="pt-2"><GoldBtn onClick={() => setShowPayoutModal(false)}>Proceed to payment →</GoldBtn></div>
-          <p className="text-[11px] text-center" style={{ color: T.faint }}>You will be redirected to the payment gateway to complete the transfer.</p>
+          <Input value={payoutForm.amount} onChange={(v) => setPayoutForm((p) => ({ ...p, amount: v }))} label="Amount (₹)" type="number" placeholder={String(commissionDue)} />
+          <Select
+            value={payoutForm.paymentType}
+            onChange={(v) => setPayoutForm((p) => ({ ...p, paymentType: v }))}
+            label="Payment type"
+            options={[
+              { value: "bank_transfer", label: "Bank Transfer" },
+              { value: "upi", label: "UPI" },
+              { value: "cheque", label: "Cheque" },
+              { value: "cash", label: "Cash" },
+              { value: "net_banking", label: "Net Banking" },
+            ]}
+          />
+          <Input value={payoutForm.paidBy} onChange={(v) => setPayoutForm((p) => ({ ...p, paidBy: v }))} label="Paid by" placeholder="e.g. Finance team, Admin" />
+          <Input value={payoutForm.paymentDate} onChange={(v) => setPayoutForm((p) => ({ ...p, paymentDate: v }))} label="Payment date" placeholder="YYYY-MM-DD" />
+          <Input value={payoutForm.notes} onChange={(v) => setPayoutForm((p) => ({ ...p, notes: v }))} label="Notes" placeholder="e.g. May – Jul 2026" />
+          <div className="flex items-center justify-end gap-2.5 pt-1">
+            <GhostBtn onClick={() => setShowPayoutModal(false)}>Cancel</GhostBtn>
+            <GoldBtn
+              onClick={() => { setShowPayoutModal(false); setPayoutForm({ amount: "", paymentType: "bank_transfer", paidBy: "", paymentDate: new Date().toISOString().split("T")[0], notes: "" }); flash("Payout recorded"); }}
+              disabled={Number(payoutForm.amount || commissionDue) <= 0}
+            >
+              Record payout
+            </GoldBtn>
+          </div>
         </div>
       </Modal>
 

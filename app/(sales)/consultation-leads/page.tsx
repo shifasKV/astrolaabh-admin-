@@ -1,11 +1,15 @@
 "use client";
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, GoldBtn, ToolbarSearch, InlineFilter, MultiCheck, SortMenu, Pagination, EmptyState, MobileListCard, Monogram, MobileToolbar, SheetSection, MobileFab } from "@/components/ui";
+import { PageHeader, Card, Chip, Tabs, GoldBtn, ToolbarSearch, InlineFilter, MultiCheck, SortMenu, Pagination, EmptyState, MobileListCard, Monogram, MobileToolbar, SheetSection, MobileFab } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { useAuth } from "@/lib/store/auth";
 import { MOCK_SALES_MEMBERS } from "@/lib/mock";
 import { useLeads, salesMemberName } from "@/lib/store/leads";
+import { inr } from "@/lib/types";
+
+const APPROVAL_LABEL: Record<string, string> = { pending: "Pending approval", approved: "Approved", rejected: "Rejected", on_hold: "On hold", completed: "Completed" };
+const APPROVAL_TONE: Record<string, "gold" | "good" | "danger" | "info" | "muted"> = { pending: "gold", approved: "good", rejected: "danger", on_hold: "info", completed: "good" };
 
 const PAGE_SIZE = 10;
 
@@ -26,13 +30,17 @@ const UserIcon = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stro
 
 export default function ConsultationLeadsPage() {
   const { user } = useAuth();
-  const { consultLeads, isReviewUnseen } = useLeads();
+  const { consultLeads, pendingApprovals, reviewedFulfillments, isReviewUnseen } = useLeads();
   const isAdmin = user?.role === "sales_admin";
   const myId = user?.id;
   const rowUnseen = (c: (typeof consultLeads)[number]) => !!(myId && c.fulfillment && isReviewUnseen(myId, { kind: "consultation", id: c.id, customerName: c.customerName, assignedTo: c.assignedTo, fulfillment: c.fulfillment }));
 
+  const [activeTab, setActiveTab] = useState("leads");
   const [search, setSearch] = useState("");
   const [statusF, setStatusF] = useState<string[]>([]);
+
+  const allSubmissions = useMemo(() => [...pendingApprovals, ...reviewedFulfillments], [pendingApprovals, reviewedFulfillments]);
+  const myConsultations = useMemo(() => allSubmissions.filter((s) => s.fulfillment.kind === "consultation" && (!myId || s.fulfillment.submittedBy === myId)), [allSubmissions, myId]);
   const [reasonF, setReasonF] = useState<string[]>([]);
   const [assigneeF, setAssigneeF] = useState<string[]>([]);
   const [sort, setSort] = useState("newest");
@@ -66,6 +74,18 @@ export default function ConsultationLeadsPage() {
       <div className="md:h-[calc(100dvh-78px)] md:flex md:flex-col md:min-h-0">
         <PageHeader title="Consultation Leads" action={<span className="hidden sm:block"><Link href="/consultation-leads/create"><GoldBtn>+ Create consultation</GoldBtn></Link></span>} />
 
+        <div className="mb-4">
+          <Tabs
+            tabs={[
+              { key: "leads", label: "Consultation Leads", count: filtered.length },
+              { key: "created_consultations", label: "Created Consultations", count: myConsultations.length },
+            ]}
+            active={activeTab}
+            onChange={(k) => { setActiveTab(k); setPage(0); }}
+          />
+        </div>
+
+        {activeTab === "leads" && <>
         <div className="hidden sm:flex items-center justify-between gap-2 mb-4">
           <div className="flex items-center gap-2 flex-wrap">
             <InlineFilter label="Status" icon={FunnelIcon} count={statusF.length}><MultiCheck options={STATUS_OPTIONS} value={statusF} onChange={(v) => { setStatusF(v); setPage(0); }} /></InlineFilter>
@@ -150,6 +170,34 @@ export default function ConsultationLeadsPage() {
           </div>
         </Card>
         <Pagination page={page} totalPages={totalPages} onPageChange={setPage} perPage={PAGE_SIZE} totalItems={filtered.length} />
+        </>}
+
+        {/* Created Consultations tab — read-only */}
+        {activeTab === "created_consultations" && (
+          <Card className="!p-0 md:flex md:flex-col md:min-h-0">
+            <div className="md:min-h-0 overflow-y-auto max-h-[560px] md:max-h-none flex-1">
+              <div className="hidden sm:grid grid-cols-[1fr_1fr_120px_120px] gap-3 px-4 h-10 items-center text-[11px] tracking-[0.06em] uppercase font-medium rounded-t-[15px]" style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.borderSoft}` }}>
+                <span>Customer</span><span>Summary</span><span>Approval</span><span className="text-right">Amount</span>
+              </div>
+              {myConsultations.length === 0 ? (
+                <EmptyState inline icon="inbox" title="No created consultations" description="Consultation leads you create will appear here." />
+              ) : (
+                myConsultations.map((s, i, arr) => (
+                  <div
+                    key={s.id}
+                    className={`grid grid-cols-1 sm:grid-cols-[1fr_1fr_120px_120px] gap-2 sm:gap-3 items-center px-4 py-2.5 ${i % 2 === 0 ? "bg-[rgba(89,82,54,0.025)]" : ""} ${i === arr.length - 1 ? "rounded-b-[15px]" : ""}`}
+                    style={{ borderBottom: i < arr.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
+                  >
+                    <div className="text-[13px] font-medium truncate" style={{ color: T.text }}>{s.customerName}</div>
+                    <div className="text-[12px] truncate" style={{ color: T.muted }}>{s.fulfillment.summary}</div>
+                    <div><Chip tone={APPROVAL_TONE[s.fulfillment.approval] || "muted"}>{APPROVAL_LABEL[s.fulfillment.approval]}</Chip></div>
+                    <div className="text-[13px] text-right font-semibold tabular-nums" style={{ color: T.text }}>{inr(s.fulfillment.total)}</div>
+                  </div>
+                ))
+              )}
+            </div>
+          </Card>
+        )}
       </div>
       <MobileFab href="/consultation-leads/create" label="New booking" />
     </>

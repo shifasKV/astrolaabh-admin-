@@ -106,8 +106,7 @@ function ConsultationInner({ headerTitle = "Book consultation", submitLabel, suc
   };
 
   const feeNum = Number(editFee) || selectedExpert?.fee || 0;
-  const discPct = Math.min(100, Math.max(0, Number(discount) || 0));
-  const discountAmount = Math.round((feeNum * discPct) / 100);
+  const discountAmount = Math.min(feeNum, Math.max(0, Number(discount) || 0));
   const total = Math.max(0, feeNum - discountAmount);
 
   const dateLabel = selectedDate ? new Date(selectedDate).toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short", year: "numeric" }) : "";
@@ -379,17 +378,10 @@ function ConsultationInner({ headerTitle = "Book consultation", submitLabel, suc
             </div>
             <div className="mt-4 pt-4 space-y-2.5 text-[13px] tabular-nums" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
               <div className="flex items-center justify-between gap-3">
-                <span style={{ color: T.muted }}>Fee</span>
-                <label className="group flex items-center h-9 rounded-[9px] pl-2.5 pr-2 cursor-text transition-shadow duration-200 focus-within:shadow-[0_0_0_3px_rgba(119,123,98,0.16)]" style={{ background: T.card, border: `1px solid ${T.accentBorder}`, boxShadow: `inset 0 1px 2px rgba(43,42,34,0.04)` }}>
-                  <span className="text-[12.5px]" style={{ color: T.accent }}>₹</span>
-                  <input value={editFee} onChange={(e) => setEditFee(e.target.value.replace(/[^0-9]/g, ""))} inputMode="numeric" placeholder={selectedExpert ? String(selectedExpert.fee) : "0"} className="w-[80px] h-full px-1.5 bg-transparent text-[13.5px] font-semibold tabular-nums text-right outline-none placeholder:font-normal" style={{ color: T.text }} aria-label="Consultation fee" />
-                </label>
-              </div>
-              <div className="flex items-center justify-between gap-3">
                 <span className="inline-flex items-center gap-1.5" style={{ color: T.muted }}>Discount<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="w-[13px] h-[13px]" style={{ color: T.faint }}><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg></span>
                 <label className="group flex items-center h-9 rounded-[9px] pl-2.5 pr-2 cursor-text transition-shadow duration-200 focus-within:shadow-[0_0_0_3px_rgba(119,123,98,0.16)]" style={{ background: T.card, border: `1px solid ${discount ? T.accent : T.accentBorder}`, boxShadow: `inset 0 1px 2px rgba(43,42,34,0.04)` }}>
-                  <input value={discount} onChange={(e) => setDiscount(e.target.value.replace(/[^0-9]/g, ""))} inputMode="numeric" placeholder="0" className="w-[54px] h-full px-1.5 bg-transparent text-[13.5px] font-semibold tabular-nums text-right outline-none placeholder:font-normal" style={{ color: T.text }} aria-label="Discount percent" />
-                  <span className="text-[12.5px]" style={{ color: T.accent }}>%</span>
+                  <span className="text-[12.5px]" style={{ color: T.accent }}>₹</span>
+                  <input value={discount} onChange={(e) => setDiscount(e.target.value.replace(/[^0-9]/g, ""))} inputMode="numeric" placeholder="0" className="w-[80px] h-full px-1.5 bg-transparent text-[13.5px] font-semibold tabular-nums text-right outline-none placeholder:font-normal" style={{ color: T.text }} aria-label="Discount amount" />
                 </label>
               </div>
             </div>

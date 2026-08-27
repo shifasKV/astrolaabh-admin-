@@ -21,7 +21,7 @@ export const OrderItemSchema = z.object({
   gemstone: z.string().optional(),
   caratWeight: z.string().optional(),
   itemType: z.enum(["stone", "jewellery"]).optional(),
-  itemStatus: z.enum(["order_placed", "in_transit", "order_received", "in_crafting", "quality_check", "ready_to_ship"]).optional(),
+  itemStatus: z.enum(["pending", "order_placed", "in_transit", "order_received", "quality_passed", "in_crafting", "quality_check", "ready_to_ship"]).optional(),
   vendorName: z.string().optional(),
   vendorOrderId: z.string().optional(),
   receivedAt: z.string().optional(),

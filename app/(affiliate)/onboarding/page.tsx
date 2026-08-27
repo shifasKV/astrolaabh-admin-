@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Card, Input, GoldBtn } from "@/components/ui";
 import { useAuth } from "@/lib/store/auth";
@@ -56,10 +56,55 @@ export default function OnboardingPage() {
 
   const goNext = () => { if (validateStep()) setStep(step + 1); };
 
+  const [submitted, setSubmitted] = useState(false);
+  const [countdown, setCountdown] = useState(5);
+
   const handleSubmit = () => {
     if (!validateStep()) return;
-    router.push("/aff-dashboard?status=pending");
+    setSubmitted(true);
   };
+
+  const goToProfile = useCallback(() => {
+    router.push("/profile?status=pending");
+  }, [router]);
+
+  useEffect(() => {
+    if (!submitted) return;
+    if (countdown <= 0) { goToProfile(); return; }
+    const t = setTimeout(() => setCountdown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [submitted, countdown, goToProfile]);
+
+  if (submitted) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4 py-10 relative overflow-hidden" style={{ background: `url(/login/onboarding-gems.png) center / cover no-repeat, ${T.bg}` }}>
+        <div className="absolute inset-0 pointer-events-none" style={{ background: "linear-gradient(180deg, rgba(241,235,220,0.62) 0%, rgba(241,235,220,0.42) 55%, rgba(241,235,220,0.6) 100%)" }} />
+        <div className="relative z-10 w-full max-w-[480px] text-center">
+          <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6" style={{ background: "rgba(76,140,74,0.12)", border: "2px solid rgba(76,140,74,0.35)" }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="#4c8c4a" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="w-9 h-9"><path d="M20 6L9 17l-5-5" /></svg>
+          </div>
+          <h1 className="text-[24px] font-semibold tracking-[-0.02em] mb-2" style={{ color: T.text }}>Application submitted!</h1>
+          <p className="text-[14px] leading-relaxed mb-8 max-w-[360px] mx-auto" style={{ color: T.muted }}>
+            Your application has been submitted for review. The AstroLaabh team will get back to you within 1–2 business days.
+          </p>
+
+          {/* Countdown ring */}
+          <div className="relative w-12 h-12 mx-auto mb-4">
+            <svg className="w-12 h-12 -rotate-90" viewBox="0 0 48 48">
+              <circle cx="24" cy="24" r="20" fill="none" stroke={T.borderSoft} strokeWidth="3" />
+              <circle cx="24" cy="24" r="20" fill="none" stroke={T.accent} strokeWidth="3" strokeLinecap="round" strokeDasharray={`${2 * Math.PI * 20}`} strokeDashoffset={`${2 * Math.PI * 20 * (1 - countdown / 5)}`} style={{ transition: "stroke-dashoffset 1s linear" }} />
+            </svg>
+            <span className="absolute inset-0 flex items-center justify-center text-[15px] font-bold tabular-nums" style={{ color: T.text }}>{countdown}</span>
+          </div>
+
+          <p className="text-[12.5px] mb-4" style={{ color: T.faint }}>Redirecting to your profile…</p>
+          <button onClick={goToProfile} className="text-[13px] font-medium underline underline-offset-4 cursor-pointer transition-opacity hover:opacity-70" style={{ color: T.accent }}>
+            Go now
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-10 relative overflow-hidden" style={{ background: `url(/login/onboarding-gems.png) center / cover no-repeat, ${T.bg}` }}>

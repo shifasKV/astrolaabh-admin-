@@ -5,7 +5,19 @@ import Link from "next/link";
 import { PageHeader, Card, StatCard, Chip, GoldBtn, ToolbarSearch, SortMenu, InlineFilter, MultiCheck, EmptyState, TableSkeleton, MobileListCard, Monogram, MobileToolbar, SheetSection, MobileFab } from "@/components/ui";
 
 const STATUS_ICON = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className="w-3.5 h-3.5"><circle cx="12" cy="12" r="10" /><path d="m9 12 2 2 4-4" /></svg>;
-const AFF_STATUS_OPTIONS = [{ value: "active", label: "Active" }, { value: "under_review", label: "Under review" }, { value: "deactivated", label: "Deactivated" }];
+const AFF_STATUS_OPTIONS = [{ value: "active", label: "Active" }, { value: "under_review", label: "Under review" }, { value: "rejected", label: "Rejected" }, { value: "revision_requested", label: "Revision requested" }, { value: "deactivated", label: "Deactivated" }];
+
+function affStatusTone(s: string): "good" | "gold" | "danger" | "muted" {
+  if (s === "active") return "good";
+  if (s === "under_review" || s === "revision_requested") return "gold";
+  if (s === "rejected") return "danger";
+  return "muted";
+}
+
+function affStatusLabel(s: string) {
+  const labels: Record<string, string> = { under_review: "Under review", revision_requested: "Revision requested", active: "Active", rejected: "Rejected", suspended: "Suspended", inactive: "Inactive" };
+  return labels[s] ?? s.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
+}
 
 const NAME_SORT = [
   { value: "name_asc", label: "Name A to Z" },
@@ -45,11 +57,11 @@ export default function AffiliatesPage() {
   const totalRegs = MOCK_AFFILIATES.reduce((s, a) => s + a.totalRegistrations, 0);
   const totalPurchases = MOCK_AFFILIATES.reduce((s, a) => s + a.totalPurchases, 0);
   const activeCount = MOCK_AFFILIATES.filter((a) => a.status === "active").length;
-  const pendingCount = MOCK_AFFILIATES.filter((a) => a.status === "under_review").length;
+  const pendingCount = MOCK_AFFILIATES.filter((a) => a.status === "under_review" || a.status === "rejected" || a.status === "revision_requested").length;
 
   const filtered = MOCK_AFFILIATES.filter((a) => {
     if (statusFilter === "active" && a.status !== "active") return false;
-    if (statusFilter === "pending" && a.status !== "under_review") return false;
+    if (statusFilter === "pending" && a.status !== "under_review" && a.status !== "rejected" && a.status !== "revision_requested") return false;
     if (filterStatusToolbar.length && !filterStatusToolbar.includes(a.status)) return false;
     if (!search) return true;
     const q = search.toLowerCase();
@@ -159,8 +171,8 @@ export default function AffiliatesPage() {
                   rightSub={stats.pendingCommission > 0 ? "commission due" : undefined}
                   sub={`${a.code} · ${a.email}`}
                   status={{
-                    label: a.status.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase()),
-                    tone: a.status === "active" ? "good" : a.status === "under_review" ? "gold" : "danger",
+                    label: affStatusLabel(a.status),
+                    tone: affStatusTone(a.status),
                     extra: `${a.commissionRate}%`,
                   }}
                   facts={[{ label: "registrations", value: stats.registrations }]}
@@ -200,8 +212,8 @@ export default function AffiliatesPage() {
                     )}
                   </span>
                   <div className="md:pl-0 pl-12">
-                    <Chip tone={a.status === "active" ? "good" : a.status === "under_review" ? "gold" : "danger"}>
-                      {a.status.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase())}
+                    <Chip tone={affStatusTone(a.status)}>
+                      {affStatusLabel(a.status)}
                     </Chip>
                   </div>
                 </Link>

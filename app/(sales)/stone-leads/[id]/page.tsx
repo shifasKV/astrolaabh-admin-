@@ -54,7 +54,7 @@ export default function StoneLeadDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const isAdmin = user?.role === "sales_admin";
-  const { orderLeads, markReviewSeen, assign, setStatus, logActivity } = useLeads();
+  const { orderLeads, pendingApprovals, reviewedFulfillments, markReviewSeen, assign, setStatus, logActivity } = useLeads();
   const order = orderLeads.find((o) => o.id === id);
   const ff = orderLeads.find((o) => o.id === id)?.fulfillment;
   const ffApproval = ff?.approval;
@@ -178,6 +178,7 @@ export default function StoneLeadDetailPage() {
       <div className="grid md:grid-cols-[1fr_340px] gap-5">
         {/* Left */}
         <div className="space-y-5">
+          {/* Log activity */}
           <Card>
             <div className="text-[15px] font-semibold tracking-[-0.01em] mb-3" style={{ color: T.text }}>Log activity</div>
             <Textarea value={activityNote} onChange={setActivityNote} placeholder="What happened? — e.g. 'Spoke to customer, will retry payment tomorrow'" rows={3} />
@@ -186,8 +187,50 @@ export default function StoneLeadDetailPage() {
             </div>
           </Card>
 
+          {/* Created orders for this lead */}
+          {(() => {
+            const allSubs = [...pendingApprovals, ...reviewedFulfillments];
+            const linkedOrders = allSubs.filter((s) => s.id === id && s.fulfillment.kind === "order");
+            if (linkedOrders.length === 0) return null;
+            return (
+              <Card>
+                <div className="text-[15px] font-semibold tracking-[-0.01em] mb-3" style={{ color: T.text }}>Created orders</div>
+                <div className="space-y-2.5">
+                  {linkedOrders.map((s, i) => {
+                    const approval = s.fulfillment.approval;
+                    const tone = approval === "approved" || approval === "completed" ? "good" : approval === "rejected" ? "danger" : approval === "on_hold" ? "info" : "gold";
+                    const label = approval === "pending" ? "Pending approval" : approval === "approved" ? "Approved" : approval === "rejected" ? "Rejected" : approval === "on_hold" ? "On hold" : "Completed";
+                    const inner = (
+                      <div className="rounded-[10px] p-3.5 transition-colors" style={{ background: T.bg, border: `1px solid ${T.borderSoft}` }}>
+                        <div className="flex items-center justify-between gap-3 mb-2">
+                          <span className="text-[13px] font-semibold" style={{ color: T.text }}>{s.fulfillment.summary || `Order #${i + 1}`}</span>
+                          <Chip tone={tone}>{label}</Chip>
+                        </div>
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-[15px] font-bold tabular-nums" style={{ color: T.text }}>{inr(s.fulfillment.total)}</span>
+                          <span className="text-[11px] tabular-nums" style={{ color: T.faint }}>{fmtDate(s.fulfillment.submittedAt)}</span>
+                        </div>
+                        {s.fulfillment.reviewNote && (
+                          <div className="mt-2 pt-2 text-[12px]" style={{ borderTop: `1px solid ${T.borderSoft}`, color: T.muted }}>{s.fulfillment.reviewNote}</div>
+                        )}
+                      </div>
+                    );
+                    if (isAdmin) {
+                      return <Link key={`order-${i}`} href={`/leads/approvals/${s.id}`} className="block hover:brightness-[0.98] transition-all">{inner}</Link>;
+                    }
+                    return <div key={`order-${i}`}>{inner}</div>;
+                  })}
+                </div>
+              </Card>
+            );
+          })()}
+        </div>
+
+        {/* Right — Enquiry details + Activity timeline */}
+        <div className="space-y-5">
+          {/* Enquiry details (moved from left) */}
           <Card>
-            <div className="text-[15px] font-semibold tracking-[-0.01em] mb-3" style={{ color: T.text }}>Product details</div>
+            <div className="text-[15px] font-semibold tracking-[-0.01em] mb-3" style={{ color: T.text }}>Enquiry details</div>
             <div className="rounded-[9px] p-3.5" style={{ background: T.bg, border: `1px solid ${T.borderSoft}` }}>
               <div className="text-[14px] font-semibold mb-0.5" style={{ color: T.text }}>{order.itemName}</div>
               <div className="text-[12px] mb-3" style={{ color: T.faint }}>{order.itemSku}</div>
@@ -196,10 +239,8 @@ export default function StoneLeadDetailPage() {
               </div>
             </div>
           </Card>
-        </div>
 
-        {/* Right — Activity timeline */}
-        <div className="space-y-5">
+          {/* Activity timeline */}
           <Card>
             <div className="text-[15px] font-semibold tracking-[-0.01em] mb-3" style={{ color: T.text }}>Activity timeline</div>
             {timeline.length === 0 ? (

@@ -2,7 +2,7 @@
 import { useCallback, useMemo, useState, useRef, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Card, Chip, StatCard, GhostBtn, GoldBtn, SectionLink, BackLink, Tabs, Tooltip, Pagination, Select, Modal, Input, ToolbarSearch, FiltersPopover, FilterField, FilterChip, DateRangeFields, EmptyState, Toast, ConfirmDialog, MobileAgenda } from "@/components/ui";
+import { Card, Chip, StatCard, GhostBtn, GoldBtn, SectionLink, BackLink, Tabs, Tooltip, Pagination, Select, Modal, Input, ToolbarSearch, InlineFilter, MultiCheck, SortMenu, EmptyState, Toast, ConfirmDialog, MobileAgenda } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { usePersistentState } from "@/lib/usePersistentState";
 import { EXPERT_PROFILES, EXPERT_AVAILABILITY, MOCK_CONSULTATIONS, MOCK_STONE_RECOMMENDATIONS, MOCK_ORDERS, MOCK_PAYMENTS } from "@/lib/mock";
@@ -105,7 +105,7 @@ export default function AstroGemologistDetailPage() {
   const [commissionToast, setCommissionToast] = useState("");
   const [commissionRates, setCommissionRates] = useState({ stone: "8", jewellery: "6", consultation: "15" });
   const [showPayoutModal, setShowPayoutModal] = useState(false);
-  const [payoutForm, setPayoutForm] = useState({ amount: "", notes: "" });
+  const [payoutForm, setPayoutForm] = useState({ amount: "", paymentType: "bank_transfer", paidBy: "", notes: "" });
 
   useEffect(() => {
     if (!showMenu) return;
@@ -123,6 +123,7 @@ export default function AstroGemologistDetailPage() {
   const [consSearch, setConsSearch] = useState("");
   const [consSort, setConsSort] = useState<SortKey>("date_desc");
   const [consFilterStatus, setConsFilterStatus] = useState("");
+  const [consFilterStatusMulti, setConsFilterStatusMulti] = useState<string[]>([]);
   const [consFilterCustomer, setConsFilterCustomer] = useState("");
   const [consFilterDateFrom, setConsFilterDateFrom] = useState("");
   const [consFilterDateTo, setConsFilterDateTo] = useState("");
@@ -178,7 +179,7 @@ export default function AstroGemologistDetailPage() {
   const nextWeek = () => { const d = new Date(calWeekBase); d.setDate(d.getDate() + 7); setCalWeekBase(d); };
   const goToToday = () => setCalWeekBase(new Date());
 
-  const [calScope, setCalScope] = usePersistentState<"day" | "week">("pref-cal-scope", "week");
+  const calScope = "week" as const;
   const [selectedEvent, setSelectedEvent] = useState<(typeof consultations)[number] | null>(null);
 
   // Add-consultation → same multi-step flow as new order (/consultations/create), expert prelocked
@@ -192,7 +193,7 @@ export default function AstroGemologistDetailPage() {
     if (viewMode === "calendar" && hoursRef.current) hoursRef.current.scrollTop = 6 * 40;
   }, [viewMode, calScope]);
 
-  const visibleDays = calScope === "day" ? [calWeekBase] : weekDays;
+  const visibleDays = weekDays;
 
   const rowStatus = (c: (typeof consultations)[number]) => {
     if (c.paymentStatus === "pending") return { tone: "gold" as const, label: "Payment pending" };
@@ -227,16 +228,23 @@ export default function AstroGemologistDetailPage() {
 
   // Consultations filtered (for list view)
   const uniqueConsCustomers = [...new Set(consultations.map((c) => c.customerName))].sort();
-  const consHasActiveFilters = !!consFilterCustomer || !!consFilterStatus || !!consFilterDateFrom || !!consFilterDateTo;
+  const consHasActiveFilters = !!consFilterCustomer || consFilterStatusMulti.length > 0 || !!consFilterStatus || !!consFilterDateFrom || !!consFilterDateTo;
   const consFiltered = sortByDate(
     searchFilter(consultations, consSearch).filter((c) => {
       if (consFilterCustomer && c.customerName !== consFilterCustomer) return false;
-      if (consFilterStatus === "scheduled" && c.status !== "scheduled") return false;
-      if (consFilterStatus === "completed" && c.status !== "closed" && c.status !== "completed") return false;
-      if (consFilterStatus === "summary_pending" && c.status !== "summary_pending") return false;
-      if (consFilterStatus === "no_show" && c.status !== "no_show") return false;
-      if (consFilterStatus === "reschedule_requested" && c.status !== "reschedule_requested") return false;
-      if (consFilterStatus === "payment_pending" && c.paymentStatus !== "pending") return false;
+      const activeStatuses = consFilterStatusMulti.length > 0 ? consFilterStatusMulti : (consFilterStatus ? [consFilterStatus] : []);
+      if (activeStatuses.length > 0) {
+        const matches = activeStatuses.some((s) => {
+          if (s === "scheduled") return c.status === "scheduled";
+          if (s === "completed") return c.status === "closed" || c.status === "completed";
+          if (s === "summary_pending") return c.status === "summary_pending";
+          if (s === "no_show") return c.status === "no_show";
+          if (s === "reschedule_requested") return c.status === "reschedule_requested";
+          if (s === "payment_pending") return c.paymentStatus === "pending";
+          return false;
+        });
+        if (!matches) return false;
+      }
       return true;
     }).filter((c) => {
       const d = c.scheduledAt?.slice(0, 10);
@@ -246,8 +254,7 @@ export default function AstroGemologistDetailPage() {
     }),
     consSort,
   );
-  const [showConsFilters, setShowConsFilters] = useState(false);
-  const consFilterCount = [consFilterCustomer, consFilterStatus, consFilterDateFrom || consFilterDateTo].filter(Boolean).length;
+  const consFilterCount = consFilterStatusMulti.length;
   const consTotalPages = Math.ceil(consFiltered.length / PAGE_SIZE);
   const consPaginated = consFiltered.slice(consPage * PAGE_SIZE, (consPage + 1) * PAGE_SIZE);
 
@@ -278,7 +285,6 @@ export default function AstroGemologistDetailPage() {
       if (recSort === "date_asc") return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
-  const [showRecFilters, setShowRecFilters] = useState(false);
   const recTotalPages = Math.ceil(recFiltered.length / PAGE_SIZE);
   const recPaginated = recFiltered.slice(recPage * PAGE_SIZE, (recPage + 1) * PAGE_SIZE);
 
@@ -359,24 +365,6 @@ export default function AstroGemologistDetailPage() {
     return (
       <div className="hidden sm:grid gap-3 items-center px-4 h-10 text-[11px] tracking-[0.06em] uppercase font-medium rounded-t-[15px]" style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.borderSoft}`, gridTemplateColumns: "1fr 140px 100px 120px" }}>
         {cols.map((c) => <span key={c}>{c}</span>)}
-      </div>
-    );
-  }
-
-  function SortControl({ value, onChange }: { value: SortKey; onChange: (v: SortKey) => void }) {
-    return (
-      <div className="flex items-center gap-1.5 h-9 px-3 rounded-[9px] text-[12px]" style={{ border: `1px solid ${T.borderSoft}`, color: T.muted }}>
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M3 6h18M6 12h12M9 18h6"/></svg>
-        <Select
-          value={value}
-          onChange={(val) => onChange(val as SortKey)}
-          compact
-          options={[
-            { value: "date_desc", label: "Newest" },
-            { value: "date_asc", label: "Oldest" },
-          ]}
-          className="w-[80px]"
-        />
       </div>
     );
   }
@@ -565,39 +553,28 @@ export default function AstroGemologistDetailPage() {
       {/* ========= CONSULTATIONS TAB ========= */}
       {activeTab === "upcoming" && (
         <>
-          {/* Toolbar — list view only (search + filters + sort); view toggle & add live on the tabs row */}
+          {/* Toolbar — list view only */}
           {viewMode === "list" && (
-            <div className="flex flex-wrap items-center gap-2 mb-3">
-              <ToolbarSearch value={consSearch} onChange={(v) => { setConsSearch(v); setConsPage(0); }} placeholder="Search customer, consultation ID…" />
-              <div className="ml-auto flex items-center gap-2">
-                <FiltersPopover count={consFilterCount} open={showConsFilters} onToggle={() => setShowConsFilters(!showConsFilters)}>
-                  <FilterField label="Status">
-                    <Select value={consFilterStatus} onChange={(v) => { setConsFilterStatus(v); setConsPage(0); }} compact placeholder="All status" options={[
-                      { value: "", label: "All status" },
-                      { value: "payment_pending", label: "Payment pending" },
-                      { value: "scheduled", label: "Scheduled" },
-                      { value: "reschedule_requested", label: "Reschedule" },
-                      { value: "no_show", label: "No show" },
-                      { value: "completed", label: "Completed" },
-                    ]} />
-                  </FilterField>
-                  <FilterField label="Scheduled between">
-                    <DateRangeFields from={consFilterDateFrom} to={consFilterDateTo} onChange={(f, t) => { setConsFilterDateFrom(f); setConsFilterDateTo(t); setConsPage(0); }} />
-                  </FilterField>
-                </FiltersPopover>
-                <div className="w-[160px]">
-                  <Select value={consSort} onChange={(val) => { setConsSort(val as SortKey); setConsPage(0); }} compact prefix="Sort: " options={[{ value: "date_desc", label: "Newest first" }, { value: "date_asc", label: "Oldest first" }]} />
-                </div>
+            <div className="hidden sm:flex flex-wrap items-center gap-2 pt-4 mb-3" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+              <div className="flex flex-wrap items-center gap-2">
+                <InlineFilter label="Status" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M3 5h18l-7 8v6l-4-2v-4z" /></svg>} count={consFilterStatusMulti.length}>
+                  <MultiCheck options={[
+                    { value: "payment_pending", label: "Payment pending" },
+                    { value: "scheduled", label: "Scheduled" },
+                    { value: "reschedule_requested", label: "Reschedule" },
+                    { value: "summary_pending", label: "Recommendation due" },
+                    { value: "no_show", label: "No show" },
+                    { value: "completed", label: "Completed" },
+                  ]} value={consFilterStatusMulti} onChange={(v) => { setConsFilterStatusMulti(v); setConsPage(0); }} />
+                </InlineFilter>
+                {consFilterStatusMulti.length > 0 && (
+                  <button onClick={() => { setConsFilterStatusMulti([]); setConsPage(0); }} className="shrink-0 text-[12px] font-medium h-8 px-2.5 rounded-[8px] cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.08)]" style={{ color: T.muted }}>Clear all</button>
+                )}
               </div>
-            </div>
-          )}
-
-          {viewMode === "list" && consHasActiveFilters && (
-            <div className="flex flex-wrap items-center gap-1.5 mb-3">
-              {consFilterCustomer && <FilterChip label={`Customer: ${consFilterCustomer}`} onClear={() => { setConsFilterCustomer(""); setConsPage(0); }} />}
-              {consFilterStatus && <FilterChip label={`Status: ${consFilterStatus.replace(/_/g, " ")}`} onClear={() => { setConsFilterStatus(""); setConsPage(0); }} />}
-              {(consFilterDateFrom || consFilterDateTo) && <FilterChip label="Date range" onClear={() => { setConsFilterDateFrom(""); setConsFilterDateTo(""); setConsPage(0); }} />}
-              <button onClick={() => { setConsFilterCustomer(""); setConsFilterStatus(""); setConsFilterDateFrom(""); setConsFilterDateTo(""); setConsPage(0); }} className="text-[12px] px-1.5 cursor-pointer hover:underline underline-offset-4" style={{ color: T.danger }}>Clear all</button>
+              <div className="ml-auto flex items-center gap-2">
+                <ToolbarSearch value={consSearch} onChange={(v) => { setConsSearch(v); setConsPage(0); }} placeholder="Search customer, consultation ID…" />
+                <SortMenu value={consSort} onChange={(v) => { setConsSort(v as SortKey); setConsPage(0); }} options={[{ value: "date_desc", label: "Newest first" }, { value: "date_asc", label: "Oldest first" }]} />
+              </div>
             </div>
           )}
 
@@ -629,85 +606,62 @@ export default function AstroGemologistDetailPage() {
             const mmDays = new Date(gtdYear, gtdMonth + 1, 0).getDate();
             const selISO = toISODate(calWeekBase);
             return (
-              <div className="flex items-start gap-4 md:flex-1 md:min-h-0">
-                {/* ——— Mobile: Apple-style infinite agenda ——— */}
-                <Card className="md:hidden !p-0 overflow-hidden w-full">
-                  <MobileAgenda
-                    className=""
-                    events={consultations.filter((c) => c.scheduledAt).map((c) => ({
-                      id: c.id,
-                      dateISO: c.scheduledAt.slice(0, 10),
-                      timeLabel: new Date(c.scheduledAt).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true }),
-                      title: c.customerName,
-                      sub: c.type.replace(/_/g, " ").replace(/^./, (ch) => ch.toUpperCase()),
-                      color: eventTone(c),
-                      href: `/consultations/${c.id}`,
-                    }))}
-                  />
-                </Card>
+              <>
+              {/* ——— Mobile: Apple-style infinite agenda ——— */}
+              <Card className="md:hidden !p-0 overflow-hidden w-full">
+                <MobileAgenda
+                  className=""
+                  events={consultations.filter((c) => c.scheduledAt).map((c) => ({
+                    id: c.id,
+                    dateISO: c.scheduledAt.slice(0, 10),
+                    timeLabel: new Date(c.scheduledAt).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true }),
+                    title: c.customerName,
+                    sub: c.type.replace(/_/g, " ").replace(/^./, (ch) => ch.toUpperCase()),
+                    color: eventTone(c),
+                    href: `/consultations/${c.id}`,
+                  }))}
+                />
+              </Card>
 
+              {/* Calendar header — outside flex row so sidebar aligns with grid */}
+              <div className="hidden md:flex flex-wrap items-end justify-between gap-3 mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="inline-flex rounded-[9px] overflow-hidden" style={{ border: `1px solid ${T.border}`, background: T.bg }}>
+                    <button onClick={prevWeek} aria-label="Previous week" className="w-8 h-8 flex items-center justify-center transition-colors hover:bg-[rgba(119,123,98,0.1)] cursor-pointer" style={{ color: T.muted, borderRight: `1px solid ${T.borderSoft}` }}>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="m15 18-6-6 6-6" /></svg>
+                    </button>
+                    <button onClick={nextWeek} aria-label="Next week" className="w-8 h-8 flex items-center justify-center transition-colors hover:bg-[rgba(119,123,98,0.1)] cursor-pointer" style={{ color: T.muted }}>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="m9 18 6-6-6-6" /></svg>
+                    </button>
+                  </div>
+                  <h2 className="font-title text-[22px] leading-tight tracking-[-0.02em]">
+                    <span className="font-bold" style={{ color: T.text }}>
+                      {`${weekDays[0].toLocaleDateString("en-IN", { day: "numeric", month: "short" })} — ${weekDays[6].toLocaleDateString("en-IN", { day: "numeric", month: "short" })}`}
+                    </span>
+                    <span className="font-normal" style={{ color: T.muted }}> {weekDays[6].getFullYear()}</span>
+                  </h2>
+                </div>
+                <div className="hidden xl:flex items-center gap-4">
+                  {[
+                    { color: T.info, label: "Scheduled" },
+                    { color: T.gold, label: "Reschedule" },
+                    { color: T.danger, label: "Needs action" },
+                    { color: T.good, label: "Done" },
+                  ].map((l) => (
+                    <span key={l.label} className="inline-flex items-center gap-1.5 text-[11.5px]" style={{ color: T.muted }}>
+                      <span className="w-2 h-2 rounded-full" style={{ background: l.color }} />
+                      {l.label}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex items-start gap-4 md:flex-1 md:min-h-0">
                 {/* Main timeline (desktop) */}
                 <div className="flex-1 min-w-0 h-full hidden md:flex flex-col">
-                  <div className="flex flex-wrap items-end justify-between gap-3 mb-3">
-                    <div className="flex items-center gap-2">
-                      <div className="inline-flex rounded-[9px] overflow-hidden" style={{ border: `1px solid ${T.border}`, background: T.bg }}>
-                        <button onClick={prevWeek} aria-label="Previous week" className="w-8 h-8 flex items-center justify-center transition-colors hover:bg-[rgba(119,123,98,0.1)] cursor-pointer" style={{ color: T.muted, borderRight: `1px solid ${T.borderSoft}` }}>
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="m15 18-6-6 6-6" /></svg>
-                        </button>
-                        <button onClick={nextWeek} aria-label="Next week" className="w-8 h-8 flex items-center justify-center transition-colors hover:bg-[rgba(119,123,98,0.1)] cursor-pointer" style={{ color: T.muted }}>
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="m9 18 6-6-6-6" /></svg>
-                        </button>
-                      </div>
-                      <div>
-                        <h2 className="font-title text-[22px] leading-tight tracking-[-0.02em]">
-                          <span className="font-bold" style={{ color: T.text }}>
-                            {calScope === "day"
-                              ? calWeekBase.toLocaleDateString("en-IN", { day: "numeric", month: "long" })
-                              : `${weekDays[0].toLocaleDateString("en-IN", { day: "numeric", month: "short" })} — ${weekDays[6].toLocaleDateString("en-IN", { day: "numeric", month: "short" })}`}
-                          </span>
-                          <span className="font-normal" style={{ color: T.muted }}> {calScope === "day" ? calWeekBase.getFullYear() : weekDays[6].getFullYear()}</span>
-                        </h2>
-                        <div className="text-[12.5px]" style={{ color: T.muted }}>
-                          {calScope === "day" ? calWeekBase.toLocaleDateString("en-IN", { weekday: "long" }) : "Week view"}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="hidden xl:flex items-center gap-4">
-                        {[
-                          { color: T.info, label: "Scheduled" },
-                          { color: T.gold, label: "Reschedule" },
-                          { color: T.danger, label: "Needs action" },
-                          { color: T.good, label: "Done" },
-                        ].map((l) => (
-                          <span key={l.label} className="inline-flex items-center gap-1.5 text-[11.5px]" style={{ color: T.muted }}>
-                            <span className="w-2 h-2 rounded-full" style={{ background: l.color }} />
-                            {l.label}
-                          </span>
-                        ))}
-                      </div>
-                      <div className="inline-flex items-center gap-1 p-1 rounded-full shrink-0" style={{ background: "rgba(89,82,54,0.07)", border: `1px solid ${T.borderSoft}` }}>
-                        {(["day", "week"] as const).map((scope) => (
-                          <button
-                            key={scope}
-                            onClick={() => { setCalScope(scope); setSelectedEvent(null); }}
-                            className="h-7 px-3.5 rounded-full text-[12.5px] capitalize shrink-0 transition-all duration-200 cursor-pointer"
-                            style={
-                              calScope === scope
-                                ? { background: T.card, color: T.text, fontWeight: 600, border: `1px solid ${T.border}`, boxShadow: "0 1px 3px rgba(43,42,34,0.10)" }
-                                : { color: T.muted, border: "1px solid transparent" }
-                            }
-                          >
-                            {scope}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
                   <Card className="overflow-hidden !p-0 flex-1 min-h-0 flex flex-col w-full">
                     <div className="overflow-x-auto flex-1 min-h-0 flex flex-col">
-                      <div className="h-full flex flex-col" style={{ minWidth: calScope === "day" ? 0 : 800 }}>
+                      <div className="h-full flex flex-col" style={{ minWidth: 800 }}>
                         <div className="grid" style={{ gridTemplateColumns: `60px repeat(${visibleDays.length}, 1fr)`, background: T.card, borderBottom: `1px solid ${T.borderSoft}` }}>
                           <div className="py-1.5" />
                           {visibleDays.map((day) => {
@@ -860,6 +814,7 @@ export default function AstroGemologistDetailPage() {
                   )}
                 </aside>
               </div>
+              </>
             );
           })()}
         </>
@@ -943,10 +898,10 @@ export default function AstroGemologistDetailPage() {
       {/* ========= SUMMARY DUE TAB ========= */}
       {activeTab === "summary_due" && (
         <>
-          <div className="flex flex-wrap items-center gap-2 mb-3">
-            <ToolbarSearch value={sdSearch} onChange={(v) => { setSdSearch(v); setSdPage(0); }} placeholder="Search customer, ID…" />
-            <div className="ml-auto w-[160px]">
-              <Select value={sdSort} onChange={(val) => { setSdSort(val as SortKey); setSdPage(0); }} compact prefix="Sort: " options={[{ value: "date_desc", label: "Newest first" }, { value: "date_asc", label: "Oldest first" }]} />
+          <div className="hidden sm:flex flex-wrap items-center gap-2 pt-4 mb-3" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+            <div className="ml-auto flex items-center gap-2">
+              <ToolbarSearch value={sdSearch} onChange={(v) => { setSdSearch(v); setSdPage(0); }} placeholder="Search customer, ID…" />
+              <SortMenu value={sdSort} onChange={(v) => { setSdSort(v as SortKey); setSdPage(0); }} options={[{ value: "date_desc", label: "Newest first" }, { value: "date_asc", label: "Oldest first" }]} />
             </div>
           </div>
 
@@ -967,10 +922,10 @@ export default function AstroGemologistDetailPage() {
       {/* ========= NO SHOW TAB ========= */}
       {activeTab === "no_show" && (
         <>
-          <div className="flex flex-wrap items-center gap-2 mb-3">
-            <ToolbarSearch value={nsSearch} onChange={(v) => { setNsSearch(v); setNsPage(0); }} placeholder="Search customer, ID…" />
-            <div className="ml-auto w-[160px]">
-              <Select value={nsSort} onChange={(val) => { setNsSort(val as SortKey); setNsPage(0); }} compact prefix="Sort: " options={[{ value: "date_desc", label: "Newest first" }, { value: "date_asc", label: "Oldest first" }]} />
+          <div className="hidden sm:flex flex-wrap items-center gap-2 pt-4 mb-3" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+            <div className="ml-auto flex items-center gap-2">
+              <ToolbarSearch value={nsSearch} onChange={(v) => { setNsSearch(v); setNsPage(0); }} placeholder="Search customer, ID…" />
+              <SortMenu value={nsSort} onChange={(v) => { setNsSort(v as SortKey); setNsPage(0); }} options={[{ value: "date_desc", label: "Newest first" }, { value: "date_asc", label: "Oldest first" }]} />
             </div>
           </div>
 
@@ -991,20 +946,19 @@ export default function AstroGemologistDetailPage() {
       {/* ========= RECOMMENDATIONS TAB ========= */}
       {activeTab === "recommendations" && (
         <>
-          <div className="flex flex-wrap items-center gap-2 mb-3">
-            <ToolbarSearch value={recSearch} onChange={(v) => { setRecSearch(v); setRecPage(0); }} placeholder="Search gemstone, customer…" />
+          <div className="hidden sm:flex flex-wrap items-center gap-2 pt-4 mb-3" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+            <div className="flex flex-wrap items-center gap-2">
+              <InlineFilter label="Stone" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M20.6 13.4 12 22l-9-9V4h9z" /><circle cx="7.5" cy="7.5" r="1.3" /></svg>} count={recFilterStone ? 1 : 0}>
+                <MultiCheck options={recStones.map((s) => ({ value: s, label: s }))} value={recFilterStone ? [recFilterStone] : []} onChange={(v) => { setRecFilterStone(v[0] || ""); setRecPage(0); }} />
+              </InlineFilter>
+              <InlineFilter label="Status" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M3 5h18l-7 8v6l-4-2v-4z" /></svg>} count={recFilterStatus ? 1 : 0}>
+                <MultiCheck options={[{ value: "submitted", label: "Submitted" }, { value: "converted_to_order", label: "Converted" }]} value={recFilterStatus ? [recFilterStatus] : []} onChange={(v) => { setRecFilterStatus(v[0] || ""); setRecPage(0); }} />
+              </InlineFilter>
+              {(recFilterStone || recFilterStatus) && <button onClick={() => { setRecFilterStone(""); setRecFilterStatus(""); setRecPage(0); }} className="shrink-0 text-[12px] font-medium h-8 px-2.5 rounded-[8px] cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.08)]" style={{ color: T.muted }}>Clear all</button>}
+            </div>
             <div className="ml-auto flex items-center gap-2">
-              <FiltersPopover count={[recFilterStone, recFilterStatus].filter(Boolean).length} open={showRecFilters} onToggle={() => setShowRecFilters(!showRecFilters)}>
-                <FilterField label="Stone">
-                  <Select value={recFilterStone} onChange={(v) => { setRecFilterStone(v); setRecPage(0); }} searchable compact placeholder="All stones" options={[{ value: "", label: "All stones" }, ...recStones.map((s2) => ({ value: s2, label: s2 }))]} />
-                </FilterField>
-                <FilterField label="Status">
-                  <Select value={recFilterStatus} onChange={(v) => { setRecFilterStatus(v); setRecPage(0); }} compact placeholder="All statuses" options={[{ value: "", label: "All statuses" }, { value: "submitted", label: "Submitted" }, { value: "converted_to_order", label: "Converted" }]} />
-                </FilterField>
-              </FiltersPopover>
-              <div className="w-[160px]">
-                <Select value={recSort} onChange={(val) => { setRecSort(val as SortKey); setRecPage(0); }} compact prefix="Sort: " options={[{ value: "date_desc", label: "Newest first" }, { value: "date_asc", label: "Oldest first" }]} />
-              </div>
+              <ToolbarSearch value={recSearch} onChange={(v) => { setRecSearch(v); setRecPage(0); }} placeholder="Search gemstone, customer…" />
+              <SortMenu value={recSort} onChange={(v) => { setRecSort(v as SortKey); setRecPage(0); }} options={[{ value: "date_desc", label: "Newest first" }, { value: "date_asc", label: "Oldest first" }]} />
             </div>
           </div>
 
@@ -1074,39 +1028,40 @@ export default function AstroGemologistDetailPage() {
             <StatCard label="Pending" value={expertPayments.filter((p) => p.status !== "paid").length} />
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 mb-3">
-            <ToolbarSearch value={paySearch} onChange={(v) => { setPaySearch(v); setPayPage(0); }} placeholder="Search customer, payment ID…" />
-            <div className="ml-auto w-[160px]">
-              <Select value={paySort} onChange={(val) => { setPaySort(val as SortKey); setPayPage(0); }} compact prefix="Sort: " options={[{ value: "date_desc", label: "Newest first" }, { value: "date_asc", label: "Oldest first" }]} />
+          <div className="hidden sm:flex flex-wrap items-center gap-2 pt-4 mb-3" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+            <div className="ml-auto flex items-center gap-2">
+              <ToolbarSearch value={paySearch} onChange={(v) => { setPaySearch(v); setPayPage(0); }} placeholder="Search payment ID, type…" />
+              <SortMenu value={paySort} onChange={(v) => { setPaySort(v as SortKey); setPayPage(0); }} options={[{ value: "date_desc", label: "Newest first" }, { value: "date_asc", label: "Oldest first" }]} />
             </div>
           </div>
 
           <Card className="!p-0 md:flex md:flex-col md:min-h-0">
           <div className="md:min-h-0 overflow-y-auto max-h-[560px] md:max-h-none flex-1">
-            <div className="hidden sm:grid grid-cols-[1fr_1fr_120px_100px_120px] gap-3 items-center px-4 h-10 text-[11px] tracking-[0.06em] uppercase font-medium rounded-t-[15px]" style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.borderSoft}` }}>
-              <span>Payment</span>
-              <span>Customer</span>
-              <span>Date</span>
-              <span>Status</span>
+            <div className="hidden sm:grid grid-cols-[120px_1fr_1fr_160px_120px] gap-3 items-center px-4 h-10 text-[11px] tracking-[0.06em] uppercase font-medium rounded-t-[15px]" style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.borderSoft}` }}>
+              <span>Payment ID</span>
+              <span>Payment type</span>
+              <span>Paid by</span>
+              <span>Date &amp; time</span>
               <span className="text-right">Amount</span>
             </div>
             {payPaginated.length === 0 ? (
-              <EmptyState inline icon="inbox" title="No payments" description="No payments to show yet." />
+              <EmptyState inline icon="inbox" title="No payouts" description="No payouts recorded yet." />
             ) : (
-              payPaginated.map((p) => (
-                <div key={p.id} className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_120px_100px_120px] gap-3 items-center px-4 py-2.5 even:bg-[rgba(89,82,54,0.025)] last:rounded-b-[15px]" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
-                  <div className="min-w-0">
+              payPaginated.map((p) => {
+                const dt = new Date(p.paidAt ?? p.createdAt);
+                return (
+                  <div key={p.id} className="grid grid-cols-1 sm:grid-cols-[120px_1fr_1fr_160px_120px] gap-3 items-center px-4 py-2.5 even:bg-[rgba(89,82,54,0.025)] last:rounded-b-[15px]" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
                     <div className="text-[11px] tracking-[0.06em] uppercase font-medium" style={{ color: T.accent }}>{p.id}</div>
-                    <div className="text-[12px] mt-0.5 truncate" style={{ color: T.muted }}>{p.purpose}</div>
+                    <div className="text-[13px] truncate" style={{ color: T.text }}>{p.medium ?? "Bank Transfer"}</div>
+                    <div className="text-[13px] truncate" style={{ color: T.text }}>{p.ownerName}</div>
+                    <div className="text-[12px] tabular-nums" style={{ color: T.muted }}>
+                      {dt.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                      <span className="ml-1 opacity-60">{dt.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true })}</span>
+                    </div>
+                    <div className="text-[13px] text-right font-semibold tabular-nums" style={{ color: T.text }}>{inr(p.amount)}</div>
                   </div>
-                  <div className="text-[13px]" style={{ color: T.text }}>{p.customerName}</div>
-                  <div className="text-[12px] tabular-nums" style={{ color: T.muted }}>
-                    {new Date(p.paidAt ?? p.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }).replace(/ (\d{4})$/, ", $1")}
-                  </div>
-                  <div><Chip tone={p.status === "paid" ? "good" : p.status === "sent" ? "gold" : "muted"}>{p.status}</Chip></div>
-                  <div className="text-[13px] text-right font-semibold tabular-nums" style={{ color: T.text }}>{inr(p.amount)}</div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </Card>
@@ -1115,7 +1070,7 @@ export default function AstroGemologistDetailPage() {
       )}
 
       {/* Make Payout Modal */}
-      <Modal open={showPayoutModal} onClose={() => setShowPayoutModal(false)} title="Initiate payout">
+      <Modal open={showPayoutModal} onClose={() => setShowPayoutModal(false)} title="Make payout">
         <div className="space-y-4">
           <div className="flex items-center justify-between gap-3 p-3.5 rounded-[12px]" style={{ background: T.accentFaint, border: `1px solid ${T.borderSoft}` }}>
             <div className="min-w-0">
@@ -1127,16 +1082,28 @@ export default function AstroGemologistDetailPage() {
               <div className="text-[16px] font-semibold tabular-nums" style={{ color: T.accent }}>{inr(totalEarnings)}</div>
             </div>
           </div>
-          <Input value={payoutForm.amount} onChange={(v) => setPayoutForm((p) => ({ ...p, amount: v }))} label="Payout amount (₹)" type="number" placeholder={String(totalEarnings)} />
-          <Input value={payoutForm.notes} onChange={(v) => setPayoutForm((p) => ({ ...p, notes: v }))} label="Period / notes" placeholder="e.g. May – Jul 2026" />
-          <p className="text-[11.5px]" style={{ color: T.faint }}>You&apos;ll be redirected to the payment gateway to complete the transfer.</p>
+          <Input value={payoutForm.amount} onChange={(v) => setPayoutForm((p) => ({ ...p, amount: v }))} label="Amount (₹)" type="number" placeholder={String(totalEarnings)} />
+          <Select
+            value={payoutForm.paymentType}
+            onChange={(v) => setPayoutForm((p) => ({ ...p, paymentType: v }))}
+            label="Payment type"
+            options={[
+              { value: "bank_transfer", label: "Bank Transfer" },
+              { value: "upi", label: "UPI" },
+              { value: "cheque", label: "Cheque" },
+              { value: "cash", label: "Cash" },
+              { value: "net_banking", label: "Net Banking" },
+            ]}
+          />
+          <Input value={payoutForm.paidBy} onChange={(v) => setPayoutForm((p) => ({ ...p, paidBy: v }))} label="Paid by" placeholder="e.g. Finance team, Admin" />
+          <Input value={payoutForm.notes} onChange={(v) => setPayoutForm((p) => ({ ...p, notes: v }))} label="Notes / period" placeholder="e.g. May – Jul 2026" />
           <div className="flex items-center justify-end gap-2.5 pt-1">
             <GhostBtn onClick={() => setShowPayoutModal(false)}>Cancel</GhostBtn>
             <GoldBtn
-              onClick={() => { setShowPayoutModal(false); setToast("Payout initiated"); setTimeout(() => setToast(""), 3000); }}
+              onClick={() => { setShowPayoutModal(false); setPayoutForm({ amount: "", paymentType: "bank_transfer", paidBy: "", notes: "" }); setToast("Payout recorded"); setTimeout(() => setToast(""), 3000); }}
               disabled={Number(payoutForm.amount || totalEarnings) <= 0}
             >
-              Proceed to payment →
+              Record payout
             </GoldBtn>
           </div>
         </div>

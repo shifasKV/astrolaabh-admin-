@@ -1,7 +1,7 @@
 "use client";
 import { use, useState } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, GoldBtn, GhostBtn, Modal, Input, Select, Textarea, DateInput, TimeInput, ShopifyButton, BackLink, Toast, ConfirmDialog } from "@/components/ui";
+import { Card, Chip, GoldBtn, GhostBtn, Modal, Input, Select, Textarea, DateInput, TimeInput, ShopifyButton, BackLink, Toast, ConfirmDialog } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_ORDERS, MOCK_CUSTOMERS, MOCK_CERTIFICATES, MOCK_ENERGISATION } from "@/lib/mock";
 import { ENERGISATION } from "@/lib/catalog";
@@ -62,7 +62,19 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const [trackingCourier, setTrackingCourier] = useState("");
   const [trackingInput, setTrackingInput] = useState("");
   const [dispatched, setDispatched] = useState(false);
+  const [editingTracking, setEditingTracking] = useState(false);
   const [receivedNotes, setReceivedNotes] = useState("");
+
+  type ShipmentLogEntry = { id: string; text: string; date: string; time: string };
+  const [shipmentLog, setShipmentLog] = useState<ShipmentLogEntry[]>([]);
+  const [showAddStatus, setShowAddStatus] = useState(false);
+  const [statusText, setStatusText] = useState("");
+  const [statusDate, setStatusDate] = useState(new Date().toISOString().split("T")[0]);
+  const [statusTime, setStatusTime] = useState(new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: false }));
+  const [editingLogId, setEditingLogId] = useState<string | null>(null);
+  const [editLogText, setEditLogText] = useState("");
+  const [editLogDate, setEditLogDate] = useState("");
+  const [editLogTime, setEditLogTime] = useState("");
 
   const [viewStep, setViewStep] = useState<PipelineStep | null>(null);
   const [summaryOpen, setSummaryOpen] = useState(false);
@@ -86,19 +98,18 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const isPaid = localPaymentStatus === "paid";
 
   const getItemStatus = (sku: string) => localItemStatuses[sku] ?? order.items.find((i) => i.sku === sku)?.itemStatus ?? "order_placed";
-  const isItemReceived = (s: string) => s === "order_received" || s === "in_crafting" || s === "ready_to_ship";
+  const isItemReceived = (s: string) => s === "order_received" || s === "quality_passed" || s === "in_crafting" || s === "ready_to_ship";
 
   const stones = order.items.filter((i) => i.itemType === "stone");
   const allStonesReceived = stones.every((item) => isItemReceived(getItemStatus(item.sku)));
   const allItemsReceived = order.items.every((item) => isItemReceived(getItemStatus(item.sku)));
 
   const sourceComplete = allItemsReceived;
-  const energiseComplete = localEnergStatus === "completed";
+  const energiseComplete = localEnergStatus === "completed" || ((localEnergStatus === "scheduled" || localEnergStatus === "in_progress") && !!energisation?.scheduledAt && new Date(energisation.scheduledAt) < new Date());
   const labUploaded = labCert?.status === "uploaded" || labCert?.status === "verified" || localLabCert;
-  const energUploaded = energCert?.status === "uploaded" || energCert?.status === "verified" || localEnergCert;
+  const energUploaded = energCert?.status === "uploaded" || energCert?.status === "verified" || localEnergCert || energiseComplete;
   const hasBothCerts = labUploaded && energUploaded;
-  // Complete only when explicitly marked done (or seeded verified on both certs).
-  const certifyComplete = certifyDone || (labCert?.status === "verified" && energCert?.status === "verified");
+  const certifyComplete = certifyDone || hasBothCerts || energiseComplete;
   const shipComplete = dispatched || order.shopifyStatus === "fulfilled";
 
   const activeStep: PipelineStep = !isPaid ? 0 : !allStonesReceived ? 0 : !energiseComplete ? 1 : !certifyComplete ? 2 : !allItemsReceived ? 0 : 3;
@@ -156,41 +167,23 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   };
 
   const itemStatusLabel = (s: string) => {
-    const map: Record<string, string> = { order_placed: "Order placed", in_transit: "In transit", order_received: "Received", in_crafting: "In crafting", quality_check: "QC", ready_to_ship: "Ready" };
+    const map: Record<string, string> = { pending: "Pending", order_placed: "Placed", in_transit: "In transit", order_received: "Received", quality_passed: "Quality Passed" };
     return map[s] ?? s;
   };
 
   const itemStatusTone = (s: string) => {
-    if (s === "order_received" || s === "ready_to_ship") return "good" as const;
-    if (s === "in_transit" || s === "in_crafting" || s === "quality_check") return "gold" as const;
+    if (s === "order_received" || s === "quality_passed") return "good" as const;
+    if (s === "in_transit") return "gold" as const;
+    if (s === "pending") return "muted" as const;
     return "muted" as const;
   };
 
   const tier = order.energisationTier ? ENERGISATION.find((e) => e.key === order.energisationTier) : null;
 
-  const overallStatus = (() => {
-    if (!isPaid) return { label: "Payment pending", tone: "gold" as const };
-    if (shipComplete) return { label: "Delivered", tone: "good" as const };
-    if (dispatched || localTracking) return { label: "In transit", tone: "gold" as const };
-    if (!certifyComplete) return { label: "Cert missing", tone: "danger" as const };
-    if (!energiseComplete) return { label: "Energisation pending", tone: "danger" as const };
-    return { label: "Not shipped", tone: "muted" as const };
-  })();
-
   return (
     <>
       {/* ============ HEADER ============ */}
-      <PageHeader
-        title={order.id}
-        sub={`Placed ${new Date(order.placedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}`}
-        back={{ label: "Orders", href: "/orders" }}
-        action={
-          <div className="flex items-center gap-2.5">
-            <Chip tone={overallStatus.tone}>{overallStatus.label}</Chip>
-            <ShopifyButton href="https://admin.shopify.com/orders">Open in Shopify</ShopifyButton>
-          </div>
-        }
-      />
+      <BackLink label="Orders" href="/orders" className="mb-4" />
 
       {/* ============ PAYMENT BANNER ============ */}
       {!isPaid && (
@@ -210,45 +203,22 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
         </div>
       )}
 
-      {/* ============ CUSTOMER — full-width identity card ============ */}
-      {customer ? (
-        <Link href={`/customers/${customer.id}`} className="block group mb-4">
-          <div className="card-interactive rounded-[16px] p-4 sm:p-5 cursor-pointer flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6" style={{ background: T.card, border: `1px solid ${T.borderSoft}`, boxShadow: T.shadow }}>
-            <div className="flex items-center gap-3 sm:w-[240px] shrink-0 min-w-0">
-              <span className="w-10 h-10 rounded-[12px] flex items-center justify-center text-[13.5px] font-semibold shrink-0" style={{ background: T.accentFaint, border: `1px solid ${T.accentBorder}`, color: T.accent }}>
-                {customer.name.split(" ").map((w) => w[0]).slice(0, 2).join("")}
-              </span>
-              <div className="min-w-0">
-                <div className="text-[10px] font-medium tracking-[0.08em] uppercase" style={{ color: T.faint }}>Customer</div>
-                <div className="text-[14.5px] font-semibold truncate" style={{ color: T.text }}>{customer.name}</div>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-6 flex-1 min-w-0 sm:pl-6" style={{ borderLeft: undefined }}>
-              {[["Phone", customer.phone], ["Email", customer.email], ["Location", customer.birthPlace]].map(([k, v]) => (
-                <div key={k} className="min-w-0">
-                  <div className="text-[10px] font-medium tracking-[0.08em] uppercase mb-0.5" style={{ color: T.faint }}>{k}</div>
-                  <div className="text-[13px] font-medium truncate" style={{ color: T.text }}>{v}</div>
-                </div>
-              ))}
-            </div>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="hidden sm:block w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" style={{ color: T.faint }}><path d="m9 18 6-6-6-6" /></svg>
-          </div>
-        </Link>
-      ) : (
-        <Card className="mb-4">
-          <div className="flex items-center justify-between text-[13px]">
-            <span className="text-[10px] font-medium tracking-[0.08em] uppercase" style={{ color: T.faint }}>Customer</span>
-            <span className="font-medium" style={{ color: T.text }}>{order.customerName}</span>
-          </div>
-        </Card>
-      )}
+      {/* Customer card moved to sidebar */}
 
       {/* ============ TWO-COLUMN BODY — work left, context right ============ */}
       <div className="flex flex-col xl:flex-row items-start gap-4">
-        <div className="flex-1 min-w-0 space-y-4 w-full">
+        <div className="flex-1 min-w-0 flex flex-col gap-4 w-full">
       {/* ============ FULFILLMENT PIPELINE ============ */}
       {isPaid && <Card>
-        <h2 className="text-[15px] font-semibold tracking-[-0.01em] mb-4" style={{ color: T.text }}>Fulfillment</h2>
+        <div className="flex items-start justify-between gap-3 mb-4">
+          <h2 className="text-[15px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>Fulfillment</h2>
+          <div className="flex flex-wrap gap-1">
+            {!sourceComplete && <Chip tone="gold">Sourcing Pending</Chip>}
+            {!energiseComplete && <Chip tone="danger">{localEnergStatus === "pending" || localEnergStatus === "not_required" ? "Energ Not Scheduled" : "Energ Incomplete"}</Chip>}
+            {!certifyComplete && <Chip tone="info">Certificate Pending</Chip>}
+            {!shipComplete && <Chip tone="muted">Shipment Pending</Chip>}
+          </div>
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-[190px_1fr] gap-4 items-start">
         {/* Stepper — side rail on desktop, scrollable chips on mobile */}
@@ -298,13 +268,6 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
           {/* ---- STEP 0: SOURCE — per-item sourcing cards; saving notifies the customer ---- */}
           {displayStep === 0 && (
             <div className="space-y-3">
-              {isPaid && (
-                <div className="flex items-center gap-2 text-[12px]" style={{ color: T.muted }}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke={T.accent} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 shrink-0"><path d="M12 3a6 6 0 0 1 6 6v4l2 2H4l2-2V9a6 6 0 0 1 6-6z" /><path d="M9 17a3 3 0 0 0 6 0" /></svg>
-                  Saved updates are pushed to the customer&apos;s web app.
-                </div>
-              )}
-
               {order.items.map((item) => {
                 const status = getItemStatus(item.sku);
                 const received = status === "order_received";
@@ -320,7 +283,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                 const saveItem = () => {
                   setSourceDirty((p) => ({ ...p, [item.sku]: false }));
                   setSourceSavedAt((p) => ({ ...p, [item.sku]: new Date().toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true }) }));
-                  flash(`${item.name.split("·")[0].trim()} updated — customer notified`);
+                  flash(`${item.name.split("·")[0].trim()} saved`);
                 };
 
                 return (
@@ -333,8 +296,8 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
                     {(!isPaid ? (
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-5 gap-y-2 mt-3 text-[12.5px]" style={{ color: T.muted }}>
-                        <div><span className={fieldLabel} style={{ color: T.faint }}>Vendor</span>{vendorName || "—"}</div>
-                        <div><span className={fieldLabel} style={{ color: T.faint }}>Vendor order</span><span className="tabular-nums">{vendorOrderId || "—"}</span></div>
+                        <div><span className={fieldLabel} style={{ color: T.faint }}>Supplier</span>{vendorName || "—"}</div>
+                        <div><span className={fieldLabel} style={{ color: T.faint }}>Supplier order</span><span className="tabular-nums">{vendorOrderId || "—"}</span></div>
                         <div className="col-span-2"><span className={fieldLabel} style={{ color: T.faint }}>Remarks</span>{localRemarks[item.sku] || "—"}</div>
                       </div>
                     ) : (
@@ -342,63 +305,43 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                         {/* Fields */}
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3.5">
                           <div>
-                            <label className={fieldLabel} style={{ color: T.faint }}>Vendor</label>
-                            <input type="text" value={vendorName} onChange={(e) => { setLocalVendorNames((p) => ({ ...p, [item.sku]: e.target.value })); markDirty(); }} placeholder="e.g. Kanakadhara Jewellers" disabled={received} className={fieldCls} style={{ ...fieldStyle, opacity: received ? 0.55 : 1 }} />
+                            <label className={fieldLabel} style={{ color: T.faint }}>Supplier</label>
+                            <input type="text" value={vendorName} onChange={(e) => { setLocalVendorNames((p) => ({ ...p, [item.sku]: e.target.value })); markDirty(); }} placeholder="e.g. Kanakadhara Jewellers" className={fieldCls} style={fieldStyle} />
                           </div>
                           <div>
-                            <label className={fieldLabel} style={{ color: T.faint }}>Vendor order no.</label>
-                            <input type="text" value={vendorOrderId} onChange={(e) => { setLocalVendorOrderIds((p) => ({ ...p, [item.sku]: e.target.value })); markDirty(); }} placeholder="e.g. KJ-2026-0950" disabled={received} className={`${fieldCls} tabular-nums`} style={{ ...fieldStyle, opacity: received ? 0.55 : 1 }} />
+                            <label className={fieldLabel} style={{ color: T.faint }}>Supplier order no.</label>
+                            <input type="text" value={vendorOrderId} onChange={(e) => { setLocalVendorOrderIds((p) => ({ ...p, [item.sku]: e.target.value })); markDirty(); }} placeholder="e.g. KJ-2026-0950" className={`${fieldCls} tabular-nums`} style={fieldStyle} />
                           </div>
                           <div>
                             <label className={fieldLabel} style={{ color: T.faint }}>Status</label>
                             <Select
                               value={status}
                               onChange={(val) => { setLocalItemStatuses((p) => ({ ...p, [item.sku]: val })); setSourceDirty((p) => ({ ...p, [item.sku]: true })); }}
-                              disabled={received}
                               compact
                               options={[
-                                { value: "order_placed", label: "Order placed" },
+                                { value: "pending", label: "Pending" },
+                                { value: "order_placed", label: "Placed" },
                                 { value: "in_transit", label: "In transit" },
-                                { value: "quality_check", label: "Quality check" },
                                 { value: "order_received", label: "Received" },
                               ]}
                             />
                           </div>
                         </div>
                         <div className="mt-3">
-                          <label className={fieldLabel} style={{ color: T.faint }}>Remarks <span className="normal-case tracking-normal" style={{ color: T.faint }}>· visible to the customer</span></label>
-                          <input type="text" value={localRemarks[item.sku] ?? ""} onChange={(e) => { setLocalRemarks((p) => ({ ...p, [item.sku]: e.target.value })); markDirty(); }} placeholder="e.g. Vendor confirmed dispatch by Friday" className={fieldCls} style={fieldStyle} />
+                          <label className={fieldLabel} style={{ color: T.faint }}>Remarks</label>
+                          <textarea value={localRemarks[item.sku] ?? ""} onChange={(e) => { setLocalRemarks((p) => ({ ...p, [item.sku]: e.target.value })); markDirty(); }} placeholder="e.g. Vendor confirmed dispatch by Friday" rows={2} className={`${fieldCls} py-2 resize-none`} style={fieldStyle} />
                         </div>
 
-                        {/* Footer: received toggle + save */}
-                        <div className="flex flex-wrap items-center justify-between gap-3 mt-4 pt-3.5" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+                        {/* Footer: save */}
+                        <div className="flex flex-wrap items-center justify-end gap-3 mt-4 pt-3.5" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
                           <button
-                            onClick={() => {
-                              const next = received ? "in_transit" : "order_received";
-                              setLocalItemStatuses((p) => ({ ...p, [item.sku]: next }));
-                              setSourceDirty((p) => ({ ...p, [item.sku]: true }));
-                              setViewStep(0);
-                            }}
-                            className="inline-flex items-center gap-2 h-9 pl-2 pr-3.5 rounded-full text-[12.5px] font-medium cursor-pointer transition-all active:scale-[0.98]"
-                            style={received ? { background: "rgba(95,112,64,0.13)", border: `1px solid rgba(95,112,64,0.35)`, color: T.good } : { background: T.bg, border: `1px solid ${T.border}`, color: T.muted }}
+                            onClick={saveItem}
+                            disabled={!dirty}
+                            className="h-9 px-4 rounded-[9px] text-[12.5px] font-semibold cursor-pointer transition-all active:scale-[0.98] disabled:cursor-default"
+                            style={dirty ? { background: T.accent, color: T.accentInk } : { background: "rgba(89,82,54,0.10)", color: T.faint }}
                           >
-                            <span className="w-5 h-5 rounded-full flex items-center justify-center" style={{ background: received ? T.good : "rgba(89,82,54,0.14)", color: received ? "#fff" : T.faint }}>
-                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
-                            </span>
-                            {received ? "Received at studio" : "Mark as received"}
+                            Save
                           </button>
-                          <div className="flex items-center gap-3">
-                            {savedAt && !dirty && <span className="text-[11.5px]" style={{ color: T.faint }}>Saved {savedAt} · customer notified</span>}
-                            {dirty && <span className="text-[11.5px] font-medium" style={{ color: T.gold }}>Unsaved changes</span>}
-                            <button
-                              onClick={saveItem}
-                              disabled={!dirty}
-                              className="h-9 px-4 rounded-[9px] text-[12.5px] font-semibold cursor-pointer transition-all active:scale-[0.98] disabled:cursor-default"
-                              style={dirty ? { background: T.accent, color: T.accentInk } : { background: "rgba(89,82,54,0.10)", color: T.faint }}
-                            >
-                              Save &amp; notify
-                            </button>
-                          </div>
                         </div>
                       </>
                     ))}
@@ -423,7 +366,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               )}
 
               {tier && (
-                <div className="rounded-[12px] p-4" style={{ background: T.card, border: `1px solid ${localEnergStatus === "completed" ? "rgba(95,112,64,0.35)" : T.borderSoft}` }}>
+                <div className="rounded-[12px] p-4" style={{ background: T.card, border: `1px solid ${energiseComplete ? "rgba(95,112,64,0.35)" : T.borderSoft}` }}>
                   {/* Header — ritual identity + status */}
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0">
@@ -438,9 +381,28 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                         <div className="text-[12px] mt-0.5" style={{ color: T.muted }}>{tier.duration}{tier.fee > 0 ? ` · ${inr(tier.fee)}` : " · included free"}</div>
                       </div>
                     </div>
-                    <Chip tone={localEnergStatus === "completed" ? "good" : localEnergStatus === "scheduled" || localEnergStatus === "in_progress" ? "gold" : "muted"}>
-                      {localEnergStatus === "completed" ? "Completed" : localEnergStatus === "scheduled" || localEnergStatus === "in_progress" ? "Scheduled" : "Not scheduled"}
-                    </Chip>
+                    <div className="flex items-center gap-2">
+                      <Chip tone={energiseComplete ? "good" : localEnergStatus === "scheduled" || localEnergStatus === "in_progress" ? "gold" : "muted"}>
+                        {energiseComplete ? "Completed" : localEnergStatus === "scheduled" || localEnergStatus === "in_progress" ? "Scheduled" : "Not scheduled"}
+                      </Chip>
+                      {!energiseComplete && (localEnergStatus === "scheduled" || localEnergStatus === "in_progress") && (
+                        <button
+                          onClick={() => {
+                            if (energisation?.scheduledAt) {
+                              const d = new Date(energisation.scheduledAt);
+                              setScheduleDate(energisation.scheduledAt.split("T")[0]);
+                              setScheduleTime(d.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true }).toUpperCase());
+                            }
+                            if (energisation?.liveLink) setScheduleLink(energisation.liveLink);
+                            setShowSchedule(true);
+                          }}
+                          className="text-[11px] font-medium px-2 py-1 rounded-[6px] cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.1)]"
+                          style={{ color: T.accent }}
+                        >
+                          Edit
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {/* Session details — labeled, not a dot run-on */}
@@ -469,25 +431,17 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                       <Link href={`/energisation/${energisation.id}`} className="text-[12px] font-medium hover:underline underline-offset-2" style={{ color: T.accent }}>View session ↗</Link>
                     ) : <span />}
                     <div className="flex items-center gap-2">
-                      {localEnergStatus !== "completed" && localEnergStatus !== "scheduled" && localEnergStatus !== "in_progress" && (
+                      {!energiseComplete && localEnergStatus !== "scheduled" && localEnergStatus !== "in_progress" && (
                         <GoldBtn onClick={() => setShowSchedule(true)}>Schedule</GoldBtn>
                       )}
-                      {(localEnergStatus === "scheduled" || localEnergStatus === "in_progress") && (
-                        <>
-                          <GhostBtn onClick={() => {
-                            if (energisation?.scheduledAt) {
-                              const d = new Date(energisation.scheduledAt);
-                              setScheduleDate(energisation.scheduledAt.split("T")[0]);
-                              setScheduleTime(d.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true }).toUpperCase());
-                            }
-                            if (energisation?.liveLink) setScheduleLink(energisation.liveLink);
-                            setShowSchedule(true);
-                          }}>Edit</GhostBtn>
-                          <GoldBtn onClick={() => setConfirmEnergComplete(true)} disabled={!allStonesReceived}>Mark as completed</GoldBtn>
-                        </>
-                      )}
-                      {localEnergStatus === "completed" && energisation?.completedAt && (
-                        <span className="text-[12px]" style={{ color: T.good }}>Completed {new Date(energisation.completedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>
+                      {energiseComplete && (
+                        <span className="text-[12px]" style={{ color: T.good }}>
+                          Completed {energisation?.completedAt
+                            ? new Date(energisation.completedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })
+                            : energisation?.scheduledAt
+                              ? new Date(energisation.scheduledAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })
+                              : ""}
+                        </span>
                       )}
                     </div>
                   </div>
@@ -531,9 +485,12 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                           {labCert?.issueDate && <div><span style={{ color: T.faint }}>Issued:</span> {labCert.issueDate}</div>}
                           {!labCert && <div>Uploaded just now.</div>}
                         </div>
-                        <div className="flex items-center gap-3 mt-3 pt-3" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
-                          <a href={labCert?.fileUrl ?? "#"} target="_blank" rel="noopener" className="text-[12px] font-medium" style={{ color: T.accent }}>View ↗</a>
-                          <button onClick={() => setCertUploadTarget("lab_authenticity")} className="text-[12px] font-medium cursor-pointer hover:underline underline-offset-2" style={{ color: T.muted }}>Replace</button>
+                        <div className="flex items-center gap-2 mt-3 pt-3" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+                          <a href={labCert?.fileUrl ?? "#"} target="_blank" rel="noopener" className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[8px] text-[12px] font-medium transition-colors hover:brightness-110 cursor-pointer" style={{ background: T.accentFaint, color: T.accent, border: `1px solid ${T.accentBorder}` }}>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                            View
+                          </a>
+                          <button onClick={() => setCertUploadTarget("lab_authenticity")} className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[8px] text-[12px] font-medium cursor-pointer transition-colors hover:bg-[rgba(89,82,54,0.06)]" style={{ color: T.muted, border: `1px solid ${T.borderSoft}` }}>Replace</button>
                         </div>
                       </>
                     ) : (
@@ -549,61 +506,36 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                   <div className="rounded-[12px] p-4" style={{ background: T.card, border: `1px solid ${energUploaded ? "rgba(95,112,64,0.35)" : T.borderSoft}` }}>
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-[12.5px] font-semibold" style={{ color: T.text }}>AstroLaabh Certificate</span>
-                      <Chip tone={energUploaded ? "good" : !energiseComplete ? "muted" : "danger"}>{energUploaded ? "Generated" : !energiseComplete ? "Locked" : "Missing"}</Chip>
+                      <Chip tone={energUploaded || energiseComplete ? "good" : "muted"}>{energUploaded ? "Generated" : energiseComplete ? "Auto-generated" : "Locked"}</Chip>
                     </div>
-                    {energUploaded ? (
+                    {energUploaded || energiseComplete ? (
                       <>
                         <div className="text-[12px] space-y-1" style={{ color: T.muted }}>
                           {energCert?.certificateNumber && <div><span style={{ color: T.faint }}>Cert #:</span> {energCert.certificateNumber}</div>}
                           {energCert?.issuingAuthority && <div><span style={{ color: T.faint }}>Issued by:</span> {energCert.issuingAuthority}</div>}
                           {energCert?.issueDate && <div><span style={{ color: T.faint }}>Date:</span> {energCert.issueDate}</div>}
-                          {!energCert && <div>Generated just now.</div>}
+                          {!energCert && <div>Auto-generated after energisation.</div>}
                         </div>
-                        <div className="flex items-center gap-3 mt-3 pt-3" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
-                          <a href={energCert?.fileUrl ?? "#"} target="_blank" rel="noopener" className="text-[12px] font-medium" style={{ color: T.accent }}>View ↗</a>
-                          <button onClick={() => setCertUploadTarget("energisation")} className="text-[12px] font-medium cursor-pointer hover:underline underline-offset-2" style={{ color: T.muted }}>Regenerate</button>
-                        </div>
-                      </>
-                    ) : !energiseComplete ? (
-                      <>
-                        <p className="text-[11px] mb-3" style={{ color: T.faint }}>In-house energisation certificate confirming ritual completion, mantra details, and astrological suitability.</p>
-                        <div className="flex items-center gap-2 text-[12px] rounded-[8px] px-3 py-2" style={{ background: T.bg, border: `1px dashed ${T.border}`, color: T.muted }}>
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
-                          Unlocks after the energisation ritual is completed.
+                        <div className="flex items-center gap-2 mt-3 pt-3" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+                          <a href={energCert?.fileUrl ?? "#"} target="_blank" rel="noopener" className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[8px] text-[12px] font-medium transition-colors hover:brightness-110 cursor-pointer" style={{ background: T.accentFaint, color: T.accent, border: `1px solid ${T.accentBorder}` }}>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                            View
+                          </a>
+                          <button onClick={() => setCertUploadTarget("energisation")} className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[8px] text-[12px] font-medium cursor-pointer transition-colors hover:bg-[rgba(89,82,54,0.06)]" style={{ color: T.muted, border: `1px solid ${T.borderSoft}` }}>Regenerate</button>
                         </div>
                       </>
                     ) : (
                       <>
-                        <p className="text-[11px] mb-3" style={{ color: T.faint }}>Ritual completed — generate the certificate with the recorded details.</p>
-                        <GoldBtn onClick={() => {
-                          const stone = order.items.find((i) => i.itemType === "stone");
-                          setCertWeight(stone?.caratWeight ?? "");
-                          if (energisation?.completedAt) setCertIssueDateActual(energisation.completedAt.split("T")[0]);
-                          if (energisation?.method) setCertRitualMethod(energisation.method);
-                          setCertUploadTarget("energisation");
-                        }}>Generate certificate</GoldBtn>
+                        <p className="text-[11px] mb-3" style={{ color: T.faint }}>Auto-generated once the energisation ritual is completed.</p>
+                        <div className="flex items-center gap-2 text-[12px] rounded-[8px] px-3 py-2" style={{ background: T.bg, border: `1px dashed ${T.border}`, color: T.muted }}>
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+                          Waiting for energisation to complete.
+                        </div>
                       </>
                     )}
                   </div>
                 </div>
 
-                {/* Completion — explicit "done" moment gated on both certificates */}
-                {certifyComplete ? (
-                  <div className="flex items-center gap-2.5 rounded-[10px] px-4 py-3 mt-3" style={{ background: "rgba(95,112,64,0.10)", border: "1px solid rgba(95,112,64,0.30)" }}>
-                    <span className="w-6 h-6 rounded-full flex items-center justify-center shrink-0" style={{ background: T.good, color: "#fff" }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg></span>
-                    <span className="text-[12.5px] font-medium" style={{ color: T.good }}>Certification complete — both certificates are on file. Shipping is unlocked.</span>
-                  </div>
-                ) : (
-                  <div className="flex flex-wrap items-center justify-between gap-3 mt-3 pt-3" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
-                    <span className="text-[12px]" style={{ color: T.faint }}>
-                      {!labUploaded && !energUploaded ? "Upload the lab report and generate the AstroLaabh certificate to finish this step."
-                        : !labUploaded ? "Waiting on the lab authenticity certificate."
-                        : !energUploaded ? "Waiting on the AstroLaabh certificate."
-                        : "Both certificates are in — mark this step as done."}
-                    </span>
-                    <GoldBtn onClick={() => { setCertifyDone(true); flash("Certification marked complete"); }} disabled={!hasBothCerts}>Mark certification done</GoldBtn>
-                  </div>
-                )}
             </div>
           )}
 
@@ -625,39 +557,174 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                     ].filter(Boolean).join(", ")}
                   </span>
                 </div>
-              ) : dispatched || order.shopifyStatus === "fulfilled" ? (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[13px] font-medium" style={{ color: T.good }}>✓ Dispatched</span>
-                    {order.shopifyStatus === "fulfilled" && <Chip tone="good">Delivered</Chip>}
-                  </div>
-                  <div className="grid sm:grid-cols-2 gap-4 text-[13px]">
-                    <div>
-                      <div className="text-[11px] tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>Tracking ID</div>
-                      <div style={{ color: T.text }}>{localTracking || order.tracking || "—"}</div>
-                    </div>
-                    <div>
-                      <div className="text-[11px] tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>Courier</div>
-                      <div style={{ color: T.text }}>{trackingCourier || "—"}</div>
-                    </div>
-                  </div>
-                </div>
               ) : (
-                <div>
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="flex-1 grid sm:grid-cols-2 gap-3">
-                      <Input value={trackingInput} onChange={setTrackingInput} label="Tracking ID" placeholder="e.g. AWB-BLU-5518234" />
-                      <Input value={trackingCourier} onChange={setTrackingCourier} label="Courier" placeholder="e.g. BlueDart, DTDC" />
-                    </div>
-                    <div className="shrink-0 self-end">
-                      <GoldBtn
-                        onClick={() => setConfirmDispatch(true)}
-                        disabled={!trackingInput.trim() || !trackingCourier.trim()}
-                      >
-                        Mark as dispatched
-                      </GoldBtn>
-                    </div>
-                  </div>
+                <div className="space-y-4">
+                  {/* Pre-dispatch: editable inputs + dispatch button */}
+                  {!(dispatched || order.shopifyStatus === "fulfilled") ? (
+                    <>
+                      <div className="grid sm:grid-cols-2 gap-3">
+                        <Input value={trackingInput} onChange={setTrackingInput} label="Tracking ID" placeholder="e.g. AWB-BLU-5518234" />
+                        <Input value={trackingCourier} onChange={setTrackingCourier} label="Courier" placeholder="e.g. BlueDart, DTDC" />
+                      </div>
+                      <div className="flex items-center justify-between gap-3 pt-1">
+                        <span className="text-[12px]" style={{ color: T.faint }}>Enter tracking details and mark as dispatched.</span>
+                        <GoldBtn
+                          onClick={() => setConfirmDispatch(true)}
+                          disabled={!trackingInput.trim() || !trackingCourier.trim()}
+                        >
+                          Mark as dispatched
+                        </GoldBtn>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      {/* Dispatched card — read-only with pencil edit */}
+                      <div className="rounded-[10px] p-4" style={{ background: T.card, border: `1px solid ${T.borderSoft}` }}>
+                        <div className="flex items-center justify-between gap-3 mb-3">
+                          <div className="flex items-center gap-2">
+                            <span className="w-5 h-5 rounded-full flex items-center justify-center shrink-0" style={{ background: T.good, color: "#fff" }}>
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-2.5 h-2.5"><path d="M20 6 9 17l-5-5" /></svg>
+                            </span>
+                            <span className="text-[13px] font-semibold" style={{ color: T.text }}>Dispatched</span>
+                            {order.shopifyStatus === "fulfilled" && <Chip tone="good">Delivered</Chip>}
+                          </div>
+                          {!editingTracking ? (
+                            <button
+                              onClick={() => setEditingTracking(true)}
+                              className="p-1.5 rounded-[6px] cursor-pointer transition-colors hover:bg-[rgba(89,82,54,0.06)]"
+                              style={{ color: T.muted }}
+                              title="Edit tracking"
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+                            </button>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <GhostBtn onClick={() => setEditingTracking(false)}>Cancel</GhostBtn>
+                              <GoldBtn onClick={() => { setLocalTracking(trackingInput || localTracking); setEditingTracking(false); flash("Tracking updated"); }}>Save</GoldBtn>
+                            </div>
+                          )}
+                        </div>
+
+                        {editingTracking ? (
+                          <div className="grid sm:grid-cols-2 gap-3">
+                            <Input value={trackingInput || localTracking || order.tracking || ""} onChange={setTrackingInput} label="Tracking ID" placeholder="e.g. AWB-BLU-5518234" />
+                            <Input value={trackingCourier} onChange={setTrackingCourier} label="Courier" placeholder="e.g. BlueDart, DTDC" />
+                          </div>
+                        ) : (
+                          <div className="grid sm:grid-cols-2 gap-3">
+                            <div>
+                              <div className="text-[10px] tracking-[0.1em] uppercase mb-1" style={{ color: T.faint }}>Tracking ID</div>
+                              <div className="text-[13px] font-medium tabular-nums" style={{ color: T.text }}>{localTracking || trackingInput || order.tracking || "—"}</div>
+                            </div>
+                            <div>
+                              <div className="text-[10px] tracking-[0.1em] uppercase mb-1" style={{ color: T.faint }}>Courier</div>
+                              <div className="text-[13px] font-medium" style={{ color: T.text }}>{trackingCourier || "—"}</div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Shipment timeline */}
+                      <div className="pt-3" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+                        <div className="flex items-center justify-between gap-3 mb-3">
+                          <span className="text-[13px] font-semibold" style={{ color: T.text }}>Shipment status</span>
+                          <button
+                            onClick={() => {
+                              setStatusText("");
+                              setStatusDate(new Date().toISOString().split("T")[0]);
+                              setStatusTime(new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: false }));
+                              setShowAddStatus(true);
+                            }}
+                            className="inline-flex items-center gap-1.5 text-[12px] font-medium px-3 py-1.5 rounded-[8px] cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.08)]"
+                            style={{ color: T.accent, border: `1px solid ${T.accentBorder}` }}
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                            Add status
+                          </button>
+                        </div>
+
+                        {/* Add status form */}
+                        {showAddStatus && (
+                          <div className="rounded-[10px] p-3.5 mb-3 space-y-3" style={{ background: T.card, border: `1px solid ${T.borderSoft}` }}>
+                            <Textarea value={statusText} onChange={setStatusText} label="Status update" placeholder="e.g. Package picked up from warehouse" rows={2} />
+                            <div className="grid grid-cols-2 gap-3">
+                              <Input value={statusDate} onChange={setStatusDate} label="Date" placeholder="YYYY-MM-DD" />
+                              <Input value={statusTime} onChange={setStatusTime} label="Time" placeholder="HH:MM" />
+                            </div>
+                            <div className="flex items-center justify-end gap-2">
+                              <GhostBtn onClick={() => setShowAddStatus(false)}>Cancel</GhostBtn>
+                              <GoldBtn
+                                onClick={() => {
+                                  if (!statusText.trim()) return;
+                                  setShipmentLog((prev) => [{ id: `log_${Date.now()}`, text: statusText.trim(), date: statusDate, time: statusTime }, ...prev]);
+                                  setShowAddStatus(false);
+                                  setStatusText("");
+                                  flash("Status added");
+                                }}
+                                disabled={!statusText.trim()}
+                              >
+                                Add
+                              </GoldBtn>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Timeline entries */}
+                        {shipmentLog.length > 0 ? (
+                          <div className="relative pl-5">
+                            <div className="absolute left-[7px] top-2 bottom-2 w-px" style={{ background: T.border }} />
+                            {shipmentLog.map((entry, i) => (
+                              <div key={entry.id} className="relative pb-4 last:pb-0">
+                                <span className="absolute left-[-17px] top-1.5 w-[11px] h-[11px] rounded-full border-2" style={{ borderColor: i === 0 ? T.good : T.border, background: i === 0 ? T.good : T.bg }} />
+                                {editingLogId === entry.id ? (
+                                  <div className="rounded-[10px] p-3 space-y-2.5" style={{ background: T.card, border: `1px solid ${T.borderSoft}` }}>
+                                    <Textarea value={editLogText} onChange={setEditLogText} rows={2} />
+                                    <div className="grid grid-cols-2 gap-3">
+                                      <Input value={editLogDate} onChange={setEditLogDate} label="Date" />
+                                      <Input value={editLogTime} onChange={setEditLogTime} label="Time" />
+                                    </div>
+                                    <div className="flex items-center justify-end gap-2">
+                                      <GhostBtn onClick={() => setEditingLogId(null)}>Cancel</GhostBtn>
+                                      <GoldBtn onClick={() => {
+                                        setShipmentLog((prev) => prev.map((e) => e.id === entry.id ? { ...e, text: editLogText.trim() || e.text, date: editLogDate || e.date, time: editLogTime || e.time } : e));
+                                        setEditingLogId(null);
+                                        flash("Status updated");
+                                      }}>
+                                        Save
+                                      </GoldBtn>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="group">
+                                    <div className="flex items-start justify-between gap-2">
+                                      <div>
+                                        <div className="text-[12.5px] font-medium" style={{ color: T.text }}>{entry.text}</div>
+                                        <div className="text-[11px] mt-0.5 tabular-nums" style={{ color: T.faint }}>
+                                          {entry.date && new Date(entry.date + "T00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                                          {entry.time && ` · ${entry.time}`}
+                                        </div>
+                                      </div>
+                                      <button
+                                        onClick={() => { setEditingLogId(entry.id); setEditLogText(entry.text); setEditLogDate(entry.date); setEditLogTime(entry.time); }}
+                                        className="opacity-0 group-hover:opacity-100 text-[11px] font-medium px-2 py-1 rounded-[6px] cursor-pointer transition-all hover:bg-[rgba(89,82,54,0.06)]"
+                                        style={{ color: T.muted }}
+                                      >
+                                        Edit
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        ) : !showAddStatus && (
+                          <div className="text-center py-4 rounded-[10px]" style={{ background: T.bg, border: `1px dashed ${T.border}` }}>
+                            <p className="text-[12px]" style={{ color: T.faint }}>No shipment updates yet. Add a status to start tracking.</p>
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -665,8 +732,15 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
         </div>
         </div>
       </Card>}
-      {/* ============ ORDER SUMMARY — collapsed reference; the work lives above ============ */}
-      <Card>
+      {/* ============ ORDER SUMMARY ============ */}
+      <Card className="order-first">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-3 pb-3" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
+          <div>
+            <h2 className="font-title text-[18px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>{order.id}</h2>
+            <div className="text-[12.5px] mt-0.5" style={{ color: T.muted }}>Placed {new Date(order.placedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</div>
+          </div>
+          <ShopifyButton href="https://admin.shopify.com/orders">Open in Shopify</ShopifyButton>
+        </div>
         <button onClick={() => setSummaryOpen((v) => !v)} className="w-full flex items-center justify-between gap-3 cursor-pointer text-left">
           <div>
             <h2 className="text-[15px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>Order summary</h2>
@@ -737,6 +811,10 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               <span className="tabular-nums" style={{ color: T.text }}>{inr(tier.fee)}</span>
             </div>
           )}
+          <div className="flex items-center justify-between px-3 py-1 text-[13px]">
+            <span style={{ color: T.muted }}>Discount</span>
+            <span className="tabular-nums" style={{ color: T.good }}>– {inr(0)}</span>
+          </div>
           <div className="flex items-baseline justify-between px-3 pt-3 mt-2" style={{ borderTop: `1px solid ${T.border}` }}>
             <span className="text-[13.5px] font-medium" style={{ color: T.muted }}>Total</span>
             <span className="font-title text-[20px] font-semibold tabular-nums tracking-[-0.01em]" style={{ color: T.text }}>
@@ -750,6 +828,39 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
         {/* Context rail — who, where, meta */}
         <aside className="w-full xl:w-[320px] shrink-0 space-y-4 xl:sticky xl:top-4">
+        {/* Customer */}
+        {customer ? (
+          <Link href={`/customers/${customer.id}`} className="block group">
+            <Card>
+              <div className="flex items-center gap-3 mb-3">
+                <span className="w-9 h-9 rounded-[10px] flex items-center justify-center text-[12.5px] font-semibold shrink-0" style={{ background: T.accentFaint, border: `1px solid ${T.accentBorder}`, color: T.accent }}>
+                  {customer.name.split(" ").map((w) => w[0]).slice(0, 2).join("")}
+                </span>
+                <div className="min-w-0">
+                  <div className="text-[10px] font-medium tracking-[0.08em] uppercase" style={{ color: T.faint }}>Customer</div>
+                  <div className="text-[14px] font-semibold truncate" style={{ color: T.text }}>{customer.name}</div>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-medium tracking-[0.08em] uppercase" style={{ color: T.faint }}>Phone</span>
+                  <span className="text-[13px] font-medium" style={{ color: T.text }}>{customer.phone}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-medium tracking-[0.08em] uppercase" style={{ color: T.faint }}>Email</span>
+                  <span className="text-[13px] font-medium truncate ml-3" style={{ color: T.text }}>{customer.email}</span>
+                </div>
+              </div>
+            </Card>
+          </Link>
+        ) : (
+          <Card>
+            <div className="flex items-center justify-between text-[13px]">
+              <span className="text-[10px] font-medium tracking-[0.08em] uppercase" style={{ color: T.faint }}>Customer</span>
+              <span className="font-medium" style={{ color: T.text }}>{order.customerName}</span>
+            </div>
+          </Card>
+        )}
         {/* Payment details */}
         <Card>
           <div className="flex items-center justify-between mb-3.5">
@@ -778,8 +889,8 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
         <Card>
           <div className="flex items-center justify-between mb-3.5">
             <h2 className="text-[15px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>Shipment details</h2>
-            <Chip tone={shipComplete ? "good" : localTracking ? "gold" : "muted"}>
-              {shipComplete ? "Delivered" : localTracking ? "In transit" : "Not shipped"}
+            <Chip tone={shipComplete ? "good" : dispatched ? "gold" : "muted"}>
+              {shipComplete ? "Delivered" : dispatched && shipmentLog.length > 0 ? shipmentLog[0].text : dispatched ? "Dispatched" : "Not shipped"}
             </Chip>
           </div>
           <div className="space-y-2.5">
@@ -834,7 +945,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       {/* ============ MODALS ============ */}
 
       {/* Mark as paid */}
-      <Modal open={showMarkPaid} onClose={() => setShowMarkPaid(false)} title="Record payment">
+      <Modal open={showMarkPaid} onClose={() => setShowMarkPaid(false)} title="Record payment" wide>
         <div className="space-y-3">
           <Select
             value={paymentMethod}
@@ -960,7 +1071,13 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       <ConfirmDialog
         open={confirmDispatch}
         onClose={() => setConfirmDispatch(false)}
-        onConfirm={() => { setLocalTracking(trackingInput); setDispatched(true); flash("Order dispatched"); }}
+        onConfirm={() => {
+          setLocalTracking(trackingInput || localTracking || order.tracking || "");
+          setDispatched(true);
+          const now = new Date();
+          setShipmentLog([{ id: `log_${Date.now()}`, text: "Order dispatched — handed to courier", date: now.toISOString().split("T")[0], time: now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: false }) }]);
+          flash("Order dispatched");
+        }}
         title="Mark order as dispatched?"
         message="This confirms the order has been handed to the courier and notifies the customer."
         confirmLabel="Mark as dispatched"

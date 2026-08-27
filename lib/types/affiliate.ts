@@ -16,7 +16,7 @@ export const AffiliateSchema = z.object({
   name: z.string(),
   email: z.string(),
   code: z.string(),
-  status: z.enum(["active", "under_review", "suspended", "inactive"]),
+  status: z.enum(["active", "under_review", "rejected", "revision_requested", "suspended", "inactive"]),
   commissionRate: z.number(),
   totalRegistrations: z.number(),
   totalPurchases: z.number(),
