@@ -113,7 +113,9 @@ function sortByDate<T>(items: T[], key: SortKey, getDate: (item: T) => string) {
 function orderStatusChip(o: Order) {
   const paid = o.paymentStatus === "paid";
   if (!paid) {
-    return { tone: (o.paymentStatus === "failed" ? "danger" : "gold") as const, label: o.paymentStatus === "failed" ? "Payment failed" : "Payment pending" };
+    const tone = o.paymentStatus === "failed" ? "danger" as const : "gold" as const;
+    const label = o.paymentStatus === "failed" ? "Payment failed" : "Payment pending";
+    return { tone, label };
   }
   if (o.shopifyStatus === "fulfilled") return { tone: "good" as const, label: "Completed" };
   if (o.tracking) return { tone: "info" as const, label: "In transit" };
