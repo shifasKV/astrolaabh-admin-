@@ -398,6 +398,22 @@ export default function AffiliateDetailPage({ params }: { params: Promise<{ id: 
               <span>Joined {affiliate.joinedAt}</span>
             </div>
           </div>
+          <div className="w-full md:w-auto md:min-w-[280px] md:pl-5 md:border-l" style={{ borderColor: T.borderSoft }}>
+            <div className="text-[10px] font-medium tracking-[0.08em] uppercase mb-2.5" style={{ color: T.faint }}>Payout account</div>
+            <div className="grid grid-cols-2 gap-x-5 gap-y-2">
+              {[
+                ["Bank", editForm.bankName],
+                ["Account", editForm.accountNumber],
+                ["IFSC", editForm.ifsc],
+                ["UPI", editForm.upi],
+              ].map(([k, v]) => (
+                <div key={k}>
+                  <div className="text-[10px] tracking-[0.07em] uppercase" style={{ color: T.faint }}>{k}</div>
+                  <div className="text-[12.5px] font-medium tabular-nums truncate" style={{ color: T.text }}>{v}</div>
+                </div>
+              ))}
+            </div>
+          </div>
           <div className="relative shrink-0" ref={menuRef}>
             <button type="button" onClick={() => setShowMenu((v) => !v)} className="w-9 h-9 rounded-[9px] flex items-center justify-center transition-colors hover:bg-[rgba(89,82,54,0.08)] cursor-pointer" style={{ border: `1px solid ${T.border}`, color: T.muted }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
@@ -651,40 +667,6 @@ export default function AffiliateDetailPage({ params }: { params: Promise<{ id: 
       {/* ===== PAYMENTS TAB ===== */}
       {dataTab === "payments" && (
         <>
-        {/* Payment overview */}
-        <div className="grid md:grid-cols-3 gap-4 mb-4">
-          <Card className="!p-5">
-            <div className="text-[11px] tracking-[0.07em] uppercase" style={{ color: T.faint }}>Total earning</div>
-            <div className="font-title text-[24px] font-semibold tabular-nums mt-1" style={{ color: T.text }}>{inr(totalCommission)}</div>
-            <div className="text-[11px] mt-1" style={{ color: T.muted }}>lifetime</div>
-          </Card>
-          <Card className="!p-5">
-            <div className="text-[11px] tracking-[0.07em] uppercase" style={{ color: T.faint }}>Paid</div>
-            <div className="font-title text-[24px] font-semibold tabular-nums mt-1" style={{ color: T.good }}>{inr(totalPaid)}</div>
-            <div className="text-[11px] mt-1" style={{ color: T.muted }}>lifetime</div>
-          </Card>
-          <Card className="!p-5">
-            <div className="text-[11px] tracking-[0.07em] uppercase" style={{ color: T.faint }}>Pending</div>
-            <div className="font-title text-[24px] font-semibold tabular-nums mt-1" style={{ color: commissionDue > 0 ? "#8a6a2f" : T.good }}>{inr(commissionDue)}</div>
-            <div className="text-[11px] mt-1" style={{ color: T.muted }}>{commissionDue > 0 ? "awaiting payout" : "all settled"}</div>
-          </Card>
-        </div>
-        <Card className="!p-5 mb-4">
-          <div className="text-[11px] tracking-[0.07em] uppercase mb-2" style={{ color: T.faint }}>Payout account</div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2">
-            {[
-              ["Bank", editForm.bankName],
-              ["Account", editForm.accountNumber],
-              ["IFSC", editForm.ifsc],
-              ["UPI", editForm.upi],
-            ].map(([k, v]) => (
-              <div key={k}>
-                <div className="text-[10px] tracking-[0.07em] uppercase" style={{ color: T.faint }}>{k}</div>
-                <div className="text-[12.5px] font-medium tabular-nums" style={{ color: T.text }}>{v}</div>
-              </div>
-            ))}
-          </div>
-        </Card>
         <div className="hidden sm:flex flex-wrap items-center gap-2 pt-4 mb-3" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
           <div className="flex flex-wrap items-center gap-2">
             <InlineFilter
