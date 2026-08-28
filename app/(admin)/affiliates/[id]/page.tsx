@@ -485,11 +485,6 @@ export default function AffiliateDetailPage({ params }: { params: Promise<{ id: 
               <h2 className="text-[15px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>Affiliate commission</h2>
               {commissionToast && <span className="text-[12px] font-medium" style={{ color: T.good }}>✓ {commissionToast}</span>}
             </div>
-            {commissionEditing ? (
-              <GoldBtn className="!h-7 !px-3 !text-[11px]" onClick={() => { setCommissionEditing(false); setCommissionToast("Saved"); setTimeout(() => setCommissionToast(""), 3000); }}>Save</GoldBtn>
-            ) : (
-              <GhostBtn className="!h-7 !px-3 !text-[11px]" onClick={() => setCommissionEditing(true)}>Edit</GhostBtn>
-            )}
           </div>
           <div className="grid grid-cols-3 gap-3">
             {(["stone", "jewellery", "consultation"] as const).map((cat) => (
@@ -510,6 +505,11 @@ export default function AffiliateDetailPage({ params }: { params: Promise<{ id: 
         <Card className="!p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-[15px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>Customer discount</h2>
+            {commissionEditing ? (
+              <GoldBtn className="!h-7 !px-3 !text-[11px]" onClick={() => { setCommissionEditing(false); setCommissionToast("Saved"); setTimeout(() => setCommissionToast(""), 3000); }}>Save</GoldBtn>
+            ) : (
+              <GhostBtn className="!h-7 !px-3 !text-[11px]" onClick={() => setCommissionEditing(true)}>Edit</GhostBtn>
+            )}
           </div>
           <div className="grid grid-cols-3 gap-3">
             {(["stone", "jewellery", "consultation"] as const).map((cat) => (

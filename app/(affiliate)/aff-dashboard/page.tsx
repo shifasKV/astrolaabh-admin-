@@ -109,8 +109,8 @@ export default function AffiliateDashboard() {
         </Card>
       </div>
 
-      {/* Activity stats + Customer discount — same row */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-4 mb-4 items-stretch">
+      {/* Activity stats + Customer discount — same row, matching hero widths */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-4 mb-4 items-stretch">
         <div className="grid grid-cols-2 gap-3">
           <StatCard label="Total orders" value={totalOrders} />
           <StatCard label="Total consultations" value={totalConsultations} />
