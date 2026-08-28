@@ -437,8 +437,8 @@ export default function AffiliateDetailPage({ params }: { params: Promise<{ id: 
         />
       </div>
 
-      {/* Toolbar — InlineFilter style */}
-      {dataTab !== "overview" && (() => {
+      {/* Toolbar — InlineFilter style (not on payments — that toolbar sits above the table) */}
+      {dataTab !== "overview" && dataTab !== "payments" && (() => {
         const FunnelIcon = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M3 5h18l-7 8v6l-4-2v-4z" /></svg>;
         const UserIcon = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><circle cx="12" cy="8" r="4" /><path d="M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6" /></svg>;
         const TagIcon = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M20.6 13.4 12 22l-9-9V4h9z" /><circle cx="7.5" cy="7.5" r="1.3" /></svg>;
@@ -447,9 +447,7 @@ export default function AffiliateDetailPage({ params }: { params: Promise<{ id: 
           ? [{ value: "paid", label: "Paid" }, { value: "pending", label: "Payment pending" }, { value: "completed", label: "Completed" }, { value: "in_progress", label: "In progress" }]
           : dataTab === "consultations"
             ? [{ value: "scheduled", label: "Scheduled" }, { value: "closed", label: "Done" }, { value: "summary_pending", label: "Recommendation due" }, { value: "no_show", label: "No show" }]
-            : dataTab === "payments"
-              ? [{ value: "paid", label: "Paid" }, { value: "pending", label: "Pending" }, { value: "processing", label: "Processing" }]
-              : [];
+            : [];
         const showCustomer = dataTab === "purchases" || dataTab === "consultations";
         const showStone = dataTab === "purchases";
         const showExpert = dataTab === "consultations";
@@ -468,7 +466,7 @@ export default function AffiliateDetailPage({ params }: { params: Promise<{ id: 
               <ToolbarSearch
                 value={search}
                 onChange={(v) => { setSearch(v); resetPages(); }}
-                placeholder={dataTab === "purchases" ? "Search order, customer, stone…" : dataTab === "consultations" ? "Search customer, expert…" : dataTab === "registrations" ? "Search customer, email…" : "Search period, reference…"}
+                placeholder={dataTab === "purchases" ? "Search order, customer, stone…" : dataTab === "consultations" ? "Search customer, expert…" : "Search customer, email…"}
               />
               <SortMenu value={sortOrder} onChange={(v) => { setSortOrder(v as "newest" | "oldest"); resetPages(); }} options={[{ value: "newest", label: "Newest" }, { value: "oldest", label: "Oldest" }]} />
             </div>
@@ -687,6 +685,28 @@ export default function AffiliateDetailPage({ params }: { params: Promise<{ id: 
             ))}
           </div>
         </Card>
+        <div className="hidden sm:flex flex-wrap items-center gap-2 pt-4 mb-3" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+          <div className="flex flex-wrap items-center gap-2">
+            <InlineFilter
+              label="Status"
+              icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M3 5h18l-7 8v6l-4-2v-4z" /></svg>}
+              count={statusFilterMulti.length}
+            >
+              <MultiCheck
+                options={[{ value: "paid", label: "Paid" }, { value: "pending", label: "Pending" }, { value: "processing", label: "Processing" }]}
+                value={statusFilterMulti}
+                onChange={(v) => { setStatusFilterMulti(v); resetPages(); }}
+              />
+            </InlineFilter>
+            {statusFilterMulti.length > 0 && (
+              <button onClick={() => { setStatusFilterMulti([]); resetPages(); }} className="shrink-0 text-[12px] font-medium h-8 px-2.5 rounded-[8px] cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.08)]" style={{ color: T.muted }}>Clear all</button>
+            )}
+          </div>
+          <div className="ml-auto flex items-center gap-2">
+            <ToolbarSearch value={search} onChange={(v) => { setSearch(v); resetPages(); }} placeholder="Search period, reference…" />
+            <SortMenu value={sortOrder} onChange={(v) => { setSortOrder(v as "newest" | "oldest"); resetPages(); }} options={[{ value: "newest", label: "Newest" }, { value: "oldest", label: "Oldest" }]} />
+          </div>
+        </div>
         <Card className="!p-0 md:flex md:flex-col md:min-h-0">
           <div className="hidden sm:grid grid-cols-[120px_1fr_1fr_160px_120px] gap-3 items-center px-4 h-10 text-[11px] tracking-[0.06em] uppercase font-medium rounded-t-[15px]" style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.borderSoft}` }}>
             <span>Payment ID</span><span>Payment type</span><span>Paid by</span><span>Date &amp; time</span><span className="text-right">Amount</span>
