@@ -399,7 +399,6 @@ export default function AffiliateDetailPage({ params }: { params: Promise<{ id: 
             </div>
           </div>
           <div className="w-full md:w-auto md:min-w-[280px] md:pl-5 md:border-l" style={{ borderColor: T.borderSoft }}>
-            <div className="text-[10px] font-medium tracking-[0.08em] uppercase mb-2.5" style={{ color: T.faint }}>Payout account</div>
             <div className="grid grid-cols-2 gap-x-5 gap-y-2">
               {[
                 ["Bank", editForm.bankName],
