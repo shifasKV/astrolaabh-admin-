@@ -41,6 +41,10 @@ function CreateAffiliatePageInner() {
   const [jewelleryRate, setJewelleryRate] = useState("4");
   const [consultationRate, setConsultationRate] = useState("10");
 
+  const [stoneDiscount, setStoneDiscount] = useState("3");
+  const [jewelleryDiscount, setJewelleryDiscount] = useState("2");
+  const [consultationDiscount, setConsultationDiscount] = useState("5");
+
   const [bankName, setBankName] = useState(isEdit ? "HDFC Bank" : "");
   const [accountNumber, setAccountNumber] = useState(isEdit ? "1234 5678 6789" : "");
   const [ifsc, setIfsc] = useState(isEdit ? "HDFC0001234" : "");
@@ -104,11 +108,19 @@ function CreateAffiliatePageInner() {
                 <span className="font-medium" style={{ color: T.text }}>{bankName || "—"}</span>
               </div>
               <div className="pt-3" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
-                <div className="text-[11px] font-medium tracking-[0.08em] uppercase mb-2" style={{ color: T.faint }}>Commission</div>
+                <div className="text-[11px] font-medium tracking-[0.08em] uppercase mb-2" style={{ color: T.faint }}>Affiliate commission</div>
                 <div className="flex flex-wrap gap-1.5">
                   <span className="text-[11px] px-2 py-0.5 rounded-full" style={{ background: T.accentFaint, color: T.accent, border: `1px solid ${T.borderSoft}` }}>Stone {stoneRate || 0}%</span>
                   <span className="text-[11px] px-2 py-0.5 rounded-full" style={{ background: T.accentFaint, color: T.accent, border: `1px solid ${T.borderSoft}` }}>Jewellery {jewelleryRate || 0}%</span>
                   <span className="text-[11px] px-2 py-0.5 rounded-full" style={{ background: T.accentFaint, color: T.accent, border: `1px solid ${T.borderSoft}` }}>Consult {consultationRate || 0}%</span>
+                </div>
+              </div>
+              <div className="pt-3" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+                <div className="text-[11px] font-medium tracking-[0.08em] uppercase mb-2" style={{ color: T.faint }}>Customer discount</div>
+                <div className="flex flex-wrap gap-1.5">
+                  <span className="text-[11px] px-2 py-0.5 rounded-full" style={{ background: "rgba(76,140,74,0.10)", color: T.good, border: `1px solid ${T.borderSoft}` }}>Stone {stoneDiscount || 0}%</span>
+                  <span className="text-[11px] px-2 py-0.5 rounded-full" style={{ background: "rgba(76,140,74,0.10)", color: T.good, border: `1px solid ${T.borderSoft}` }}>Jewellery {jewelleryDiscount || 0}%</span>
+                  <span className="text-[11px] px-2 py-0.5 rounded-full" style={{ background: "rgba(76,140,74,0.10)", color: T.good, border: `1px solid ${T.borderSoft}` }}>Consult {consultationDiscount || 0}%</span>
                 </div>
               </div>
             </div>
@@ -128,12 +140,27 @@ function CreateAffiliatePageInner() {
           </Section>
 
           <div ref={commissionRef}>
-            <Section title="Commission setup" sub="Set the commission percentage for each category. Can be updated later.">
+            <Section title="Commission & discount" sub="Set the affiliate commission and the discount customers get when using their referral code.">
               <div>
-                <FieldLabel>Commission rates</FieldLabel>
+                <FieldLabel>Affiliate commission rates</FieldLabel>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   {([["Stone", stoneRate, setStoneRate], ["Jewellery", jewelleryRate, setJewelleryRate], ["Consultation", consultationRate, setConsultationRate]] as const).map(([cat, val, setter]) => (
                     <div key={cat} className="rounded-[12px] p-3.5" style={{ background: T.accentFaint, border: `1px solid ${T.borderSoft}` }}>
+                      <div className="text-[10px] font-medium tracking-[0.08em] uppercase mb-2" style={{ color: T.faint }}>{cat}</div>
+                      <div className="flex items-center gap-1.5">
+                        <input type="number" value={val} onChange={(e) => setter(e.target.value)} className="w-full h-9 px-3 rounded-[8px] text-[13px] font-semibold tabular-nums outline-none" style={{ background: T.card, border: `1px solid ${T.border}`, color: T.text }} />
+                        <span className="text-[13px] font-medium shrink-0" style={{ color: T.muted }}>%</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <FieldLabel>Customer discount rates</FieldLabel>
+                <p className="text-[12px] -mt-1 mb-2.5" style={{ color: T.faint }}>Discount applied when a referred customer uses this affiliate&apos;s code.</p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {([["Stone", stoneDiscount, setStoneDiscount], ["Jewellery", jewelleryDiscount, setJewelleryDiscount], ["Consultation", consultationDiscount, setConsultationDiscount]] as const).map(([cat, val, setter]) => (
+                    <div key={cat} className="rounded-[12px] p-3.5" style={{ background: "rgba(76,140,74,0.06)", border: `1px solid ${T.borderSoft}` }}>
                       <div className="text-[10px] font-medium tracking-[0.08em] uppercase mb-2" style={{ color: T.faint }}>{cat}</div>
                       <div className="flex items-center gap-1.5">
                         <input type="number" value={val} onChange={(e) => setter(e.target.value)} className="w-full h-9 px-3 rounded-[8px] text-[13px] font-semibold tabular-nums outline-none" style={{ background: T.card, border: `1px solid ${T.border}`, color: T.text }} />

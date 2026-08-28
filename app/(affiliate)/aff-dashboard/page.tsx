@@ -2,7 +2,7 @@
 import { useState, useMemo } from "react";
 import { PageHeader, StatCard, Card } from "@/components/ui";
 import { T } from "@/lib/theme";
-import { MOCK_AFFILIATES, MOCK_AFFILIATE_LINKS, MOCK_REFERRAL_EVENTS, MOCK_PAYOUTS } from "@/lib/mock";
+import { MOCK_AFFILIATES, MOCK_REFERRAL_EVENTS, MOCK_PAYOUTS } from "@/lib/mock";
 import { inr } from "@/lib/types";
 
 const WINDOW = 14;
@@ -25,7 +25,6 @@ const fmtShort = (iso: string) => {
 
 export default function AffiliateDashboard() {
   const affiliate = MOCK_AFFILIATES[0];
-  const myLinks = MOCK_AFFILIATE_LINKS.filter((l) => l.affiliateId === affiliate.id);
   const myReferrals = MOCK_REFERRAL_EVENTS.filter((r) => r.affiliateId === affiliate.id);
 
   const totalOrders = myReferrals.filter((r) => r.eventType === "order").length;
@@ -35,8 +34,6 @@ export default function AffiliateDashboard() {
   const totalCommission = paidCommission + pendingCommission;
   const pendingOrders = myReferrals.filter((r) => r.eventType === "order" && r.commissionStatus === "pending").length;
   const pendingConsultations = myReferrals.filter((r) => r.eventType === "booking" && (!r.commissionStatus || r.commissionStatus === "pending")).length;
-  const linksGenerated = myLinks.length;
-
   const [chartOffset, setChartOffset] = useState(0);
   const earningsData = useMemo(() => generateEarningsData(), []);
 
@@ -112,13 +109,30 @@ export default function AffiliateDashboard() {
         </Card>
       </div>
 
+      {/* Customer discount rates */}
+      <Card className="!p-6 mb-4">
+        <div className="text-[13px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>Customer discount rates</div>
+        <p className="text-[12px] mt-0.5 mb-3" style={{ color: T.muted }}>Discount your referred customers receive on their first purchase.</p>
+        <div className="flex-1 flex flex-col justify-center">
+          {([
+            { label: "Consultation", rate: 5 },
+            { label: "Stone order", rate: 3 },
+            { label: "Jewellery order", rate: 2 },
+          ] as const).map((c, i) => (
+            <div key={c.label} className="flex items-center justify-between py-2.5 first:pt-0 last:pb-0" style={i > 0 ? { borderTop: `1px solid ${T.borderSoft}` } : undefined}>
+              <span className="text-[13.5px]" style={{ color: T.muted }}>{c.label}</span>
+              <span className="font-title text-[20px] font-bold tabular-nums tracking-[-0.02em]" style={{ color: T.good }}>{c.rate}%</span>
+            </div>
+          ))}
+        </div>
+      </Card>
+
       {/* Activity stats */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
+      <div className="grid grid-cols-2 md:grid-cols-2 gap-3 mb-4">
         <StatCard label="Total orders" value={totalOrders} />
         <StatCard label="Total consultations" value={totalConsultations} />
         <StatCard label="Pending orders" value={pendingOrders} />
         <StatCard label="Pending consultations" value={pendingConsultations} />
-        <StatCard label="Links generated" value={linksGenerated} />
       </div>
 
       {/* Row 4: Earnings chart */}
