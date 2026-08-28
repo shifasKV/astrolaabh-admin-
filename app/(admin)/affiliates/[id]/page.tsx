@@ -230,7 +230,9 @@ export default function AffiliateDetailPage({ params }: { params: Promise<{ id: 
   const [specificRates, setSpecificRates] = useState({ stone: "5", jewellery: "4", consultation: "10" });
   const [discountRates, setDiscountRates] = useState({ stone: "3", jewellery: "2", consultation: "5" });
   const [commissionEditing, setCommissionEditing] = useState(false);
+  const [discountEditing, setDiscountEditing] = useState(false);
   const [commissionToast, setCommissionToast] = useState("");
+  const [discountToast, setDiscountToast] = useState("");
 
   const [dataTab, setDataTab] = useState("overview");
   const [search, setSearch] = useState("");
@@ -420,6 +422,41 @@ export default function AffiliateDetailPage({ params }: { params: Promise<{ id: 
         </div>
       </Card>
 
+      {/* Payment overview — above tabs */}
+      <div className="grid md:grid-cols-3 gap-4 mb-4">
+        <Card className="!p-5">
+          <div className="text-[11px] tracking-[0.07em] uppercase" style={{ color: T.faint }}>Total earning</div>
+          <div className="font-title text-[24px] font-semibold tabular-nums mt-1" style={{ color: T.text }}>{inr(totalCommission)}</div>
+          <div className="text-[11px] mt-1" style={{ color: T.muted }}>lifetime</div>
+        </Card>
+        <Card className="!p-5">
+          <div className="text-[11px] tracking-[0.07em] uppercase" style={{ color: T.faint }}>Paid</div>
+          <div className="font-title text-[24px] font-semibold tabular-nums mt-1" style={{ color: T.good }}>{inr(totalPaid)}</div>
+          <div className="text-[11px] mt-1" style={{ color: T.muted }}>lifetime</div>
+        </Card>
+        <Card className="!p-5">
+          <div className="text-[11px] tracking-[0.07em] uppercase" style={{ color: T.faint }}>Pending</div>
+          <div className="font-title text-[24px] font-semibold tabular-nums mt-1" style={{ color: commissionDue > 0 ? "#8a6a2f" : T.good }}>{inr(commissionDue)}</div>
+          <div className="text-[11px] mt-1" style={{ color: T.muted }}>{commissionDue > 0 ? "awaiting payout" : "all settled"}</div>
+        </Card>
+      </div>
+      <Card className="!p-5 mb-4">
+        <div className="text-[11px] tracking-[0.07em] uppercase mb-2" style={{ color: T.faint }}>Payout account</div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2">
+          {[
+            ["Bank", editForm.bankName],
+            ["Account", editForm.accountNumber],
+            ["IFSC", editForm.ifsc],
+            ["UPI", editForm.upi],
+          ].map(([k, v]) => (
+            <div key={k}>
+              <div className="text-[10px] tracking-[0.07em] uppercase" style={{ color: T.faint }}>{k}</div>
+              <div className="text-[12.5px] font-medium tabular-nums" style={{ color: T.text }}>{v}</div>
+            </div>
+          ))}
+        </div>
+      </Card>
+
       {/* Tabs */}
       <div className="mb-4">
         <Tabs
@@ -509,18 +546,21 @@ export default function AffiliateDetailPage({ params }: { params: Promise<{ id: 
         </Card>
         <Card className="!p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-[15px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>Customer discount</h2>
-            {commissionEditing ? (
-              <GoldBtn className="!h-7 !px-3 !text-[11px]" onClick={() => { setCommissionEditing(false); setCommissionToast("Saved"); setTimeout(() => setCommissionToast(""), 3000); }}>Save</GoldBtn>
+            <div className="flex items-center gap-3">
+              <h2 className="text-[15px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>Customer discount</h2>
+              {discountToast && <span className="text-[12px] font-medium" style={{ color: T.good }}>✓ {discountToast}</span>}
+            </div>
+            {discountEditing ? (
+              <GoldBtn className="!h-7 !px-3 !text-[11px]" onClick={() => { setDiscountEditing(false); setDiscountToast("Saved"); setTimeout(() => setDiscountToast(""), 3000); }}>Save</GoldBtn>
             ) : (
-              <GhostBtn className="!h-7 !px-3 !text-[11px]" onClick={() => setCommissionEditing(true)}>Edit</GhostBtn>
+              <GhostBtn className="!h-7 !px-3 !text-[11px]" onClick={() => setDiscountEditing(true)}>Edit</GhostBtn>
             )}
           </div>
           <div className="grid grid-cols-3 gap-3">
             {(["stone", "jewellery", "consultation"] as const).map((cat) => (
               <div key={`d-${cat}`}>
                 <div className="text-[11px] tracking-[0.07em] uppercase" style={{ color: T.faint }}>{cat}</div>
-                {commissionEditing ? (
+                {discountEditing ? (
                   <div className="flex items-center gap-1.5 mt-1">
                     <input type="number" value={discountRates[cat]} onChange={(e) => setDiscountRates((p) => ({ ...p, [cat]: e.target.value }))} className="w-full h-8 px-2 rounded-[7px] text-[13px] outline-none" style={{ background: T.bg, border: `1px solid ${T.border}`, color: T.text }} />
                     <span className="text-[12px] font-medium shrink-0" style={{ color: T.muted }}>%</span>
@@ -648,40 +688,6 @@ export default function AffiliateDetailPage({ params }: { params: Promise<{ id: 
       {/* ===== PAYMENTS TAB ===== */}
       {dataTab === "payments" && (
         <>
-        {/* Payment overview */}
-        <div className="grid md:grid-cols-3 gap-4 mb-4">
-          <Card className="!p-5">
-            <div className="text-[11px] tracking-[0.07em] uppercase" style={{ color: T.faint }}>Total earning</div>
-            <div className="font-title text-[24px] font-semibold tabular-nums mt-1" style={{ color: T.text }}>{inr(totalCommission)}</div>
-            <div className="text-[11px] mt-1" style={{ color: T.muted }}>lifetime</div>
-          </Card>
-          <Card className="!p-5">
-            <div className="text-[11px] tracking-[0.07em] uppercase" style={{ color: T.faint }}>Paid</div>
-            <div className="font-title text-[24px] font-semibold tabular-nums mt-1" style={{ color: T.good }}>{inr(totalPaid)}</div>
-            <div className="text-[11px] mt-1" style={{ color: T.muted }}>lifetime</div>
-          </Card>
-          <Card className="!p-5">
-            <div className="text-[11px] tracking-[0.07em] uppercase" style={{ color: T.faint }}>Pending</div>
-            <div className="font-title text-[24px] font-semibold tabular-nums mt-1" style={{ color: commissionDue > 0 ? "#8a6a2f" : T.good }}>{inr(commissionDue)}</div>
-            <div className="text-[11px] mt-1" style={{ color: T.muted }}>{commissionDue > 0 ? "awaiting payout" : "all settled"}</div>
-          </Card>
-        </div>
-        <Card className="!p-5 mb-4">
-          <div className="text-[11px] tracking-[0.07em] uppercase mb-2" style={{ color: T.faint }}>Payout account</div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2">
-            {[
-              ["Bank", editForm.bankName],
-              ["Account", editForm.accountNumber],
-              ["IFSC", editForm.ifsc],
-              ["UPI", editForm.upi],
-            ].map(([k, v]) => (
-              <div key={k}>
-                <div className="text-[10px] tracking-[0.07em] uppercase" style={{ color: T.faint }}>{k}</div>
-                <div className="text-[12.5px] font-medium tabular-nums" style={{ color: T.text }}>{v}</div>
-              </div>
-            ))}
-          </div>
-        </Card>
         <Card className="!p-0 md:flex md:flex-col md:min-h-0">
           <div className="hidden sm:grid grid-cols-[120px_1fr_1fr_160px_120px] gap-3 items-center px-4 h-10 text-[11px] tracking-[0.06em] uppercase font-medium rounded-t-[15px]" style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.borderSoft}` }}>
             <span>Payment ID</span><span>Payment type</span><span>Paid by</span><span>Date &amp; time</span><span className="text-right">Amount</span>
