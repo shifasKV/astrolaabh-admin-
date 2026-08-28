@@ -390,7 +390,7 @@ export default function AffiliateDetailPage({ params }: { params: Promise<{ id: 
                 {affiliate.code}
               </span>
             </div>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-[12.5px]" style={{ color: T.muted }}>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-[14px]" style={{ color: T.muted }}>
               <span>{affiliate.email}</span>
               <span style={{ color: T.faint }}>·</span>
               <span className="tabular-nums">{editForm.phone}</span>
