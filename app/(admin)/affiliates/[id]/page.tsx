@@ -648,10 +648,15 @@ export default function AffiliateDetailPage({ params }: { params: Promise<{ id: 
       {/* ===== PAYMENTS TAB ===== */}
       {dataTab === "payments" && (
         <>
-        {/* Payment overview + payout account */}
-        <div className="grid md:grid-cols-[1fr_1fr_1fr] gap-4 mb-4">
+        {/* Payment overview */}
+        <div className="grid md:grid-cols-3 gap-4 mb-4">
           <Card className="!p-5">
-            <div className="text-[11px] tracking-[0.07em] uppercase" style={{ color: T.faint }}>Total paid</div>
+            <div className="text-[11px] tracking-[0.07em] uppercase" style={{ color: T.faint }}>Total earning</div>
+            <div className="font-title text-[24px] font-semibold tabular-nums mt-1" style={{ color: T.text }}>{inr(totalCommission)}</div>
+            <div className="text-[11px] mt-1" style={{ color: T.muted }}>lifetime</div>
+          </Card>
+          <Card className="!p-5">
+            <div className="text-[11px] tracking-[0.07em] uppercase" style={{ color: T.faint }}>Paid</div>
             <div className="font-title text-[24px] font-semibold tabular-nums mt-1" style={{ color: T.good }}>{inr(totalPaid)}</div>
             <div className="text-[11px] mt-1" style={{ color: T.muted }}>lifetime</div>
           </Card>
@@ -660,23 +665,23 @@ export default function AffiliateDetailPage({ params }: { params: Promise<{ id: 
             <div className="font-title text-[24px] font-semibold tabular-nums mt-1" style={{ color: commissionDue > 0 ? "#8a6a2f" : T.good }}>{inr(commissionDue)}</div>
             <div className="text-[11px] mt-1" style={{ color: T.muted }}>{commissionDue > 0 ? "awaiting payout" : "all settled"}</div>
           </Card>
-          <Card className="!p-5">
-            <div className="text-[11px] tracking-[0.07em] uppercase mb-2" style={{ color: T.faint }}>Payout account</div>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-              {[
-                ["Bank", editForm.bankName],
-                ["Account", editForm.accountNumber],
-                ["IFSC", editForm.ifsc],
-                ["UPI", editForm.upi],
-              ].map(([k, v]) => (
-                <div key={k}>
-                  <div className="text-[10px] tracking-[0.07em] uppercase" style={{ color: T.faint }}>{k}</div>
-                  <div className="text-[12.5px] font-medium tabular-nums" style={{ color: T.text }}>{v}</div>
-                </div>
-              ))}
-            </div>
-          </Card>
         </div>
+        <Card className="!p-5 mb-4">
+          <div className="text-[11px] tracking-[0.07em] uppercase mb-2" style={{ color: T.faint }}>Payout account</div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2">
+            {[
+              ["Bank", editForm.bankName],
+              ["Account", editForm.accountNumber],
+              ["IFSC", editForm.ifsc],
+              ["UPI", editForm.upi],
+            ].map(([k, v]) => (
+              <div key={k}>
+                <div className="text-[10px] tracking-[0.07em] uppercase" style={{ color: T.faint }}>{k}</div>
+                <div className="text-[12.5px] font-medium tabular-nums" style={{ color: T.text }}>{v}</div>
+              </div>
+            ))}
+          </div>
+        </Card>
         <Card className="!p-0 md:flex md:flex-col md:min-h-0">
           <div className="hidden sm:grid grid-cols-[120px_1fr_1fr_160px_120px] gap-3 items-center px-4 h-10 text-[11px] tracking-[0.06em] uppercase font-medium rounded-t-[15px]" style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.borderSoft}` }}>
             <span>Payment ID</span><span>Payment type</span><span>Paid by</span><span>Date &amp; time</span><span className="text-right">Amount</span>

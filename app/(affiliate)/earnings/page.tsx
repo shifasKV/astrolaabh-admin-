@@ -31,9 +31,14 @@ export default function EarningsPage() {
         action={<GhostBtn><span className="inline-flex items-center gap-1.5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-[15px] h-[15px]"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M7 10l5 5 5-5" /><path d="M12 15V3" /></svg>Download statement</span></GhostBtn>}
       />
 
-      <div className="grid md:grid-cols-[1fr_1fr_1fr] gap-4 mb-6">
+      <div className="grid md:grid-cols-3 gap-4 mb-6">
         <Card className="!p-5">
-          <div className="text-[11px] tracking-[0.07em] uppercase" style={{ color: T.faint }}>Total paid</div>
+          <div className="text-[11px] tracking-[0.07em] uppercase" style={{ color: T.faint }}>Total earning</div>
+          <div className="font-title text-[24px] font-semibold tabular-nums mt-1" style={{ color: T.text }}>{inr(affiliate.totalPaid + affiliate.totalAccrued)}</div>
+          <div className="text-[11px] mt-1" style={{ color: T.muted }}>lifetime</div>
+        </Card>
+        <Card className="!p-5">
+          <div className="text-[11px] tracking-[0.07em] uppercase" style={{ color: T.faint }}>Paid</div>
           <div className="font-title text-[24px] font-semibold tabular-nums mt-1" style={{ color: T.good }}>{inr(affiliate.totalPaid)}</div>
           <div className="text-[11px] mt-1" style={{ color: T.muted }}>lifetime</div>
         </Card>
@@ -41,10 +46,6 @@ export default function EarningsPage() {
           <div className="text-[11px] tracking-[0.07em] uppercase" style={{ color: T.faint }}>Pending</div>
           <div className="font-title text-[24px] font-semibold tabular-nums mt-1" style={{ color: pendingAmount > 0 ? "#8a6a2f" : T.good }}>{inr(pendingAmount)}</div>
           <div className="text-[11px] mt-1" style={{ color: T.muted }}>{pendingAmount > 0 ? "in holding period" : "all settled"}</div>
-        </Card>
-        <Card className="!p-5">
-          <div className="text-[11px] tracking-[0.07em] uppercase" style={{ color: T.faint }}>Lifetime earned</div>
-          <div className="font-title text-[24px] font-semibold tabular-nums mt-1" style={{ color: T.text }}>{inr(affiliate.totalPaid + affiliate.totalAccrued)}</div>
         </Card>
       </div>
 
