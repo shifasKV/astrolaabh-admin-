@@ -227,7 +227,9 @@ export default function AffiliateDetailPage({ params }: { params: Promise<{ id: 
     upi: `${affiliate?.name.split(" ").pop()?.toLowerCase()}@upi`,
   };
   const [payoutForm, setPayoutForm] = useState({ amount: "", paymentType: "bank_transfer", paidBy: "", paymentDate: new Date().toISOString().split("T")[0], notes: "" });
-  const [specificRates] = useState({ stone: "5", jewellery: "4", consultation: "10" });
+  const [specificRates, setSpecificRates] = useState({ stone: "5", jewellery: "4", consultation: "10" });
+  const [commissionEditing, setCommissionEditing] = useState(false);
+  const [commissionToast, setCommissionToast] = useState("");
 
   const [dataTab, setDataTab] = useState("overview");
   const [search, setSearch] = useState("");
@@ -478,14 +480,28 @@ export default function AffiliateDetailPage({ params }: { params: Promise<{ id: 
       <div className="grid md:grid-cols-2 gap-4 mb-4">
         <Card className="!p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-[15px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>Commission rates</h2>
-            <GhostBtn className="!h-7 !px-3 !text-[11px]" onClick={() => router.push(`/affiliates/create?edit=${id}&scrollTo=commission`)}>Edit rates</GhostBtn>
+            <div className="flex items-center gap-3">
+              <h2 className="text-[15px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>Commission rates</h2>
+              {commissionToast && <span className="text-[12px] font-medium" style={{ color: T.good }}>✓ {commissionToast}</span>}
+            </div>
+            {commissionEditing ? (
+              <GoldBtn className="!h-7 !px-3 !text-[11px]" onClick={() => { setCommissionEditing(false); setCommissionToast("Commission saved"); setTimeout(() => setCommissionToast(""), 3000); }}>Save</GoldBtn>
+            ) : (
+              <GhostBtn className="!h-7 !px-3 !text-[11px]" onClick={() => setCommissionEditing(true)}>Edit</GhostBtn>
+            )}
           </div>
           <div className="grid grid-cols-3 gap-3">
             {(["stone", "jewellery", "consultation"] as const).map((cat) => (
               <div key={cat}>
                 <div className="text-[11px] tracking-[0.07em] uppercase" style={{ color: T.faint }}>{cat}</div>
-                <div className="font-title text-[22px] font-semibold tabular-nums mt-1" style={{ color: T.text }}>{specificRates[cat]}%</div>
+                {commissionEditing ? (
+                  <div className="flex items-center gap-1.5 mt-1">
+                    <input type="number" value={specificRates[cat]} onChange={(e) => setSpecificRates((p) => ({ ...p, [cat]: e.target.value }))} className="w-full h-8 px-2 rounded-[7px] text-[13px] outline-none" style={{ background: T.bg, border: `1px solid ${T.border}`, color: T.text }} />
+                    <span className="text-[12px] font-medium shrink-0" style={{ color: T.muted }}>%</span>
+                  </div>
+                ) : (
+                  <div className="font-title text-[22px] font-semibold tabular-nums mt-1" style={{ color: T.text }}>{specificRates[cat]}%</div>
+                )}
               </div>
             ))}
           </div>
