@@ -477,7 +477,7 @@ export default function AffiliateDetailPage({ params }: { params: Promise<{ id: 
       {/* ===== OVERVIEW TAB ===== */}
       {dataTab === "overview" && (
         <div className="md:min-h-0 md:overflow-y-auto">
-      {/* Rates + payout — two named cards, scannable */}
+      {/* Commission + Customer discount — side by side */}
       <div className="grid md:grid-cols-2 gap-4 mb-4">
         <Card className="!p-6">
           <div className="flex items-center justify-between mb-4">
@@ -506,37 +506,23 @@ export default function AffiliateDetailPage({ params }: { params: Promise<{ id: 
               </div>
             ))}
           </div>
-          <div className="mt-5 pt-5" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
-            <div className="text-[11px] font-medium tracking-[0.07em] uppercase mb-3" style={{ color: T.faint }}>Customer discount</div>
-            <div className="grid grid-cols-3 gap-3">
-              {(["stone", "jewellery", "consultation"] as const).map((cat) => (
-                <div key={`d-${cat}`}>
-                  <div className="text-[11px] tracking-[0.07em] uppercase" style={{ color: T.faint }}>{cat}</div>
-                  {commissionEditing ? (
-                    <div className="flex items-center gap-1.5 mt-1">
-                      <input type="number" value={discountRates[cat]} onChange={(e) => setDiscountRates((p) => ({ ...p, [cat]: e.target.value }))} className="w-full h-8 px-2 rounded-[7px] text-[13px] outline-none" style={{ background: T.bg, border: `1px solid ${T.border}`, color: T.text }} />
-                      <span className="text-[12px] font-medium shrink-0" style={{ color: T.muted }}>%</span>
-                    </div>
-                  ) : (
-                    <div className="font-title text-[22px] font-semibold tabular-nums mt-1" style={{ color: T.good }}>{discountRates[cat]}%</div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
         </Card>
         <Card className="!p-6">
-          <h2 className="text-[15px] font-semibold tracking-[-0.01em] mb-4" style={{ color: T.text }}>Payout account</h2>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-            {[
-              ["Bank", editForm.bankName],
-              ["Account", editForm.accountNumber],
-              ["IFSC", editForm.ifsc],
-              ["UPI", editForm.upi],
-            ].map(([k, v]) => (
-              <div key={k}>
-                <div className="text-[11px] tracking-[0.07em] uppercase" style={{ color: T.faint }}>{k}</div>
-                <div className="text-[13px] font-medium tabular-nums mt-0.5" style={{ color: T.text }}>{v}</div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-[15px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>Customer discount</h2>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            {(["stone", "jewellery", "consultation"] as const).map((cat) => (
+              <div key={`d-${cat}`}>
+                <div className="text-[11px] tracking-[0.07em] uppercase" style={{ color: T.faint }}>{cat}</div>
+                {commissionEditing ? (
+                  <div className="flex items-center gap-1.5 mt-1">
+                    <input type="number" value={discountRates[cat]} onChange={(e) => setDiscountRates((p) => ({ ...p, [cat]: e.target.value }))} className="w-full h-8 px-2 rounded-[7px] text-[13px] outline-none" style={{ background: T.bg, border: `1px solid ${T.border}`, color: T.text }} />
+                    <span className="text-[12px] font-medium shrink-0" style={{ color: T.muted }}>%</span>
+                  </div>
+                ) : (
+                  <div className="font-title text-[22px] font-semibold tabular-nums mt-1" style={{ color: T.good }}>{discountRates[cat]}%</div>
+                )}
               </div>
             ))}
           </div>
@@ -546,15 +532,17 @@ export default function AffiliateDetailPage({ params }: { params: Promise<{ id: 
       {/* KPIs — header / value / status */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
         {[
-          { label: "Purchases", value: allOrders.length, status: "completed", tone: T.good, hero: false },
-          { label: "Consultations", value: allConsultations.length, status: "completed", tone: T.good, hero: false },
-          { label: "Registrations", value: referredCustomers.length, status: "referred", tone: T.good, hero: false },
-          { label: "Commission due", value: inr(commissionDue), status: commissionDue > 0 ? "awaiting payout" : "all settled", tone: commissionDue > 0 ? "#8a6a2f" : T.good, hero: false },
-          { label: "Commission earned", value: inr(totalCommission), status: "lifetime", tone: "#8a6a2f", hero: true },
+          { label: "Purchases", value: allOrders.length, status: "completed", tone: T.good, hero: false, tab: "purchases" },
+          { label: "Consultations", value: allConsultations.length, status: "completed", tone: T.good, hero: false, tab: "consultations" },
+          { label: "Registrations", value: referredCustomers.length, status: "referred", tone: T.good, hero: false, tab: "registrations" },
+          { label: "Commission due", value: inr(commissionDue), status: commissionDue > 0 ? "awaiting payout" : "all settled", tone: commissionDue > 0 ? "#8a6a2f" : T.good, hero: false, tab: "payments" },
+          { label: "Commission earned", value: inr(totalCommission), status: "lifetime", tone: "#8a6a2f", hero: true, tab: "payments" },
         ].map((stat, i) => (
-          <div
+          <button
             key={i}
-            className="rounded-[16px] p-5"
+            type="button"
+            onClick={() => { setDataTab(stat.tab); clearFilters(); }}
+            className="rounded-[16px] p-5 text-left transition-all duration-300 cursor-pointer hover:scale-[1.02]"
             style={
               stat.hero
                 ? { background: "linear-gradient(160deg, #faf0d8 0%, #efdfb8 100%)", border: "1px solid rgba(160,125,56,0.35)", boxShadow: T.shadow }
@@ -564,7 +552,7 @@ export default function AffiliateDetailPage({ params }: { params: Promise<{ id: 
             <div className="text-[11px] tracking-[0.08em] uppercase" style={{ color: stat.hero ? "#8a6a2f" : T.faint }}>{stat.label}</div>
             <div className="text-[20px] font-semibold mt-1 tabular-nums" style={{ color: T.text }}>{stat.value}</div>
             <div className="text-[11px] font-medium mt-1" style={{ color: stat.tone }}>{stat.status}</div>
-          </div>
+          </button>
         ))}
       </div>
 
@@ -655,6 +643,35 @@ export default function AffiliateDetailPage({ params }: { params: Promise<{ id: 
       {/* ===== PAYMENTS TAB ===== */}
       {dataTab === "payments" && (
         <>
+        {/* Payment overview + payout account */}
+        <div className="grid md:grid-cols-[1fr_1fr_1fr] gap-4 mb-4">
+          <Card className="!p-5">
+            <div className="text-[11px] tracking-[0.07em] uppercase" style={{ color: T.faint }}>Total paid</div>
+            <div className="font-title text-[24px] font-semibold tabular-nums mt-1" style={{ color: T.good }}>{inr(totalPaid)}</div>
+            <div className="text-[11px] mt-1" style={{ color: T.muted }}>lifetime</div>
+          </Card>
+          <Card className="!p-5">
+            <div className="text-[11px] tracking-[0.07em] uppercase" style={{ color: T.faint }}>Pending</div>
+            <div className="font-title text-[24px] font-semibold tabular-nums mt-1" style={{ color: commissionDue > 0 ? "#8a6a2f" : T.good }}>{inr(commissionDue)}</div>
+            <div className="text-[11px] mt-1" style={{ color: T.muted }}>{commissionDue > 0 ? "awaiting payout" : "all settled"}</div>
+          </Card>
+          <Card className="!p-5">
+            <div className="text-[11px] tracking-[0.07em] uppercase mb-2" style={{ color: T.faint }}>Payout account</div>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+              {[
+                ["Bank", editForm.bankName],
+                ["Account", editForm.accountNumber],
+                ["IFSC", editForm.ifsc],
+                ["UPI", editForm.upi],
+              ].map(([k, v]) => (
+                <div key={k}>
+                  <div className="text-[10px] tracking-[0.07em] uppercase" style={{ color: T.faint }}>{k}</div>
+                  <div className="text-[12.5px] font-medium tabular-nums" style={{ color: T.text }}>{v}</div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
         <Card className="!p-0 md:flex md:flex-col md:min-h-0">
           <div className="hidden sm:grid grid-cols-[120px_1fr_1fr_160px_120px] gap-3 items-center px-4 h-10 text-[11px] tracking-[0.06em] uppercase font-medium rounded-t-[15px]" style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.borderSoft}` }}>
             <span>Payment ID</span><span>Payment type</span><span>Paid by</span><span>Date &amp; time</span><span className="text-right">Amount</span>
