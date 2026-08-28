@@ -176,6 +176,15 @@ export default function ConsultationsPage() {
   const prevWeek = () => setCalWeekBase((d) => { const n = new Date(d); n.setDate(n.getDate() - 7); return n; });
   const nextWeek = () => setCalWeekBase((d) => { const n = new Date(d); n.setDate(n.getDate() + 7); return n; });
 
+  const calNow = new Date();
+  const calNowHour = calNow.getHours();
+  const calNowPct = (calNow.getMinutes() / 60) * 100;
+  const calNowTimeStr = calNow.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: false });
+  const calTodayVisible = visibleDays.some((d) => toISODate(d) === todayISO);
+  const mmLead = (new Date(gtdYear, gtdMonth, 1).getDay() + 6) % 7;
+  const mmDays = new Date(gtdYear, gtdMonth + 1, 0).getDate();
+  const selISO = toISODate(calWeekBase);
+
   const rowStatus = (c: (typeof MOCK_CONSULTATIONS)[number]) => {
     if (c.paymentStatus === "pending") return { tone: "gold" as const, label: "Payment pending" };
     if (c.status === "reschedule_requested") return { tone: "gold" as const, label: "Reschedule request" };
@@ -371,17 +380,7 @@ export default function ConsultationsPage() {
       {/* ============ Incomplete bookings ============ */}
 
       {/* ============ Calendar view ============ */}
-      {tab === "all" && viewMode === "calendar" && (() => {
-        const now = new Date();
-        const nowHour = now.getHours();
-        const nowPct = (now.getMinutes() / 60) * 100;
-        const nowTimeStr = now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: false });
-        const todayVisible = visibleDays.some((d) => toISODate(d) === todayISO);
-        const mmLead = (new Date(gtdYear, gtdMonth, 1).getDay() + 6) % 7;
-        const mmDays = new Date(gtdYear, gtdMonth + 1, 0).getDate();
-        const selISO = toISODate(calWeekBase);
-        return (
-          <>
+      {tab === "all" && viewMode === "calendar" && <>
           {/* ——— Mobile: Apple-style infinite agenda ——— */}
           <Card className="md:hidden !p-0 overflow-hidden w-full">
             <MobileAgenda
@@ -500,14 +499,14 @@ export default function ConsultationsPage() {
                               </div>
                             );
                           })}
-                          {todayVisible && hour === nowHour && (
-                            <div className="absolute left-0 right-0 z-10 pointer-events-none" style={{ top: `${nowPct}%` }}>
+                          {calTodayVisible && hour === calNowHour && (
+                            <div className="absolute left-0 right-0 z-10 pointer-events-none" style={{ top: `${calNowPct}%` }}>
                               <div className="relative h-[2px]" style={{ background: T.danger }}>
                                 <span
                                   className="absolute left-0.5 top-1/2 -translate-y-1/2 text-[9px] font-bold px-1.5 py-px rounded-full tabular-nums"
                                   style={{ background: T.danger, color: "#fdf6ea" }}
                                 >
-                                  {nowTimeStr}
+                                  {calNowTimeStr}
                                 </span>
                               </div>
                             </div>
@@ -644,9 +643,7 @@ export default function ConsultationsPage() {
               )}
             </aside>
           </div>
-          </>
-        );
-      })()}
+      </>}
       </div>
       <MobileFab href="/consultations/create" label="Book" />
     </>
