@@ -13,8 +13,8 @@ export const MOCK_NOTIFICATIONS: MockNotification[] = [
   { id: "notif_002", title: "Energisation scheduled", description: "AL-ORD-004 · Neelam Sri Lankan · Aug 9 6:00 PM", time: "5 hours ago", read: false, type: "energisation", linkTo: "/orders/AL-ORD-004" },
   { id: "notif_003", title: "Payment received", description: "Divya Kapoor · ₹95,000 · Manik Thai Ruby", time: "Yesterday", read: false, type: "payment", linkTo: "/payments" },
   { id: "notif_004", title: "Certificate uploaded", description: "AL-ORD-007 · GIA-2026-82134 awaiting verification", time: "Yesterday", read: true, type: "certificate", linkTo: "/certificates" },
-  { id: "notif_005", title: "Summary overdue", description: "cons_004 · Rajesh Iyer — 33 days since consultation", time: "2 days ago", read: true, type: "consultation", linkTo: "/consultations/cons_004" },
-  { id: "notif_006", title: "New consultation booked", description: "Ananya Reddy · Aug 12 11:00 AM · Initial", time: "6 days ago", read: true, type: "consultation", linkTo: "/consultations" },
+  { id: "notif_005", title: "Summary overdue", description: "cons_004 · Rajesh Iyer — 44 days since consultation", time: "2 days ago", read: true, type: "consultation", linkTo: "/consultations/cons_004" },
+  { id: "notif_006", title: "New consultation booked", description: "Ananya Reddy · Aug 26 11:00 AM · Initial", time: "6 days ago", read: true, type: "consultation", linkTo: "/consultations" },
   { id: "notif_007", title: "Affiliate commission accrued", description: "SANDEEP108 · ₹26,000 from AL-ORD-004", time: "1 week ago", read: true, type: "affiliate", linkTo: "/affiliates/aff_001" },
   { id: "notif_008", title: "Payment link expired", description: "pay_007 · Rohan Malhotra · ₹5,000", time: "2 weeks ago", read: true, type: "payment", linkTo: "/payments" },
 ];

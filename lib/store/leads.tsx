@@ -129,7 +129,7 @@ function buildSeed(): OverlayMap {
   seed["inc_con_002"] = {
     ...seed["inc_con_002"],
     leadStatus: "converted",
-    fulfillment: { kind: "consultation", submittedBy: "sales_02", submittedAt: "2026-08-16T09:05:00+05:30", summary: "Kundali analysis · Dr. Meenakshi Joshi", subtotal: 4500, discount: 500, total: 4000, note: "Applied first-time 500 off.", approval: "pending",
+    fulfillment: { kind: "consultation", submittedBy: "sales_02", submittedAt: "2026-08-30T09:05:00+05:30", summary: "Kundali analysis · Dr. Meenakshi Joshi", subtotal: 4500, discount: 500, total: 4000, note: "Applied first-time 500 off.", approval: "pending",
       details: {
         schedule: { expert: "Dr. Meenakshi Joshi", date: "18 Aug 2026", time: "6:45 PM", problem: "Career direction and marriage timing." },
         lineItems: [{ label: "Consultation fee", amount: 4500 }, { label: "Discount", amount: -500 }],
