@@ -70,7 +70,6 @@ export default function AppointmentsPage() {
   const loading = useSimulatedLoad();
   const [tab, setTab] = useState("all");
   const [viewMode, setViewMode] = usePersistentState<ViewMode>("pref-consult-view", "calendar");
-  const [calScope, setCalScope] = usePersistentState<"day" | "week">("pref-cal-scope", "week");
   const [selectedEvent, setSelectedEvent] = useState<Consultation | null>(null);
   const [search, setSearch] = useState("");
   const [filterCustomer, setFilterCustomer] = useState("");
@@ -126,7 +125,7 @@ export default function AppointmentsPage() {
 
   // Calendar
   const weekDays = useMemo(() => getWeekDays(calWeekBase), [calWeekBase]);
-  const visibleDays = calScope === "day" ? [calWeekBase] : weekDays;
+  const visibleDays = weekDays;
   const prevWeek = () => setCalWeekBase((d) => { const n = new Date(d); n.setDate(n.getDate() - 7); return n; });
   const nextWeek = () => setCalWeekBase((d) => { const n = new Date(d); n.setDate(n.getDate() + 7); return n; });
   const goToToday = () => setCalWeekBase(new Date());
@@ -134,7 +133,7 @@ export default function AppointmentsPage() {
   const hoursRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     if (viewMode === "calendar" && hoursRef.current) hoursRef.current.scrollTop = 6 * 40;
-  }, [viewMode, calScope]);
+  }, [viewMode]);
 
   const eventTone = (c: Consultation) => {
     const es = expertStatus(c);
@@ -395,7 +394,7 @@ export default function AppointmentsPage() {
         const mmDays = new Date(gtdYear, gtdMonth + 1, 0).getDate();
         const selISO = toISODate(calWeekBase);
         return (
-          <div className="flex items-start gap-4 md:flex-1 md:min-h-0">
+          <>
             {/* ——— Mobile: Apple-style infinite agenda ——— */}
             <Card className="md:hidden !p-0 overflow-hidden w-full">
               <MobileAgenda
@@ -412,67 +411,44 @@ export default function AppointmentsPage() {
               />
             </Card>
 
+            {/* Calendar header — outside flex row so sidebar aligns with grid */}
+            <div className="hidden md:flex flex-wrap items-end justify-between gap-3 mb-3">
+              <div className="flex items-center gap-2">
+                <div className="inline-flex rounded-[9px] overflow-hidden" style={{ border: `1px solid ${T.border}`, background: T.bg }}>
+                  <button onClick={prevWeek} aria-label="Previous week" className="w-8 h-8 flex items-center justify-center transition-colors hover:bg-[rgba(119,123,98,0.1)] cursor-pointer" style={{ color: T.muted, borderRight: `1px solid ${T.borderSoft}` }}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="m15 18-6-6 6-6" /></svg>
+                  </button>
+                  <button onClick={nextWeek} aria-label="Next week" className="w-8 h-8 flex items-center justify-center transition-colors hover:bg-[rgba(119,123,98,0.1)] cursor-pointer" style={{ color: T.muted }}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="m9 18 6-6-6-6" /></svg>
+                  </button>
+                </div>
+                <h2 className="font-title text-[22px] leading-tight tracking-[-0.02em]">
+                  <span className="font-bold" style={{ color: T.text }}>
+                    {`${weekDays[0].toLocaleDateString("en-IN", { day: "numeric", month: "short" })} — ${weekDays[6].toLocaleDateString("en-IN", { day: "numeric", month: "short" })}`}
+                  </span>
+                  <span className="font-normal" style={{ color: T.muted }}> {weekDays[6].getFullYear()}</span>
+                </h2>
+              </div>
+              <div className="hidden xl:flex items-center gap-4">
+                {[
+                  { color: T.info, label: "Scheduled" },
+                  { color: T.danger, label: "Recommendation due" },
+                  { color: T.good, label: "Done" },
+                ].map((l) => (
+                  <span key={l.label} className="inline-flex items-center gap-1.5 text-[11.5px]" style={{ color: T.muted }}>
+                    <span className="w-2 h-2 rounded-full" style={{ background: l.color }} />
+                    {l.label}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-start gap-4 md:flex-1 md:min-h-0">
             {/* Main timeline (desktop) */}
             <div className="flex-1 min-w-0 h-full hidden md:flex flex-col">
-              <div className="flex flex-wrap items-end justify-between gap-3 mb-3">
-                <div className="flex items-center gap-2">
-                  <div className="inline-flex rounded-[9px] overflow-hidden" style={{ border: `1px solid ${T.border}`, background: T.bg }}>
-                    <button onClick={prevWeek} aria-label="Previous week" className="w-8 h-8 flex items-center justify-center transition-colors hover:bg-[rgba(119,123,98,0.1)] cursor-pointer" style={{ color: T.muted, borderRight: `1px solid ${T.borderSoft}` }}>
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="m15 18-6-6 6-6" /></svg>
-                    </button>
-                    <button onClick={nextWeek} aria-label="Next week" className="w-8 h-8 flex items-center justify-center transition-colors hover:bg-[rgba(119,123,98,0.1)] cursor-pointer" style={{ color: T.muted }}>
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="m9 18 6-6-6-6" /></svg>
-                    </button>
-                  </div>
-                  <div>
-                    <h2 className="font-title text-[22px] leading-tight tracking-[-0.02em]">
-                      <span className="font-bold" style={{ color: T.text }}>
-                        {calScope === "day"
-                          ? calWeekBase.toLocaleDateString("en-IN", { day: "numeric", month: "long" })
-                          : `${weekDays[0].toLocaleDateString("en-IN", { day: "numeric", month: "short" })} — ${weekDays[6].toLocaleDateString("en-IN", { day: "numeric", month: "short" })}`}
-                      </span>
-                      <span className="font-normal" style={{ color: T.muted }}> {calScope === "day" ? calWeekBase.getFullYear() : weekDays[6].getFullYear()}</span>
-                    </h2>
-                    <div className="text-[12.5px]" style={{ color: T.muted }}>
-                      {calScope === "day" ? calWeekBase.toLocaleDateString("en-IN", { weekday: "long" }) : "Week view"}
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="hidden xl:flex items-center gap-4">
-                    {[
-                      { color: T.info, label: "Scheduled" },
-                      { color: T.danger, label: "Recommendation due" },
-                      { color: T.good, label: "Done" },
-                    ].map((l) => (
-                      <span key={l.label} className="inline-flex items-center gap-1.5 text-[11.5px]" style={{ color: T.muted }}>
-                        <span className="w-2 h-2 rounded-full" style={{ background: l.color }} />
-                        {l.label}
-                      </span>
-                    ))}
-                  </div>
-                  <div className="inline-flex items-center gap-1 p-1 rounded-full shrink-0" style={{ background: "rgba(89,82,54,0.07)", border: `1px solid ${T.borderSoft}` }}>
-                    {(["day", "week"] as const).map((scope) => (
-                      <button
-                        key={scope}
-                        onClick={() => { setCalScope(scope); setSelectedEvent(null); }}
-                        className="h-7 px-3.5 rounded-full text-[12.5px] capitalize shrink-0 transition-all duration-200 cursor-pointer"
-                        style={
-                          calScope === scope
-                            ? { background: T.card, color: T.text, fontWeight: 600, border: `1px solid ${T.border}`, boxShadow: "0 1px 3px rgba(43,42,34,0.10)" }
-                            : { color: T.muted, border: "1px solid transparent" }
-                        }
-                      >
-                        {scope}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
               <Card className="overflow-hidden !p-0 flex-1 min-h-0 flex flex-col w-full">
                 <div className="overflow-x-auto flex-1 min-h-0 flex flex-col">
-                  <div className="h-full flex flex-col" style={{ minWidth: calScope === "day" ? 0 : 800 }}>
+                  <div className="h-full flex flex-col" style={{ minWidth: 800 }}>
                     <div className="grid" style={{ gridTemplateColumns: `60px repeat(${visibleDays.length}, 1fr)`, background: T.card, borderBottom: `1px solid ${T.borderSoft}` }}>
                       <div className="py-1.5" />
                       {visibleDays.map((day) => {
@@ -617,6 +593,7 @@ export default function AppointmentsPage() {
               )}
             </aside>
           </div>
+          </>
         );
       })()}
       </div>

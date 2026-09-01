@@ -76,12 +76,11 @@ export default function EnergisationPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [page, setPage] = useState(1);
   const [calWeekBase, setCalWeekBase] = useState(() => new Date());
-  const [calScope, setCalScope] = useState<"day" | "week">("week");
   const hoursRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     /* open on the working morning, not midnight */
     if (viewMode === "calendar" && hoursRef.current) hoursRef.current.scrollTop = 5 * 40;
-  }, [viewMode, calScope]);
+  }, [viewMode]);
   const [selectedEvent, setSelectedEvent] = useState<(typeof MOCK_ENERGISATION)[number] | null>(null);
   const [gtdYear, setGtdYear] = useState(new Date().getFullYear());
   const [gtdMonth, setGtdMonth] = useState(new Date().getMonth());
@@ -175,13 +174,13 @@ export default function EnergisationPage() {
     return map;
   }, []);
 
-  const visibleDays = calScope === "day" ? [calWeekBase] : weekDays;
+  const visibleDays = weekDays;
 
-  /* Today lands on today's day view — the day's actual schedule, not just the week */
   const goToToday = () => {
     setCalWeekBase(new Date());
-    setCalScope("day");
   };
+  const prevWeek = () => setCalWeekBase((d) => { const n = new Date(d); n.setDate(n.getDate() - 7); return n; });
+  const nextWeek = () => setCalWeekBase((d) => { const n = new Date(d); n.setDate(n.getDate() + 7); return n; });
 
   const handleExport = ({ from, to, format, periodLabel }: { from: string; to: string; format: "pdf" | "xls"; periodLabel: string }) => {
     const inRange = (d: string) => (!from || d.slice(0, 10) >= from) && (!to || d.slice(0, 10) <= to);
@@ -255,30 +254,27 @@ export default function EnergisationPage() {
           />
         )}
 
-        {/* Filter strip — filters left, search + sort right (desktop) */}
+        {/* Filter strip — list view only */}
+        {viewMode === "list" && (
         <div className="hidden sm:flex flex-wrap items-center gap-2 pt-4" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
           <div className="flex flex-wrap items-center gap-2">
-            {viewMode === "list" && (
-              <>
-                <InlineFilter label="Expert" icon={E_ICONS.expert} count={filterExpert.length} width={240}>
-                  <MultiCheck options={uniqueExperts.map((e) => ({ value: e, label: e }))} value={filterExpert} onChange={setFilterExpert} onAfter={() => setPage(1)} />
-                </InlineFilter>
-                <InlineFilter label="Date" icon={E_ICONS.date} count={filterDateFrom || filterDateTo ? 1 : 0} width={440}>
-                  <DateRangePanel from={filterDateFrom} to={filterDateTo} onChange={(f, t) => { setFilterDateFrom(f); setFilterDateTo(t); setPage(1); }} />
-                </InlineFilter>
-                <InlineFilter label="Status" icon={E_ICONS.status} count={filterStatus.length}>
-                  <MultiCheck options={Object.entries(STATUS_FILTER_LABEL).map(([k, v]) => ({ value: k, label: v }))} value={filterStatus} onChange={setFilterStatus} onAfter={() => setPage(1)} />
-                </InlineFilter>
-                {hasActiveFilters && (
-                  <button
-                    onClick={() => { setFilterCustomer(""); setFilterStatus([]); setFilterExpert([]); setFilterDateFrom(""); setFilterDateTo(""); setPage(1); }}
-                    className="text-[12px] font-medium px-1.5 cursor-pointer hover:underline underline-offset-4 whitespace-nowrap"
-                    style={{ color: T.danger }}
-                  >
-                    Clear all
-                  </button>
-                )}
-              </>
+            <InlineFilter label="Expert" icon={E_ICONS.expert} count={filterExpert.length} width={240}>
+              <MultiCheck options={uniqueExperts.map((e) => ({ value: e, label: e }))} value={filterExpert} onChange={setFilterExpert} onAfter={() => setPage(1)} />
+            </InlineFilter>
+            <InlineFilter label="Date" icon={E_ICONS.date} count={filterDateFrom || filterDateTo ? 1 : 0} width={440}>
+              <DateRangePanel from={filterDateFrom} to={filterDateTo} onChange={(f, t) => { setFilterDateFrom(f); setFilterDateTo(t); setPage(1); }} />
+            </InlineFilter>
+            <InlineFilter label="Status" icon={E_ICONS.status} count={filterStatus.length}>
+              <MultiCheck options={Object.entries(STATUS_FILTER_LABEL).map(([k, v]) => ({ value: k, label: v }))} value={filterStatus} onChange={setFilterStatus} onAfter={() => setPage(1)} />
+            </InlineFilter>
+            {hasActiveFilters && (
+              <button
+                onClick={() => { setFilterCustomer(""); setFilterStatus([]); setFilterExpert([]); setFilterDateFrom(""); setFilterDateTo(""); setPage(1); }}
+                className="text-[12px] font-medium px-1.5 cursor-pointer hover:underline underline-offset-4 whitespace-nowrap"
+                style={{ color: T.danger }}
+              >
+                Clear all
+              </button>
             )}
           </div>
           <div className="ml-auto flex items-center gap-2">
@@ -286,6 +282,7 @@ export default function EnergisationPage() {
             <SortMenu value={sort} onChange={(val) => { setSort(val as SortKey); setPage(1); }} options={E_SORT_OPTIONS} />
           </div>
         </div>
+        )}
       </div>
 
       {viewMode === "list" && <>
@@ -372,7 +369,7 @@ export default function EnergisationPage() {
         const mmDays = new Date(gtdYear, gtdMonth + 1, 0).getDate();
         const selISO = toISODate(calWeekBase);
         return (
-          <div className="flex items-start gap-4 md:flex-1 md:min-h-0">
+          <>
             {/* ——— Mobile: Apple-style infinite agenda ——— */}
             <Card className="md:hidden !p-0 overflow-hidden w-full">
               <MobileAgenda
@@ -389,62 +386,45 @@ export default function EnergisationPage() {
               />
             </Card>
 
+            {/* Calendar header — above flex row so it spans timeline + sidebar */}
+            <div className="hidden md:flex flex-wrap items-end justify-between gap-3 mb-3">
+              <div className="flex items-center gap-2">
+                <div className="inline-flex rounded-[9px] overflow-hidden" style={{ border: `1px solid ${T.border}`, background: T.bg }}>
+                  <button onClick={prevWeek} aria-label="Previous week" className="w-8 h-8 flex items-center justify-center transition-colors hover:bg-[rgba(119,123,98,0.1)] cursor-pointer" style={{ color: T.muted, borderRight: `1px solid ${T.borderSoft}` }}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="m15 18-6-6 6-6" /></svg>
+                  </button>
+                  <button onClick={nextWeek} aria-label="Next week" className="w-8 h-8 flex items-center justify-center transition-colors hover:bg-[rgba(119,123,98,0.1)] cursor-pointer" style={{ color: T.muted }}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="m9 18 6-6-6-6" /></svg>
+                  </button>
+                </div>
+                <h2 className="font-title text-[22px] leading-tight tracking-[-0.02em]">
+                  <span className="font-bold" style={{ color: T.text }}>
+                    {`${weekDays[0].toLocaleDateString("en-IN", { day: "numeric", month: "short" })} — ${weekDays[6].toLocaleDateString("en-IN", { day: "numeric", month: "short" })}`}
+                  </span>
+                  <span className="font-normal" style={{ color: T.muted }}> {weekDays[6].getFullYear()}</span>
+                </h2>
+              </div>
+              <div className="hidden xl:flex items-center gap-4">
+                {[
+                  { color: T.info, label: "Scheduled" },
+                  { color: T.gold, label: "In progress" },
+                  { color: T.good, label: "Completed" },
+                ].map((l) => (
+                  <span key={l.label} className="inline-flex items-center gap-1.5 text-[11.5px]" style={{ color: T.muted }}>
+                    <span className="w-2 h-2 rounded-full" style={{ background: l.color }} />
+                    {l.label}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-start gap-4 md:flex-1 md:min-h-0">
             {/* ——— Main timeline (desktop) ——— */}
             <div className="flex-1 min-w-0 h-full hidden md:flex flex-col">
-              {/* Big date title + scope pills */}
-              <div className="flex flex-wrap items-end justify-between gap-3 mb-3">
-                <div>
-                  <h2 className="font-title text-[26px] leading-tight tracking-[-0.02em]">
-                    <span className="font-bold" style={{ color: T.text }}>
-                      {calScope === "day"
-                        ? calWeekBase.toLocaleDateString("en-IN", { day: "numeric", month: "long" })
-                        : `${weekDays[0].toLocaleDateString("en-IN", { day: "numeric", month: "short" })} — ${weekDays[6].toLocaleDateString("en-IN", { day: "numeric", month: "short" })}`}
-                    </span>
-                    <span className="font-normal" style={{ color: T.muted }}> {calScope === "day" ? calWeekBase.getFullYear() : weekDays[6].getFullYear()}</span>
-                  </h2>
-                  <div className="text-[13.5px] mt-0.5" style={{ color: T.muted }}>
-                    {calScope === "day" ? calWeekBase.toLocaleDateString("en-IN", { weekday: "long" }) : "Week view"}
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="hidden xl:flex items-center gap-4">
-                    {[
-                      { color: T.info, label: "Scheduled" },
-                      { color: T.gold, label: "In progress" },
-                      { color: T.good, label: "Completed" },
-                    ].map((l) => (
-                      <span key={l.label} className="inline-flex items-center gap-1.5 text-[11.5px]" style={{ color: T.muted }}>
-                        <span className="w-2 h-2 rounded-full" style={{ background: l.color }} />
-                        {l.label}
-                      </span>
-                    ))}
-                  </div>
-                  <div
-                    className="inline-flex items-center gap-1 p-1 rounded-full shrink-0"
-                    style={{ background: "rgba(89,82,54,0.07)", border: `1px solid ${T.borderSoft}` }}
-                  >
-                    {(["day", "week"] as const).map((scope) => (
-                      <button
-                        key={scope}
-                        onClick={() => { setCalScope(scope); setSelectedEvent(null); }}
-                        className="h-7 px-3.5 rounded-full text-[12.5px] capitalize shrink-0 transition-all duration-200 cursor-pointer"
-                        style={
-                          calScope === scope
-                            ? { background: T.card, color: T.text, fontWeight: 600, border: `1px solid ${T.border}`, boxShadow: "0 1px 3px rgba(43,42,34,0.10)" }
-                            : { color: T.muted, border: "1px solid transparent" }
-                        }
-                      >
-                        {scope}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
               {/* Timeline grid */}
               <Card className="overflow-hidden !p-0 flex-1 min-h-0 flex flex-col w-full">
                 <div className="overflow-x-auto flex-1 min-h-0 flex flex-col">
-                  <div className="h-full flex flex-col" style={{ minWidth: calScope === "day" ? 0 : 800 }}>
+                  <div className="h-full flex flex-col" style={{ minWidth: 800 }}>
                     {/* Day headers */}
                     <div className="grid sticky top-0 z-10" style={{ gridTemplateColumns: `60px repeat(${visibleDays.length}, 1fr)`, background: T.card, borderBottom: `1px solid ${T.borderSoft}` }}>
                       <div className="py-1.5" />
@@ -678,6 +658,7 @@ export default function EnergisationPage() {
               )}
             </aside>
           </div>
+          </>
         );
       })()}
       </div>

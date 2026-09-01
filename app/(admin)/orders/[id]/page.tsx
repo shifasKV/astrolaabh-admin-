@@ -42,6 +42,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const [scheduleNotes, setScheduleNotes] = useState("");
 
   const [localPaymentStatus, setLocalPaymentStatus] = useState(order?.paymentStatus ?? "pending");
+  const [linkSent, setLinkSent] = useState(false);
   const [showMarkPaid, setShowMarkPaid] = useState(false);
   const [paymentRef, setPaymentRef] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("");
@@ -77,7 +78,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const [editLogTime, setEditLogTime] = useState("");
 
   const [viewStep, setViewStep] = useState<PipelineStep | null>(null);
-  const [summaryOpen, setSummaryOpen] = useState(false);
+  const [summaryOpen, setSummaryOpen] = useState(() => (order?.paymentStatus ?? "pending") !== "paid");
   const [confirmEnergComplete, setConfirmEnergComplete] = useState(false);
   const [confirmDispatch, setConfirmDispatch] = useState(false);
 
@@ -184,24 +185,6 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
     <>
       {/* ============ HEADER ============ */}
       <BackLink label="Orders" href="/orders" className="mb-4" />
-
-      {/* ============ PAYMENT BANNER ============ */}
-      {!isPaid && (
-        <div
-          className="flex flex-wrap items-center gap-3 rounded-[12px] px-4 py-3 mb-4"
-          style={{ background: "rgba(160,125,56,0.08)", border: "1px solid rgba(160,125,56,0.28)" }}
-        >
-          <span className="w-2 h-2 rounded-full shrink-0" style={{ background: T.gold }} />
-          <div className="flex-1 min-w-0 text-[13px]">
-            <span className="font-semibold" style={{ color: T.text }}>Payment pending</span>
-            <span style={{ color: T.muted }}> — fulfillment is locked until payment is received.</span>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <button onClick={() => flash("Payment link sent to customer")} className="text-[12.5px] font-medium h-8 px-3 rounded-[8px] cursor-pointer transition-colors hover:bg-[rgba(160,125,56,0.12)]" style={{ color: T.gold }}>Resend link</button>
-            <button onClick={() => setShowMarkPaid(true)} className="text-[12.5px] font-semibold h-8 px-3.5 rounded-[8px] cursor-pointer hover:brightness-110 transition-all" style={{ background: T.accent, color: T.accentInk }}>Mark as paid</button>
-          </div>
-        </div>
-      )}
 
       {/* Customer card moved to sidebar */}
 
@@ -861,29 +844,65 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
             </div>
           </Card>
         )}
-        {/* Payment details */}
-        <Card>
-          <div className="flex items-center justify-between mb-3.5">
-            <h2 className="text-[15px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>Payment details</h2>
-            <Chip tone={isPaid ? "good" : "gold"}>{isPaid ? "Paid" : "Payment pending"}</Chip>
+        {/* Payment — pending CTAs replace details until paid */}
+        {!isPaid ? (
+          <div
+            className="rounded-[16px] p-5"
+            style={{ background: "rgba(160,125,56,0.08)", border: "1px solid rgba(160,125,56,0.28)", boxShadow: T.shadow }}
+          >
+            <div className="mb-4 pb-4" style={{ borderBottom: "1px solid rgba(160,125,56,0.18)" }}>
+              <div className="flex items-center gap-2.5 mb-1.5">
+                <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: T.gold }} />
+                <h2 className="font-title text-[18px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>Payment pending</h2>
+              </div>
+              <p className="text-[13.5px]" style={{ color: T.muted }}>
+                Fulfillment is locked until payment is received.
+              </p>
+            </div>
+            <div className="flex flex-col gap-2.5">
+              <button
+                onClick={() => {
+                  setLinkSent(true);
+                  flash(linkSent ? "Payment link resent to customer" : "Payment link sent to customer");
+                }}
+                className="h-11 w-full px-5 rounded-[10px] text-[14px] font-semibold cursor-pointer transition-all hover:brightness-110"
+                style={{ background: T.accent, color: T.accentInk }}
+              >
+                {linkSent ? "Resend link" : "Send payment link"}
+              </button>
+              <button
+                onClick={() => setShowMarkPaid(true)}
+                className="h-11 w-full px-5 rounded-[10px] text-[14px] font-semibold cursor-pointer transition-colors hover:bg-[rgba(160,125,56,0.14)]"
+                style={{ color: T.gold, border: "1px solid rgba(160,125,56,0.35)", background: "rgba(255,254,250,0.6)" }}
+              >
+                Mark as paid
+              </button>
+            </div>
           </div>
-          <div className="space-y-2.5">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-medium tracking-[0.08em] uppercase" style={{ color: T.faint }}>Method</span>
-              <span className="text-[13px] font-medium" style={{ color: isPaid ? T.text : T.faint }}>{isPaid ? "Bank transfer (NEFT)" : "—"}</span>
+        ) : (
+          <Card>
+            <div className="flex items-center justify-between mb-3.5">
+              <h2 className="text-[15px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>Payment details</h2>
+              <Chip tone="good">Paid</Chip>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-medium tracking-[0.08em] uppercase" style={{ color: T.faint }}>Transaction ID</span>
-              <span className="text-[13px] font-medium tabular-nums" style={{ color: isPaid ? T.accent : T.faint }}>{isPaid ? `TXN${order.id.replace(/\D/g, "").slice(0, 8)}` : "—"}</span>
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-medium tracking-[0.08em] uppercase" style={{ color: T.faint }}>Method</span>
+                <span className="text-[13px] font-medium" style={{ color: T.text }}>Bank transfer (NEFT)</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-medium tracking-[0.08em] uppercase" style={{ color: T.faint }}>Transaction ID</span>
+                <span className="text-[13px] font-medium tabular-nums" style={{ color: T.accent }}>{`TXN${order.id.replace(/\D/g, "").slice(0, 8)}`}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-medium tracking-[0.08em] uppercase" style={{ color: T.faint }}>Paid at</span>
+                <span className="text-[12.5px] tabular-nums" style={{ color: T.muted }}>
+                  {new Date(new Date(order.placedAt).getTime() + 3600000).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) + " · " + new Date(new Date(order.placedAt).getTime() + 3600000).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true })}
+                </span>
+              </div>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-medium tracking-[0.08em] uppercase" style={{ color: T.faint }}>Paid at</span>
-              <span className="text-[12.5px] tabular-nums" style={{ color: isPaid ? T.muted : T.faint }}>
-                {isPaid ? new Date(new Date(order.placedAt).getTime() + 3600000).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) + " · " + new Date(new Date(order.placedAt).getTime() + 3600000).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true }) : "—"}
-              </span>
-            </div>
-          </div>
-        </Card>
+          </Card>
+        )}
 
         {/* Shipment details */}
         <Card>
