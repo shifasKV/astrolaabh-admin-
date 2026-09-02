@@ -5,6 +5,7 @@ import { T } from "@/lib/theme";
 import * as V from "@/lib/validators";
 import { useAuth, type Role } from "@/lib/store/auth";
 import { PasswordCard } from "./PasswordCard";
+import { CalendarIntegrationCard } from "./CalendarIntegrationCard";
 
 const ROLE_LABEL: Record<Role, string> = {
   admin: "Administrator",
@@ -218,6 +219,7 @@ export function StaffProfilePage({ expectedRoles }: { expectedRoles: Role[] }) {
         </aside>
 
         <div className="space-y-4">
+          <CalendarIntegrationCard />
           <PasswordCard />
         </div>
       </div>

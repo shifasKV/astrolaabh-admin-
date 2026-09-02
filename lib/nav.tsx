@@ -63,6 +63,7 @@ export const ADMIN_NAV: NavGroup[] = [
     label: "Admin",
     items: [
       { key: "payments", label: "Payments", href: "/payments", icon: ICONS.payments },
+      { key: "notification-settings", label: "Notification Settings", href: "/notification-settings", icon: ICONS.notifications },
     ],
   },
 ];
