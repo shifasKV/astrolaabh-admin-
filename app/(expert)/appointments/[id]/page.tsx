@@ -25,19 +25,14 @@ interface RecData {
   energisationName: string;
 }
 
-interface RemedyValue {
-  type: string;
-  instructions: string;
-}
-
 interface DetailFields {
   why: string;
   purpose: string;
   howToWear: string;
 }
 
-function remedyIsComplete(v: RemedyValue | null): boolean {
-  return !!v && !!v.type.trim() && !!v.instructions.trim();
+function remedyIsComplete(v: string | null): boolean {
+  return !!v && !!v.trim();
 }
 
 function SectionActions({
@@ -200,14 +195,14 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
   const [activeWorkTab, setActiveWorkTab] = useState<"summary" | "stone" | "remedy">("summary");
 
-  // Remedy — optional section with same saved / draft / edit-session model
+  // Remedy — optional single free-text field
   const initialRemedy = (() => {
     const rec = MOCK_REMEDY_RECOMMENDATIONS.find((r) => r.consultationId === id);
-    return rec ? { type: rec.type, instructions: rec.instructions } : null;
+    if (!rec) return null;
+    return [rec.type, rec.instructions].filter(Boolean).join("\n\n");
   })();
-  const [savedRemedy, setSavedRemedy] = useState<RemedyValue | null>(initialRemedy);
-  const [remedyType, setRemedyType] = useState(initialRemedy?.type ?? "");
-  const [remedyInstructions, setRemedyInstructions] = useState(initialRemedy?.instructions ?? "");
+  const [savedRemedy, setSavedRemedy] = useState<string | null>(initialRemedy);
+  const [remedyText, setRemedyText] = useState(initialRemedy ?? "");
   const [remedyEditSession, setRemedyEditSession] = useState(false);
 
   // Recommendation local state — seeded from mock
@@ -342,15 +337,13 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
   };
 
   const startEditRemedy = () => {
-    const current = savedRemedy ?? { type: "", instructions: "" };
-    setRemedyType(current.type);
-    setRemedyInstructions(current.instructions);
+    setRemedyText(savedRemedy ?? "");
     setRemedyEditSession(true);
   };
 
   const saveRemedySection = () => {
-    if (!remedyType.trim() || !remedyInstructions.trim()) return;
-    setSavedRemedy({ type: remedyType.trim(), instructions: remedyInstructions.trim() });
+    if (!remedyText.trim()) return;
+    setSavedRemedy(remedyText.trim());
     setRemedyEditSession(false);
     if (packageStatus !== "submitted") setPackageStatus("draft");
   };
@@ -619,11 +612,9 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
               <div className="flex items-start justify-between gap-3 mb-3">
                 <div className="min-w-0">
                   <div className="text-[11px] font-medium tracking-[0.06em] uppercase" style={{ color: T.faint }}>Consultation summary</div>
-                  {summaryIsEditing && (
-                    <p className="text-[12px] mt-0.5 leading-relaxed" style={{ color: T.muted }}>
-                      Key observations, interpretation, conclusion, and agreed next steps
-                    </p>
-                  )}
+                  <p className="text-[12px] mt-0.5 leading-relaxed" style={{ color: T.muted }}>
+                    Key observations, interpretation, conclusion, and agreed next steps
+                  </p>
                 </div>
                 <SectionActions
                   showEdit={summaryHasSaved && !summaryIsEditing}
@@ -636,7 +627,7 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
               {summaryIsEditing ? (
                 <Textarea value={summaryText} onChange={setSummaryText} placeholder="Write your consultation summary here…" rows={5} />
               ) : (
-                <p className="text-[13.5px] leading-relaxed" style={{ color: T.text }}>{savedSummary}</p>
+                <p className="text-[13.5px] leading-relaxed whitespace-pre-wrap" style={{ color: T.text }}>{savedSummary}</p>
               )}
             </div>
           )}
@@ -676,30 +667,27 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
               <div className="flex items-start justify-between gap-3 mb-3">
                 <div className="min-w-0">
                   <div className="text-[11px] font-medium tracking-[0.06em] uppercase" style={{ color: T.faint }}>Other remedy</div>
-                  {remedyIsEditing && (
-                    <p className="text-[12px] mt-0.5 leading-relaxed" style={{ color: T.muted }}>
-                      Prescribe mantras, rituals, or lifestyle changes (optional)
-                    </p>
-                  )}
+                  <p className="text-[12px] mt-0.5 leading-relaxed" style={{ color: T.muted }}>
+                    Prescribe mantras, rituals, or lifestyle changes (optional)
+                  </p>
                 </div>
                 <SectionActions
                   showEdit={remedyHasSaved && !remedyIsEditing}
                   showSave={remedyIsEditing}
                   onEdit={startEditRemedy}
                   onSave={saveRemedySection}
-                  saveDisabled={!remedyType.trim() || !remedyInstructions.trim()}
+                  saveDisabled={!remedyText.trim()}
                 />
               </div>
               {remedyIsEditing ? (
-                <div className="space-y-3">
-                  <Input value={remedyType} onChange={setRemedyType} label="Remedy type" placeholder="E.g. Mantra, Havan / Puja, Lifestyle change" />
-                  <Textarea value={remedyInstructions} onChange={setRemedyInstructions} label="Instructions" placeholder="Detailed instructions for the customer…" rows={3} />
-                </div>
+                <Textarea
+                  value={remedyText}
+                  onChange={setRemedyText}
+                  placeholder="E.g. Mantra, havan / puja, lifestyle changes — include timing, duration, and instructions…"
+                  rows={5}
+                />
               ) : (
-                <div className="space-y-2 text-[13px]">
-                  <div className="flex justify-between gap-4"><span style={{ color: T.muted }}>Type</span><span className="text-right" style={{ color: T.text }}>{savedRemedy?.type || "—"}</span></div>
-                  <div className="flex justify-between gap-4"><span style={{ color: T.muted }}>Instructions</span><span className="text-right max-w-[60%]" style={{ color: T.text }}>{savedRemedy?.instructions || "—"}</span></div>
-                </div>
+                <p className="text-[13.5px] leading-relaxed whitespace-pre-wrap" style={{ color: T.text }}>{savedRemedy}</p>
               )}
             </div>
           )}

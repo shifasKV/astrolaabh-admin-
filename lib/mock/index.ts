@@ -3,6 +3,8 @@ export { MOCK_ORDERS } from "./orders";
 export { MOCK_CONSULTATIONS } from "./consultations";
 export { MOCK_STONE_RECOMMENDATIONS, MOCK_REMEDY_RECOMMENDATIONS } from "./recommendations";
 export { MOCK_PAYMENTS } from "./payments";
+export { MOCK_EXPERT_PAYOUTS } from "./expert-payouts";
+export type { ExpertPayout } from "./expert-payouts";
 export { MOCK_ENERGISATION } from "./energisation";
 export { MOCK_CERTIFICATES } from "./certificates";
 export { MOCK_AFFILIATES, MOCK_AFFILIATE_LINKS, MOCK_REFERRAL_EVENTS, MOCK_PAYOUTS } from "./affiliates";

@@ -299,7 +299,14 @@ export function Sidebar({ groups, orgName, orgSub, userLabel, userSub, onUserCli
               style={{ background: T.popover, border: `1px solid ${T.border}`, boxShadow: T.shadowLift }}
             >
               <button
-                onClick={() => { setMenuOpen(false); setProfileOpen(true); }}
+                onClick={() => {
+                  setMenuOpen(false);
+                  if (user?.role === "expert") {
+                    router.push("/expert-profile");
+                  } else {
+                    setProfileOpen(true);
+                  }
+                }}
                 className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-[8px] text-[13px] font-medium text-left cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.10)]"
                 style={{ color: T.text }}
               >

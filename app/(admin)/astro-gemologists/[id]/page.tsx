@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Card, Chip, StatCard, GhostBtn, GoldBtn, SectionLink, BackLink, Tabs, Tooltip, Pagination, Select, Modal, Input, ToolbarSearch, InlineFilter, MultiCheck, SortMenu, EmptyState, Toast, ConfirmDialog, MobileAgenda } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { usePersistentState } from "@/lib/usePersistentState";
-import { EXPERT_PROFILES, EXPERT_AVAILABILITY, MOCK_CONSULTATIONS, MOCK_STONE_RECOMMENDATIONS, MOCK_ORDERS, MOCK_PAYMENTS } from "@/lib/mock";
+import { EXPERT_PROFILES, EXPERT_AVAILABILITY, MOCK_CONSULTATIONS, MOCK_STONE_RECOMMENDATIONS, MOCK_ORDERS, MOCK_PAYMENTS, MOCK_EXPERT_PAYOUTS } from "@/lib/mock";
 import { inr } from "@/lib/types";
 import type { StoneRecommendation } from "@/lib/types";
 
@@ -342,23 +342,43 @@ export default function AstroGemologistDetailPage() {
   const recTotalPages = Math.ceil(recFiltered.length / PAGE_SIZE);
   const recPaginated = recFiltered.slice(recPage * PAGE_SIZE, (recPage + 1) * PAGE_SIZE);
 
-  // Payments filtered — payments linked to this expert's consultations
-  const expertConsIds = new Set(consultations.map((c) => c.id));
-  const expertPayments = MOCK_PAYMENTS.filter((p) => p.linkedAppointmentId && expertConsIds.has(p.linkedAppointmentId));
-  const payFiltered = expertPayments
+  // Commission earned (consultations + converted stone recommendations)
+  const stoneRate = parseFloat(commissionRates.stone) / 100;
+  const consultRate = parseFloat(commissionRates.consultation) / 100;
+  const consultCommission = consultations
+    .filter((c) => c.paymentStatus === "paid")
+    .reduce((sum, c) => sum + Math.round((c.fee ?? 0) * consultRate), 0);
+  const stoneCommission = allRecommendations
+    .filter((r) => r.status === "converted_to_order" && r.orderId)
+    .reduce((sum, r) => {
+      const order = MOCK_ORDERS.find((o) => o.id === r.orderId);
+      return sum + (order ? Math.round(order.total * stoneRate) : 0);
+    }, 0);
+  const totalCommission = consultCommission + stoneCommission;
+
+  // Payouts recorded for this expert
+  const expertPayouts = MOCK_EXPERT_PAYOUTS.filter((p) => p.expertId === expertId);
+  const payFiltered = expertPayouts
     .filter((p) => {
       if (!paySearch) return true;
       const q = paySearch.toLowerCase();
-      return p.customerName.toLowerCase().includes(q) || p.id.toLowerCase().includes(q) || p.purpose.toLowerCase().includes(q);
+      return (
+        p.id.toLowerCase().includes(q) ||
+        p.paymentType.toLowerCase().includes(q) ||
+        p.paidBy.toLowerCase().includes(q) ||
+        (p.notes ?? "").toLowerCase().includes(q)
+      );
     })
     .sort((a, b) => {
-      const aTime = new Date(a.paidAt ?? a.createdAt).getTime();
-      const bTime = new Date(b.paidAt ?? b.createdAt).getTime();
+      const aTime = new Date(a.paidAt).getTime();
+      const bTime = new Date(b.paidAt).getTime();
       return paySort === "date_asc" ? aTime - bTime : bTime - aTime;
     });
   const payTotalPages = Math.ceil(payFiltered.length / PAGE_SIZE);
   const payPaginated = payFiltered.slice(payPage * PAGE_SIZE, (payPage + 1) * PAGE_SIZE);
-  const totalEarnings = expertPayments.filter((p) => p.status === "paid").reduce((sum, p) => sum + p.amount, 0);
+  const totalPaid = expertPayouts.reduce((sum, p) => sum + p.amount, 0);
+  const totalPending = Math.max(0, totalCommission - totalPaid);
+  const totalEarnings = totalCommission;
 
   const tabCounts: Record<string, number> = {
     availability: weekDaysForAvail.length,
@@ -366,7 +386,7 @@ export default function AstroGemologistDetailPage() {
     upcoming: consultations.length,
     summary_due: allPendingSummaries.length,
     no_show: allNoShows.length,
-    payments: expertPayments.length,
+    payments: expertPayouts.length,
   };
 
   const statusTone = (s: string) => {
@@ -1154,24 +1174,25 @@ export default function AstroGemologistDetailPage() {
       {activeTab === "payments" && (
         <>
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
-            <StatCard label="Total earnings" value={inr(totalEarnings)} featured />
-            <StatCard label="Total payments" value={expertPayments.length} />
-            <StatCard label="Pending" value={expertPayments.filter((p) => p.status !== "paid").length} />
+            <StatCard label="Total commission" value={inr(totalCommission)} featured />
+            <StatCard label="Paid" value={inr(totalPaid)} />
+            <StatCard label="Pending" value={inr(totalPending)} />
           </div>
 
           <div className="hidden sm:flex flex-wrap items-center gap-2 pt-4 mb-3" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
             <div className="ml-auto flex items-center gap-2">
-              <ToolbarSearch value={paySearch} onChange={(v) => { setPaySearch(v); setPayPage(0); }} placeholder="Search payment ID, type…" />
+              <ToolbarSearch value={paySearch} onChange={(v) => { setPaySearch(v); setPayPage(0); }} placeholder="Search payment ID, notes…" />
               <SortMenu value={paySort} onChange={(v) => { setPaySort(v as SortKey); setPayPage(0); }} options={[{ value: "date_desc", label: "Newest first" }, { value: "date_asc", label: "Oldest first" }]} />
             </div>
           </div>
 
           <Card className="!p-0 md:flex md:flex-col md:min-h-0">
           <div className="md:min-h-0 overflow-y-auto max-h-[560px] md:max-h-none flex-1">
-            <div className="hidden sm:grid grid-cols-[120px_1fr_1fr_160px_120px] gap-3 items-center px-4 h-10 text-[11px] tracking-[0.06em] uppercase font-medium rounded-t-[15px]" style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.borderSoft}` }}>
+            <div className="hidden sm:grid grid-cols-[110px_120px_120px_1.2fr_150px_110px] gap-3 items-center px-4 h-10 text-[11px] tracking-[0.06em] uppercase font-medium rounded-t-[15px]" style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.borderSoft}` }}>
               <span>Payment ID</span>
               <span>Payment type</span>
               <span>Paid by</span>
+              <span>Notes</span>
               <span>Date &amp; time</span>
               <span className="text-right">Amount</span>
             </div>
@@ -1179,12 +1200,13 @@ export default function AstroGemologistDetailPage() {
               <EmptyState inline icon="inbox" title="No payouts" description="No payouts recorded yet." />
             ) : (
               payPaginated.map((p) => {
-                const dt = new Date(p.paidAt ?? p.createdAt);
+                const dt = new Date(p.paidAt);
                 return (
-                  <div key={p.id} className="grid grid-cols-1 sm:grid-cols-[120px_1fr_1fr_160px_120px] gap-3 items-center px-4 py-2.5 even:bg-[rgba(89,82,54,0.025)] last:rounded-b-[15px]" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
+                  <div key={p.id} className="grid grid-cols-1 sm:grid-cols-[110px_120px_120px_1.2fr_150px_110px] gap-3 items-center px-4 py-2.5 even:bg-[rgba(89,82,54,0.025)] last:rounded-b-[15px]" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
                     <div className="text-[11px] tracking-[0.06em] uppercase font-medium" style={{ color: T.accent }}>{p.id}</div>
-                    <div className="text-[13px] truncate" style={{ color: T.text }}>{p.medium ?? "Bank Transfer"}</div>
-                    <div className="text-[13px] truncate" style={{ color: T.text }}>{p.ownerName}</div>
+                    <div className="text-[13px] truncate" style={{ color: T.text }}>{p.paymentType}</div>
+                    <div className="text-[13px] truncate" style={{ color: T.text }}>{p.paidBy}</div>
+                    <div className="text-[13px] truncate" style={{ color: p.notes ? T.text : T.faint }}>{p.notes || "—"}</div>
                     <div className="text-[12px] tabular-nums" style={{ color: T.muted }}>
                       {dt.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
                       <span className="ml-1 opacity-60">{dt.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true })}</span>

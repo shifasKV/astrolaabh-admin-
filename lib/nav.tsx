@@ -73,9 +73,10 @@ export const EXPERT_NAV: NavGroup[] = [
     items: [
       { key: "dashboard", label: "Dashboard", href: "/expert-dashboard", icon: ICONS.dashboard },
       { key: "appointments", label: "Appointments", href: "/appointments", icon: ICONS.calendar },
-      { key: "expert-orders", label: "Orders", href: "/expert-orders", icon: ICONS.orders },
       { key: "availability", label: "Availability", href: "/availability", icon: ICONS.calendar },
       { key: "recommendations", label: "My Recommendations", href: "/recommendations", icon: ICONS.recommendation },
+      { key: "expert-orders", label: "Orders", href: "/expert-orders", icon: ICONS.orders },
+      { key: "payments", label: "Payments", href: "/expert-payments", icon: ICONS.payments },
     ],
   },
 ];
