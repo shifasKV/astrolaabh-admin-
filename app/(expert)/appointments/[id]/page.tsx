@@ -634,7 +634,7 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
             </div>
             {!isNoShow && packageStatus !== "submitted" && (
               <div className="flex items-center gap-2 shrink-0">
-                <GhostBtn disabled={!hasAnyContent || (hasMandatoryContent && packageStatus !== "submitted")} onClick={handleSaveDraft}>
+                <GhostBtn disabled={!hasAnyContent || hasMandatoryContent} onClick={handleSaveDraft}>
                   Save draft
                 </GhostBtn>
                 <GoldBtn disabled={!hasMandatoryContent} onClick={handleSubmitRecommendation}>
