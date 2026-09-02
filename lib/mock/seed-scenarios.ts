@@ -580,7 +580,7 @@ export const SEED_ORDERS: Order[] = [
     paymentStatus: "pending", energisationStatus: "pending", energisationTier: "maha_abhishek",
     certificateStatus: "not_required", affiliateCode: "SANDEEP108",
     consultationId: "cons_031", recommendationId: "rec_031",
-    placedAt: "2026-07-28", updatedAt: "2026-07-28", placedBy: "priya.sharma@astrolaabh.com",
+    placedAt: "2026-07-28", updatedAt: "2026-07-28", placedBy: "sandeep@astrolaabh.house",
   },
 
   // S04: Payment failed

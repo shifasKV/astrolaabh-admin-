@@ -1,6 +1,7 @@
 export { GoldBtn, GhostBtn, DangerBtn, LinkBtn } from "./Button";
 export { Card, StatCard, DetailCard } from "./Card";
 export { Chip, StatusDot } from "./Chip";
+export { CopyableContact } from "./CopyableContact";
 export { Input, Select, Textarea, FileInput, DateInput, TimeInput, FieldError } from "./Input";
 export { Alert } from "./Alert";
 export type { AlertTone } from "./Alert";

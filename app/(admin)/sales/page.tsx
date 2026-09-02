@@ -143,8 +143,9 @@ export default function SalesPage() {
                       <div className="text-[12px] truncate mt-px" style={{ color: T.muted }}>{member.role}</div>
                     </div>
                   </div>
-                  <span className="text-[12px] truncate md:pl-0 pl-12 tabular-nums" style={{ color: T.muted }}>
-                    {member.email} <span style={{ color: T.faint }}>· {member.phone}</span>
+                  <span className="min-w-0 text-[12px] md:pl-0 pl-12 tabular-nums" style={{ color: T.muted }}>
+                    <span className="block truncate">{member.email}</span>
+                    <span className="block truncate mt-px" style={{ color: T.faint }}>{member.phone}</span>
                   </span>
                   <span className="text-[12.5px] tabular-nums md:text-right md:pl-0 pl-12" style={{ color: T.text }}>{stats.totalLeads}</span>
                   <span className="text-[12.5px] font-semibold tabular-nums md:text-right md:pl-0 pl-12" style={{ color: stats.activeLeads > 0 ? T.accent : T.faint }}>

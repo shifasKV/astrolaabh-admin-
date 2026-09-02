@@ -5,6 +5,7 @@ import { T } from "@/lib/theme";
 import * as V from "@/lib/validators";
 import { EXPERT_PROFILES } from "@/lib/mock";
 import { useAuth } from "@/lib/store/auth";
+import { PasswordCard } from "@/components/profile/PasswordCard";
 
 const EXPERT_ID = "usr_expert_01";
 
@@ -151,7 +152,6 @@ function experienceToKey(exp: string): string {
 
 type IdentityDraft = {
   name: string;
-  email: string;
   phone: string;
   age: string;
   gender: string;
@@ -182,7 +182,7 @@ export default function ExpertProfilePage() {
   const [toast, setToast] = useState("");
 
   const [name, setName] = useState(expert?.name ?? "");
-  const [email, setEmail] = useState(user?.email ?? (expert ? `${expert.name.split(" ").pop()?.toLowerCase()}@astrolaabh.house` : ""));
+  const email = user?.email ?? (expert ? `${expert.name.split(" ").pop()?.toLowerCase()}@astrolaabh.house` : "");
   const [phone, setPhone] = useState(expert?.phone ?? "");
   const [age, setAge] = useState("52");
   const [gender, setGender] = useState("male");
@@ -243,7 +243,7 @@ export default function ExpertProfilePage() {
   };
 
   const startIdentityEdit = () => {
-    setIdentityDraft({ name, email, phone, age, gender, photoPreview });
+    setIdentityDraft({ name, phone, age, gender, photoPreview });
     setErrors({});
     setIdentityEditing(true);
   };
@@ -252,14 +252,12 @@ export default function ExpertProfilePage() {
     if (!identityDraft) return;
     const e: Record<string, string> = {
       name: V.required(identityDraft.name, "Full name"),
-      email: V.email(identityDraft.email),
       phone: V.phone(identityDraft.phone),
       age: V.optionalNumber(identityDraft.age, "Age"),
     };
     setErrors(e);
     if (!V.isClean(e)) return;
     setName(identityDraft.name.trim());
-    setEmail(identityDraft.email.trim());
     setPhone(identityDraft.phone.trim());
     setAge(identityDraft.age.trim());
     setGender(identityDraft.gender);
@@ -402,13 +400,15 @@ export default function ExpertProfilePage() {
                   error={errors.name}
                   label="Full name"
                 />
-                <Input
-                  value={identityDraft.email}
-                  onChange={(v) => setIdentityDraft((d) => (d ? { ...d, email: v } : d))}
-                  error={errors.email}
-                  label="Email"
-                  type="email"
-                />
+                <div>
+                  <div className="text-[11px] tracking-[0.07em] uppercase mb-2" style={{ color: T.faint }}>Email</div>
+                  <div
+                    className="h-10 px-3 rounded-[9px] flex items-center text-[13.5px] truncate"
+                    style={{ background: "rgba(89,82,54,0.04)", border: `1px solid ${T.borderSoft}`, color: T.muted }}
+                  >
+                    {email}
+                  </div>
+                </div>
                 <Input
                   value={identityDraft.phone}
                   onChange={(v) => setIdentityDraft((d) => (d ? { ...d, phone: v } : d))}
@@ -632,6 +632,8 @@ export default function ExpertProfilePage() {
               </div>
             )}
           </Card>
+
+          <PasswordCard />
         </div>
       </div>
 

@@ -3,11 +3,10 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import { T } from "@/lib/theme";
-import { useAuth } from "@/lib/store/auth";
+import { useAuth, type Role } from "@/lib/store/auth";
 import { useSidebar } from "./SidebarState";
 import { Modal } from "./Modal";
-import { Input } from "./Input";
-import { GoldBtn, GhostBtn } from "./Button";
+import { GhostBtn } from "./Button";
 
 const ROLE_LABEL: Record<string, string> = {
   admin: "Administrator",
@@ -15,6 +14,14 @@ const ROLE_LABEL: Record<string, string> = {
   affiliate: "Affiliate partner",
   sales_admin: "Sales admin",
   sales_exec: "Sales executive",
+};
+
+const PROFILE_HREF: Record<Role, string> = {
+  admin: "/admin-profile",
+  expert: "/expert-profile",
+  affiliate: "/affiliate-profile",
+  sales_admin: "/sales-profile",
+  sales_exec: "/sales-profile",
 };
 
 export interface NavGroup {
@@ -61,19 +68,10 @@ export function Sidebar({ groups, orgName, orgSub, userLabel, userSub, onUserCli
   const [notifOpen, setNotifOpen] = useState(false);
   const unreadNotifs = notifications?.filter((n) => !n.read).length ?? 0;
   const [signOutOpen, setSignOutOpen] = useState(false);
-  const [profileOpen, setProfileOpen] = useState(false);
-  const [pwOpen, setPwOpen] = useState(false);
-  const [pw, setPw] = useState({ current: "", next: "", confirm: "" });
-  const [pwToast, setPwToast] = useState("");
 
-  const savePassword = () => {
-    if (!pw.current || !pw.next) { setPwToast("Fill in your current and new password."); return; }
-    if (pw.next !== pw.confirm) { setPwToast("New passwords don't match."); return; }
-    if (pw.next.length < 6) { setPwToast("Use at least 6 characters."); return; }
-    setPw({ current: "", next: "", confirm: "" });
-    setPwToast("");
-    setPwOpen(false);
-    setProfileOpen(false);
+  const openProfile = () => {
+    setMenuOpen(false);
+    if (user?.role) router.push(PROFILE_HREF[user.role]);
   };
 
   const isActive = (href: string) => {
@@ -299,14 +297,7 @@ export function Sidebar({ groups, orgName, orgSub, userLabel, userSub, onUserCli
               style={{ background: T.popover, border: `1px solid ${T.border}`, boxShadow: T.shadowLift }}
             >
               <button
-                onClick={() => {
-                  setMenuOpen(false);
-                  if (user?.role === "expert") {
-                    router.push("/expert-profile");
-                  } else {
-                    setProfileOpen(true);
-                  }
-                }}
+                onClick={openProfile}
                 className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-[8px] text-[13px] font-medium text-left cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.10)]"
                 style={{ color: T.text }}
               >
@@ -330,63 +321,6 @@ export function Sidebar({ groups, orgName, orgSub, userLabel, userSub, onUserCli
           </>
         )}
       </div>
-
-      {/* Profile modal */}
-      <Modal open={profileOpen} onClose={() => { setProfileOpen(false); setPwOpen(false); }} title="My profile">
-        <div className="flex items-center gap-3.5 mb-5">
-          <span
-            className="w-14 h-14 rounded-[16px] flex items-center justify-center text-[18px] font-semibold shrink-0"
-            style={{ background: T.accentFaint, border: `1px solid ${T.accentBorder}`, color: T.accent }}
-          >
-            {userLabel[0]}
-          </span>
-          <div className="min-w-0">
-            <div className="text-[16px] font-semibold" style={{ color: T.text }}>{userLabel}</div>
-            <div className="text-[12.5px] mt-0.5" style={{ color: T.muted }}>{user ? ROLE_LABEL[user.role] ?? user.role : userSub}</div>
-          </div>
-        </div>
-
-        <div className="space-y-3">
-          {[
-            ["Name", user?.name ?? userLabel],
-            ["Email", user?.email ?? "—"],
-            ["Role", user ? ROLE_LABEL[user.role] ?? user.role : "—"],
-          ].map(([k, v], i, arr) => (
-            <div key={k} className={`flex items-baseline justify-between gap-3 ${i < arr.length - 1 ? "pb-3" : ""}`} style={i < arr.length - 1 ? { borderBottom: `1px solid ${T.borderSoft}` } : undefined}>
-              <span className="text-[11px] font-medium tracking-[0.06em] uppercase shrink-0" style={{ color: T.faint }}>{k}</span>
-              <span className="text-[13px] font-medium text-right" style={{ color: T.text }}>{v}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* Change password */}
-        <div className="mt-5 pt-5" style={{ borderTop: `1px solid ${T.border}` }}>
-          {!pwOpen ? (
-            <button
-              onClick={() => setPwOpen(true)}
-              className="inline-flex items-center gap-2 text-[13px] font-medium cursor-pointer hover:underline underline-offset-4"
-              style={{ color: T.accent }}
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-                <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
-              </svg>
-              Change password
-            </button>
-          ) : (
-            <div className="space-y-3">
-              <h3 className="text-[13.5px] font-semibold" style={{ color: T.text }}>Change password</h3>
-              <Input value={pw.current} onChange={(v) => { setPw((p) => ({ ...p, current: v })); setPwToast(""); }} label="Current password" type="password" placeholder="••••••••" />
-              <Input value={pw.next} onChange={(v) => { setPw((p) => ({ ...p, next: v })); setPwToast(""); }} label="New password" type="password" placeholder="At least 6 characters" />
-              <Input value={pw.confirm} onChange={(v) => { setPw((p) => ({ ...p, confirm: v })); setPwToast(""); }} label="Confirm new password" type="password" placeholder="Repeat new password" />
-              {pwToast && <p className="text-[12px]" style={{ color: T.danger }}>{pwToast}</p>}
-              <div className="flex gap-2.5 pt-1">
-                <GoldBtn onClick={savePassword}>Update password</GoldBtn>
-                <GhostBtn onClick={() => { setPwOpen(false); setPw({ current: "", next: "", confirm: "" }); setPwToast(""); }}>Cancel</GhostBtn>
-              </div>
-            </div>
-          )}
-        </div>
-      </Modal>
 
       {/* Sign-out confirmation */}
       <Modal open={signOutOpen} onClose={() => setSignOutOpen(false)} title="Sign out?">

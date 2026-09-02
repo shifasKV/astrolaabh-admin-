@@ -19,6 +19,7 @@ type SortKey = "date_desc" | "date_asc" | "amount_high" | "amount_low";
 
 const STATUS_FILTER_LABEL: Record<string, string> = {
   payment_pending: "Payment pending",
+  recommended: "Recommended",
   not_shipped: "Not shipped",
   in_transit: "In transit",
   delivered: "Delivered",
@@ -84,6 +85,7 @@ export default function OrdersPage() {
 
   const matchesStatus = (o: (typeof MOCK_ORDERS)[number], status: string) => {
     if (!status) return true;
+    if (status === "recommended") return o.paymentStatus === "pending" && Boolean(o.recommendationId);
     if (status === "payment_pending") return o.paymentStatus === "pending";
     if (status === "cert_missing") return o.certificateStatus === "missing" && o.paymentStatus === "paid";
     if (status === "energ_missing") return o.energisationStatus === "pending" && o.paymentStatus === "paid";
@@ -277,9 +279,12 @@ export default function OrdersPage() {
         ) : (
           paginated.map((o, idx) => {
             const paid = o.paymentStatus === "paid";
+            const isRecommended = Boolean(o.recommendationId) && !paid;
             /* Every flag that applies — an order can be not-shipped AND missing its cert */
             const orderStatus = !paid
-              ? { tone: "gold" as const, label: "Payment pending" }
+              ? isRecommended
+                ? { tone: "gold" as const, label: "Recommended" }
+                : { tone: "gold" as const, label: "Payment pending" }
               : o.shopifyStatus === "fulfilled"
                 ? { tone: "good" as const, label: "Completed" }
                 : o.tracking

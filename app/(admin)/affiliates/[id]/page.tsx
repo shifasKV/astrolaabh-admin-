@@ -2,7 +2,7 @@
 import { use, useState, useRef, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Card, StatCard, Chip, GoldBtn, GhostBtn, DangerBtn, Modal, Input, Textarea, Tabs, Pagination, BackLink, Select, ToolbarSearch, InlineFilter, MultiCheck, SortMenu, Toast, ConfirmDialog } from "@/components/ui";
+import { Card, StatCard, Chip, GoldBtn, GhostBtn, DangerBtn, Modal, Input, Textarea, Tabs, Pagination, BackLink, Select, ToolbarSearch, InlineFilter, MultiCheck, SortMenu, Toast, ConfirmDialog, CopyableContact } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_AFFILIATES, MOCK_REFERRAL_EVENTS, MOCK_PAYOUTS, MOCK_ORDERS, MOCK_CONSULTATIONS, MOCK_CUSTOMERS } from "@/lib/mock";
 import { inr } from "@/lib/types";
@@ -372,9 +372,9 @@ export default function AffiliateDetailPage({ params }: { params: Promise<{ id: 
 
       {/* Identity */}
       <Card className="!p-6 mb-4">
-        <div className="flex flex-wrap items-start gap-5">
+        <div className="flex flex-wrap items-center gap-5">
           <div
-            className="w-14 h-14 rounded-[16px] flex items-center justify-center text-[18px] font-semibold shrink-0"
+            className="w-14 h-14 rounded-[16px] flex items-center justify-center text-[18px] font-semibold shrink-0 self-center"
             style={{ background: T.accentFaint, border: `1px solid ${T.accentBorder}`, color: T.accent }}
           >
             {affiliate.name.split(" ").map((w) => w[0]).slice(0, 2).join("")}
@@ -383,19 +383,19 @@ export default function AffiliateDetailPage({ params }: { params: Promise<{ id: 
             <div className="flex flex-wrap items-center gap-2.5">
               <span className="text-[18px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>{affiliate.name}</span>
               <Chip tone={isActive ? "good" : "danger"}>{isActive ? "active" : "inactive"}</Chip>
+            </div>
+            <div className="flex flex-wrap items-center gap-2.5 mt-1.5">
               <span
                 className="text-[11px] font-semibold tracking-[0.06em] uppercase px-2 py-0.5 rounded-[6px]"
                 style={{ background: T.accentFaint, border: `1px solid ${T.accentBorder}`, color: T.accent }}
               >
                 {affiliate.code}
               </span>
+              <span className="text-[12.5px]" style={{ color: T.muted }}>Joined {affiliate.joinedAt}</span>
             </div>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-[14px]" style={{ color: T.muted }}>
-              <span>{affiliate.email}</span>
-              <span style={{ color: T.faint }}>·</span>
-              <span className="tabular-nums">{editForm.phone}</span>
-              <span style={{ color: T.faint }}>·</span>
-              <span>Joined {affiliate.joinedAt}</span>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-[13px]" style={{ color: T.muted }}>
+              <CopyableContact type="email" value={affiliate.email} onCopied={flash} />
+              <CopyableContact type="phone" value={editForm.phone} onCopied={flash} />
             </div>
           </div>
           <div className="w-full md:w-auto md:min-w-[280px] md:pl-5 md:border-l" style={{ borderColor: T.borderSoft }}>

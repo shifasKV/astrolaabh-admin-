@@ -1,7 +1,7 @@
 "use client";
 import { use, useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { Card, Chip, GhostBtn, BackLink, Tabs, Pagination, Toast, ConfirmDialog } from "@/components/ui";
+import { Card, Chip, GhostBtn, BackLink, Tabs, Pagination, Toast, ConfirmDialog, CopyableContact } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_CUSTOMERS, MOCK_ORDERS, MOCK_CONSULTATIONS, MOCK_PAYMENTS, MOCK_INCOMPLETE_ORDERS, MOCK_INCOMPLETE_CONSULTATIONS } from "@/lib/mock";
 import { inr } from "@/lib/types";
@@ -77,22 +77,16 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
       <div className="rounded-[16px] mb-4 overflow-hidden" style={{ background: T.card, border: `1px solid ${T.border}`, boxShadow: T.shadow }}>
         <div className="flex flex-wrap items-center gap-5 p-6 pb-5">
           <div
-            className="w-14 h-14 rounded-full flex items-center justify-center font-title text-[20px] font-semibold shrink-0"
-            style={{ background: `${T.accent}15`, border: `1px solid ${T.accent}35`, color: T.accent }}
+            className="w-14 h-14 rounded-[16px] flex items-center justify-center font-title text-[20px] font-semibold shrink-0"
+            style={{ background: T.accentFaint, border: `1px solid ${T.accentBorder}`, color: T.accent }}
           >
             {customer.name[0]}
           </div>
           <div className="flex-1 min-w-0">
             <div className="font-title text-[20px] font-semibold tracking-[-0.015em]" style={{ color: T.text }}>{customer.name}</div>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1 text-[13px]" style={{ color: T.muted }}>
-              <span className="inline-flex items-center gap-1.5">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-3.5 h-3.5" style={{ color: T.faint }}><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
-                {customer.email}
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-3.5 h-3.5" style={{ color: T.faint }}><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-                <span className="tabular-nums">{customer.phone}</span>
-              </span>
+              <CopyableContact type="email" value={customer.email} onCopied={(msg) => { setToast(msg); setTimeout(() => setToast(""), 2500); }} />
+              <CopyableContact type="phone" value={customer.phone} onCopied={(msg) => { setToast(msg); setTimeout(() => setToast(""), 2500); }} />
             </div>
           </div>
           <div className="relative shrink-0" ref={actionMenuRef}>

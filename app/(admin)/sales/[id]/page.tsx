@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Card, Chip, StatCard, Tabs, Pagination, BackLink, ToolbarSearch, Toast, ConfirmDialog, InlineFilter, MultiCheck, SortMenu } from "@/components/ui";
+import { Card, Chip, StatCard, Tabs, Pagination, BackLink, ToolbarSearch, Toast, ConfirmDialog, InlineFilter, MultiCheck, SortMenu, CopyableContact } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_SALES_MEMBERS, MOCK_INCOMPLETE_ORDERS, MOCK_INCOMPLETE_CONSULTATIONS, MOCK_ORDERS, MOCK_CONSULTATIONS } from "@/lib/mock";
 import type { IncompleteOrderStatus, IncompleteConsultationStatus } from "@/lib/mock";
@@ -334,24 +334,22 @@ export default function SalesDetailPage() {
 
       {/* Profile card */}
       <Card className="mb-4 !p-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="flex items-start gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-4 min-w-0">
             <span
-              className="w-14 h-14 rounded-full flex items-center justify-center text-[18px] font-semibold shrink-0"
-              style={{ background: `${T.accent}18`, border: `1.5px solid ${T.accent}40`, color: T.accent }}
+              className="w-14 h-14 rounded-[16px] flex items-center justify-center text-[18px] font-semibold shrink-0"
+              style={{ background: T.accentFaint, border: `1px solid ${T.accentBorder}`, color: T.accent }}
             >
               {member.name[0]}
             </span>
-            <div>
-              <div className="flex items-center gap-2">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-[18px] font-semibold" style={{ color: T.text }}>{member.name}</h2>
                 <Chip tone={isActive ? "good" : "muted"}>{isActive ? "Active" : "Inactive"}</Chip>
               </div>
-              <div className="text-[13px] mt-0.5" style={{ color: T.muted }}>{member.role}</div>
-              <div className="flex items-center gap-3 mt-1.5">
-                <span className="text-[13px]" style={{ color: T.faint }}>{member.phone}</span>
-                <span className="text-[12px]" style={{ color: T.faint }}>·</span>
-                <span className="text-[13px]" style={{ color: T.faint }}>{member.email}</span>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5 text-[13px]" style={{ color: T.muted }}>
+                <CopyableContact type="email" value={member.email} onCopied={(msg) => { setToast(msg); setTimeout(() => setToast(""), 2500); }} />
+                <CopyableContact type="phone" value={member.phone} onCopied={(msg) => { setToast(msg); setTimeout(() => setToast(""), 2500); }} />
               </div>
             </div>
           </div>

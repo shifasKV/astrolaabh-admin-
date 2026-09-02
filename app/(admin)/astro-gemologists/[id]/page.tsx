@@ -2,7 +2,7 @@
 import { useCallback, useMemo, useState, useRef, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Card, Chip, StatCard, GhostBtn, GoldBtn, SectionLink, BackLink, Tabs, Tooltip, Pagination, Select, Modal, Input, ToolbarSearch, InlineFilter, MultiCheck, SortMenu, EmptyState, Toast, ConfirmDialog, MobileAgenda } from "@/components/ui";
+import { Card, Chip, StatCard, GhostBtn, GoldBtn, SectionLink, BackLink, Tabs, Tooltip, Pagination, Select, Modal, Input, ToolbarSearch, InlineFilter, MultiCheck, SortMenu, EmptyState, Toast, ConfirmDialog, MobileAgenda, CopyableContact } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { usePersistentState } from "@/lib/usePersistentState";
 import { EXPERT_PROFILES, EXPERT_AVAILABILITY, MOCK_CONSULTATIONS, MOCK_STONE_RECOMMENDATIONS, MOCK_ORDERS, MOCK_PAYMENTS, MOCK_EXPERT_PAYOUTS } from "@/lib/mock";
@@ -462,6 +462,15 @@ export default function AstroGemologistDetailPage() {
     );
   }
 
+  const EXPERT_EMAILS: Record<string, string> = {
+    usr_expert_01: "sandeep@astrolaabh.house",
+    usr_expert_02: "meenakshi@astrolaabh.house",
+    usr_expert_03: "vtripathi@astrolaabh.house",
+  };
+  const expertEmail =
+    EXPERT_EMAILS[expert.id] ??
+    `${expert.name.split(" ").pop()?.toLowerCase() ?? "expert"}@astrolaabh.house`;
+
   return (
     <>
       <div className="md:h-[calc(100dvh-78px)] md:flex md:flex-col md:min-h-0">
@@ -471,9 +480,9 @@ export default function AstroGemologistDetailPage() {
 
       {/* Identity */}
       <Card className="!p-6 mb-4">
-        <div className="flex flex-wrap items-start gap-5">
+        <div className="flex flex-wrap items-center gap-5">
           <div
-            className="w-14 h-14 rounded-[16px] flex items-center justify-center text-[18px] font-semibold shrink-0"
+            className="w-14 h-14 rounded-[16px] flex items-center justify-center text-[18px] font-semibold shrink-0 self-center"
             style={{ background: T.accentFaint, border: `1px solid ${T.accentBorder}`, color: T.accent }}
           >
             {expert.name.split(" ").map((w) => w[0]).slice(-2).join("")}
@@ -481,45 +490,59 @@ export default function AstroGemologistDetailPage() {
           <div className="flex-1 min-w-0">
             <div className="flex flex-wrap items-center gap-2.5">
               <span className="text-[18px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>{expert.name}</span>
-              {isActive ? (expert.calendlyStatus === "pending" ? <Chip tone="gold">Calendly invite pending</Chip> : <Chip tone="good">active</Chip>) : <Chip tone="danger">inactive</Chip>}
+              <Chip tone="muted">{expert.experience}</Chip>
+              {!isActive && <Chip tone="danger">inactive</Chip>}
             </div>
-            <div className="text-[13px] mt-1" style={{ color: T.muted }}>{expert.specialization}</div>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-[12.5px]" style={{ color: T.muted }}>
-              <span>{expert.experience}</span>
-              <span style={{ color: T.faint }}>·</span>
-              <span>{expert.languages.join(", ")}</span>
-              <span style={{ color: T.faint }}>·</span>
-              <span className="font-medium" style={{ color: T.accent }}>{inr(expert.fee)}/session</span>
-              <span style={{ color: T.faint }}>·</span>
-              <span className="tabular-nums">{expert.phone}</span>
+            <div className="flex flex-wrap items-center gap-2 mt-1.5 text-[13px]" style={{ color: T.muted }}>
+              <span>{expert.specialization}</span>
+              {expert.languages.length > 0 && (
+                <>
+                  <span style={{ color: T.faint }}>·</span>
+                  <span>{expert.languages.join(", ")}</span>
+                </>
+              )}
+            </div>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-[13px]" style={{ color: T.muted }}>
+              <CopyableContact type="email" value={expertEmail} onCopied={(msg) => { setToast(msg); setTimeout(() => setToast(""), 2500); }} />
+              <CopyableContact type="phone" value={expert.phone} onCopied={(msg) => { setToast(msg); setTimeout(() => setToast(""), 2500); }} />
             </div>
           </div>
-          <div className="relative shrink-0" ref={menuRef}>
-            <button type="button" onClick={() => setShowMenu((v) => !v)} className="w-9 h-9 rounded-[9px] flex items-center justify-center transition-colors hover:bg-[rgba(89,82,54,0.08)] cursor-pointer" style={{ border: `1px solid ${T.border}`, color: T.muted }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
-            </button>
-            {showMenu && (
-              <div className="absolute right-0 top-full mt-1 z-50 rounded-[10px] overflow-hidden shadow-lg py-1 min-w-[190px]" style={{ background: T.popover, border: `1px solid ${T.border}`, animation: "fadeIn 120ms ease-out" }}>
-                <button type="button" onClick={() => { setShowMenu(false); router.push(`/astro-gemologists/${id}/edit`); }} className="w-full text-left px-4 py-2.5 text-[13px] flex items-center gap-2.5 transition-colors hover:bg-[rgba(119,123,98,0.08)] cursor-pointer" style={{ color: T.text }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17 3a2.83 2.83 0 114 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
-                  Edit profile
-                </button>
-                {expert.calendlyStatus === "pending" && isActive && (
-                  <button type="button" onClick={() => { setShowMenu(false); setToast("Calendly invitation resent"); setTimeout(() => setToast(""), 3000); }} className="w-full text-left px-4 py-2.5 text-[13px] flex items-center gap-2.5 transition-colors hover:bg-[rgba(119,123,98,0.08)] cursor-pointer" style={{ color: T.text }}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M22 2L11 13"/><path d="M22 2L15 22l-4-9-9-4z"/></svg>
-                    Resend invitation
-                  </button>
-                )}
-                <button type="button" onClick={() => { setShowMenu(false); setShowPayoutModal(true); }} className="w-full text-left px-4 py-2.5 text-[13px] flex items-center gap-2.5 transition-colors hover:bg-[rgba(119,123,98,0.08)] cursor-pointer" style={{ color: T.text }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 2v20M6 6h9a3 3 0 0 1 0 6H5M7 12h8a3 3 0 0 1 0 6H6"/></svg>
-                  Make payout
-                </button>
-                <div className="mx-2 my-1" style={{ borderTop: `1px solid ${T.borderSoft}` }} />
-                <button type="button" onClick={() => { setShowMenu(false); if (isActive) { setConfirmDeactivate(true); } else { setIsActive(true); setToast("Gemologist activated"); setTimeout(() => setToast(""), 3000); } }} className="w-full text-left px-4 py-2.5 text-[13px] flex items-center gap-2.5 transition-colors hover:bg-[rgba(119,123,98,0.08)] cursor-pointer" style={{ color: isActive ? T.danger : T.good }}>
-                  {isActive ? <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/></svg>Deactivate</> : <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M20 6L9 17l-5-5"/></svg>Activate</>}
-                </button>
+          <div className="flex items-center gap-3 shrink-0 ml-auto">
+            <div className="text-right pr-[6px]">
+              <div className="font-title text-[22px] leading-none font-semibold tabular-nums tracking-[-0.02em]" style={{ color: T.text }}>
+                {inr(expert.fee)}
               </div>
-            )}
+              <div className="text-[11px] font-medium tracking-[0.06em] uppercase mt-1" style={{ color: T.faint }}>
+                per session
+              </div>
+            </div>
+            <div className="relative" ref={menuRef}>
+              <button type="button" onClick={() => setShowMenu((v) => !v)} className="w-9 h-9 rounded-[9px] flex items-center justify-center transition-colors hover:bg-[rgba(89,82,54,0.08)] cursor-pointer" style={{ border: `1px solid ${T.border}`, color: T.muted }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
+              </button>
+              {showMenu && (
+                <div className="absolute right-0 top-full mt-1 z-50 rounded-[10px] overflow-hidden shadow-lg py-1 min-w-[190px]" style={{ background: T.popover, border: `1px solid ${T.border}`, animation: "fadeIn 120ms ease-out" }}>
+                  <button type="button" onClick={() => { setShowMenu(false); router.push(`/astro-gemologists/${id}/edit`); }} className="w-full text-left px-4 py-2.5 text-[13px] flex items-center gap-2.5 transition-colors hover:bg-[rgba(119,123,98,0.08)] cursor-pointer" style={{ color: T.text }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17 3a2.83 2.83 0 114 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+                    Edit profile
+                  </button>
+                  {expert.calendlyStatus === "pending" && isActive && (
+                    <button type="button" onClick={() => { setShowMenu(false); setToast("Calendly invitation resent"); setTimeout(() => setToast(""), 3000); }} className="w-full text-left px-4 py-2.5 text-[13px] flex items-center gap-2.5 transition-colors hover:bg-[rgba(119,123,98,0.08)] cursor-pointer" style={{ color: T.text }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M22 2L11 13"/><path d="M22 2L15 22l-4-9-9-4z"/></svg>
+                      Resend invitation
+                    </button>
+                  )}
+                  <button type="button" onClick={() => { setShowMenu(false); setShowPayoutModal(true); }} className="w-full text-left px-4 py-2.5 text-[13px] flex items-center gap-2.5 transition-colors hover:bg-[rgba(119,123,98,0.08)] cursor-pointer" style={{ color: T.text }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 2v20M6 6h9a3 3 0 0 1 0 6H5M7 12h8a3 3 0 0 1 0 6H6"/></svg>
+                    Make payout
+                  </button>
+                  <div className="mx-2 my-1" style={{ borderTop: `1px solid ${T.borderSoft}` }} />
+                  <button type="button" onClick={() => { setShowMenu(false); if (isActive) { setConfirmDeactivate(true); } else { setIsActive(true); setToast("Gemologist activated"); setTimeout(() => setToast(""), 3000); } }} className="w-full text-left px-4 py-2.5 text-[13px] flex items-center gap-2.5 transition-colors hover:bg-[rgba(119,123,98,0.08)] cursor-pointer" style={{ color: isActive ? T.danger : T.good }}>
+                    {isActive ? <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/></svg>Deactivate</> : <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M20 6L9 17l-5-5"/></svg>Activate</>}
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </Card>

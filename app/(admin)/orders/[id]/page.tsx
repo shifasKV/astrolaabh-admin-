@@ -1,12 +1,12 @@
 "use client";
 import { use, useState } from "react";
 import Link from "next/link";
-import { Card, Chip, GoldBtn, GhostBtn, Modal, Input, Select, Textarea, DateInput, TimeInput, ShopifyButton, BackLink, Toast, ConfirmDialog } from "@/components/ui";
+import { Card, Chip, GoldBtn, GhostBtn, Modal, Input, Select, Textarea, DateInput, TimeInput, ShopifyButton, BackLink, Toast, ConfirmDialog, CopyableContact } from "@/components/ui";
+import { MarkAsPaidModal, type MarkAsPaidResult } from "@/components/orders/MarkAsPaidModal";
 import { T } from "@/lib/theme";
 import { MOCK_ORDERS, MOCK_CUSTOMERS, MOCK_CERTIFICATES, MOCK_ENERGISATION } from "@/lib/mock";
 import { ENERGISATION } from "@/lib/catalog";
 import { inr } from "@/lib/types";
-import * as V from "@/lib/validators";
 
 type CertUploadTarget = "lab_authenticity" | "energisation" | null;
 type PipelineStep = 0 | 1 | 2 | 3;
@@ -43,10 +43,12 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
   const [localPaymentStatus, setLocalPaymentStatus] = useState(order?.paymentStatus ?? "pending");
   const [linkSent, setLinkSent] = useState(false);
+  const [checkoutCopied, setCheckoutCopied] = useState(false);
   const [showMarkPaid, setShowMarkPaid] = useState(false);
-  const [paymentRef, setPaymentRef] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState("");
-  const [payErrors, setPayErrors] = useState<Record<string, string>>({});
+  const [paidMethodLabel, setPaidMethodLabel] = useState("");
+  const [paidReference, setPaidReference] = useState("");
+  const [paidNotes, setPaidNotes] = useState("");
+  const [localShipAddress, setLocalShipAddress] = useState("");
 
   const [localItemStatuses, setLocalItemStatuses] = useState<Record<string, string>>({});
   const [localVendorNames, setLocalVendorNames] = useState<Record<string, string>>({});
@@ -92,11 +94,22 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   }
 
   const customer = MOCK_CUSTOMERS.find((c) => c.id === order.customerId);
+  const checkoutLink = `https://checkout.astrolaabh.house/o/${order.id}`;
   const certs = MOCK_CERTIFICATES.filter((c) => c.orderId === order.id);
   const energisation = MOCK_ENERGISATION.find((e) => e.orderId === order.id);
   const labCert = certs.find((c) => c.type === "lab_authenticity");
   const energCert = certs.find((c) => c.type === "energisation");
   const isPaid = localPaymentStatus === "paid";
+  const isRecommended = Boolean(order.recommendationId);
+  const shipAddress = localShipAddress || customer?.shippingAddress || "";
+
+  const METHOD_LABELS: Record<string, string> = {
+    bank_transfer: "Bank transfer (NEFT)",
+    upi: "UPI",
+    card: "Card",
+    cheque: "Cheque",
+    cash: "Cash",
+  };
 
   const getItemStatus = (sku: string) => localItemStatuses[sku] ?? order.items.find((i) => i.sku === sku)?.itemStatus ?? "order_placed";
   const isItemReceived = (s: string) => s === "order_received" || s === "quality_passed" || s === "in_crafting" || s === "ready_to_ship";
@@ -137,18 +150,13 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
   const flash = (msg: string) => { setToast(msg); setTimeout(() => setToast(""), 3000); };
 
-  const handleMarkPaid = () => {
-    const e: Record<string, string> = {
-      paymentMethod: V.required(paymentMethod, "Payment method"),
-      paymentRef: V.required(paymentRef, "Payment reference"),
-    };
-    setPayErrors(e);
-    if (!V.isClean(e)) return;
+  const handleMarkPaid = (result: MarkAsPaidResult) => {
     setLocalPaymentStatus("paid");
+    setPaidMethodLabel(METHOD_LABELS[result.method] ?? result.method);
+    setPaidReference(result.reference);
+    setPaidNotes(result.notes ?? "");
+    if (result.shippingAddress) setLocalShipAddress(result.shippingAddress);
     setShowMarkPaid(false);
-    setPaymentRef("");
-    setPaymentMethod("");
-    setPayErrors({});
     flash("Payment marked as received");
   };
 
@@ -811,39 +819,6 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
         {/* Context rail — who, where, meta */}
         <aside className="w-full xl:w-[320px] shrink-0 space-y-4 xl:sticky xl:top-4">
-        {/* Customer */}
-        {customer ? (
-          <Link href={`/customers/${customer.id}`} className="block group">
-            <Card>
-              <div className="flex items-center gap-3 mb-3">
-                <span className="w-9 h-9 rounded-[10px] flex items-center justify-center text-[12.5px] font-semibold shrink-0" style={{ background: T.accentFaint, border: `1px solid ${T.accentBorder}`, color: T.accent }}>
-                  {customer.name.split(" ").map((w) => w[0]).slice(0, 2).join("")}
-                </span>
-                <div className="min-w-0">
-                  <div className="text-[10px] font-medium tracking-[0.08em] uppercase" style={{ color: T.faint }}>Customer</div>
-                  <div className="text-[14px] font-semibold truncate" style={{ color: T.text }}>{customer.name}</div>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-medium tracking-[0.08em] uppercase" style={{ color: T.faint }}>Phone</span>
-                  <span className="text-[13px] font-medium" style={{ color: T.text }}>{customer.phone}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-medium tracking-[0.08em] uppercase" style={{ color: T.faint }}>Email</span>
-                  <span className="text-[13px] font-medium truncate ml-3" style={{ color: T.text }}>{customer.email}</span>
-                </div>
-              </div>
-            </Card>
-          </Link>
-        ) : (
-          <Card>
-            <div className="flex items-center justify-between text-[13px]">
-              <span className="text-[10px] font-medium tracking-[0.08em] uppercase" style={{ color: T.faint }}>Customer</span>
-              <span className="font-medium" style={{ color: T.text }}>{order.customerName}</span>
-            </div>
-          </Card>
-        )}
         {/* Payment — pending CTAs replace details until paid */}
         {!isPaid ? (
           <div
@@ -851,24 +826,47 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
             style={{ background: "rgba(160,125,56,0.08)", border: "1px solid rgba(160,125,56,0.28)", boxShadow: T.shadow }}
           >
             <div className="mb-4 pb-4" style={{ borderBottom: "1px solid rgba(160,125,56,0.18)" }}>
-              <div className="flex items-center gap-2.5 mb-1.5">
+              <div className="flex items-center gap-2.5 mb-3">
                 <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: T.gold }} />
-                <h2 className="font-title text-[18px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>Payment pending</h2>
+                <h2 className="font-title text-[18px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>
+                  {isRecommended ? "Recommended" : "Payment pending"}
+                </h2>
               </div>
-              <p className="text-[13.5px]" style={{ color: T.muted }}>
-                Fulfillment is locked until payment is received.
-              </p>
+              <div className="text-[10px] font-medium tracking-[0.08em] uppercase mb-1.5" style={{ color: T.faint }}>Checkout link</div>
+              <div className="flex items-center gap-2">
+                <div
+                  className="flex-1 min-w-0 h-10 px-3 rounded-[9px] flex items-center text-[12px] truncate"
+                  style={{ background: "rgba(255,254,250,0.7)", border: "1px solid rgba(160,125,56,0.22)", color: T.text }}
+                  title={checkoutLink}
+                >
+                  {checkoutLink}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(checkoutLink);
+                    flash("Checkout link copied");
+                    setCheckoutCopied(true);
+                    setTimeout(() => setCheckoutCopied(false), 2000);
+                  }}
+                  className="shrink-0 h-10 px-3 rounded-[9px] text-[12px] font-medium cursor-pointer transition-colors hover:bg-[rgba(160,125,56,0.14)]"
+                  style={{ color: checkoutCopied ? T.good : T.text, border: "1px solid rgba(160,125,56,0.28)", background: "rgba(255,254,250,0.6)" }}
+                  title="Copy checkout link"
+                >
+                  {checkoutCopied ? "Copied" : "Copy"}
+                </button>
+              </div>
             </div>
             <div className="flex flex-col gap-2.5">
               <button
                 onClick={() => {
                   setLinkSent(true);
-                  flash(linkSent ? "Payment link resent to customer" : "Payment link sent to customer");
+                  flash(linkSent ? "Checkout link resent to customer" : "Checkout link sent to customer");
                 }}
                 className="h-11 w-full px-5 rounded-[10px] text-[14px] font-semibold cursor-pointer transition-all hover:brightness-110"
                 style={{ background: T.accent, color: T.accentInk }}
               >
-                {linkSent ? "Resend link" : "Send payment link"}
+                {linkSent ? "Resend link" : "Send checkout link"}
               </button>
               <button
                 onClick={() => setShowMarkPaid(true)}
@@ -888,11 +886,13 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
             <div className="space-y-2.5">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-medium tracking-[0.08em] uppercase" style={{ color: T.faint }}>Method</span>
-                <span className="text-[13px] font-medium" style={{ color: T.text }}>Bank transfer (NEFT)</span>
+                <span className="text-[13px] font-medium" style={{ color: T.text }}>{paidMethodLabel || "Bank transfer (NEFT)"}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-medium tracking-[0.08em] uppercase" style={{ color: T.faint }}>Transaction ID</span>
-                <span className="text-[13px] font-medium tabular-nums" style={{ color: T.accent }}>{`TXN${order.id.replace(/\D/g, "").slice(0, 8)}`}</span>
+                <span className="text-[13px] font-medium tabular-nums" style={{ color: T.accent }}>
+                  {paidReference || `TXN${order.id.replace(/\D/g, "").slice(0, 8)}`}
+                </span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-medium tracking-[0.08em] uppercase" style={{ color: T.faint }}>Paid at</span>
@@ -900,6 +900,61 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                   {new Date(new Date(order.placedAt).getTime() + 3600000).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) + " · " + new Date(new Date(order.placedAt).getTime() + 3600000).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true })}
                 </span>
               </div>
+              {paidNotes ? (
+                <div>
+                  <div className="text-[10px] font-medium tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>Notes</div>
+                  <div className="text-[13px] leading-relaxed" style={{ color: T.text }}>{paidNotes}</div>
+                </div>
+              ) : null}
+            </div>
+          </Card>
+        )}
+
+        {/* Customer */}
+        {customer ? (
+          <Link href={`/customers/${customer.id}`} className="block group">
+            <Card>
+              <div className="flex items-center gap-3 mb-3">
+                <span className="w-9 h-9 rounded-[10px] flex items-center justify-center text-[12.5px] font-semibold shrink-0" style={{ background: T.accentFaint, border: `1px solid ${T.accentBorder}`, color: T.accent }}>
+                  {customer.name.split(" ").map((w) => w[0]).slice(0, 2).join("")}
+                </span>
+                <div className="min-w-0">
+                  <div className="text-[10px] font-medium tracking-[0.08em] uppercase" style={{ color: T.faint }}>Customer</div>
+                  <div className="text-[14px] font-semibold truncate" style={{ color: T.text }}>{customer.name}</div>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-[10px] font-medium tracking-[0.08em] uppercase shrink-0" style={{ color: T.faint }}>Phone</span>
+                  <CopyableContact
+                    type="phone"
+                    value={customer.phone}
+                    showIcon={false}
+                    color={T.text}
+                    textClassName="text-[13px] font-medium"
+                    onCopied={flash}
+                  />
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-[10px] font-medium tracking-[0.08em] uppercase shrink-0" style={{ color: T.faint }}>Email</span>
+                  <CopyableContact
+                    type="email"
+                    value={customer.email}
+                    showIcon={false}
+                    color={T.text}
+                    textClassName="text-[13px] font-medium"
+                    className="justify-end"
+                    onCopied={flash}
+                  />
+                </div>
+              </div>
+            </Card>
+          </Link>
+        ) : (
+          <Card>
+            <div className="flex items-center justify-between text-[13px]">
+              <span className="text-[10px] font-medium tracking-[0.08em] uppercase" style={{ color: T.faint }}>Customer</span>
+              <span className="font-medium" style={{ color: T.text }}>{order.customerName}</span>
             </div>
           </Card>
         )}
@@ -919,8 +974,8 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
             </div>
             <div>
               <div className="text-[10px] font-medium tracking-[0.08em] uppercase mb-0.5" style={{ color: T.faint }}>Ship to</div>
-              <div className="text-[13px] font-medium leading-relaxed" style={{ color: customer?.shippingAddress ? T.text : T.faint }}>
-                {customer ? `${customer.name}, ${customer.shippingAddress || "—"}` : "—"}
+              <div className="text-[13px] font-medium leading-relaxed" style={{ color: shipAddress ? T.text : T.faint }}>
+                {customer ? `${customer.name}, ${shipAddress || "—"}` : "—"}
               </div>
             </div>
             <div className="flex items-center justify-between">
@@ -963,30 +1018,16 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
       {/* ============ MODALS ============ */}
 
-      {/* Mark as paid */}
-      <Modal open={showMarkPaid} onClose={() => setShowMarkPaid(false)} title="Record payment" wide>
-        <div className="space-y-3">
-          <Select
-            value={paymentMethod}
-            onChange={(v) => { setPaymentMethod(v); setPayErrors((p) => (p.paymentMethod ? { ...p, paymentMethod: "" } : p)); }}
-            error={payErrors.paymentMethod}
-            label="Payment method"
-            options={[
-              { value: "", label: "Select…" },
-              { value: "bank_transfer", label: "Bank transfer / NEFT / IMPS" },
-              { value: "upi", label: "UPI" },
-              { value: "card", label: "Credit / Debit card" },
-              { value: "cheque", label: "Cheque" },
-              { value: "cash", label: "Cash" },
-            ]}
-          />
-          <Input value={paymentRef} onChange={(v) => { setPaymentRef(v); setPayErrors((p) => (p.paymentRef ? { ...p, paymentRef: "" } : p)); }} onBlur={() => setPayErrors((p) => ({ ...p, paymentRef: V.required(paymentRef, "Payment reference") }))} error={payErrors.paymentRef} label="Payment reference / transaction ID" placeholder="e.g. UTR number, cheque number" />
-        </div>
-        <div className="flex gap-2.5 mt-5">
-          <GoldBtn onClick={handleMarkPaid}>Confirm payment</GoldBtn>
-          <GhostBtn onClick={() => setShowMarkPaid(false)}>Cancel</GhostBtn>
-        </div>
-      </Modal>
+      <MarkAsPaidModal
+        open={showMarkPaid}
+        onClose={() => setShowMarkPaid(false)}
+        onConfirm={handleMarkPaid}
+        amount={order.total}
+        customerName={order.customerName}
+        contextLabel="Order total"
+        requireAddress={isRecommended}
+        existingAddress={shipAddress}
+      />
 
       {/* Certificate Upload */}
       <Modal

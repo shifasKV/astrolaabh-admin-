@@ -71,7 +71,11 @@ const SUBMISSIONS_KEY = "astro:leads:subs:v3";
 const SEEN_KEY = "astro:leads:seen:v3";
 const ACTIVE_EXECS = MOCK_SALES_MEMBERS.filter((m) => m.status === "active");
 
-const EXPERT_EMAILS: Record<string, string> = { "sandeep@astrolaabh.house": "usr_expert_01" };
+const EXPERT_EMAILS: Record<string, string> = {
+  "sandeep@astrolaabh.house": "usr_expert_01",
+  "meenakshi@astrolaabh.house": "usr_expert_02",
+  "vtripathi@astrolaabh.house": "usr_expert_03",
+};
 
 /** Resolve an order's placedBy (email or id) to a display name + role. */
 export function placedByInfo(placedBy?: string): { name: string; role: string } {

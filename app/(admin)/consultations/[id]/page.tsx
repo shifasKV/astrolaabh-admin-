@@ -1,9 +1,10 @@
 "use client";
 import { use, useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, GoldBtn, GhostBtn, Modal, Input, Textarea, BackLink, Toast, ConfirmDialog } from "@/components/ui";
+import { PageHeader, Card, Chip, GoldBtn, GhostBtn, Modal, Input, Textarea, BackLink, Toast, ConfirmDialog, CopyableContact } from "@/components/ui";
+import { MarkAsPaidModal, type MarkAsPaidResult } from "@/components/orders/MarkAsPaidModal";
 import { T } from "@/lib/theme";
-import { MOCK_CONSULTATIONS, MOCK_CUSTOMERS, MOCK_STONE_RECOMMENDATIONS, MOCK_REMEDY_RECOMMENDATIONS, EXPERT_PROFILES, getExpertDates, getExpertSlots } from "@/lib/mock";
+import { MOCK_CONSULTATIONS, MOCK_CUSTOMERS, MOCK_STONE_RECOMMENDATIONS, MOCK_REMEDY_RECOMMENDATIONS, MOCK_ORDERS, EXPERT_PROFILES, getExpertDates, getExpertSlots } from "@/lib/mock";
 import type { ExpertProfile, TimeSlot } from "@/lib/mock";
 import { STONES } from "@/lib/catalog";
 
@@ -33,9 +34,13 @@ export default function ConsultationDetailPage({ params }: { params: Promise<{ i
   const [localStatus, setLocalStatus] = useState(consultation?.status ?? "scheduled");
   const [localNoShowBy, setLocalNoShowBy] = useState(consultation?.noShowBy ?? "");
   const [confirmNoShow, setConfirmNoShow] = useState<"customer" | "expert" | null>(null);
-  const [confirmMarkPaid, setConfirmMarkPaid] = useState(false);
+  const [showMarkPaid, setShowMarkPaid] = useState(false);
   const [localPaymentStatus, setLocalPaymentStatus] = useState(consultation?.paymentStatus ?? "pending");
+  const [paidMethodLabel, setPaidMethodLabel] = useState("");
+  const [paidReference, setPaidReference] = useState("");
+  const [paidNotes, setPaidNotes] = useState("");
   const [linkSent, setLinkSent] = useState(false);
+  const [checkoutCopied, setCheckoutCopied] = useState(false);
   const [stoneLinkSent, setStoneLinkSent] = useState(false);
   const actionMenuRef = useRef<HTMLDivElement>(null);
 
@@ -59,6 +64,10 @@ export default function ConsultationDetailPage({ params }: { params: Promise<{ i
   const customer = MOCK_CUSTOMERS.find((c) => c.id === consultation.customerId);
   const recommendation = MOCK_STONE_RECOMMENDATIONS.find((r) => r.consultationId === consultation.id);
   const remedy = MOCK_REMEDY_RECOMMENDATIONS.find((r) => r.consultationId === consultation.id);
+  const checkoutLink = `https://checkout.astrolaabh.house/c/${consultation.id}`;
+  const recommendationOrderId =
+    recommendation?.orderId ??
+    MOCK_ORDERS.find((o) => o.recommendationId === recommendation?.id || (recommendation && o.consultationId === consultation.id))?.id;
 
   const openRescheduleModal = () => {
     const currentExpert = EXPERT_PROFILES.find((e) => e.id === consultation.expertId) ?? EXPERT_PROFILES[0];
@@ -131,6 +140,24 @@ export default function ConsultationDetailPage({ params }: { params: Promise<{ i
                 <span style={{ color: T.faint }}>·</span>
                 <span className="tabular-nums">{dt.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })} · {dt.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true })}</span>
               </div>
+              {customer && (customer.email || customer.phone) && (
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-[13px]" style={{ color: T.muted }}>
+                  {customer.email && (
+                    <CopyableContact
+                      type="email"
+                      value={customer.email}
+                      onCopied={(msg) => { setToast(msg); setTimeout(() => setToast(""), 2500); }}
+                    />
+                  )}
+                  {customer.phone && (
+                    <CopyableContact
+                      type="phone"
+                      value={customer.phone}
+                      onCopied={(msg) => { setToast(msg); setTimeout(() => setToast(""), 2500); }}
+                    />
+                  )}
+                </div>
+              )}
             </div>
           </div>
           <div className="relative shrink-0" ref={actionMenuRef}>
@@ -209,53 +236,72 @@ export default function ConsultationDetailPage({ params }: { params: Promise<{ i
               <div>
                 <div className="text-[11px] font-medium tracking-[0.06em] uppercase mb-2" style={{ color: T.faint }}>Stone recommendation</div>
                 {recommendation ? (
-                  <div className="rounded-[12px] p-4" style={{ background: T.accentFaint, border: `1px solid ${T.accentBorder}` }}>
-                    <div className="flex items-start gap-3">
-                      {(() => {
-                        const stone = recommendation.matchedSku
-                          ? STONES.find((s) => s.sku === recommendation.matchedSku)
-                          : STONES.find((s) =>
-                              recommendation.gemstone.toLowerCase().includes(s.gemName.toLowerCase()) ||
-                              recommendation.gemstone.toLowerCase().includes(s.english.toLowerCase())
-                            );
-                        return (
-                          <div
-                            className="w-[72px] h-[72px] rounded-[10px] shrink-0 overflow-hidden flex items-center justify-center"
-                            style={{ background: stone?.shadeHex ? `${stone.shadeHex}22` : "rgba(89,82,54,0.06)", border: `1px solid ${T.borderSoft}` }}
-                          >
-                            {stone?.image ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img src={stone.image} alt={recommendation.gemstone} className="w-full h-full object-cover" />
-                            ) : (
-                              <span className="text-[22px]" aria-hidden>💎</span>
-                            )}
-                          </div>
+                  (() => {
+                    const stone = recommendation.matchedSku
+                      ? STONES.find((s) => s.sku === recommendation.matchedSku)
+                      : STONES.find((s) =>
+                          recommendation.gemstone.toLowerCase().includes(s.gemName.toLowerCase()) ||
+                          recommendation.gemstone.toLowerCase().includes(s.english.toLowerCase())
                         );
-                      })()}
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-start justify-between gap-2">
-                          <div className="text-[16px] font-semibold min-w-0" style={{ color: T.text }}>{recommendation.gemstone}</div>
-                          {recommendation.status === "converted_to_order" && recommendation.orderId ? (
-                            <Link href={`/orders/${recommendation.orderId}`} className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold shrink-0 hover:underline underline-offset-4" style={{ color: T.accent }}>
-                              View order {recommendation.orderId}
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M7 17 17 7M17 7H9M17 7v8" /></svg>
-                            </Link>
+                    const cardInner = (
+                      <div className="flex items-start gap-3">
+                        <div
+                          className="w-[72px] h-[72px] rounded-[10px] shrink-0 overflow-hidden flex items-center justify-center"
+                          style={{ background: stone?.shadeHex ? `${stone.shadeHex}22` : "rgba(89,82,54,0.06)", border: `1px solid ${T.borderSoft}` }}
+                        >
+                          {stone?.image ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={stone.image} alt={recommendation.gemstone} className="w-full h-full object-cover" />
                           ) : (
-                            <GoldBtn
-                              onClick={() => setShowSendLinkModal(true)}
-                              className="!h-9 !px-4 !text-[12.5px] shrink-0"
-                            >
-                              {stoneLinkSent ? "Resend Payment Link" : "Send Payment Link"}
-                            </GoldBtn>
+                            <span className="text-[22px]" aria-hidden>💎</span>
                           )}
                         </div>
-                        <div className="flex flex-wrap gap-x-5 gap-y-1 mt-2 text-[12.5px]">
-                          <span style={{ color: T.muted }}>Weight <span className="font-medium" style={{ color: T.text }}>{recommendation.weightRange}</span></span>
-                          <span style={{ color: T.muted }}>Purpose <span className="font-medium" style={{ color: T.text }}>{recommendation.purpose ?? "—"}</span></span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-start justify-between gap-2">
+                            <div className="text-[16px] font-semibold min-w-0" style={{ color: T.text }}>{recommendation.gemstone}</div>
+                            {recommendationOrderId ? (
+                              <span className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold shrink-0" style={{ color: T.accent }}>
+                                View order {recommendationOrderId}
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M7 17 17 7M17 7H9M17 7v8" /></svg>
+                              </span>
+                            ) : (
+                              <span
+                                role="button"
+                                tabIndex={0}
+                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowSendLinkModal(true); }}
+                                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); setShowSendLinkModal(true); } }}
+                                className="inline-flex items-center h-9 px-4 rounded-[9px] text-[12.5px] font-semibold shrink-0 cursor-pointer"
+                                style={{ background: T.accent, color: T.accentInk }}
+                              >
+                                {stoneLinkSent ? "Resend Payment Link" : "Send Payment Link"}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex flex-wrap gap-x-5 gap-y-1 mt-2 text-[12.5px]">
+                            <span style={{ color: T.muted }}>Weight <span className="font-medium" style={{ color: T.text }}>{recommendation.weightRange}</span></span>
+                            <span style={{ color: T.muted }}>Purpose <span className="font-medium" style={{ color: T.text }}>{recommendation.purpose ?? "—"}</span></span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </div>
+                    );
+                    /* Always navigate to the linked recommended order (payment-pending or in progress) */
+                    if (recommendationOrderId) {
+                      return (
+                        <Link
+                          href={`/orders/${recommendationOrderId}`}
+                          className="block rounded-[12px] p-4 transition-colors hover:!bg-[rgba(119,123,98,0.14)]"
+                          style={{ background: T.accentFaint, border: `1px solid ${T.accentBorder}` }}
+                        >
+                          {cardInner}
+                        </Link>
+                      );
+                    }
+                    return (
+                      <div className="rounded-[12px] p-4" style={{ background: T.accentFaint, border: `1px solid ${T.accentBorder}` }}>
+                        {cardInner}
+                      </div>
+                    );
+                  })()
                 ) : (
                   <div className="rounded-[12px] p-4 text-[13px]" style={{ background: "rgba(89,82,54,0.03)", border: `1px dashed ${T.border}`, color: T.faint }}>No stone recommended yet.</div>
                 )}
@@ -320,75 +366,62 @@ export default function ConsultationDetailPage({ params }: { params: Promise<{ i
 
         {/* Context rail */}
         <aside className="w-full xl:w-[320px] shrink-0 space-y-4 xl:sticky xl:top-4">
-          {customer ? (
-            <Link href={`/customers/${customer.id}`} className="block group">
-              <Card className="!p-5 card-interactive cursor-pointer">
-                {/* Identity header */}
-                <div className="flex items-center gap-3 pb-4 mb-4" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
-                  <span className="w-10 h-10 rounded-[12px] flex items-center justify-center text-[13.5px] font-semibold shrink-0" style={{ background: T.accentFaint, border: `1px solid ${T.accentBorder}`, color: T.accent }}>
-                    {customer.name.split(" ").map((w) => w[0]).slice(0, 2).join("")}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-[10px] font-medium tracking-[0.08em] uppercase" style={{ color: T.faint }}>Customer</div>
-                    <div className="text-[14.5px] font-semibold truncate" style={{ color: T.text }}>{customer.name}</div>
-                  </div>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" style={{ color: T.faint }}><path d="m9 18 6-6-6-6" /></svg>
-                </div>
-                {/* Birth — full width */}
-                <div className="mb-3.5">
-                  <div className="text-[10px] font-medium tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>Birth</div>
-                  <div className="text-[13px] font-medium tabular-nums" style={{ color: T.text }}>{customer.birthDate} · {customer.birthTime}</div>
-                  <div className="text-[12.5px] mt-0.5" style={{ color: T.muted }}>{customer.birthPlace}</div>
-                </div>
-                {/* Chart facts — 2-col grid, no dividers */}
-                <div className="grid grid-cols-2 gap-y-3 gap-x-4">
-                  {[["Rashi", customer.rashi || "—"], ["Nakshatra", customer.nakshatra || "—"], ["Chart ref", customer.chartRef || "—"]].map(([k, v]) => (
-                    <div key={k}>
-                      <div className="text-[10px] font-medium tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>{k}</div>
-                      <div className="text-[13px] font-medium" style={{ color: T.text }}>{v}</div>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-            </Link>
-          ) : (
-            <Card className="!p-5"><h2 className="text-[15px] font-semibold mb-1" style={{ color: T.text }}>Customer</h2><p className="text-[13px]" style={{ color: T.muted }}>Record not found.</p></Card>
-          )}
-
           {!isPaid ? (
             <div
               className="rounded-[16px] p-5"
               style={{ background: "rgba(160,125,56,0.08)", border: "1px solid rgba(160,125,56,0.28)", boxShadow: T.shadow }}
             >
               <div className="mb-4 pb-4" style={{ borderBottom: "1px solid rgba(160,125,56,0.18)" }}>
-                <div className="flex items-center gap-2.5 mb-1.5">
+                <div className="flex items-center gap-2.5 mb-3">
                   <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: T.gold }} />
                   <h2 className="font-title text-[18px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>Payment pending</h2>
                 </div>
-                <p className="text-[13.5px]" style={{ color: T.muted }}>
-                  The customer hasn&apos;t paid the consultation fee yet.
-                </p>
-              </div>
-              <div className="pb-4 mb-4" style={{ borderBottom: "1px solid rgba(160,125,56,0.18)" }}>
-                <div className="text-[10px] font-medium tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>Fee</div>
-                <div className="font-title text-[24px] leading-none font-semibold tabular-nums" style={{ color: T.text }}>
-                  {consultation.fee ? `₹${consultation.fee.toLocaleString("en-IN")}` : "—"}
+                <div className="mb-4">
+                  <div className="text-[10px] font-medium tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>Fee</div>
+                  <div className="font-title text-[24px] leading-none font-semibold tabular-nums" style={{ color: T.text }}>
+                    {consultation.fee ? `₹${consultation.fee.toLocaleString("en-IN")}` : "—"}
+                  </div>
+                </div>
+                <div className="text-[10px] font-medium tracking-[0.08em] uppercase mb-1.5" style={{ color: T.faint }}>Checkout link</div>
+                <div className="flex items-center gap-2">
+                  <div
+                    className="flex-1 min-w-0 h-10 px-3 rounded-[9px] flex items-center text-[12px] truncate"
+                    style={{ background: "rgba(255,254,250,0.7)", border: "1px solid rgba(160,125,56,0.22)", color: T.text }}
+                    title={checkoutLink}
+                  >
+                    {checkoutLink}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(checkoutLink);
+                      setToast("Checkout link copied");
+                      setTimeout(() => setToast(""), 3000);
+                      setCheckoutCopied(true);
+                      setTimeout(() => setCheckoutCopied(false), 2000);
+                    }}
+                    className="shrink-0 h-10 px-3 rounded-[9px] text-[12px] font-medium cursor-pointer transition-colors hover:bg-[rgba(160,125,56,0.14)]"
+                    style={{ color: checkoutCopied ? T.good : T.text, border: "1px solid rgba(160,125,56,0.28)", background: "rgba(255,254,250,0.6)" }}
+                    title="Copy checkout link"
+                  >
+                    {checkoutCopied ? "Copied" : "Copy"}
+                  </button>
                 </div>
               </div>
               <div className="flex flex-col gap-2.5">
                 <button
                   onClick={() => {
                     setLinkSent(true);
-                    setToast(linkSent ? "Payment link resent to customer" : "Payment link sent to customer");
+                    setToast(linkSent ? "Checkout link resent to customer" : "Checkout link sent to customer");
                     setTimeout(() => setToast(""), 3000);
                   }}
                   className="h-11 w-full px-5 rounded-[10px] text-[14px] font-semibold cursor-pointer transition-all hover:brightness-110"
                   style={{ background: T.accent, color: T.accentInk }}
                 >
-                  {linkSent ? "Resend link" : "Send payment link"}
+                  {linkSent ? "Resend link" : "Send checkout link"}
                 </button>
                 <button
-                  onClick={() => setConfirmMarkPaid(true)}
+                  onClick={() => setShowMarkPaid(true)}
                   className="h-11 w-full px-5 rounded-[10px] text-[14px] font-semibold cursor-pointer transition-colors hover:bg-[rgba(160,125,56,0.14)]"
                   style={{ color: T.gold, border: "1px solid rgba(160,125,56,0.35)", background: "rgba(255,254,250,0.6)" }}
                 >
@@ -399,22 +432,71 @@ export default function ConsultationDetailPage({ params }: { params: Promise<{ i
           ) : (
             <Card className="!p-5">
               <div className="flex items-center justify-between mb-3.5">
-                <h2 className="text-[15px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>Payment</h2>
+                <h2 className="text-[15px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>Payment details</h2>
                 <Chip tone="good">Paid</Chip>
               </div>
-              <div className="pb-3.5 mb-3.5" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
-                <div className="text-[10px] font-medium tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>Fee</div>
-                <div className="font-title text-[24px] leading-none font-semibold tabular-nums" style={{ color: T.text }}>
-                  {consultation.fee ? `₹${consultation.fee.toLocaleString("en-IN")}` : "—"}
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-medium tracking-[0.08em] uppercase" style={{ color: T.faint }}>Method</span>
+                  <span className="text-[13px] font-medium" style={{ color: T.text }}>{paidMethodLabel || "Bank transfer (NEFT)"}</span>
                 </div>
-              </div>
-              <div>
-                <div className="text-[10px] font-medium tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>Paid at</div>
-                <div className="text-[13px] font-medium tabular-nums" style={{ color: T.text }}>
-                  {dt.toLocaleDateString("en-IN", { day: "numeric", month: "short" })} · {dt.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true })}
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-medium tracking-[0.08em] uppercase" style={{ color: T.faint }}>Transaction ID</span>
+                  <span className="text-[13px] font-medium tabular-nums" style={{ color: T.accent }}>
+                    {paidReference || `TXN${consultation.id.replace(/\D/g, "").slice(0, 8) || "001"}`}
+                  </span>
                 </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-medium tracking-[0.08em] uppercase" style={{ color: T.faint }}>Paid at</span>
+                  <span className="text-[12.5px] tabular-nums" style={{ color: T.muted }}>
+                    {dt.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })} · {dt.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true })}
+                  </span>
+                </div>
+                {paidNotes ? (
+                  <div>
+                    <div className="text-[10px] font-medium tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>Notes</div>
+                    <div className="text-[13px] leading-relaxed" style={{ color: T.text }}>{paidNotes}</div>
+                  </div>
+                ) : null}
               </div>
             </Card>
+          )}
+
+          {customer ? (
+            <Link href={`/customers/${customer.id}`} className="block group">
+              <Card className="!p-5 card-interactive cursor-pointer">
+                <div className="flex items-center justify-between mb-3.5">
+                  <h2 className="text-[15px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>Birth details</h2>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" style={{ color: T.faint }}><path d="m9 18 6-6-6-6" /></svg>
+                </div>
+                <div className="space-y-3 mb-3.5">
+                  <div>
+                    <div className="text-[10px] font-medium tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>Location</div>
+                    <div className="text-[13px] font-medium" style={{ color: T.text }}>{customer.birthPlace || "—"}</div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <div className="text-[10px] font-medium tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>Date</div>
+                      <div className="text-[13px] font-medium tabular-nums" style={{ color: T.text }}>{customer.birthDate || "—"}</div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] font-medium tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>Time</div>
+                      <div className="text-[13px] font-medium tabular-nums" style={{ color: T.text }}>{customer.birthTime || "—"}</div>
+                    </div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-y-3 gap-x-4 pt-3.5" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+                  {[["Rashi", customer.rashi || "—"], ["Nakshatra", customer.nakshatra || "—"], ["Chart ref", customer.chartRef || "—"]].map(([k, v]) => (
+                    <div key={k}>
+                      <div className="text-[10px] font-medium tracking-[0.08em] uppercase mb-1" style={{ color: T.faint }}>{k}</div>
+                      <div className="text-[13px] font-medium" style={{ color: T.text }}>{v}</div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            </Link>
+          ) : (
+            <Card className="!p-5"><h2 className="text-[15px] font-semibold mb-1" style={{ color: T.text }}>Birth details</h2><p className="text-[13px]" style={{ color: T.muted }}>Record not found.</p></Card>
           )}
         </aside>
       </div>
@@ -560,14 +642,28 @@ export default function ConsultationDetailPage({ params }: { params: Promise<{ i
       />
 
       {/* Mark payment as received */}
-      <ConfirmDialog
-        open={confirmMarkPaid}
-        onClose={() => setConfirmMarkPaid(false)}
-        onConfirm={() => { setLocalPaymentStatus("paid"); setToast("Payment marked as received"); setTimeout(() => setToast(""), 3000); }}
-        title="Mark payment as received?"
-        message="Confirm that the consultation fee has been received from the customer."
-        confirmLabel="Mark as paid"
-        tone="default"
+      <MarkAsPaidModal
+        open={showMarkPaid}
+        onClose={() => setShowMarkPaid(false)}
+        onConfirm={(result: MarkAsPaidResult) => {
+          const labels: Record<string, string> = {
+            bank_transfer: "Bank transfer (NEFT)",
+            upi: "UPI",
+            card: "Card",
+            cheque: "Cheque",
+            cash: "Cash",
+          };
+          setLocalPaymentStatus("paid");
+          setPaidMethodLabel(labels[result.method] ?? result.method);
+          setPaidReference(result.reference);
+          setPaidNotes(result.notes ?? "");
+          setShowMarkPaid(false);
+          setToast("Payment marked as received");
+          setTimeout(() => setToast(""), 3000);
+        }}
+        amount={consultation.fee ?? 0}
+        customerName={consultation.customerName}
+        contextLabel="Consultation fee"
       />
 
       {toast && <Toast message={toast} />}

@@ -38,7 +38,7 @@ export const MOCK_ORDERS: Order[] = [
     items: [{ sku: "AL-HRA-0102", name: "Heera · GIA Certified Diamond", qty: 1, price: 875000, gemstone: "Diamond", caratWeight: "1.8ct", itemType: "stone", itemStatus: "order_placed" }],
     total: 875000, stage: 0, shopifyStatus: "unfulfilled", operationalStatus: "pending", paymentStatus: "pending",
     energisationStatus: "pending", energisationTier: "pran_pratishtha", certificateStatus: "not_required",
-    placedAt: "2026-08-01", updatedAt: "2026-08-01", placedBy: "rahul.verma@astrolaabh.com", consultationId: "cons_005", recommendationId: "rec_005",
+    placedAt: "2026-08-01", updatedAt: "2026-08-01", placedBy: "sandeep@astrolaabh.house", consultationId: "cons_005", recommendationId: "rec_005",
   },
   {
     id: "AL-ORD-006", customerId: "cust_006", customerName: "Vikram Singh Randhawa",
@@ -85,11 +85,11 @@ export const MOCK_ORDERS: Order[] = [
     placedAt: "2026-07-28", updatedAt: "2026-08-04",
   },
   {
-    id: "AL-ORD-011", customerId: "cust_007", customerName: "Ananya Reddy",
+    id: "AL-ORD-011", customerId: "cust_004", customerName: "Rajesh Iyer",
     items: [{ sku: "AL-GMD-0078", name: "Gomed · Ceylon Hessonite", qty: 1, price: 126000, gemstone: "Hessonite", caratWeight: "7.2r", itemType: "stone", itemStatus: "order_placed" }],
     total: 126000, stage: 0, shopifyStatus: "unfulfilled", operationalStatus: "pending", paymentStatus: "pending",
     energisationStatus: "pending", energisationTier: "shuddhi", certificateStatus: "not_required",
-    placedAt: "2026-08-04", updatedAt: "2026-08-04", placedBy: "sandeep@astrolaabh.house",
+    placedAt: "2026-08-04", updatedAt: "2026-08-04", placedBy: "sandeep@astrolaabh.house", consultationId: "cons_004", recommendationId: "rec_008",
   },
   {
     id: "AL-ORD-012", customerId: "cust_012", customerName: "Rohan Malhotra",
@@ -99,7 +99,7 @@ export const MOCK_ORDERS: Order[] = [
     ],
     total: 293000, stage: 0, shopifyStatus: "unfulfilled", operationalStatus: "pending", paymentStatus: "pending",
     energisationStatus: "pending", energisationTier: "maha_abhishek", certificateStatus: "not_required", affiliateCode: "RAJENDRA7",
-    placedAt: "2026-08-06", updatedAt: "2026-08-06", placedBy: "admin@astrolaabh.house", consultationId: "cons_008",
+    placedAt: "2026-08-06", updatedAt: "2026-08-06", placedBy: "sandeep@astrolaabh.house", consultationId: "cons_008", recommendationId: "rec_007",
   },
   {
     id: "AL-ORD-013", customerId: "cust_006", customerName: "Vikram Singh Randhawa",
