@@ -44,6 +44,16 @@ function formatHour(h: number): string {
   return `${h - 12} PM`;
 }
 
+function generateFullDaySlots(): string[] {
+  return Array.from({ length: 24 }, (_, h) => `${String(h).padStart(2, "0")}:00`);
+}
+
+function to12Hour(hhmm: string): string {
+  const [h, m] = hhmm.split(":").map(Number);
+  const ap = h >= 12 ? "PM" : "AM";
+  return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${ap}`;
+}
+
 function recommendationStatusLabel(rec: StoneRecommendation): string {
   return rec.status === "converted_to_order" ? "Converted to order" : "Submitted";
 }
@@ -62,41 +72,71 @@ export default function AstroGemologistDetailPage() {
   const { id } = useParams<{ id: string }>();
   const expert = EXPERT_PROFILES.find((e) => e.id === id);
   const availability = EXPERT_AVAILABILITY.find((e) => e.expertId === id);
+  const expertId = expert?.id ?? id;
 
-  if (!expert) {
-    return (
-      <div className="flex items-center justify-center h-[60vh]">
-        <p className="text-[14px]" style={{ color: T.muted }}>Expert not found.</p>
-      </div>
-    );
-  }
-
-  const consultations = MOCK_CONSULTATIONS.filter((c) => c.expertId === id);
+  const consultations = MOCK_CONSULTATIONS.filter((c) => c.expertId === expertId);
   const allUpcoming = consultations.filter((c) => c.status === "scheduled");
   const allPendingSummaries = consultations.filter((c) => c.status === "summary_pending");
   const allCompleted = consultations.filter((c) => c.status === "closed" || c.status === "completed");
   const allNoShows = consultations.filter((c) => c.status === "no_show" && c.noShowBy === "expert");
-  const allRecommendations = MOCK_STONE_RECOMMENDATIONS.filter((r) => r.expertId === id);
-  const next7Days = availability?.availability.slice(0, 7) ?? [];
+  const allRecommendations = MOCK_STONE_RECOMMENDATIONS.filter((r) => r.expertId === expertId);
+
+  const weekDaysForAvail = useMemo(() => {
+    const start = new Date();
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      return toISODate(d);
+    });
+  }, []);
+
+  const fullDaySlots = useMemo(() => generateFullDaySlots(), []);
 
   const bookedSlotMap = useMemo(() => {
     const map = new Map<string, { id: string; customerName: string }>();
     for (const c of consultations) {
       if (c.status === "cancelled" || c.status === "no_show") continue;
       const dt = new Date(c.scheduledAt);
-      const dateKey = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
-      const h = dt.getHours();
-      const m = dt.getMinutes();
-      const ampm = h >= 12 ? "PM" : "AM";
-      const h12 = h % 12 || 12;
-      const timeKey = m === 0 ? `${h12}:00 ${ampm}` : `${h12}:${String(m).padStart(2, "0")} ${ampm}`;
-      map.set(`${dateKey}_${timeKey}`, { id: c.id, customerName: c.customerName });
+      const dateKey = toISODate(dt);
+      const hh = String(dt.getHours()).padStart(2, "0");
+      const mm = String(dt.getMinutes()).padStart(2, "0");
+      map.set(`${dateKey}-${hh}:${mm}`, { id: c.id, customerName: c.customerName });
     }
     return map;
   }, [consultations]);
 
+  const [unavailableSlots, setUnavailableSlots] = useState<Set<string>>(() => {
+    const set = new Set<string>();
+    for (const day of availability?.availability.slice(0, 7) ?? []) {
+      for (const slot of day.slots) {
+        if (!slot.available) {
+          const raw = slot.time;
+          let hhmm = raw;
+          if (/am|pm/i.test(raw)) {
+            const m = raw.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+            if (m) {
+              let h = parseInt(m[1], 10);
+              const min = m[2];
+              const ap = m[3].toUpperCase();
+              if (ap === "PM" && h !== 12) h += 12;
+              if (ap === "AM" && h === 12) h = 0;
+              hhmm = `${String(h).padStart(2, "0")}:${min}`;
+            }
+          }
+          set.add(`${day.date}-${hhmm}`);
+        }
+      }
+    }
+    if (set.size === 0) {
+      const today = toISODate(new Date());
+      set.add(`${today}-07:00`);
+      set.add(`${today}-18:00`);
+    }
+    return set;
+  });
+
   const router = useRouter();
-  const [isActive, setIsActive] = useState(expert.status === "active");
+  const [isActive, setIsActive] = useState(expert?.status === "active");
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const [toast, setToast] = useState("");
@@ -106,6 +146,20 @@ export default function AstroGemologistDetailPage() {
   const [commissionRates, setCommissionRates] = useState({ stone: "8", jewellery: "6", consultation: "15" });
   const [showPayoutModal, setShowPayoutModal] = useState(false);
   const [payoutForm, setPayoutForm] = useState({ amount: "", paymentType: "bank_transfer", paidBy: "", notes: "" });
+
+  const toggleUnavailable = (dateISO: string, time: string) => {
+    const key = `${dateISO}-${time}`;
+    if (bookedSlotMap.has(key)) return;
+    let nowUnavailable = false;
+    setUnavailableSlots((prev) => {
+      const n = new Set(prev);
+      if (n.has(key)) n.delete(key);
+      else { n.add(key); nowUnavailable = true; }
+      return n;
+    });
+    setToast(nowUnavailable ? `${to12Hour(time)} marked unavailable` : `${to12Hour(time)} opened`);
+    setTimeout(() => setToast(""), 2500);
+  };
 
   useEffect(() => {
     if (!showMenu) return;
@@ -307,7 +361,7 @@ export default function AstroGemologistDetailPage() {
   const totalEarnings = expertPayments.filter((p) => p.status === "paid").reduce((sum, p) => sum + p.amount, 0);
 
   const tabCounts: Record<string, number> = {
-    availability: next7Days.length,
+    availability: weekDaysForAvail.length,
     recommendations: allRecommendations.length,
     upcoming: consultations.length,
     summary_due: allPendingSummaries.length,
@@ -326,36 +380,45 @@ export default function AstroGemologistDetailPage() {
 
   function ConsultationRow({ c, showStatus }: { c: typeof consultations[number]; showStatus?: string }) {
     const comm = c.paymentStatus === "paid" ? consCommission(c.fee ?? 0) : 0;
+    const dt = new Date(c.scheduledAt);
+    const esLabel = showStatus === "summary"
+      ? (c.summarySubmittedAt ? "Provided" : "Pending")
+      : c.status === "scheduled" ? "Scheduled"
+      : c.status === "summary_pending" ? "Recommendation due"
+      : c.status === "no_show" ? (c.noShowBy === "expert" ? "Expert no show" : "Customer no show")
+      : c.status === "closed" || c.status === "completed" ? "Completed"
+      : c.status.replace(/_/g, " ");
+    const esTone = showStatus === "summary"
+      ? (c.summarySubmittedAt ? "good" as const : "danger" as const)
+      : statusTone(c.status);
+
     return (
       <Link
         href={`/consultations/${c.id}`}
-        className="group grid grid-cols-1 sm:grid-cols-[1fr_140px_100px_120px] gap-2 sm:gap-3 items-center px-4 py-2.5 transition-colors duration-150 even:bg-[rgba(89,82,54,0.025)] hover:!bg-[rgba(119,123,98,0.08)] last:rounded-b-[15px]"
-        style={{ borderBottom: `1px solid ${T.borderSoft}` }}
+        className="group hidden sm:grid items-center gap-4 px-4 py-3.5 transition-colors duration-150 even:bg-[rgba(89,82,54,0.025)] hover:!bg-[rgba(119,123,98,0.08)] last:rounded-b-[15px]"
+        style={{ borderBottom: `1px solid ${T.borderSoft}`, gridTemplateColumns: "1fr 150px 100px 130px" }}
       >
         <div className="min-w-0">
-          <span className="text-[11px] tracking-[0.06em] uppercase font-medium" style={{ color: T.accent }}>{c.id}</span>
-          <div className="text-[14px] mt-0.5 truncate" style={{ color: T.text }}>{c.customerName}</div>
-        </div>
-        <div className="min-w-0">
-          <span className="text-[12px] tabular-nums" style={{ color: T.text }}>
-            {new Date(c.scheduledAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }).replace(/ (\d{4})$/, ", $1")}
-          </span>
-        </div>
-        <div className="text-[12px] tabular-nums text-right" style={{ color: comm > 0 ? T.accent : T.faint }}>
-          {comm > 0 ? inr(comm) : "—"}
-        </div>
-        <div>
-          {showStatus === "summary" ? (
-            c.summarySubmittedAt ? <Chip tone="good">Provided</Chip> : <Chip tone="danger">Pending</Chip>
-          ) : (
-            <Chip tone={statusTone(c.status)}>
-              {c.status === "scheduled" ? "Scheduled" :
-               c.status === "summary_pending" ? "Recommendation due" :
-               c.status === "no_show" ? (c.noShowBy === "expert" ? "Expert no show" : "Customer no show") :
-               c.status === "closed" || c.status === "completed" ? "Completed" :
-               c.status.replace(/_/g, " ")}
-            </Chip>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[14px] font-medium" style={{ color: T.text }}>{c.customerName}</span>
+          </div>
+          {c.problemStatement && (
+            <div className="text-[12px] mt-0.5 truncate" style={{ color: T.faint }}>{c.problemStatement}</div>
           )}
+        </div>
+        <div className="shrink-0">
+          <div className="text-[13.5px] font-medium tabular-nums" style={{ color: T.text }}>
+            {dt.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+          </div>
+          <div className="text-[12px] mt-0.5 tabular-nums" style={{ color: T.muted }}>
+            {dt.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true })} · {c.duration}min
+          </div>
+        </div>
+        <div className="text-right shrink-0">
+          <span className="text-[12px] tabular-nums" style={{ color: comm > 0 ? T.accent : T.faint }}>{comm > 0 ? inr(comm) : "—"}</span>
+        </div>
+        <div className="flex items-center justify-end shrink-0">
+          <Chip tone={esTone}>{esLabel}</Chip>
         </div>
       </Link>
     );
@@ -363,8 +426,18 @@ export default function AstroGemologistDetailPage() {
 
   function TableHeader({ cols }: { cols: string[] }) {
     return (
-      <div className="hidden sm:grid gap-3 items-center px-4 h-10 text-[11px] tracking-[0.06em] uppercase font-medium rounded-t-[15px]" style={{ color: T.faint, background: T.card, borderBottom: `1px solid ${T.borderSoft}`, gridTemplateColumns: "1fr 140px 100px 120px" }}>
-        {cols.map((c) => <span key={c}>{c}</span>)}
+      <div className="hidden sm:grid items-center gap-4 px-4 pt-4 pb-3 text-[11px] tracking-[0.08em] uppercase" style={{ color: T.faint, borderBottom: `1px solid ${T.border}`, gridTemplateColumns: "1fr 150px 100px 130px" }}>
+        {cols.map((c) => (
+          <div key={c} className={c === "Commission" || c === "Status" ? "text-right" : undefined}>{c}</div>
+        ))}
+      </div>
+    );
+  }
+
+  if (!expert) {
+    return (
+      <div className="flex items-center justify-center h-[60vh]">
+        <p className="text-[14px]" style={{ color: T.muted }}>Expert not found.</p>
       </div>
     );
   }
@@ -555,23 +628,71 @@ export default function AstroGemologistDetailPage() {
         <>
           {/* Toolbar — list view only */}
           {viewMode === "list" && (
-            <div className="hidden sm:flex flex-wrap items-center gap-2 pt-4 mb-3" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
-              <div className="flex flex-wrap items-center gap-2">
-                <InlineFilter label="Status" icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M3 5h18l-7 8v6l-4-2v-4z" /></svg>} count={consFilterStatusMulti.length}>
-                  <MultiCheck options={[
+            <div className="hidden sm:flex flex-wrap items-center gap-2.5 mb-4">
+              <div className="w-[200px]">
+                <Select
+                  value={consFilterCustomer}
+                  onChange={(v) => { setConsFilterCustomer(v); setConsPage(0); }}
+                  searchable
+                  compact
+                  placeholder="All customers"
+                  options={[{ value: "", label: "All customers" }, ...uniqueConsCustomers.map((name) => ({ value: name, label: name }))]}
+                />
+              </div>
+              <div className="w-[200px]">
+                <Select
+                  value={consFilterStatus}
+                  onChange={(v) => { setConsFilterStatus(v); setConsFilterStatusMulti([]); setConsPage(0); }}
+                  compact
+                  placeholder="All statuses"
+                  options={[
+                    { value: "", label: "All statuses" },
                     { value: "payment_pending", label: "Payment pending" },
                     { value: "scheduled", label: "Scheduled" },
                     { value: "reschedule_requested", label: "Reschedule" },
                     { value: "summary_pending", label: "Recommendation due" },
                     { value: "no_show", label: "No show" },
                     { value: "completed", label: "Completed" },
-                  ]} value={consFilterStatusMulti} onChange={(v) => { setConsFilterStatusMulti(v); setConsPage(0); }} />
-                </InlineFilter>
-                {consFilterStatusMulti.length > 0 && (
-                  <button onClick={() => { setConsFilterStatusMulti([]); setConsPage(0); }} className="shrink-0 text-[12px] font-medium h-8 px-2.5 rounded-[8px] cursor-pointer transition-colors hover:bg-[rgba(119,123,98,0.08)]" style={{ color: T.muted }}>Clear all</button>
+                  ]}
+                />
+              </div>
+              <div className="relative">
+                <button
+                  onClick={() => setShowConsDatePicker(!showConsDatePicker)}
+                  className="h-9 px-3.5 rounded-[9px] text-[13.5px] flex items-center gap-2 cursor-pointer transition-all"
+                  style={{ background: T.popover, border: `1px solid ${(consFilterDateFrom || consFilterDateTo) ? T.accentBorder : T.border}`, color: T.text }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><rect x="3" y="4" width="18" height="17" rx="2" /><path d="M8 2v4M16 2v4M3 9h18" /></svg>
+                  {(consFilterDateFrom || consFilterDateTo)
+                    ? `${consFilterDateFrom ? new Date(consFilterDateFrom + "T00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "Start"} — ${consFilterDateTo ? new Date(consFilterDateTo + "T00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "End"}`
+                    : "All dates"}
+                </button>
+                {showConsDatePicker && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setShowConsDatePicker(false)} />
+                    <div className="absolute top-full left-0 mt-1 z-50 rounded-[9px] shadow-lg p-4 w-[280px]" style={{ background: T.popover, border: `1px solid ${T.border}` }}>
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="flex-1">
+                          <div className="text-[9px] uppercase tracking-[0.06em] mb-1" style={{ color: T.faint }}>From</div>
+                          <input type="date" value={consFilterDateFrom} onChange={(e) => { setConsFilterDateFrom(e.target.value); setConsPage(0); }} className="w-full h-8 px-2 rounded-[7px] text-[11px] outline-none" style={{ background: T.bg, border: `1px solid ${T.borderSoft}`, color: T.text }} />
+                        </div>
+                        <span className="text-[11px] mt-3" style={{ color: T.faint }}>—</span>
+                        <div className="flex-1">
+                          <div className="text-[9px] uppercase tracking-[0.06em] mb-1" style={{ color: T.faint }}>To</div>
+                          <input type="date" value={consFilterDateTo} onChange={(e) => { setConsFilterDateTo(e.target.value); setConsPage(0); }} className="w-full h-8 px-2 rounded-[7px] text-[11px] outline-none" style={{ background: T.bg, border: `1px solid ${T.borderSoft}`, color: T.text }} />
+                        </div>
+                      </div>
+                      {(consFilterDateFrom || consFilterDateTo) && (
+                        <button onClick={() => { setConsFilterDateFrom(""); setConsFilterDateTo(""); setShowConsDatePicker(false); setConsPage(0); }} className="text-[11px] cursor-pointer hover:underline" style={{ color: T.danger }}>Clear dates</button>
+                      )}
+                    </div>
+                  </>
                 )}
               </div>
               <div className="ml-auto flex items-center gap-2">
+                {consHasActiveFilters && (
+                  <button onClick={() => { setConsFilterCustomer(""); setConsFilterStatus(""); setConsFilterStatusMulti([]); setConsFilterDateFrom(""); setConsFilterDateTo(""); setConsPage(0); }} className="text-[12px] font-medium px-1.5 cursor-pointer hover:underline underline-offset-4 whitespace-nowrap" style={{ color: T.danger }}>Clear all</button>
+                )}
                 <ToolbarSearch value={consSearch} onChange={(v) => { setConsSearch(v); setConsPage(0); }} placeholder="Search customer, consultation ID…" />
                 <SortMenu value={consSort} onChange={(v) => { setConsSort(v as SortKey); setConsPage(0); }} options={[{ value: "date_desc", label: "Newest first" }, { value: "date_asc", label: "Oldest first" }]} />
               </div>
@@ -581,17 +702,15 @@ export default function AstroGemologistDetailPage() {
           {/* ---- List view ---- */}
           {viewMode === "list" && (
             <>
-                            <Card className="!p-0 md:flex md:flex-col md:min-h-0">
-          <div className="md:min-h-0 overflow-y-auto max-h-[560px] md:max-h-none flex-1">
-                <TableHeader cols={["Consultation", "Date", "Commission", "Status"]} />
+              <Card className="!p-0 md:min-h-0 md:overflow-y-auto">
+                <TableHeader cols={["Booking details", "Scheduled time", "Commission", "Status"]} />
                 {consPaginated.length === 0 ? (
                   <EmptyState inline icon="search" title="No consultations" description="Try a different search or clear the filters." />
                 ) : (
                   consPaginated.map((c) => <ConsultationRow key={c.id} c={c} />)
                 )}
-              </div>
-        </Card>
-        <Pagination page={consPage} totalPages={consTotalPages} totalItems={consFiltered.length} perPage={PAGE_SIZE} onPageChange={setConsPage} />
+              </Card>
+              <Pagination page={consPage} totalPages={consTotalPages} totalItems={consFiltered.length} perPage={PAGE_SIZE} onPageChange={setConsPage} />
             </>
           )}
 
@@ -824,76 +943,88 @@ export default function AstroGemologistDetailPage() {
       {activeTab === "availability" && (
         <Card className="!p-6 md:min-h-0 md:overflow-y-auto">
           <div className="flex items-center justify-between mb-4 pb-4" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
-            <h2 className="text-[15px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>Week availability</h2>
-            <Link
-              href={`/astro-gemologists/${id}/availability`}
-              className="inline-flex items-center gap-1.5 h-9 px-4 rounded-[9px] text-[12px] font-medium transition-all duration-200 hover:brightness-110 cursor-pointer"
-              style={{ background: T.accent, color: T.accentInk }}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-              Manage availability
-            </Link>
-          </div>
-          {next7Days.length === 0 ? (
-            <EmptyState inline icon="calendar" title="No availability set" description="This expert hasn't configured availability." />
-          ) : (
             <div>
-              {next7Days.map((day, i) => {
-                const bookedCount = day.slots.filter((s: { time: string; available: boolean }) => bookedSlotMap.has(`${day.date}_${s.time}`)).length;
-                const freeSlots = day.slots.filter((s: { available: boolean }) => s.available).length;
-                const visibleSlots = freeSlots + bookedCount;
-                return (
-                  <div
-                    key={day.date}
-                    className="flex items-start justify-between gap-4 py-3"
-                    style={{ borderBottom: i < next7Days.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
-                  >
-                    <div className="min-w-0">
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-[13px] font-medium" style={{ color: T.text }}>
-                          {new Date(day.date + "T00:00:00").toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })}
-                        </span>
-                        <span className="text-[11.5px] tabular-nums" style={{ color: freeSlots > 0 ? T.good : T.faint }}>
-                          {freeSlots > 0 ? `${freeSlots} available` : "Fully booked"}
-                          {bookedCount > 0 && <span style={{ color: T.accent }}> · {bookedCount} booked</span>}
-                        </span>
-                      </div>
-                      <div className="flex flex-wrap gap-1.5 mt-2">
-                        {day.slots.filter((slot: { time: string; available: boolean }) => slot.available || bookedSlotMap.has(`${day.date}_${slot.time}`)).map((slot: { time: string; available: boolean }) => {
-                          const booking = bookedSlotMap.get(`${day.date}_${slot.time}`);
-                          if (booking) {
-                            return (
-                              <Link
-                                key={slot.time}
-                                href={`/consultations/${booking.id}`}
-                                className="text-[11px] tabular-nums px-2 py-1 rounded-[6px] transition-all hover:brightness-125 cursor-pointer"
-                                style={{ background: "rgba(119,123,98,0.12)", color: T.accent, border: `1px solid rgba(119,123,98,0.3)` }}
-                                title={`Booked — ${booking.customerName}`}
-                              >
-                                {slot.time}
-                              </Link>
-                            );
-                          }
-                          return (
-                            <span
-                              key={slot.time}
-                              className="text-[11px] tabular-nums px-2 py-1 rounded-[6px]"
-                              style={{ background: "rgba(95,112,64,0.10)", color: T.good, border: "1px solid rgba(95,112,64,0.22)" }}
-                            >
-                              {slot.time}
-                            </span>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+              <h2 className="text-[15px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>Week availability</h2>
+              <p className="text-[12px] mt-0.5" style={{ color: T.muted }}>24-hour slots · Booked opens the consultation · Available / Unavailable toggle</p>
             </div>
-          )}
+            <div className="hidden sm:flex items-center gap-3 text-[11.5px]" style={{ color: T.muted }}>
+              <span className="inline-flex items-center gap-1.5"><span className="w-2 h-2 rounded-full" style={{ background: T.good }} />Booked</span>
+              <span className="inline-flex items-center gap-1.5"><span className="w-2 h-2 rounded-full" style={{ background: T.info }} />Available</span>
+              <span className="inline-flex items-center gap-1.5"><span className="w-2 h-2 rounded-full" style={{ background: T.faint }} />Unavailable</span>
+            </div>
+          </div>
+          <div>
+            {weekDaysForAvail.map((dateISO, i) => {
+              const bookedCount = fullDaySlots.filter((t) => bookedSlotMap.has(`${dateISO}-${t}`)).length;
+              const unavailableCount = fullDaySlots.filter((t) => !bookedSlotMap.has(`${dateISO}-${t}`) && unavailableSlots.has(`${dateISO}-${t}`)).length;
+              const openCount = 24 - bookedCount - unavailableCount;
+              const bookedStyle = { background: "rgba(95,112,64,0.16)", border: "1px solid rgba(95,112,64,0.42)", color: "#3d4a28" };
+              const availableStyle = { background: "rgba(88,112,130,0.14)", border: "1px solid rgba(88,112,130,0.40)", color: T.info };
+              const unavailableStyle = { background: "rgba(134,126,100,0.10)", border: "1px dashed rgba(134,126,100,0.50)", color: T.faint };
+              const slotBtnClass = "inline-flex items-center justify-center gap-1.5 h-8 w-[92px] px-2 rounded-[9px] text-[12.5px] font-medium tabular-nums cursor-pointer transition-colors hover:brightness-95";
+              return (
+                <div
+                  key={dateISO}
+                  className="py-4"
+                  style={{ borderBottom: i < weekDaysForAvail.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
+                >
+                  <div className="flex items-baseline gap-2 mb-3">
+                    <span className="text-[13px] font-medium" style={{ color: T.text }}>
+                      {new Date(dateISO + "T00:00:00").toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })}
+                    </span>
+                    <span className="text-[11.5px] tabular-nums" style={{ color: T.faint }}>
+                      {openCount} available · {bookedCount} booked · {unavailableCount} unavailable
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {fullDaySlots.map((time) => {
+                      const key = `${dateISO}-${time}`;
+                      const booking = bookedSlotMap.get(key);
+                      if (booking) {
+                        return (
+                          <Link
+                            key={key}
+                            href={`/consultations/${booking.id}`}
+                            title={`Booked — ${booking.customerName}`}
+                            className={slotBtnClass}
+                            style={bookedStyle}
+                          >
+                            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: T.good }} />
+                            {to12Hour(time)}
+                          </Link>
+                        );
+                      }
+                      const isUnavailable = unavailableSlots.has(key);
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => toggleUnavailable(dateISO, time)}
+                          title={isUnavailable ? "Unavailable — tap to reopen" : "Available — tap to mark unavailable"}
+                          className={slotBtnClass}
+                          style={isUnavailable ? unavailableStyle : availableStyle}
+                        >
+                          {isUnavailable ? (
+                            <>
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="w-3 h-3"><circle cx="12" cy="12" r="9" /><path d="M5.6 5.6 18.4 18.4" /></svg>
+                              <span className="line-through">{to12Hour(time)}</span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: T.info }} />
+                              {to12Hour(time)}
+                            </>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </Card>
       )}
-
 
       {/* ========= SUMMARY DUE TAB ========= */}
       {activeTab === "summary_due" && (
@@ -907,7 +1038,7 @@ export default function AstroGemologistDetailPage() {
 
           <Card className="!p-0 md:flex md:flex-col md:min-h-0">
           <div className="md:min-h-0 overflow-y-auto max-h-[560px] md:max-h-none flex-1">
-            <TableHeader cols={["Customer", "Date", "Commission", "Status"]} />
+            <TableHeader cols={["Booking details", "Scheduled time", "Commission", "Status"]} />
             {sdPaginated.length === 0 ? (
               <EmptyState inline icon="check" title="Nothing pending" description="All recommendations are up to date." />
             ) : (
@@ -931,7 +1062,7 @@ export default function AstroGemologistDetailPage() {
 
           <Card className="!p-0 md:flex md:flex-col md:min-h-0">
           <div className="md:min-h-0 overflow-y-auto max-h-[560px] md:max-h-none flex-1">
-            <TableHeader cols={["Customer", "Date", "Commission", "Status"]} />
+            <TableHeader cols={["Booking details", "Scheduled time", "Commission", "Status"]} />
             {nsPaginated.length === 0 ? (
               <EmptyState inline icon="check" title="No no-shows" description="This expert has no no-show records." />
             ) : (

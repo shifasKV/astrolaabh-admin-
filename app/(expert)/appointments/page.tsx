@@ -332,7 +332,7 @@ export default function AppointmentsPage() {
           paginated.map((c, i) => {
             const dt = new Date(c.scheduledAt);
             const es = expertStatus(c);
-            const commEarned = es === "done" ? Math.round((c.fee ?? 0) * 0.15) : 0;
+            const commEarned = c.paymentStatus === "paid" ? Math.round((c.fee ?? 0) * 0.15) : 0;
             return (
               <div key={c.id} className="group">
               <MobileListCard

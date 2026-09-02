@@ -161,6 +161,76 @@ function buildSeed(): OverlayMap {
         lineItems: [{ label: "Stone", amount: 305000 }, { label: "Making", amount: 35000 }, { label: "Energisation", amount: 0 }],
       } },
   };
+  // Demo: expert (astro-gemologist) orders awaiting / after admin approval.
+  seed["inc_ord_002"] = {
+    ...seed["inc_ord_002"],
+    leadStatus: "converted",
+    fulfillment: {
+      kind: "order",
+      submittedBy: "usr_expert_01",
+      submittedAt: "2026-08-21T14:10:00+05:30",
+      summary: "Blue Sapphire (Neelam) — Sri Lankan, 6.2r · Panchdhatu ring",
+      subtotal: 312000,
+      discount: 0,
+      total: 312000,
+      note: "Placed after Saturn remedy consultation with Rajesh Iyer.",
+      approval: "pending",
+      details: {
+        stone: { name: "Neelam · Blue Sapphire", sub: "6.2 ratti · Sri Lankan · Natural, Unheated", price: 275000, shadeHex: "#1e3a8a", custom: false },
+        design: { name: DESIGNS.find((d) => d.name === "Chandra Rekha")?.name ?? "Panchdhatu ring", sub: "Panchdhatu · Ring · From library", price: 37000, custom: false },
+        energisation: { name: "Maha Abhishek", fee: 0 },
+        deliverTo: "Rajesh Iyer · Bengaluru 560001",
+        lineItems: [{ label: "Stone", amount: 275000 }, { label: "Making", amount: 37000 }, { label: "Energisation", amount: 0 }],
+      },
+    },
+  };
+  seed["inc_ord_003"] = {
+    ...seed["inc_ord_003"],
+    leadStatus: "converted",
+    fulfillment: {
+      kind: "order",
+      submittedBy: "usr_expert_01",
+      submittedAt: "2026-08-08T16:30:00+05:30",
+      summary: "Ruby (Manik) — Burmese, 3.8r · 22K gold ring",
+      subtotal: 198000,
+      discount: 8000,
+      total: 190000,
+      note: "Follow-up order after health consultation.",
+      approval: "approved",
+      reviewedBy: "admin",
+      reviewedAt: "2026-08-09T11:00:00+05:30",
+      details: {
+        stone: { name: "Manik · Ruby", sub: "3.8 ratti · Burmese · Pigeon blood", price: 165000, shadeHex: "#9b1b30", custom: false },
+        design: { name: DESIGNS.find((d) => d.name === "Surya Prabha")?.name ?? "Surya Prabha", sub: "22K Gold · Ring · From library", price: 33000, custom: false },
+        energisation: { name: "Shuddhi", fee: 0 },
+        deliverTo: "Amit Khanna · Mumbai 400050",
+        lineItems: [{ label: "Stone", amount: 165000 }, { label: "Making", amount: 33000 }, { label: "Energisation", amount: 0 }],
+      },
+    },
+  };
+  seed["inc_ord_004"] = {
+    ...seed["inc_ord_004"],
+    leadStatus: "converted",
+    fulfillment: {
+      kind: "order",
+      submittedBy: "usr_expert_01",
+      submittedAt: "2026-07-28T10:15:00+05:30",
+      summary: "Yellow Sapphire (Pukhraj) — Thai, 3.5r · 22K Sharan ring",
+      subtotal: 154000,
+      discount: 0,
+      total: 154000,
+      approval: "completed",
+      reviewedBy: "admin",
+      reviewedAt: "2026-07-29T09:30:00+05:30",
+      details: {
+        stone: { name: "Pukhraj · Yellow Sapphire", sub: "3.5 ratti · Thai · Golden yellow", price: 128000, shadeHex: "#e7c14a", custom: false },
+        design: { name: "Sharan ring", sub: "22K Gold · Ring", price: 26000, custom: false },
+        energisation: { name: "Brihaspati Maha Abhishek", fee: 0 },
+        deliverTo: "Meera Patel · Ahmedabad 380001",
+        lineItems: [{ label: "Stone", amount: 128000 }, { label: "Making", amount: 26000 }, { label: "Energisation", amount: 0 }],
+      },
+    },
+  };
   return seed;
 }
 
@@ -198,7 +268,18 @@ export function LeadsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) setOverlay((prev) => mergeOverlays(prev, JSON.parse(raw) as OverlayMap));
+      if (raw) {
+        const stored = JSON.parse(raw) as OverlayMap;
+        const seed = buildSeed();
+        const merged = mergeOverlays(seed, stored);
+        // Keep demo expert-order fulfillments if localStorage never set them
+        for (const id of ["inc_ord_002", "inc_ord_003", "inc_ord_004"] as const) {
+          if (seed[id]?.fulfillment && !stored[id]?.fulfillment) {
+            merged[id] = { ...merged[id], ...seed[id] };
+          }
+        }
+        setOverlay(merged);
+      }
     } catch { /* ignore malformed storage */ }
     hydrated.done = true;
   }, [hydrated]);

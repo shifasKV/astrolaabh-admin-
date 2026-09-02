@@ -1,7 +1,7 @@
 "use client";
 import { use, useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { Card, Chip, GoldBtn, GhostBtn, Textarea, Input, Modal, BackLink } from "@/components/ui";
+import { Card, Chip, GoldBtn, GhostBtn, Textarea, Input, Modal, BackLink, ConfirmDialog } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_CONSULTATIONS, MOCK_CUSTOMERS, MOCK_STONE_RECOMMENDATIONS, MOCK_REMEDY_RECOMMENDATIONS } from "@/lib/mock";
 import { STONES } from "@/lib/catalog";
@@ -43,47 +43,28 @@ function remedyIsComplete(v: RemedyValue | null): boolean {
 function SectionActions({
   showEdit,
   showSave,
-  showCancel,
   onEdit,
   onSave,
-  onCancel,
   saveDisabled,
 }: {
   showEdit?: boolean;
   showSave?: boolean;
-  showCancel?: boolean;
   onEdit?: () => void;
   onSave: () => void;
-  onCancel: () => void;
   saveDisabled?: boolean;
 }) {
-  if (showSave || showCancel) {
+  if (showSave) {
     return (
-      <div className="flex items-center gap-2 shrink-0">
-        {showCancel && (
-          <button type="button" onClick={onCancel} className="text-[12px] font-medium cursor-pointer transition-opacity hover:opacity-80" style={{ color: T.muted }}>
-            Cancel
-          </button>
-        )}
-        {showSave && (
-          <button
-            type="button"
-            onClick={onSave}
-            disabled={saveDisabled}
-            className="text-[12px] font-semibold cursor-pointer transition-opacity hover:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed"
-            style={{ color: T.accent }}
-          >
-            Save
-          </button>
-        )}
-      </div>
+      <GoldBtn onClick={onSave} disabled={saveDisabled} className="!h-8 !px-3.5 !text-[12px] shrink-0">
+        Save
+      </GoldBtn>
     );
   }
   if (showEdit && onEdit) {
     return (
-      <button type="button" onClick={onEdit} className="text-[12px] font-medium shrink-0 cursor-pointer transition-opacity hover:opacity-80" style={{ color: T.accent }}>
+      <GoldBtn onClick={onEdit} className="!h-8 !px-3.5 !text-[12px] shrink-0">
         Edit
-      </button>
+      </GoldBtn>
     );
   }
   return null;
@@ -92,28 +73,22 @@ function SectionActions({
 function StoneRecDisplay({
   recData,
   savedDetails,
-  canEdit,
+  canChangeStone,
+  canEditDetails,
   detailsIsEditing,
-  detailsHasSaved,
-  detailsEditSession,
-  detailsIsDirty,
   onChangeStone,
   onEditDetails,
   onSaveDetails,
-  onCancelEditDetails,
   onDetailsChange,
 }: {
   recData: RecData;
   savedDetails: DetailFields;
-  canEdit?: boolean;
+  canChangeStone?: boolean;
+  canEditDetails?: boolean;
   detailsIsEditing?: boolean;
-  detailsHasSaved?: boolean;
-  detailsEditSession?: boolean;
-  detailsIsDirty?: boolean;
   onChangeStone?: () => void;
   onEditDetails?: () => void;
   onSaveDetails?: () => void;
-  onCancelEditDetails?: () => void;
   onDetailsChange?: (field: "purpose" | "howToWear" | "why", value: string) => void;
 }) {
   const stone = STONES.find((s) => s.sku === recData.stoneSku)
@@ -150,28 +125,23 @@ function StoneRecDisplay({
             )}
           </div>
         </div>
-        {canEdit && onChangeStone && (
-          <button
-            type="button"
-            onClick={onChangeStone}
-            className="text-[12px] font-medium shrink-0 cursor-pointer transition-opacity hover:opacity-80"
-            style={{ color: T.accent }}
-          >
-            Change stone
-          </button>
-        )}
+        <div className="flex items-center gap-2 shrink-0">
+          {canChangeStone && onChangeStone && (
+            <GhostBtn onClick={onChangeStone} className="!h-8 !px-3.5 !text-[12px]">
+              Change stone
+            </GhostBtn>
+          )}
+        </div>
       </div>
-      {(detailsHasSaved || detailsIsEditing || canEdit) && (
+      {(savedDetails.purpose || savedDetails.howToWear || savedDetails.why || detailsIsEditing || canEditDetails) && (
         <div className="mt-4 pt-4 space-y-3" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
-          {canEdit && (
+          {canEditDetails && (
             <div className="flex items-center justify-end -mt-1 mb-1">
               <SectionActions
                 showEdit={!detailsIsEditing}
-                showSave={!!detailsIsEditing && !!detailsIsDirty}
-                showCancel={!!detailsEditSession || (!!detailsIsEditing && !!detailsIsDirty)}
+                showSave={!!detailsIsEditing}
                 onEdit={onEditDetails}
                 onSave={() => onSaveDetails?.()}
-                onCancel={() => onCancelEditDetails?.()}
                 saveDisabled={!recData.why.trim() || !recData.purpose.trim()}
               />
             </div>
@@ -219,7 +189,6 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
   const [savedSummary, setSavedSummary] = useState(initialSummary);
   const [summaryText, setSummaryText] = useState(initialSummary);
   const [summaryEditSession, setSummaryEditSession] = useState(false);
-  const [summarySnapshot, setSummarySnapshot] = useState(initialSummary);
   const [summaryStatus, setSummaryStatus] = useState<"empty" | "draft" | "submitted">(() =>
     consultation?.summary ? "submitted" : "empty"
   );
@@ -228,6 +197,7 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
     return "empty";
   });
   const [showEditWarning, setShowEditWarning] = useState(false);
+  const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
   const [activeWorkTab, setActiveWorkTab] = useState<"summary" | "stone" | "remedy">("summary");
 
   // Remedy — optional section with same saved / draft / edit-session model
@@ -239,7 +209,6 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
   const [remedyType, setRemedyType] = useState(initialRemedy?.type ?? "");
   const [remedyInstructions, setRemedyInstructions] = useState(initialRemedy?.instructions ?? "");
   const [remedyEditSession, setRemedyEditSession] = useState(false);
-  const [remedySnapshot, setRemedySnapshot] = useState<RemedyValue>({ type: "", instructions: "" });
 
   // Recommendation local state — seeded from mock
   const mockRec = MOCK_STONE_RECOMMENDATIONS.find((r) => r.consultationId === id);
@@ -276,7 +245,6 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
     return { why: mockRec.rationale, purpose: mockRec.purpose, howToWear };
   });
   const [detailsEditSession, setDetailsEditSession] = useState(false);
-  const [detailsSnapshot, setDetailsSnapshot] = useState<DetailFields>({ why: "", purpose: "", howToWear: "" });
   const [toast, setToast] = useState("");
   const [showReschedule, setShowReschedule] = useState(false);
   const [rescheduleReason, setRescheduleReason] = useState("");
@@ -329,6 +297,7 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
       energisationName: pick.energisationName,
     }));
     setShowRecModal(false);
+    if (packageStatus !== "submitted") setPackageStatus("draft");
     showToast("Stone selection saved");
   };
 
@@ -336,105 +305,59 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
     setRecData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const hasMandatoryContent = savedSummary.trim().length > 0 && recData.status !== "not_recommended";
-  const hasAnyContent = savedSummary.trim().length > 0 || recData.status !== "not_recommended" || remedyIsComplete(savedRemedy);
+  const hasMandatoryContent = savedSummary.trim().length > 0;
+  const hasStoneRecommendation = recData.status !== "not_recommended";
+  const hasRemedy = remedyIsComplete(savedRemedy);
 
   const summaryHasSaved = !!savedSummary.trim();
   const summaryIsFirstEntry = !summaryHasSaved && packageStatus !== "submitted";
   const summaryIsEditing = summaryIsFirstEntry || summaryEditSession;
-  const summaryBaseline = summaryEditSession ? summarySnapshot : savedSummary;
-  const summaryIsDirty = summaryText !== summaryBaseline;
 
-  const remedyHasSaved = remedyIsComplete(savedRemedy);
+  const remedyHasSaved = hasRemedy;
   const remedyIsFirstEntry = !remedyHasSaved && packageStatus !== "submitted";
   const remedyIsEditing = remedyIsFirstEntry || remedyEditSession;
-  const remedyBaseline = remedyEditSession ? remedySnapshot : (savedRemedy ?? { type: "", instructions: "" });
-  const remedyIsDirty = remedyType !== remedyBaseline.type || remedyInstructions !== remedyBaseline.instructions;
 
   const detailsHasSaved = !!(savedDetails.why.trim() && savedDetails.purpose.trim());
-  const detailsIsFirstEntry = !detailsHasSaved && packageStatus !== "submitted" && recData.status !== "not_recommended";
+  const detailsIsFirstEntry = !detailsHasSaved && packageStatus !== "submitted" && hasStoneRecommendation;
   const detailsIsEditing = detailsIsFirstEntry || detailsEditSession;
-  const detailsBaseline = detailsEditSession ? detailsSnapshot : savedDetails;
-  const detailsIsDirty =
-    recData.why !== detailsBaseline.why ||
-    recData.purpose !== detailsBaseline.purpose ||
-    recData.howToWear !== detailsBaseline.howToWear;
 
-  const handleSaveDraft = () => {
-    if (!hasAnyContent) return;
-    const wasSubmitted = packageStatus === "submitted";
-    if (savedSummary.trim()) setSummaryStatus("draft");
-    if (recData.status === "recommended") setRecData((prev) => ({ ...prev, status: "draft" }));
-    setDetailsEditSession(false);
-    setPackageStatus("draft");
-    if (wasSubmitted) {
-      setShowEditWarning(true);
-      showToast("Changes saved as draft — submit recommendation when ready");
-    } else {
-      showToast("Saved as draft");
-    }
-  };
+  const missingOptionalParts = [
+    !hasStoneRecommendation ? "Stone recommendation" : null,
+    !hasRemedy ? "Other remedy" : null,
+  ].filter(Boolean) as string[];
 
   const startEditSummary = () => {
-    setSummarySnapshot(savedSummary);
     setSummaryText(savedSummary);
     setSummaryEditSession(true);
-  };
-
-  const cancelSummaryEdit = () => {
-    if (summaryEditSession) {
-      setSummaryText(summarySnapshot);
-      setSummaryEditSession(false);
-    } else {
-      setSummaryText(savedSummary);
-    }
   };
 
   const saveSummarySection = () => {
     if (!summaryText.trim()) return;
     setSavedSummary(summaryText);
     setSummaryEditSession(false);
-    if (packageStatus !== "submitted") setSummaryStatus("draft");
+    if (packageStatus !== "submitted") {
+      setSummaryStatus("draft");
+      setPackageStatus("draft");
+    }
   };
 
   const startEditRemedy = () => {
     const current = savedRemedy ?? { type: "", instructions: "" };
-    setRemedySnapshot(current);
     setRemedyType(current.type);
     setRemedyInstructions(current.instructions);
     setRemedyEditSession(true);
-  };
-
-  const cancelRemedyEdit = () => {
-    if (remedyEditSession) {
-      setRemedyType(remedySnapshot.type);
-      setRemedyInstructions(remedySnapshot.instructions);
-      setRemedyEditSession(false);
-    } else {
-      setRemedyType(savedRemedy?.type ?? "");
-      setRemedyInstructions(savedRemedy?.instructions ?? "");
-    }
   };
 
   const saveRemedySection = () => {
     if (!remedyType.trim() || !remedyInstructions.trim()) return;
     setSavedRemedy({ type: remedyType.trim(), instructions: remedyInstructions.trim() });
     setRemedyEditSession(false);
+    if (packageStatus !== "submitted") setPackageStatus("draft");
   };
 
   const startEditDetails = () => {
-    setDetailsSnapshot(savedDetails);
     setRecData((prev) => ({ ...prev, ...savedDetails }));
     setDetailsEditSession(true);
-  };
-
-  const cancelDetailsEdit = () => {
-    if (detailsEditSession) {
-      setRecData((prev) => ({ ...prev, ...detailsSnapshot }));
-      setDetailsEditSession(false);
-    } else {
-      setRecData((prev) => ({ ...prev, ...savedDetails }));
-    }
   };
 
   const saveDetailsSection = () => {
@@ -442,22 +365,33 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
     const next = { why: recData.why, purpose: recData.purpose, howToWear: recData.howToWear };
     setSavedDetails(next);
     setDetailsEditSession(false);
+    if (packageStatus !== "submitted") setPackageStatus("draft");
   };
 
   const contentBoxStyle = { background: T.bg, border: `1px solid ${T.borderSoft}` };
 
-  const handleSubmitRecommendation = () => {
+  const performSubmitRecommendation = () => {
     if (!hasMandatoryContent) return;
     setSummaryStatus("submitted");
     setSummaryEditSession(false);
     setRemedyEditSession(false);
     setDetailsEditSession(false);
     setShowEditWarning(false);
-    if (recData.status === "draft" || recData.status === "not_recommended") {
+    setShowSubmitConfirm(false);
+    if (recData.status === "draft") {
       setRecData((prev) => ({ ...prev, status: "recommended" }));
     }
     setPackageStatus("submitted");
     showToast("Recommendation submitted successfully");
+  };
+
+  const handleSubmitRecommendation = () => {
+    if (!hasMandatoryContent) return;
+    if (missingOptionalParts.length > 0) {
+      setShowSubmitConfirm(true);
+      return;
+    }
+    performSubmitRecommendation();
   };
 
   const effectiveStatus = localStatus;
@@ -472,7 +406,6 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
     : (effectiveStatus === "closed" || effectiveStatus === "completed") ? "good" as const
     : "gold" as const;
 
-  const canEditRec = recData.status !== "purchased";
   const isUpcoming = effectiveStatus === "scheduled" || effectiveStatus === "reschedule_requested";
   const isRecommendationDue = effectiveStatus === "summary_pending";
   const isNoShow = effectiveStatus === "no_show";
@@ -625,18 +558,12 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
           <div className="flex items-center justify-between gap-4 mb-4 pb-4" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
             <div className="flex items-center gap-2.5 min-w-0">
               <h3 className="text-[15px] font-semibold shrink-0" style={{ color: T.text }}>Post-consultation</h3>
-              {packageStatus === "submitted" && (
-                <Chip tone="good">Recommended to Customer</Chip>
-              )}
               {packageStatus === "draft" && (
                 <Chip tone="muted">Draft</Chip>
               )}
             </div>
             {!isNoShow && packageStatus !== "submitted" && (
               <div className="flex items-center gap-2 shrink-0">
-                <GhostBtn disabled={!hasAnyContent || hasMandatoryContent} onClick={handleSaveDraft}>
-                  Save draft
-                </GhostBtn>
                 <GoldBtn disabled={!hasMandatoryContent} onClick={handleSubmitRecommendation}>
                   Submit recommendation
                 </GoldBtn>
@@ -654,8 +581,8 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
           <div className="flex items-center gap-1 mb-5 pb-3" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
             {([
               { key: "summary" as const, label: "Summary", optional: false, done: summaryHasSaved },
-              { key: "stone" as const, label: "Stone recommendation", optional: false, done: recData.status === "recommended" || recData.status === "purchased" },
-              { key: "remedy" as const, label: "Other remedy", optional: true, done: remedyHasSaved },
+              { key: "stone" as const, label: "Stone recommendation", optional: true, done: false },
+              { key: "remedy" as const, label: "Other remedy", optional: true, done: false },
             ]).map((t) => {
               const active = activeWorkTab === t.key;
               return (
@@ -668,16 +595,18 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
                     color: active ? T.accent : T.muted,
                   }}
                 >
-                  <span
-                    className="w-[18px] h-[18px] rounded-full flex items-center justify-center text-[10px] shrink-0"
-                    style={{
-                      background: t.done ? T.good : "rgba(89,82,54,0.08)",
-                      color: t.done ? "#fff" : T.faint,
-                      border: t.done ? "none" : `1px solid ${T.borderSoft}`,
-                    }}
-                  >
-                    {t.done ? "✓" : ""}
-                  </span>
+                  {!t.optional && (
+                    <span
+                      className="w-[18px] h-[18px] rounded-full flex items-center justify-center text-[10px] shrink-0"
+                      style={{
+                        background: t.done ? T.good : "rgba(89,82,54,0.08)",
+                        color: t.done ? "#fff" : T.faint,
+                        border: t.done ? "none" : `1px solid ${T.borderSoft}`,
+                      }}
+                    >
+                      {t.done ? "✓" : ""}
+                    </span>
+                  )}
                   {t.label}{t.optional ? " (Optional)" : ""}
                 </button>
               );
@@ -697,12 +626,10 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
                   )}
                 </div>
                 <SectionActions
-                  showEdit={summaryHasSaved && !summaryEditSession}
-                  showSave={summaryIsEditing && summaryIsDirty}
-                  showCancel={summaryEditSession || (summaryIsEditing && summaryIsDirty)}
+                  showEdit={summaryHasSaved && !summaryIsEditing}
+                  showSave={summaryIsEditing}
                   onEdit={startEditSummary}
                   onSave={saveSummarySection}
-                  onCancel={cancelSummaryEdit}
                   saveDisabled={!summaryText.trim()}
                 />
               </div>
@@ -730,15 +657,12 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
                   <StoneRecDisplay
                     recData={recData}
                     savedDetails={savedDetails}
-                    canEdit={canEditRec}
+                    canChangeStone={recData.status !== "purchased"}
+                    canEditDetails
                     detailsIsEditing={detailsIsEditing}
-                    detailsHasSaved={detailsHasSaved}
-                    detailsEditSession={detailsEditSession}
-                    detailsIsDirty={detailsIsDirty}
                     onChangeStone={() => openRecPicker(0)}
                     onEditDetails={startEditDetails}
                     onSaveDetails={saveDetailsSection}
-                    onCancelEditDetails={cancelDetailsEdit}
                     onDetailsChange={handleDetailsChange}
                   />
                 </div>
@@ -759,12 +683,10 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
                   )}
                 </div>
                 <SectionActions
-                  showEdit={remedyHasSaved && !remedyEditSession}
-                  showSave={remedyIsEditing && remedyIsDirty}
-                  showCancel={remedyEditSession || (remedyIsEditing && remedyIsDirty)}
+                  showEdit={remedyHasSaved && !remedyIsEditing}
+                  showSave={remedyIsEditing}
                   onEdit={startEditRemedy}
                   onSave={saveRemedySection}
-                  onCancel={cancelRemedyEdit}
                   saveDisabled={!remedyType.trim() || !remedyInstructions.trim()}
                 />
               </div>
@@ -834,6 +756,21 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
           </div>
         </div>
       </Modal>
+
+      <ConfirmDialog
+        open={showSubmitConfirm}
+        onClose={() => setShowSubmitConfirm(false)}
+        onConfirm={performSubmitRecommendation}
+        title="Submit without optional items?"
+        tone="default"
+        confirmLabel="Submit recommendation anyway"
+        cancelLabel="Cancel"
+        message={
+          missingOptionalParts.length === 2
+            ? "Stone recommendation and Other remedy have not been added. You can still submit with the consultation summary only."
+            : `${missingOptionalParts[0]} has not been added. You can still submit the recommendation without it.`
+        }
+      />
 
       {/* Toast */}
       {toast && (
