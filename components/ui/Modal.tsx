@@ -9,9 +9,10 @@ interface ModalProps {
   title?: string;
   children: React.ReactNode;
   wide?: boolean;
+  extraWide?: boolean;
 }
 
-export function Modal({ open, onClose, title, children, wide }: ModalProps) {
+export function Modal({ open, onClose, title, children, wide, extraWide }: ModalProps) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
@@ -40,7 +41,7 @@ export function Modal({ open, onClose, title, children, wide }: ModalProps) {
         onClick={onClose}
       />
       <div
-        className={`relative rounded-[18px] w-full max-h-[90vh] ${wide ? "max-w-[640px]" : "max-w-[480px]"}`}
+        className={`relative rounded-[18px] w-full max-h-[90vh] flex flex-col ${extraWide ? "max-w-[980px]" : wide ? "max-w-[640px]" : "max-w-[480px]"}`}
         style={{ background: T.card, border: `1px solid ${T.borderSoft}`, boxShadow: "0 2px 6px rgba(43,42,34,0.06), 0 44px 90px -40px rgba(43,42,34,0.45), inset 0 1px 0 rgba(255,255,255,0.5), inset 0 0 0 1px rgba(160,125,56,0.18)", animation: "modal-in 250ms cubic-bezier(0.22, 1, 0.36, 1)" }}
       >
         {title && (
@@ -56,7 +57,7 @@ export function Modal({ open, onClose, title, children, wide }: ModalProps) {
             </button>
           </div>
         )}
-        <div className="p-6 overflow-visible">{children}</div>
+        <div className="p-6 overflow-y-auto flex-1 min-h-0">{children}</div>
       </div>
     </div>,
     document.body,

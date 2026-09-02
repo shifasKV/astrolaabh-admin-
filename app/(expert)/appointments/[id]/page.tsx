@@ -1,17 +1,11 @@
 "use client";
 import { use, useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, GoldBtn, GhostBtn, Textarea, Input, Modal, SearchFilter, StepIndicator, BackLink } from "@/components/ui";
+import { Card, Chip, GoldBtn, GhostBtn, Textarea, Input, Modal, BackLink } from "@/components/ui";
 import { T } from "@/lib/theme";
 import { MOCK_CONSULTATIONS, MOCK_CUSTOMERS, MOCK_STONE_RECOMMENDATIONS, MOCK_REMEDY_RECOMMENDATIONS } from "@/lib/mock";
-import { STONES, DESIGNS, inr } from "@/lib/catalog";
-
-type RecStep = "stone" | "design" | "review";
-const REC_STEPS: { key: RecStep; label: string }[] = [
-  { key: "stone", label: "Stone" },
-  { key: "design", label: "Design" },
-  { key: "review", label: "Review" },
-];
+import { STONES } from "@/lib/catalog";
+import { RecommendationPickerFlow, type RecommendationPickResult } from "@/components/create/RecommendationPickerFlow";
 
 type RecStatus = "not_recommended" | "draft" | "recommended" | "purchased";
 
@@ -21,76 +15,268 @@ interface RecData {
   gemstone: string;
   weightRange: string;
   metalSetting: string;
-  rationale: string;
+  why: string;
   purpose: string;
-  fingerGuidance: string;
-  timingGuidance: string;
+  howToWear: string;
   designName: string;
+  designSlug: string;
+  form: string;
+  energisationKey: string;
+  energisationName: string;
 }
 
-function recStatusTone(s: RecStatus) {
-  if (s === "purchased") return "good" as const;
-  if (s === "recommended") return "gold" as const;
-  if (s === "draft") return "muted" as const;
-  return "muted" as const;
+interface RemedyValue {
+  type: string;
+  instructions: string;
+}
+
+interface DetailFields {
+  why: string;
+  purpose: string;
+  howToWear: string;
+}
+
+function remedyIsComplete(v: RemedyValue | null): boolean {
+  return !!v && !!v.type.trim() && !!v.instructions.trim();
+}
+
+function SectionActions({
+  showEdit,
+  showSave,
+  showCancel,
+  onEdit,
+  onSave,
+  onCancel,
+  saveDisabled,
+}: {
+  showEdit?: boolean;
+  showSave?: boolean;
+  showCancel?: boolean;
+  onEdit?: () => void;
+  onSave: () => void;
+  onCancel: () => void;
+  saveDisabled?: boolean;
+}) {
+  if (showSave || showCancel) {
+    return (
+      <div className="flex items-center gap-2 shrink-0">
+        {showCancel && (
+          <button type="button" onClick={onCancel} className="text-[12px] font-medium cursor-pointer transition-opacity hover:opacity-80" style={{ color: T.muted }}>
+            Cancel
+          </button>
+        )}
+        {showSave && (
+          <button
+            type="button"
+            onClick={onSave}
+            disabled={saveDisabled}
+            className="text-[12px] font-semibold cursor-pointer transition-opacity hover:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{ color: T.accent }}
+          >
+            Save
+          </button>
+        )}
+      </div>
+    );
+  }
+  if (showEdit && onEdit) {
+    return (
+      <button type="button" onClick={onEdit} className="text-[12px] font-medium shrink-0 cursor-pointer transition-opacity hover:opacity-80" style={{ color: T.accent }}>
+        Edit
+      </button>
+    );
+  }
+  return null;
+}
+
+function StoneRecDisplay({
+  recData,
+  savedDetails,
+  canEdit,
+  detailsIsEditing,
+  detailsHasSaved,
+  detailsEditSession,
+  detailsIsDirty,
+  onChangeStone,
+  onEditDetails,
+  onSaveDetails,
+  onCancelEditDetails,
+  onDetailsChange,
+}: {
+  recData: RecData;
+  savedDetails: DetailFields;
+  canEdit?: boolean;
+  detailsIsEditing?: boolean;
+  detailsHasSaved?: boolean;
+  detailsEditSession?: boolean;
+  detailsIsDirty?: boolean;
+  onChangeStone?: () => void;
+  onEditDetails?: () => void;
+  onSaveDetails?: () => void;
+  onCancelEditDetails?: () => void;
+  onDetailsChange?: (field: "purpose" | "howToWear" | "why", value: string) => void;
+}) {
+  const stone = STONES.find((s) => s.sku === recData.stoneSku)
+    ?? STONES.find((s) =>
+      recData.gemstone.toLowerCase().includes(s.gemName.toLowerCase()) ||
+      recData.gemstone.toLowerCase().includes(s.english.toLowerCase())
+    );
+  const isLoose = recData.metalSetting.toLowerCase().includes("loose");
+  const jewellery = isLoose ? "Loose stone" : (recData.designName || recData.metalSetting.split(" ").slice(-1)[0] || "—");
+  const metal = isLoose ? "—" : recData.metalSetting.replace(/\s+(Ring|Pendant|Bracelet)$/i, "") || recData.metalSetting;
+
+  return (
+    <div className="rounded-[12px] p-4" style={{ background: T.accentFaint, border: `1px solid ${T.accentBorder}` }}>
+      <div className="flex items-start gap-3">
+        <div
+          className="w-[72px] h-[72px] rounded-[10px] shrink-0 overflow-hidden flex items-center justify-center"
+          style={{ background: stone?.shadeHex ? `${stone.shadeHex}22` : "rgba(89,82,54,0.06)", border: `1px solid ${T.borderSoft}` }}
+        >
+          {stone?.image ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={stone.image} alt={recData.gemstone} className="w-full h-full object-cover" />
+          ) : (
+            <span className="text-[22px]" aria-hidden>💎</span>
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="text-[16px] font-semibold" style={{ color: T.text }}>{recData.gemstone}</div>
+          <div className="flex flex-wrap gap-x-5 gap-y-1.5 mt-2 text-[12.5px]">
+            <span style={{ color: T.muted }}>Weight <span className="font-medium" style={{ color: T.text }}>{recData.weightRange || "—"}</span></span>
+            {!isLoose && <span style={{ color: T.muted }}>Metal <span className="font-medium" style={{ color: T.text }}>{metal}</span></span>}
+            <span style={{ color: T.muted }}>Jewellery <span className="font-medium" style={{ color: T.text }}>{jewellery}</span></span>
+            {recData.energisationName && (
+              <span style={{ color: T.muted }}>Energisation <span className="font-medium" style={{ color: T.text }}>{recData.energisationName}</span></span>
+            )}
+          </div>
+        </div>
+        {canEdit && onChangeStone && (
+          <button
+            type="button"
+            onClick={onChangeStone}
+            className="text-[12px] font-medium shrink-0 cursor-pointer transition-opacity hover:opacity-80"
+            style={{ color: T.accent }}
+          >
+            Change stone
+          </button>
+        )}
+      </div>
+      {(detailsHasSaved || detailsIsEditing || canEdit) && (
+        <div className="mt-4 pt-4 space-y-3" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+          {canEdit && (
+            <div className="flex items-center justify-end -mt-1 mb-1">
+              <SectionActions
+                showEdit={!detailsIsEditing}
+                showSave={!!detailsIsEditing && !!detailsIsDirty}
+                showCancel={!!detailsEditSession || (!!detailsIsEditing && !!detailsIsDirty)}
+                onEdit={onEditDetails}
+                onSave={() => onSaveDetails?.()}
+                onCancel={() => onCancelEditDetails?.()}
+                saveDisabled={!recData.why.trim() || !recData.purpose.trim()}
+              />
+            </div>
+          )}
+          {detailsIsEditing ? (
+            <div className="space-y-3">
+              <Textarea value={recData.why} onChange={(v) => onDetailsChange?.("why", v)} label="Why" placeholder="Why this stone for this chart…" rows={3} />
+              <Input value={recData.purpose} onChange={(v) => onDetailsChange?.("purpose", v)} label="Purpose" placeholder="E.g. Career advancement" />
+              <Textarea value={recData.howToWear} onChange={(v) => onDetailsChange?.("howToWear", v)} label="How to wear" placeholder="E.g. Index finger, right hand · Thursday, Pushya nakshatra" rows={2} />
+            </div>
+          ) : (
+            <>
+              {savedDetails.purpose && (
+                <div>
+                  <div className="text-[11px] font-medium tracking-[0.06em] uppercase mb-1" style={{ color: T.faint }}>Purpose</div>
+                  <p className="text-[13px] leading-relaxed" style={{ color: T.text }}>{savedDetails.purpose}</p>
+                </div>
+              )}
+              {savedDetails.howToWear && (
+                <div>
+                  <div className="text-[11px] font-medium tracking-[0.06em] uppercase mb-1" style={{ color: T.faint }}>How to wear</div>
+                  <p className="text-[13px] leading-relaxed" style={{ color: T.text }}>{savedDetails.howToWear}</p>
+                </div>
+              )}
+              {savedDetails.why && (
+                <div>
+                  <div className="text-[11px] font-medium tracking-[0.06em] uppercase mb-1" style={{ color: T.faint }}>Why</div>
+                  <p className="text-[13px] leading-relaxed" style={{ color: T.text }}>{savedDetails.why}</p>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function ConsultationWorkspace({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const consultation = MOCK_CONSULTATIONS.find((c) => c.id === id);
 
-  // Summary state
-  const [summaryText, setSummaryText] = useState(() => consultation?.summary ?? "");
+  // Summary — saved = committed section value; summaryText = in-progress draft
+  const initialSummary = consultation?.summary ?? "";
+  const [savedSummary, setSavedSummary] = useState(initialSummary);
+  const [summaryText, setSummaryText] = useState(initialSummary);
+  const [summaryEditSession, setSummaryEditSession] = useState(false);
+  const [summarySnapshot, setSummarySnapshot] = useState(initialSummary);
   const [summaryStatus, setSummaryStatus] = useState<"empty" | "draft" | "submitted">(() =>
     consultation?.summary ? "submitted" : "empty"
   );
-
-  const [editingSummary, setEditingSummary] = useState(false);
+  const [packageStatus, setPackageStatus] = useState<"empty" | "draft" | "submitted">(() => {
+    if (consultation?.summary) return "submitted";
+    return "empty";
+  });
+  const [showEditWarning, setShowEditWarning] = useState(false);
   const [activeWorkTab, setActiveWorkTab] = useState<"summary" | "stone" | "remedy">("summary");
 
-  // Remedy local state
-  const [remedyType, setRemedyType] = useState("");
-  const [remedyInstructions, setRemedyInstructions] = useState("");
-  const [remedyFrequency, setRemedyFrequency] = useState("");
-  const [remedyDuration, setRemedyDuration] = useState("");
-  const [remedySaved, setRemedySaved] = useState(false);
+  // Remedy — optional section with same saved / draft / edit-session model
+  const initialRemedy = (() => {
+    const rec = MOCK_REMEDY_RECOMMENDATIONS.find((r) => r.consultationId === id);
+    return rec ? { type: rec.type, instructions: rec.instructions } : null;
+  })();
+  const [savedRemedy, setSavedRemedy] = useState<RemedyValue | null>(initialRemedy);
+  const [remedyType, setRemedyType] = useState(initialRemedy?.type ?? "");
+  const [remedyInstructions, setRemedyInstructions] = useState(initialRemedy?.instructions ?? "");
+  const [remedyEditSession, setRemedyEditSession] = useState(false);
+  const [remedySnapshot, setRemedySnapshot] = useState<RemedyValue>({ type: "", instructions: "" });
 
   // Recommendation local state — seeded from mock
   const mockRec = MOCK_STONE_RECOMMENDATIONS.find((r) => r.consultationId === id);
   const [recData, setRecData] = useState<RecData>(() => {
-    if (!mockRec) return { status: "not_recommended", stoneSku: "", gemstone: "", weightRange: "", metalSetting: "", rationale: "", purpose: "", fingerGuidance: "", timingGuidance: "", designName: "" };
+    if (!mockRec) return { status: "not_recommended", stoneSku: "", gemstone: "", weightRange: "", metalSetting: "", why: "", purpose: "", howToWear: "", designName: "", designSlug: "", form: "Ring", energisationKey: "shuddhi", energisationName: "Shuddhi" };
     let status: RecStatus = "not_recommended";
     if (mockRec.status === "draft") status = "draft";
     else if (mockRec.status === "converted_to_order") status = "purchased";
     else if (mockRec.status === "submitted" || mockRec.status === "approved" || mockRec.status === "shared") status = "recommended";
+    const howToWear = [mockRec.fingerGuidance, mockRec.timingGuidance].filter(Boolean).join(" · ");
     return {
       status,
       stoneSku: mockRec.matchedSku ?? "",
       gemstone: mockRec.gemstone,
       weightRange: mockRec.weightRange,
       metalSetting: mockRec.metalSetting ?? "",
-      rationale: mockRec.rationale,
+      why: mockRec.rationale,
       purpose: mockRec.purpose,
-      fingerGuidance: mockRec.fingerGuidance ?? "",
-      timingGuidance: mockRec.timingGuidance ?? "",
+      howToWear,
       designName: "",
+      designSlug: "",
+      form: "Ring",
+      energisationKey: "shuddhi",
+      energisationName: "Shuddhi",
     };
   });
 
-  // Modal state
   const [showRecModal, setShowRecModal] = useState(false);
-  const [recStep, setRecStep] = useState<RecStep>("stone");
-  const [recSearch, setRecSearch] = useState("");
-  const [recStoneSku, setRecStoneSku] = useState("");
-  const [recDesignForm, setRecDesignForm] = useState<"" | "Ring" | "Pendant" | "Bracelet" | "Loose">("Ring");
-  const [recDesignSlug, setRecDesignSlug] = useState("");
-  const [recDesignMetal, setRecDesignMetal] = useState("22K Gold");
-  const [recDesignSize, setRecDesignSize] = useState("");
-  const [recRationale, setRecRationale] = useState("");
-  const [recPurpose, setRecPurpose] = useState("");
-  const [recFinger, setRecFinger] = useState("");
-  const [recTiming, setRecTiming] = useState("");
-  const [animating, setAnimating] = useState(false);
+  const [recPickerStartStep, setRecPickerStartStep] = useState(0);
+
+  const [savedDetails, setSavedDetails] = useState<DetailFields>(() => {
+    if (!mockRec) return { why: "", purpose: "", howToWear: "" };
+    const howToWear = [mockRec.fingerGuidance, mockRec.timingGuidance].filter(Boolean).join(" · ");
+    return { why: mockRec.rationale, purpose: mockRec.purpose, howToWear };
+  });
+  const [detailsEditSession, setDetailsEditSession] = useState(false);
+  const [detailsSnapshot, setDetailsSnapshot] = useState<DetailFields>({ why: "", purpose: "", howToWear: "" });
   const [toast, setToast] = useState("");
   const [showReschedule, setShowReschedule] = useState(false);
   const [rescheduleReason, setRescheduleReason] = useState("");
@@ -117,79 +303,161 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
   }
 
   const customer = MOCK_CUSTOMERS.find((c) => c.id === consultation.customerId);
-  const remedyRec = MOCK_REMEDY_RECOMMENDATIONS.find((r) => r.consultationId === consultation.id);
-
-  const selectedStone = STONES.find((s) => s.sku === recStoneSku);
-  const selectedDesign = DESIGNS.find((d) => d.slug === recDesignSlug);
-
-  const recStepIndex = REC_STEPS.findIndex((s) => s.key === recStep);
-  const canNavRec = (i: number) => {
-    if (i === 0) return true;
-    if (i >= 1) return !!recStoneSku;
-    return false;
-  };
-
-  const goRecStep = (target: RecStep) => {
-    setAnimating(true);
-    setTimeout(() => { setRecStep(target); setAnimating(false); }, 150);
-  };
 
   const showToast = (msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(""), 3000);
   };
 
-  const openRecModal = () => {
-    if (recData.status === "draft") {
-      const matchedStone = STONES.find((s) => s.gemName === recData.gemstone || s.sku === recData.stoneSku);
-      if (matchedStone) setRecStoneSku(matchedStone.sku);
-      setRecRationale(recData.rationale);
-      setRecPurpose(recData.purpose);
-      setRecFinger(recData.fingerGuidance);
-      setRecTiming(recData.timingGuidance);
-    } else {
-      setRecStoneSku("");
-      setRecRationale("");
-      setRecPurpose("");
-      setRecFinger("");
-      setRecTiming("");
-    }
-    setRecDesignSlug("");
-    setRecDesignForm("Ring");
-    setRecStep("stone");
+  const openRecPicker = (startStep = 0) => {
+    setRecPickerStartStep(startStep);
     setShowRecModal(true);
   };
 
-  const saveRec = (status: "draft" | "recommended") => {
-    const stone = STONES.find((s) => s.sku === recStoneSku);
-    const design = DESIGNS.find((d) => d.slug === recDesignSlug);
-    setRecData({
-      status,
-      stoneSku: recStoneSku,
-      gemstone: stone?.gemName ?? "",
-      weightRange: stone ? `${stone.ratti} ratti` : "",
-      metalSetting: recDesignForm === "Loose" ? "Loose stone" : `${recDesignMetal} ${recDesignForm}`,
-      rationale: recRationale,
-      purpose: recPurpose,
-      fingerGuidance: recFinger,
-      timingGuidance: recTiming,
-      designName: design?.name ?? (recDesignForm === "Loose" ? "Loose stone" : ""),
-    });
+  const handlePickerComplete = (pick: RecommendationPickResult) => {
+    setRecData((prev) => ({
+      ...prev,
+      status: prev.status === "recommended" || prev.status === "purchased" ? prev.status : "draft",
+      stoneSku: pick.stoneSku,
+      gemstone: pick.gemstone,
+      weightRange: pick.weightRange,
+      metalSetting: pick.metalSetting,
+      designName: pick.designName,
+      designSlug: pick.designSlug,
+      form: pick.form,
+      energisationKey: pick.energisationKey,
+      energisationName: pick.energisationName,
+    }));
     setShowRecModal(false);
-    showToast(status === "draft" ? "Recommendation saved as draft" : "Recommendation submitted");
+    showToast("Stone selection saved");
   };
 
-  const handleSubmitSummary = () => {
-    if (!summaryText.trim()) return;
-    setSummaryStatus("submitted");
-    setEditingSummary(false);
-    showToast(summaryStatus === "submitted" ? "Summary updated" : "Summary submitted successfully");
+  const handleDetailsChange = (field: "purpose" | "howToWear" | "why", value: string) => {
+    setRecData((prev) => ({ ...prev, [field]: value }));
   };
+
+  const hasMandatoryContent = savedSummary.trim().length > 0 && recData.status !== "not_recommended";
+  const hasAnyContent = savedSummary.trim().length > 0 || recData.status !== "not_recommended" || remedyIsComplete(savedRemedy);
+
+  const summaryHasSaved = !!savedSummary.trim();
+  const summaryIsFirstEntry = !summaryHasSaved && packageStatus !== "submitted";
+  const summaryIsEditing = summaryIsFirstEntry || summaryEditSession;
+  const summaryBaseline = summaryEditSession ? summarySnapshot : savedSummary;
+  const summaryIsDirty = summaryText !== summaryBaseline;
+
+  const remedyHasSaved = remedyIsComplete(savedRemedy);
+  const remedyIsFirstEntry = !remedyHasSaved && packageStatus !== "submitted";
+  const remedyIsEditing = remedyIsFirstEntry || remedyEditSession;
+  const remedyBaseline = remedyEditSession ? remedySnapshot : (savedRemedy ?? { type: "", instructions: "" });
+  const remedyIsDirty = remedyType !== remedyBaseline.type || remedyInstructions !== remedyBaseline.instructions;
+
+  const detailsHasSaved = !!(savedDetails.why.trim() && savedDetails.purpose.trim());
+  const detailsIsFirstEntry = !detailsHasSaved && packageStatus !== "submitted" && recData.status !== "not_recommended";
+  const detailsIsEditing = detailsIsFirstEntry || detailsEditSession;
+  const detailsBaseline = detailsEditSession ? detailsSnapshot : savedDetails;
+  const detailsIsDirty =
+    recData.why !== detailsBaseline.why ||
+    recData.purpose !== detailsBaseline.purpose ||
+    recData.howToWear !== detailsBaseline.howToWear;
 
   const handleSaveDraft = () => {
+    if (!hasAnyContent) return;
+    const wasSubmitted = packageStatus === "submitted";
+    if (savedSummary.trim()) setSummaryStatus("draft");
+    if (recData.status === "recommended") setRecData((prev) => ({ ...prev, status: "draft" }));
+    setDetailsEditSession(false);
+    setPackageStatus("draft");
+    if (wasSubmitted) {
+      setShowEditWarning(true);
+      showToast("Changes saved as draft — submit recommendation when ready");
+    } else {
+      showToast("Saved as draft");
+    }
+  };
+
+  const startEditSummary = () => {
+    setSummarySnapshot(savedSummary);
+    setSummaryText(savedSummary);
+    setSummaryEditSession(true);
+  };
+
+  const cancelSummaryEdit = () => {
+    if (summaryEditSession) {
+      setSummaryText(summarySnapshot);
+      setSummaryEditSession(false);
+    } else {
+      setSummaryText(savedSummary);
+    }
+  };
+
+  const saveSummarySection = () => {
     if (!summaryText.trim()) return;
-    setSummaryStatus("draft");
-    showToast("Summary saved as draft");
+    setSavedSummary(summaryText);
+    setSummaryEditSession(false);
+    if (packageStatus !== "submitted") setSummaryStatus("draft");
+  };
+
+  const startEditRemedy = () => {
+    const current = savedRemedy ?? { type: "", instructions: "" };
+    setRemedySnapshot(current);
+    setRemedyType(current.type);
+    setRemedyInstructions(current.instructions);
+    setRemedyEditSession(true);
+  };
+
+  const cancelRemedyEdit = () => {
+    if (remedyEditSession) {
+      setRemedyType(remedySnapshot.type);
+      setRemedyInstructions(remedySnapshot.instructions);
+      setRemedyEditSession(false);
+    } else {
+      setRemedyType(savedRemedy?.type ?? "");
+      setRemedyInstructions(savedRemedy?.instructions ?? "");
+    }
+  };
+
+  const saveRemedySection = () => {
+    if (!remedyType.trim() || !remedyInstructions.trim()) return;
+    setSavedRemedy({ type: remedyType.trim(), instructions: remedyInstructions.trim() });
+    setRemedyEditSession(false);
+  };
+
+  const startEditDetails = () => {
+    setDetailsSnapshot(savedDetails);
+    setRecData((prev) => ({ ...prev, ...savedDetails }));
+    setDetailsEditSession(true);
+  };
+
+  const cancelDetailsEdit = () => {
+    if (detailsEditSession) {
+      setRecData((prev) => ({ ...prev, ...detailsSnapshot }));
+      setDetailsEditSession(false);
+    } else {
+      setRecData((prev) => ({ ...prev, ...savedDetails }));
+    }
+  };
+
+  const saveDetailsSection = () => {
+    if (!recData.why.trim() || !recData.purpose.trim()) return;
+    const next = { why: recData.why, purpose: recData.purpose, howToWear: recData.howToWear };
+    setSavedDetails(next);
+    setDetailsEditSession(false);
+  };
+
+  const contentBoxStyle = { background: T.bg, border: `1px solid ${T.borderSoft}` };
+
+  const handleSubmitRecommendation = () => {
+    if (!hasMandatoryContent) return;
+    setSummaryStatus("submitted");
+    setSummaryEditSession(false);
+    setRemedyEditSession(false);
+    setDetailsEditSession(false);
+    setShowEditWarning(false);
+    if (recData.status === "draft" || recData.status === "not_recommended") {
+      setRecData((prev) => ({ ...prev, status: "recommended" }));
+    }
+    setPackageStatus("submitted");
+    showToast("Recommendation submitted successfully");
   };
 
   const effectiveStatus = localStatus;
@@ -204,7 +472,7 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
     : (effectiveStatus === "closed" || effectiveStatus === "completed") ? "good" as const
     : "gold" as const;
 
-  const canEditRec = recData.status === "not_recommended" || recData.status === "draft";
+  const canEditRec = recData.status !== "purchased";
   const isUpcoming = effectiveStatus === "scheduled" || effectiveStatus === "reschedule_requested";
   const isRecommendationDue = effectiveStatus === "summary_pending";
   const isNoShow = effectiveStatus === "no_show";
@@ -353,22 +621,41 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
 
       {/* ========= Unified Recommendation Workspace ========= */}
       {!isUpcoming && (
-        <Card className="mb-4">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-[15px] font-semibold" style={{ color: T.text }}>Post-consultation</h3>
-            <div className="flex items-center gap-2">
-              {summaryStatus === "submitted" && recData.status !== "not_recommended" && remedySaved && (
-                <Chip tone="good">All submitted</Chip>
+        <Card className={`mb-4 ${isNoShow ? "opacity-50 pointer-events-none select-none" : ""}`}>
+          <div className="flex items-center justify-between gap-4 mb-4 pb-4" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
+            <div className="flex items-center gap-2.5 min-w-0">
+              <h3 className="text-[15px] font-semibold shrink-0" style={{ color: T.text }}>Post-consultation</h3>
+              {packageStatus === "submitted" && (
+                <Chip tone="good">Recommended to Customer</Chip>
+              )}
+              {packageStatus === "draft" && (
+                <Chip tone="muted">Draft</Chip>
               )}
             </div>
+            {!isNoShow && packageStatus !== "submitted" && (
+              <div className="flex items-center gap-2 shrink-0">
+                <GhostBtn disabled={!hasAnyContent || (hasMandatoryContent && packageStatus !== "submitted")} onClick={handleSaveDraft}>
+                  Save draft
+                </GhostBtn>
+                <GoldBtn disabled={!hasMandatoryContent} onClick={handleSubmitRecommendation}>
+                  Submit recommendation
+                </GoldBtn>
+              </div>
+            )}
           </div>
+
+          {showEditWarning && packageStatus !== "submitted" && (
+            <div className="rounded-[9px] px-3.5 py-2.5 mb-4 text-[12.5px] leading-relaxed" style={{ background: "rgba(160,125,56,0.12)", border: "1px solid rgba(160,125,56,0.28)", color: T.text }}>
+              Changes are saved as draft only. Submit recommendation when ready to send to the customer.
+            </div>
+          )}
 
           {/* Tab bar with completion indicators */}
           <div className="flex items-center gap-1 mb-5 pb-3" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
             {([
-              { key: "summary" as const, label: "Summary", done: summaryStatus === "submitted" },
-              { key: "stone" as const, label: "Stone recommendation", done: recData.status === "recommended" || recData.status === "purchased" },
-              { key: "remedy" as const, label: "Other remedy", done: remedySaved || !!remedyRec },
+              { key: "summary" as const, label: "Summary", optional: false, done: summaryHasSaved },
+              { key: "stone" as const, label: "Stone recommendation", optional: false, done: recData.status === "recommended" || recData.status === "purchased" },
+              { key: "remedy" as const, label: "Other remedy", optional: true, done: remedyHasSaved },
             ]).map((t) => {
               const active = activeWorkTab === t.key;
               return (
@@ -391,7 +678,7 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
                   >
                     {t.done ? "✓" : ""}
                   </span>
-                  {t.label}
+                  {t.label}{t.optional ? " (Optional)" : ""}
                 </button>
               );
             })}
@@ -399,31 +686,30 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
 
           {/* ---- Summary tab ---- */}
           {activeWorkTab === "summary" && (
-            <div>
-              {summaryStatus === "submitted" && !editingSummary ? (
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <Chip tone="good">Submitted</Chip>
-                    <button onClick={() => setEditingSummary(true)} className="text-[12px] font-medium cursor-pointer transition-opacity hover:opacity-80" style={{ color: T.accent }}>Edit</button>
-                  </div>
-                  <p className="text-[13.5px] leading-relaxed" style={{ color: T.text }}>{summaryText}</p>
+            <div className="rounded-[9px] p-4" style={contentBoxStyle}>
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <div className="min-w-0">
+                  <div className="text-[11px] font-medium tracking-[0.06em] uppercase" style={{ color: T.faint }}>Consultation summary</div>
+                  {summaryIsEditing && (
+                    <p className="text-[12px] mt-0.5 leading-relaxed" style={{ color: T.muted }}>
+                      Key observations, interpretation, conclusion, and agreed next steps
+                    </p>
+                  )}
                 </div>
+                <SectionActions
+                  showEdit={summaryHasSaved && !summaryEditSession}
+                  showSave={summaryIsEditing && summaryIsDirty}
+                  showCancel={summaryEditSession || (summaryIsEditing && summaryIsDirty)}
+                  onEdit={startEditSummary}
+                  onSave={saveSummarySection}
+                  onCancel={cancelSummaryEdit}
+                  saveDisabled={!summaryText.trim()}
+                />
+              </div>
+              {summaryIsEditing ? (
+                <Textarea value={summaryText} onChange={setSummaryText} placeholder="Write your consultation summary here…" rows={5} />
               ) : (
-                <div>
-                  <div className="text-[12px] mb-2" style={{ color: T.muted }}>Key observations, interpretation, conclusion, and agreed next steps</div>
-                  <Textarea value={summaryText} onChange={setSummaryText} placeholder="Write your consultation summary here…" rows={5} />
-                  <div className="flex items-center justify-end gap-2.5 mt-3">
-                    {summaryStatus === "submitted" && editingSummary && (
-                      <GhostBtn onClick={() => setEditingSummary(false)}>Cancel</GhostBtn>
-                    )}
-                    {summaryStatus !== "submitted" && (
-                      <GhostBtn disabled={!summaryText.trim()} onClick={handleSaveDraft}>Save draft</GhostBtn>
-                    )}
-                    <GoldBtn disabled={!summaryText.trim()} onClick={handleSubmitSummary}>
-                      {summaryStatus === "submitted" ? "Update summary" : "Submit summary"}
-                    </GoldBtn>
-                  </div>
-                </div>
+                <p className="text-[13.5px] leading-relaxed" style={{ color: T.text }}>{savedSummary}</p>
               )}
             </div>
           )}
@@ -435,44 +721,26 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
                 <div className="text-center py-6">
                   <div className="w-12 h-12 rounded-full mx-auto mb-3 flex items-center justify-center text-[20px]" style={{ background: "rgba(119,123,98,0.1)" }}>💎</div>
                   <p className="text-[13.5px] mb-3" style={{ color: T.muted }}>No stone recommendation yet</p>
-                  <GoldBtn onClick={openRecModal}>Select stone from inventory</GoldBtn>
+                  <GoldBtn onClick={() => openRecPicker(0)}>Select stone from inventory</GoldBtn>
                 </div>
               )}
 
-              {recData.status === "draft" && (
+              {recData.status !== "not_recommended" && (
                 <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <Chip tone="muted">Draft</Chip>
-                    <GoldBtn onClick={openRecModal}>Edit draft</GoldBtn>
-                  </div>
-                  <div className="rounded-[9px] p-4 space-y-2 text-[13px]" style={{ background: T.bg, border: `1px solid ${T.borderSoft}` }}>
-                    <div className="flex justify-between"><span style={{ color: T.muted }}>Gemstone</span><span style={{ color: T.text }}>{recData.gemstone}</span></div>
-                    <div className="flex justify-between"><span style={{ color: T.muted }}>Weight</span><span style={{ color: T.text }}>{recData.weightRange}</span></div>
-                    <div className="flex justify-between"><span style={{ color: T.muted }}>Setting</span><span style={{ color: T.text }}>{recData.metalSetting}</span></div>
-                    <div className="flex justify-between"><span style={{ color: T.muted }}>Rationale</span><span className="text-right max-w-[60%]" style={{ color: T.text }}>{recData.rationale}</span></div>
-                  </div>
-                </div>
-              )}
-
-              {(recData.status === "recommended" || recData.status === "purchased") && (
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <Chip tone={recStatusTone(recData.status)}>{recData.status === "purchased" ? "Purchased" : "Recommended"}</Chip>
-                  </div>
-                  <div className="rounded-[9px] p-4 space-y-2 text-[13px]" style={{ background: T.bg, border: `1px solid ${T.borderSoft}` }}>
-                    <div className="flex justify-between"><span style={{ color: T.muted }}>Gemstone</span><span style={{ color: T.text }}>{recData.gemstone}</span></div>
-                    <div className="flex justify-between"><span style={{ color: T.muted }}>Weight</span><span style={{ color: T.text }}>{recData.weightRange}</span></div>
-                    <div className="flex justify-between"><span style={{ color: T.muted }}>Setting</span><span style={{ color: T.text }}>{recData.metalSetting}</span></div>
-                    <div className="flex justify-between"><span style={{ color: T.muted }}>Purpose</span><span className="text-right max-w-[60%]" style={{ color: T.text }}>{recData.purpose}</span></div>
-                    <div className="flex justify-between"><span style={{ color: T.muted }}>Finger</span><span style={{ color: T.text }}>{recData.fingerGuidance}</span></div>
-                    <div className="flex justify-between"><span style={{ color: T.muted }}>Timing</span><span style={{ color: T.text }}>{recData.timingGuidance}</span></div>
-                    <div className="flex justify-between"><span style={{ color: T.muted }}>Rationale</span><span className="text-right max-w-[60%]" style={{ color: T.text }}>{recData.rationale}</span></div>
-                    {recData.stoneSku && (
-                      <div className="pt-2 mt-2 flex justify-between" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
-                        <span style={{ color: T.muted }}>Matched SKU</span><span style={{ color: T.accent }}>{recData.stoneSku}</span>
-                      </div>
-                    )}
-                  </div>
+                  <StoneRecDisplay
+                    recData={recData}
+                    savedDetails={savedDetails}
+                    canEdit={canEditRec}
+                    detailsIsEditing={detailsIsEditing}
+                    detailsHasSaved={detailsHasSaved}
+                    detailsEditSession={detailsEditSession}
+                    detailsIsDirty={detailsIsDirty}
+                    onChangeStone={() => openRecPicker(0)}
+                    onEditDetails={startEditDetails}
+                    onSaveDetails={saveDetailsSection}
+                    onCancelEditDetails={cancelDetailsEdit}
+                    onDetailsChange={handleDetailsChange}
+                  />
                 </div>
               )}
             </div>
@@ -480,52 +748,35 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
 
           {/* ---- Other remedy tab ---- */}
           {activeWorkTab === "remedy" && (
-            <div>
-              {(remedySaved || remedyRec) ? (
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <Chip tone="good">Saved</Chip>
-                    <button onClick={() => setRemedySaved(false)} className="text-[12px] font-medium cursor-pointer transition-opacity hover:opacity-80" style={{ color: T.accent }}>Edit</button>
-                  </div>
-                  <div className="rounded-[9px] p-4 space-y-2 text-[13px]" style={{ background: T.bg, border: `1px solid ${T.borderSoft}` }}>
-                    <div className="flex justify-between"><span style={{ color: T.muted }}>Type</span><span style={{ color: T.text }}>{remedyType || remedyRec?.type || "—"}</span></div>
-                    <div className="flex justify-between"><span style={{ color: T.muted }}>Instructions</span><span className="text-right max-w-[60%]" style={{ color: T.text }}>{remedyInstructions || remedyRec?.instructions || "—"}</span></div>
-                    {(remedyFrequency || remedyRec?.frequency) && <div className="flex justify-between"><span style={{ color: T.muted }}>Frequency</span><span style={{ color: T.text }}>{remedyFrequency || remedyRec?.frequency}</span></div>}
-                    {(remedyDuration || remedyRec?.duration) && <div className="flex justify-between"><span style={{ color: T.muted }}>Duration</span><span style={{ color: T.text }}>{remedyDuration || remedyRec?.duration}</span></div>}
-                  </div>
+            <div className="rounded-[9px] p-4" style={contentBoxStyle}>
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <div className="min-w-0">
+                  <div className="text-[11px] font-medium tracking-[0.06em] uppercase" style={{ color: T.faint }}>Other remedy</div>
+                  {remedyIsEditing && (
+                    <p className="text-[12px] mt-0.5 leading-relaxed" style={{ color: T.muted }}>
+                      Prescribe mantras, rituals, or lifestyle changes (optional)
+                    </p>
+                  )}
+                </div>
+                <SectionActions
+                  showEdit={remedyHasSaved && !remedyEditSession}
+                  showSave={remedyIsEditing && remedyIsDirty}
+                  showCancel={remedyEditSession || (remedyIsEditing && remedyIsDirty)}
+                  onEdit={startEditRemedy}
+                  onSave={saveRemedySection}
+                  onCancel={cancelRemedyEdit}
+                  saveDisabled={!remedyType.trim() || !remedyInstructions.trim()}
+                />
+              </div>
+              {remedyIsEditing ? (
+                <div className="space-y-3">
+                  <Input value={remedyType} onChange={setRemedyType} label="Remedy type" placeholder="E.g. Mantra, Havan / Puja, Lifestyle change" />
+                  <Textarea value={remedyInstructions} onChange={setRemedyInstructions} label="Instructions" placeholder="Detailed instructions for the customer…" rows={3} />
                 </div>
               ) : (
-                <div>
-                  <div className="text-[12px] mb-3" style={{ color: T.muted }}>Prescribe mantras, rituals, or lifestyle changes</div>
-                  <div className="space-y-3">
-                    <div>
-                      <label className="text-[12px] block mb-1.5" style={{ color: T.muted }}>Remedy type</label>
-                      <div className="flex flex-wrap gap-2">
-                        {["Mantra", "Havan / Puja", "Gemstone wearing ritual", "Charity / Daan", "Lifestyle", "Other"].map((type) => (
-                          <button
-                            key={type}
-                            onClick={() => setRemedyType(type)}
-                            className="px-3 py-1.5 rounded-[8px] text-[12px] font-medium transition-all cursor-pointer"
-                            style={{
-                              background: remedyType === type ? "rgba(119,123,98,0.15)" : T.bg,
-                              border: `1.5px solid ${remedyType === type ? "rgba(119,123,98,0.65)" : T.borderSoft}`,
-                              color: remedyType === type ? T.accent : T.text,
-                            }}
-                          >{type}</button>
-                        ))}
-                      </div>
-                    </div>
-                    <Textarea value={remedyInstructions} onChange={setRemedyInstructions} label="Instructions" placeholder="Detailed instructions for the customer…" rows={3} />
-                    <div className="grid sm:grid-cols-2 gap-3">
-                      <Input value={remedyFrequency} onChange={setRemedyFrequency} label="Frequency (optional)" placeholder="E.g. Daily, Every Saturday" />
-                      <Input value={remedyDuration} onChange={setRemedyDuration} label="Duration (optional)" placeholder="E.g. 40 days, 3 months" />
-                    </div>
-                  </div>
-                  <div className="flex justify-end mt-4">
-                    <GoldBtn disabled={!remedyType || !remedyInstructions.trim()} onClick={() => { setRemedySaved(true); showToast("Remedy saved"); }}>
-                      Save remedy
-                    </GoldBtn>
-                  </div>
+                <div className="space-y-2 text-[13px]">
+                  <div className="flex justify-between gap-4"><span style={{ color: T.muted }}>Type</span><span className="text-right" style={{ color: T.text }}>{savedRemedy?.type || "—"}</span></div>
+                  <div className="flex justify-between gap-4"><span style={{ color: T.muted }}>Instructions</span><span className="text-right max-w-[60%]" style={{ color: T.text }}>{savedRemedy?.instructions || "—"}</span></div>
                 </div>
               )}
             </div>
@@ -536,179 +787,24 @@ export default function ConsultationWorkspace({ params }: { params: Promise<{ id
       {/* ================================================================ */}
       {/*  Recommendation modal                                            */}
       {/* ================================================================ */}
-      <Modal open={showRecModal} onClose={() => setShowRecModal(false)} title="Stone recommendation" wide>
-        <StepIndicator
-          steps={REC_STEPS}
-          currentIndex={recStepIndex}
-          onNavigate={(i) => goRecStep(REC_STEPS[i].key)}
-          canNavigateTo={canNavRec}
+      <Modal open={showRecModal} onClose={() => setShowRecModal(false)} title="Stone recommendation" extraWide>
+        <RecommendationPickerFlow
+          key={`${showRecModal}-${recPickerStartStep}`}
+          startStep={recPickerStartStep}
+          initial={{
+            stoneSku: recData.stoneSku,
+            gemstone: recData.gemstone,
+            weightRange: recData.weightRange,
+            metalSetting: recData.metalSetting,
+            designName: recData.designName,
+            designSlug: recData.designSlug,
+            form: recData.form,
+            energisationKey: recData.energisationKey,
+            energisationName: recData.energisationName,
+          }}
+          onCancel={() => setShowRecModal(false)}
+          onComplete={handlePickerComplete}
         />
-
-        <div
-          className="transition-all duration-150 mt-4"
-          style={{ opacity: animating ? 0 : 1, transform: animating ? "translateY(6px)" : "translateY(0)" }}
-        >
-          {/* STEP: Stone */}
-          {recStep === "stone" && (
-            <>
-              <div className="text-[15px] font-semibold tracking-[-0.01em] mb-3" style={{ color: T.text }}>Select stone from inventory</div>
-              <div className="mb-3">
-                <SearchFilter search={recSearch} onSearchChange={setRecSearch} placeholder="Search SKU, gemstone…" />
-              </div>
-              <div className="max-h-[320px] overflow-y-auto">
-                {STONES.filter((s) => !recSearch || s.sku.toLowerCase().includes(recSearch.toLowerCase()) || s.gemName.toLowerCase().includes(recSearch.toLowerCase())).slice(0, 20).map((s) => (
-                  <button
-                    key={s.sku}
-                    onClick={() => { setRecStoneSku(s.sku); setRecSearch(""); }}
-                    className="w-full flex items-center justify-between py-3 px-3 text-left rounded-[9px] transition-all duration-150 cursor-pointer hover:pl-4"
-                    style={{
-                      background: recStoneSku === s.sku ? "rgba(119,123,98,0.13)" : "transparent",
-                      borderBottom: `1px solid ${T.borderSoft}`,
-                    }}
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div className="text-[13.5px] font-medium" style={{ color: T.text }}>{s.sku}</div>
-                      <div className="text-[12px] mt-0.5" style={{ color: T.muted }}>
-                        {s.gemName} · {s.origin} · {s.ratti}r · {inr(s.price)}
-                      </div>
-                    </div>
-                    {recStoneSku === s.sku && <span style={{ color: T.accent }}>✓</span>}
-                  </button>
-                ))}
-              </div>
-              {recStoneSku && (
-                <div className="mt-4 pt-3 flex justify-end" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
-                  <GoldBtn onClick={() => goRecStep("design")}>Next →</GoldBtn>
-                </div>
-              )}
-            </>
-          )}
-
-          {/* STEP: Design */}
-          {recStep === "design" && (
-            <>
-              <div className="text-[15px] font-semibold tracking-[-0.01em] mb-3" style={{ color: T.text }}>Select jewellery design (optional)</div>
-              <div className="space-y-5">
-                <div>
-                  <div className="text-[11px] tracking-[0.06em] uppercase mb-2.5" style={{ color: T.muted }}>Type of wear</div>
-                  <div className="flex flex-wrap gap-2.5">
-                    {(["Ring", "Pendant", "Bracelet", "Loose"] as const).map((form) => {
-                      const isActive = recDesignForm === form;
-                      return (
-                        <button
-                          key={form}
-                          onClick={() => { setRecDesignForm(form); setRecDesignSize(""); if (form === "Loose") setRecDesignSlug(""); }}
-                          className="flex flex-col items-center justify-center w-[80px] h-[70px] rounded-[10px] transition-all duration-150 cursor-pointer"
-                          style={{
-                            background: isActive ? "rgba(119,123,98,0.15)" : T.bg,
-                            border: `1.5px solid ${isActive ? "rgba(119,123,98,0.65)" : T.borderSoft}`,
-                          }}
-                        >
-                          <span className="text-[18px] mb-1">
-                            {form === "Ring" && "💍"}{form === "Pendant" && "📿"}{form === "Bracelet" && "⌚"}{form === "Loose" && "💎"}
-                          </span>
-                          <span className="text-[11px] font-medium" style={{ color: isActive ? T.accent : T.text }}>
-                            {form === "Loose" ? "Loose stone" : form}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {recDesignForm && recDesignForm !== "Loose" && (
-                  <div>
-                    <div className="text-[11px] tracking-[0.06em] uppercase mb-2.5" style={{ color: T.muted }}>Metal</div>
-                    <div className="flex flex-wrap gap-2">
-                      {["22K Gold", "18K Gold", "Silver", "Panchdhatu"].map((metal) => (
-                        <button
-                          key={metal}
-                          onClick={() => setRecDesignMetal(recDesignMetal === metal ? "" : metal)}
-                          className="px-3 py-1.5 rounded-[8px] text-[11px] font-medium transition-all duration-150 cursor-pointer"
-                          style={{
-                            background: recDesignMetal === metal ? "rgba(119,123,98,0.15)" : T.bg,
-                            border: `1.5px solid ${recDesignMetal === metal ? "rgba(119,123,98,0.65)" : T.borderSoft}`,
-                            color: recDesignMetal === metal ? T.accent : T.text,
-                          }}
-                        >{metal}</button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {recDesignForm && recDesignForm !== "Loose" && (
-                  <div>
-                    <div className="text-[11px] tracking-[0.06em] uppercase mb-2.5" style={{ color: T.muted }}>Designs</div>
-                    <div className="grid grid-cols-3 gap-2.5 max-h-[200px] overflow-y-auto">
-                      {DESIGNS.filter((d) => d.remaining > 0 && d.form === recDesignForm).map((d) => {
-                        const isActive = recDesignSlug === d.slug;
-                        return (
-                          <button
-                            key={d.slug}
-                            onClick={() => setRecDesignSlug(d.slug)}
-                            className="flex flex-col items-center p-2.5 rounded-[10px] transition-all duration-150 cursor-pointer"
-                            style={{
-                              background: isActive ? "rgba(119,123,98,0.15)" : T.bg,
-                              border: `1.5px solid ${isActive ? "rgba(119,123,98,0.65)" : T.borderSoft}`,
-                            }}
-                          >
-                            <div className="w-[56px] h-[56px] rounded-[8px] overflow-hidden mb-1.5" style={{ background: "rgba(119,123,98,0.10)", border: `1px solid ${T.borderSoft}` }}>
-                              <img src={d.image} alt={d.name} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
-                            </div>
-                            <span className="text-[11px] font-medium text-center truncate w-full" style={{ color: isActive ? T.accent : T.text }}>{d.name}</span>
-                            <span className="text-[11px]" style={{ color: T.faint }}>₹{d.price.toLocaleString("en-IN")}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="mt-4 pt-3 flex justify-end gap-2.5" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
-                <GhostBtn onClick={() => goRecStep("stone")}>← Back</GhostBtn>
-                <GoldBtn onClick={() => goRecStep("review")}>Next →</GoldBtn>
-              </div>
-            </>
-          )}
-
-          {/* STEP: Review */}
-          {recStep === "review" && (
-            <>
-              <div className="text-[11px] tracking-[0.08em] uppercase mb-4" style={{ color: T.faint }}>Review recommendation</div>
-
-              <div className="space-y-3 text-[13.5px] mb-5">
-                <div className="flex justify-between py-2" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
-                  <span style={{ color: T.muted }}>Stone</span>
-                  <span style={{ color: T.text }}>{selectedStone ? `${selectedStone.gemName} · ${selectedStone.sku} · ${selectedStone.ratti}r` : "—"}</span>
-                </div>
-                <div className="flex justify-between py-2" style={{ borderBottom: `1px solid ${T.borderSoft}` }}>
-                  <span style={{ color: T.muted }}>Design</span>
-                  <span style={{ color: T.text }}>
-                    {recDesignForm === "Loose" ? "Loose stone" : selectedDesign ? `${selectedDesign.name} · ${recDesignMetal}` : "None selected"}
-                  </span>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <Textarea value={recRationale} onChange={setRecRationale} label="Astrological rationale" placeholder="Why this stone for this chart…" rows={3} />
-                <Input value={recPurpose} onChange={setRecPurpose} label="Purpose" placeholder="E.g. Career advancement" />
-                <div className="grid sm:grid-cols-2 gap-3">
-                  <Input value={recFinger} onChange={setRecFinger} label="Finger guidance" placeholder="E.g. Index finger, right hand" />
-                  <Input value={recTiming} onChange={setRecTiming} label="Timing guidance" placeholder="E.g. Thursday, Pushya nakshatra" />
-                </div>
-              </div>
-
-              <div className="mt-4 pt-3 flex items-center justify-between" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
-                <GhostBtn onClick={() => goRecStep("design")}>← Back</GhostBtn>
-                <div className="flex gap-2.5">
-                  <GhostBtn onClick={() => saveRec("draft")}>Save as draft</GhostBtn>
-                  <GoldBtn disabled={!recRationale.trim() || !recStoneSku} onClick={() => saveRec("recommended")}>Recommend</GoldBtn>
-                </div>
-              </div>
-            </>
-          )}
-        </div>
       </Modal>
 
       {/* Reschedule modal */}

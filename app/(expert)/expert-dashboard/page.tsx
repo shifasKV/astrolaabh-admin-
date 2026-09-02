@@ -1,44 +1,21 @@
 "use client";
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Chip, EmptyState, TimeInput } from "@/components/ui";
+import { PageHeader, Card, Chip, EmptyState } from "@/components/ui";
 
-const parseAmPm = (s: string) => {
-  const m = s.match(/(\d+):(\d+)\s*(AM|PM)/i);
-  if (!m) return 0;
-  let h = Number(m[1]) % 12;
-  if (/PM/i.test(m[3])) h += 12;
-  return h * 60 + Number(m[2]);
-};
 import { T } from "@/lib/theme";
 import {
   MOCK_CONSULTATIONS,
   MOCK_STONE_RECOMMENDATIONS,
-  getExpertSchedule,
-  DEFAULT_BOOKING_DURATION_MIN,
 } from "@/lib/mock";
-import type { TimeRange } from "@/lib/mock";
 import { inr } from "@/lib/types";
 
 function toISODate(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-function generateSlotsFromRanges(ranges: TimeRange[], durationMin: number): string[] {
-  const slots: string[] = [];
-  for (const r of ranges) {
-    const [sh, sm] = r.start.split(":").map(Number);
-    const [eh, em] = r.end.split(":").map(Number);
-    let cur = sh * 60 + sm;
-    const end = eh * 60 + em;
-    while (cur + durationMin <= end) {
-      const h = Math.floor(cur / 60);
-      const m = cur % 60;
-      slots.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
-      cur += durationMin;
-    }
-  }
-  return slots;
+function generateFullDaySlots(): string[] {
+  return Array.from({ length: 24 }, (_, h) => `${String(h).padStart(2, "0")}:00`);
 }
 
 const EXPERT_ID = "usr_expert_01";
@@ -50,8 +27,6 @@ export default function ExpertDashboard() {
   tomorrow.setDate(now.getDate() + 1);
   const tomorrowISO = toISODate(tomorrow);
 
-  const schedule = getExpertSchedule(EXPERT_ID);
-
   const myConsultations = MOCK_CONSULTATIONS.filter((c) => c.expertId === EXPERT_ID);
   const todayAppts = myConsultations.filter((c) => c.scheduledAt.startsWith(todayISO) && c.status !== "cancelled" && c.status !== "no_show");
   const tomorrowAppts = myConsultations.filter((c) => c.scheduledAt.startsWith(tomorrowISO) && c.status !== "cancelled" && c.status !== "no_show");
@@ -62,29 +37,16 @@ export default function ExpertDashboard() {
   const purchases = MOCK_STONE_RECOMMENDATIONS.filter((r) => r.expertId === EXPERT_ID && r.status === "converted_to_order").length;
   const totalCommission = completedCount * Math.round(5000 * 0.15);
 
-  const getSlotsForDate = (dateISO: string): string[] => {
-    if (!schedule) return [];
-    const override = schedule.dateOverrides.find((o) => o.date === dateISO);
-    if (override) return generateSlotsFromRanges(override.ranges, DEFAULT_BOOKING_DURATION_MIN);
-    const d = new Date(dateISO + "T00:00:00");
-    const dow = d.getDay();
-    const day = schedule.weeklyHours.find((w) => w.dayOfWeek === dow);
-    if (!day || !day.available) return [];
-    return generateSlotsFromRanges(day.ranges, DEFAULT_BOOKING_DURATION_MIN);
-  };
+  const todaySlots = generateFullDaySlots();
+  const tomorrowSlots = generateFullDaySlots();
 
-  const todaySlots = getSlotsForDate(todayISO);
-  const tomorrowSlots = getSlotsForDate(tomorrowISO);
-
-  const [blockedSlots, setBlockedSlots] = useState<Set<string>>(() => new Set([
+  const [unavailableSlots, setUnavailableSlots] = useState<Set<string>>(() => new Set([
     `${todayISO}-07:00`,
     `${todayISO}-18:00`,
     `${tomorrowISO}-12:00`,
     `${tomorrowISO}-17:00`,
   ]));
 
-  const [addStart, setAddStart] = useState("9:00 AM");
-  const [addEnd, setAddEnd] = useState("5:00 PM");
   const [toast, setToast] = useState("");
   const flash = (msg: string) => { setToast(msg); setTimeout(() => setToast(""), 2500); };
   const to12 = (hhmm: string) => {
@@ -92,20 +54,16 @@ export default function ExpertDashboard() {
     const ap = h >= 12 ? "PM" : "AM";
     return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${ap}`;
   };
-  const addHours = () => {
-    if (parseAmPm(addEnd) <= parseAmPm(addStart)) { flash("End time must be after the start time"); return; }
-    flash(`Opened ${addStart} – ${addEnd} for today`);
-  };
-  const toggleBlock = (time: string) => {
+  const toggleUnavailable = (time: string) => {
     const key = `${todayISO}-${time}`;
-    let nowBlocked = false;
-    setBlockedSlots((prev) => {
+    let nowUnavailable = false;
+    setUnavailableSlots((prev) => {
       const n = new Set(prev);
       if (n.has(key)) n.delete(key);
-      else { n.add(key); nowBlocked = true; }
+      else { n.add(key); nowUnavailable = true; }
       return n;
     });
-    flash(nowBlocked ? `Blocked ${to12(time)}` : `Reopened ${to12(time)}`);
+    flash(nowUnavailable ? `${to12(time)} marked unavailable` : `${to12(time)} opened`);
   };
 
   const bookedSlotMap = useMemo(() => {
@@ -130,17 +88,20 @@ export default function ExpertDashboard() {
   };
 
   const slotCounts = (dateISO: string, slots: string[]) => {
-    let open = 0, booked = 0, blocked = 0;
+    let open = 0, booked = 0, unavailable = 0;
     for (const t of slots) {
       const key = `${dateISO}-${t}`;
       if (bookedSlotMap.has(key)) booked++;
-      else if (blockedSlots.has(key)) blocked++;
+      else if (unavailableSlots.has(key)) unavailable++;
       else open++;
     }
-    return { open, booked, blocked };
+    return { open, booked, unavailable };
   };
 
-  const todayCounts = slotCounts(todayISO, todaySlots);
+  const openSlotStyle = { background: "rgba(95,112,64,0.16)", border: "1px solid rgba(95,112,64,0.42)", color: "#3d4a28" };
+  const unavailableSlotStyle = { background: "rgba(134,126,100,0.10)", border: "1px dashed rgba(134,126,100,0.50)", color: T.faint };
+  const slotBtnClass = "inline-flex items-center justify-center gap-1.5 h-8 w-[92px] px-2 rounded-[9px] text-[12.5px] font-medium tabular-nums cursor-pointer transition-colors hover:brightness-95";
+
   const tmwCounts = slotCounts(tomorrowISO, tomorrowSlots);
   const actions = [
     summariesDue > 0 && { href: "/appointments", label: "Summaries due", sub: "Pending post-consultation", count: summariesDue },
@@ -201,9 +162,14 @@ export default function ExpertDashboard() {
                     style={{ borderBottom: i < arr.length - 1 ? `1px solid ${T.borderSoft}` : "none" }}
                   >
                     <div className="min-w-0 flex-1">
-                      <div className="text-[13.5px] font-medium" style={{ color: T.text }}>{c.customerName}</div>
-                      <div className="text-[12px] mt-0.5" style={{ color: T.muted }}>
-                        {c.type.replace(/_/g, " ")} · {new Date(c.scheduledAt).toLocaleString("en-IN", { timeStyle: "short" })} · {c.duration}min
+                      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                        <span className="text-[13.5px] font-medium" style={{ color: T.text }}>{c.customerName}</span>
+                        <span className="text-[12px] tabular-nums" style={{ color: T.muted }}>
+                          {new Date(c.scheduledAt).toLocaleString("en-IN", { timeStyle: "short" })} · {c.duration}min
+                        </span>
+                      </div>
+                      <div className="text-[12px] mt-0.5 truncate" style={{ color: T.muted }}>
+                        {c.problemStatement || "—"}
                       </div>
                     </div>
                     <Chip tone={statusTone(c.status)}>{c.status.replace(/_/g, " ")}</Chip>
@@ -212,81 +178,79 @@ export default function ExpertDashboard() {
               </div>
             )}
 
-            {/* Availability — summary + expandable "manage today" (block slots + add hours) */}
+            {/* Availability — open / unavailable slot sections */}
             <div className="mt-5 pt-5" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-baseline gap-2.5">
-                  <span className="text-[13px] font-semibold" style={{ color: T.text }}>Availability</span>
-                  <span className="text-[12px]" style={{ color: T.muted }}>
-                    <span className="font-semibold tabular-nums" style={{ color: T.good }}>{todayCounts.open}</span> open · <span className="font-semibold tabular-nums" style={{ color: T.accent }}>{todayCounts.booked}</span> booked · <span className="font-semibold tabular-nums" style={{ color: T.faint }}>{todayCounts.blocked}</span> blocked
-                  </span>
-                </div>
-                <Link href="/availability" className="text-[12.5px] font-medium shrink-0 transition-opacity hover:opacity-75" style={{ color: T.accent }}>Manage all →</Link>
-              </div>
-
-              <div className="mt-3.5 p-4 rounded-[12px]" style={{ background: T.bg, border: `1px solid ${T.borderSoft}` }}>
-                  {/* Block slots */}
-                  <div className="flex items-center justify-between gap-3 mb-3">
-                    <span className="text-[11px] font-medium tracking-[0.07em] uppercase" style={{ color: T.faint }}>Today&apos;s slots</span>
-                    <div className="flex items-center gap-3">
-                      {[
-                        { c: T.good, l: "Open" },
-                        { c: T.faint, l: "Blocked" },
-                        { c: T.accent, l: "Booked" },
-                      ].map((x) => (
-                        <span key={x.l} className="inline-flex items-center gap-1.5 text-[11px]" style={{ color: T.muted }}>
-                          <span className="w-2 h-2 rounded-full" style={{ background: x.c }} />{x.l}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
+              <div className="p-4 rounded-[12px]" style={{ background: T.bg, border: `1px solid ${T.borderSoft}` }}>
                   {todaySlots.length === 0 ? (
-                    <p className="text-[12.5px]" style={{ color: T.muted }}>No hours configured today. Add some below.</p>
+                    <p className="text-[12.5px]" style={{ color: T.muted }}>No slots available.</p>
                   ) : (
-                    <div className="flex flex-wrap gap-2">
-                      {todaySlots.map((time) => {
-                        const key = `${todayISO}-${time}`;
-                        const booking = bookedSlotMap.get(key);
-                        const isBlocked = blockedSlots.has(key);
-                        if (booking) {
-                          return (
-                            <span key={key} title={`Booked · ${booking.customerName}`} className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[9px] text-[12.5px] font-medium tabular-nums cursor-default" style={{ background: T.accentFaint, border: `1px solid ${T.accentBorder}`, color: T.accent }}>
-                              <span className="w-1.5 h-1.5 rounded-full" style={{ background: T.accent }} />
-                              {to12(time)}
-                            </span>
+                    <>
+                      {/* Open slots */}
+                      <div>
+                        <span className="block text-[11px] font-medium tracking-[0.07em] uppercase mb-2.5" style={{ color: T.faint }}>Open slots</span>
+                        {(() => {
+                          const openSlots = todaySlots.filter((time) => {
+                            const key = `${todayISO}-${time}`;
+                            return !bookedSlotMap.has(key) && !unavailableSlots.has(key);
+                          });
+                          return openSlots.length === 0 ? (
+                            <p className="text-[12px]" style={{ color: T.muted }}>No open slots right now.</p>
+                          ) : (
+                            <div className="flex flex-wrap gap-2">
+                              {openSlots.map((time) => {
+                                const key = `${todayISO}-${time}`;
+                                return (
+                                  <button
+                                    key={key}
+                                    onClick={() => toggleUnavailable(time)}
+                                    title="Open — tap to mark unavailable"
+                                    className={slotBtnClass}
+                                    style={openSlotStyle}
+                                  >
+                                    <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: T.good }} />
+                                    {to12(time)}
+                                  </button>
+                                );
+                              })}
+                            </div>
                           );
-                        }
-                        return (
-                          <button
-                            key={key}
-                            onClick={() => toggleBlock(time)}
-                            title={isBlocked ? "Blocked — tap to reopen" : "Open — tap to block"}
-                            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[9px] text-[12.5px] font-medium tabular-nums cursor-pointer transition-colors hover:brightness-95"
-                            style={isBlocked ? { background: "rgba(89,82,54,0.05)", border: `1px solid ${T.borderSoft}`, color: T.faint } : { background: "rgba(95,112,64,0.12)", border: "1px solid rgba(95,112,64,0.28)", color: T.text }}
-                          >
-                            {isBlocked ? (
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="w-3 h-3"><circle cx="12" cy="12" r="9" /><path d="M5.6 5.6 18.4 18.4" /></svg>
-                            ) : (
-                              <span className="w-1.5 h-1.5 rounded-full" style={{ background: T.good }} />
-                            )}
-                            <span className={isBlocked ? "line-through" : ""}>{to12(time)}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                  <p className="text-[11.5px] mt-2.5" style={{ color: T.faint }}>Tap an open slot to block it. Booked slots can&apos;t be changed.</p>
+                        })()}
+                      </div>
 
-                  {/* Add hours */}
-                  <div className="mt-4 pt-4" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
-                    <span className="text-[11px] font-medium tracking-[0.07em] uppercase" style={{ color: T.faint }}>Add hours</span>
-                    <div className="flex flex-wrap items-center gap-2.5 mt-2.5">
-                      <div className="w-[130px]"><TimeInput value={addStart} onChange={setAddStart} /></div>
-                      <span className="text-[13px]" style={{ color: T.faint }}>–</span>
-                      <div className="w-[130px]"><TimeInput value={addEnd} onChange={setAddEnd} /></div>
-                      <button onClick={addHours} className="h-9 px-4 rounded-[9px] text-[12.5px] font-semibold cursor-pointer transition-all duration-200 hover:brightness-110" style={{ background: T.accent, color: T.accentInk }}>Add hours</button>
-                    </div>
-                  </div>
+                      {/* Unavailable slots */}
+                      <div className="mt-4 pt-4" style={{ borderTop: `1px solid ${T.borderSoft}` }}>
+                        <span className="block text-[11px] font-medium tracking-[0.07em] uppercase mb-2.5" style={{ color: T.faint }}>Unavailable</span>
+                        {(() => {
+                          const unavailableList = todaySlots.filter((time) => {
+                            const key = `${todayISO}-${time}`;
+                            return !bookedSlotMap.has(key) && unavailableSlots.has(key);
+                          });
+                          return unavailableList.length === 0 ? (
+                            <p className="text-[12px]" style={{ color: T.muted }}>No unavailable slots.</p>
+                          ) : (
+                            <div className="flex flex-wrap gap-2">
+                              {unavailableList.map((time) => {
+                                const key = `${todayISO}-${time}`;
+                                return (
+                                  <button
+                                    key={key}
+                                    onClick={() => toggleUnavailable(time)}
+                                    title="Unavailable — tap to reopen"
+                                    className={slotBtnClass}
+                                    style={unavailableSlotStyle}
+                                  >
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="w-3 h-3"><circle cx="12" cy="12" r="9" /><path d="M5.6 5.6 18.4 18.4" /></svg>
+                                    <span className="line-through">{to12(time)}</span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    </>
+                  )}
+                  <p className="text-[11.5px] mt-2.5" style={{ color: T.faint }}>Tap an open slot to mark it unavailable, or tap unavailable to reopen.</p>
                 </div>
             </div>
           </Card>
@@ -319,23 +283,24 @@ export default function ExpertDashboard() {
               <h2 className="text-[15px] font-semibold tracking-[-0.01em]" style={{ color: T.text }}>Tomorrow</h2>
               <span className="text-[12px]" style={{ color: T.muted }}>{new Date(tomorrowISO + "T00:00:00").toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })}</span>
             </div>
-            {tomorrowSlots.length === 0 ? (
-              <EmptyState inline icon="calendar" title="No hours set" description="Nothing configured for tomorrow yet." />
-            ) : (
-              <>
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="text-[13px] font-semibold tabular-nums" style={{ color: T.text }}>{tomorrowAppts.length}</span>
-                  <span className="text-[12.5px]" style={{ color: T.muted }}>appointment{tomorrowAppts.length === 1 ? "" : "s"} booked</span>
-                </div>
-                <div className="flex items-center gap-4">
-                  <span className="text-[12px]" style={{ color: T.muted }}><span className="font-semibold tabular-nums" style={{ color: T.good }}>{tmwCounts.open}</span> open</span>
-                  <span className="text-[12px]" style={{ color: T.muted }}><span className="font-semibold tabular-nums" style={{ color: T.faint }}>{tmwCounts.blocked}</span> blocked</span>
-                </div>
-                <Link href="/availability" className="inline-flex items-center gap-1 text-[12.5px] font-medium mt-4 hover:underline underline-offset-4" style={{ color: T.accent }}>
-                  Open availability →
-                </Link>
-              </>
-            )}
+            <div className="space-y-1.5">
+              <Link href="/appointments" className="flex items-center gap-3 py-2.5 px-2.5 -mx-2.5 rounded-[10px] transition-colors hover:bg-[rgba(119,123,98,0.07)]">
+                <span className="w-9 h-9 rounded-[10px] flex items-center justify-center text-[15px] font-bold tabular-nums shrink-0" style={{ background: T.accentMuted, color: T.accent }}>{tomorrowAppts.length}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[13px] font-medium" style={{ color: T.text }}>Appointments booked</span>
+                  <span className="block text-[11.5px]" style={{ color: T.muted }}>Scheduled for tomorrow</span>
+                </span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 shrink-0" style={{ color: T.faint }}><path d="m9 18 6-6-6-6" /></svg>
+              </Link>
+              <Link href="/availability" className="flex items-center gap-3 py-2.5 px-2.5 -mx-2.5 rounded-[10px] transition-colors hover:bg-[rgba(119,123,98,0.07)]">
+                <span className="w-9 h-9 rounded-[10px] flex items-center justify-center text-[15px] font-bold tabular-nums shrink-0" style={{ background: "rgba(95,112,64,0.13)", color: T.good }}>{tmwCounts.open}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[13px] font-medium" style={{ color: T.text }}>Open slots</span>
+                  <span className="block text-[11.5px]" style={{ color: T.muted }}>Available to book</span>
+                </span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 shrink-0" style={{ color: T.faint }}><path d="m9 18 6-6-6-6" /></svg>
+              </Link>
+            </div>
           </Card>
         </aside>
       </div>
